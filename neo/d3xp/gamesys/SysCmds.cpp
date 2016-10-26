@@ -1038,7 +1038,7 @@ void Cmd_TestLight_f( const idCmdArgs& args )
 	
 	renderView_t*	rv = player->GetRenderView();
 	
-	float fov = tan( idMath::M_DEG2RAD * rv->fov_x / 2 );
+	float fov = rv->fov_right;
 	
 	
 	dict.SetMatrix( "rotation", mat3_default );

@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "../tr_local.h"
 #include "../../framework/Common_local.h"
 
+#include <openvr.h>
+
 idCVar r_drawFlickerBox( "r_drawFlickerBox", "0", CVAR_RENDERER | CVAR_BOOL, "visual test for dropping frames" );
 idCVar stereoRender_warp( "stereoRender_warp", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use the optical warping renderprog instead of stereoDeGhost" );
 idCVar stereoRender_warpStrength( "stereoRender_warpStrength", "1.45", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "amount of pre-distortion" );
@@ -149,6 +151,18 @@ const void GL_BlockingSwapBuffers()
 	
 	GLimp_SwapBuffers();
 	
+	if (glConfig.openVREnabled)
+	{
+		//glFinish();
+		//vr::VRCompositor()->PostPresentHandoff();
+
+		//extern vr::IVRSystem * hmd;
+		//vr::VREvent_t e;
+		//while( hmd->PollNextEvent( &e, sizeof( e ) ) ) { }
+		vr::TrackedDevicePose_t m_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+		vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+	}
+
 	const int beforeFence = Sys_Milliseconds();
 	if( r_showSwapBuffers.GetBool() && beforeFence - beforeSwap > 1 )
 	{
@@ -226,6 +240,8 @@ static void R_MakeStereoRenderImage( idImage* image )
 	image->AllocImage( opts, TF_LINEAR, TR_CLAMP );
 }
 
+void R_DepthImage( idImage* image );
+
 /*
 ====================
 RB_StereoRenderExecuteBackEndCommands
@@ -248,11 +264,26 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 	
 	// create the stereoRenderImage if we haven't already
 	static idImage* stereoRenderImages[2];
+	static idImage* stereoDepthImages[2];
+	static Framebuffer * stereoRenderFBO[2];
 	for( int i = 0; i < 2; i++ )
 	{
 		if( stereoRenderImages[i] == NULL )
 		{
 			stereoRenderImages[i] = globalImages->ImageFromFunction( va( "_stereoRender%i", i ), R_MakeStereoRenderImage );
+			stereoDepthImages[i] = globalImages->ImageFromFunction( va( "_stereoDepth%i", i ), R_DepthImage );
+
+			stereoRenderFBO[i] = new Framebuffer( va( "_stereoFBO%i", i ), renderSystem->GetWidth(), renderSystem->GetHeight() );
+
+			stereoRenderFBO[i]->Bind();
+
+			stereoRenderFBO[i]->AddColorBuffer( GL_RGBA, 0 );
+			stereoRenderFBO[i]->AddDepthBuffer( GL_DEPTH24_STENCIL8 );
+		
+			stereoRenderFBO[i]->AttachImage2D( GL_TEXTURE_2D, stereoRenderImages[i], 0 );
+			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImages[i] );
+
+			stereoRenderFBO[i]->Check();
 		}
 		
 		// resize the stereo render image if the main window has changed size
@@ -260,6 +291,13 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 				stereoRenderImages[i]->GetUploadHeight() != renderSystem->GetHeight() )
 		{
 			stereoRenderImages[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
+			stereoDepthImages[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
+
+			stereoRenderFBO[i]->Bind();
+			stereoRenderFBO[i]->AttachImage2D( GL_TEXTURE_2D, stereoRenderImages[i], 0 );
+			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImages[i] );
+			stereoRenderFBO[i]->Check();
+			stereoRenderFBO[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
 		}
 	}
 	
@@ -279,6 +317,7 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 		const int targetEye = ( stereoEye == 1 ) ? 1 : 0;
 		
 		// Set the back end into a known default state to fix any stale render state issues
+		globalFramebuffers.currentStereoRenderFBO = stereoRenderFBO[ targetEye ];
 		GL_SetDefaultState();
 		renderProgManager.Unbind();
 		renderProgManager.ZeroUniforms();
@@ -329,14 +368,12 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 					break;
 			}
 		}
-		
-		// copy to the target
-		stereoRenderImages[ targetEye ]->CopyFramebuffer( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight() );
 	}
 	
 	// perform the final compositing / warping / deghosting to the actual framebuffer(s)
 	assert( foundEye[0] && foundEye[1] );
 	
+	globalFramebuffers.currentStereoRenderFBO = NULL;
 	GL_SetDefaultState();
 	
 	RB_SetMVP( renderMatrix_identity );
@@ -478,7 +515,31 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 			GL_ViewportAndScissor( renderSystem->GetWidth(), 0, renderSystem->GetWidth(), renderSystem->GetHeight() );
 			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			break;
+
+		case STEREO3D_OPENVR:
+			if (glConfig.openVREnabled)
+			{
+				vr::Texture_t leftEyeTexture = {(void*)stereoRenderImages[0]->GetTexNum(), vr::API_OpenGL, vr::ColorSpace_Gamma };
+				vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
+				vr::Texture_t rightEyeTexture = {(void*)stereoRenderImages[1]->GetTexNum(), vr::API_OpenGL, vr::ColorSpace_Gamma };
+				vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture );
+			}
+
+			GL_SelectTexture( 0 );
+			stereoRenderImages[0]->Bind();
+			GL_SelectTexture( 1 );
+			stereoRenderImages[1]->Bind();
+			GL_ViewportAndScissor( 0, 0, glConfig.nativeScreenWidth/2, glConfig.nativeScreenHeight );
+			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			
+			GL_SelectTexture( 0 );
+			stereoRenderImages[1]->Bind();
+			GL_SelectTexture( 1 );
+			stereoRenderImages[0]->Bind();
+			GL_ViewportAndScissor( glConfig.nativeScreenWidth/2, 0, glConfig.nativeScreenWidth/2, glConfig.nativeScreenHeight );
+			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
+			break;
+
 		case STEREO3D_TOP_AND_BOTTOM_COMPRESSED:
 			GL_SelectTexture( 1 );
 			stereoRenderImages[0]->Bind();

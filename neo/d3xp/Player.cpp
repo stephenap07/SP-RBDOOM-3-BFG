@@ -10658,11 +10658,18 @@ void idPlayer::CalculateRenderView()
 			// allow the right player view weapons
 			renderView->viewID = entityNumber + 1;
 		}
-		
-		gameLocal.CalcFov( CalcFov( true ), renderView->fov_x, renderView->fov_y );
+
+		float fov_x, fov_y;
+		gameLocal.CalcFov( CalcFov( true ), fov_x, fov_y );
+		fov_x = tan(fov_x * 0.5f * idMath::M_DEG2RAD);
+		fov_y = tan(fov_y * 0.5f * idMath::M_DEG2RAD);
+		renderView->fov_left = -fov_x;
+		renderView->fov_right = fov_x;
+		renderView->fov_bottom = -fov_y;
+		renderView->fov_top = fov_y;
 	}
 	
-	if( renderView->fov_y == 0 )
+	if( renderView->fov_bottom == renderView->fov_top )
 	{
 		common->Error( "renderView->fov_y == 0" );
 	}

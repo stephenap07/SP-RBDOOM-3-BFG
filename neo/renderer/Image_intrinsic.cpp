@@ -160,7 +160,7 @@ static void R_RGBA8LinearImage( idImage* image )
 	image->GenerateImage( ( byte* )data, DEFAULT_SIZE, DEFAULT_SIZE, TF_LINEAR, TR_REPEAT, TD_LOOKUP_TABLE_RGBA );
 }
 
-static void R_DepthImage( idImage* image )
+void R_DepthImage( idImage* image )
 {
 	// RB: NULL data and MSAA support
 #if defined(USE_HDR_MSAA)

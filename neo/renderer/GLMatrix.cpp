@@ -430,11 +430,11 @@ void R_SetupProjectionMatrix( viewDef_t* viewDef )
 	//
 	const float zNear = ( viewDef->renderView.cramZNear ) ? ( r_znear.GetFloat() * 0.25f ) : r_znear.GetFloat();
 	
-	float ymax = zNear * tan( viewDef->renderView.fov_y * idMath::PI / 360.0f );
-	float ymin = -ymax;
+	float ymax = viewDef->renderView.fov_top;
+	float ymin = viewDef->renderView.fov_bottom;
 	
-	float xmax = zNear * tan( viewDef->renderView.fov_x * idMath::PI / 360.0f );
-	float xmin = -xmax;
+	float xmax = viewDef->renderView.fov_right;
+	float xmin = viewDef->renderView.fov_left;
 	
 	const float width = xmax - xmin;
 	const float height = ymax - ymin;
@@ -453,13 +453,13 @@ void R_SetupProjectionMatrix( viewDef_t* viewDef )
 	ymin += jittery * height;
 	ymax += jittery * height;
 	
-	viewDef->projectionMatrix[0 * 4 + 0] = 2.0f * zNear / width;
+	viewDef->projectionMatrix[0 * 4 + 0] = 2.0f / width;
 	viewDef->projectionMatrix[1 * 4 + 0] = 0.0f;
 	viewDef->projectionMatrix[2 * 4 + 0] = ( xmax + xmin ) / width;	// normally 0
 	viewDef->projectionMatrix[3 * 4 + 0] = 0.0f;
 	
 	viewDef->projectionMatrix[0 * 4 + 1] = 0.0f;
-	viewDef->projectionMatrix[1 * 4 + 1] = 2.0f * zNear / height;
+	viewDef->projectionMatrix[1 * 4 + 1] = 2.0f / height;
 	viewDef->projectionMatrix[2 * 4 + 1] = ( ymax + ymin ) / height;	// normally 0
 	viewDef->projectionMatrix[3 * 4 + 1] = 0.0f;
 	
@@ -487,11 +487,11 @@ void R_SetupProjectionMatrix( viewDef_t* viewDef )
 // RB: standard OpenGL projection matrix
 void R_SetupProjectionMatrix2( const viewDef_t* viewDef, const float zNear, const float zFar, float projectionMatrix[16] )
 {
-	float ymax = zNear * tan( viewDef->renderView.fov_y * idMath::PI / 360.0f );
-	float ymin = -ymax;
+	float ymax = viewDef->renderView.fov_top;
+	float ymin = viewDef->renderView.fov_bottom;
 	
-	float xmax = zNear * tan( viewDef->renderView.fov_x * idMath::PI / 360.0f );
-	float xmin = -xmax;
+	float xmax = viewDef->renderView.fov_right;
+	float xmin = viewDef->renderView.fov_left;
 	
 	const float width = xmax - xmin;
 	const float height = ymax - ymin;
@@ -515,13 +515,13 @@ void R_SetupProjectionMatrix2( const viewDef_t* viewDef, const float zNear, cons
 	
 	float depth = zFar - zNear;
 	
-	projectionMatrix[0 * 4 + 0] = 2.0f * zNear / width;
+	projectionMatrix[0 * 4 + 0] = 2.0f / width;
 	projectionMatrix[1 * 4 + 0] = 0.0f;
 	projectionMatrix[2 * 4 + 0] = ( xmax + xmin ) / width;	// normally 0
 	projectionMatrix[3 * 4 + 0] = 0.0f;
 	
 	projectionMatrix[0 * 4 + 1] = 0.0f;
-	projectionMatrix[1 * 4 + 1] = 2.0f * zNear / height;
+	projectionMatrix[1 * 4 + 1] = 2.0f / height;
 	projectionMatrix[2 * 4 + 1] = ( ymax + ymin ) / height;	// normally 0
 	projectionMatrix[3 * 4 + 1] = 0.0f;
 	

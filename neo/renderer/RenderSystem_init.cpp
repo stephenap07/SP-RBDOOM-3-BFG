@@ -47,6 +47,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "../framework/Common_local.h"
 #endif
 
+#include <openvr.h>
+
 // DeviceContext bypasses RenderSystem to work directly with this
 idGuiModel* tr_guiModel;
 
@@ -816,6 +818,56 @@ safeMode:
 	}
 }
 
+vr::IVRSystem * hmd;
+
+static void VR_Init()
+{
+	vr::EVRInitError error = vr::VRInitError_None;
+	hmd = vr::VR_Init( &error, vr::VRApplication_Scene );
+	if ( error != vr::VRInitError_None )
+	{
+		common->Printf( "VR initialization failed: %s\n", vr::VR_GetVRInitErrorAsEnglishDescription( error ) );
+		glConfig.openVREnabled = false;
+		return;
+	}
+
+	if ( !vr::VRCompositor() )
+	{
+		common->Printf( "VR compositor not present.\n" );
+		glConfig.openVREnabled = false;
+		return;
+	}
+
+	//vr::VRCompositor()->ForceInterleavedReprojectionOn( true );
+	vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
+
+	glConfig.openVREnabled = true;
+
+	hmd->GetRecommendedRenderTargetSize( (uint32_t*)&glConfig.openVRWidth, (uint32_t*)&glConfig.openVRHeight );
+
+	hmd->GetProjectionRaw( vr::Eye_Left,
+		&glConfig.openVRfovEye[1][0], &glConfig.openVRfovEye[1][1],
+		&glConfig.openVRfovEye[1][2], &glConfig.openVRfovEye[1][3]);
+
+	hmd->GetProjectionRaw( vr::Eye_Right,
+		&glConfig.openVRfovEye[0][0], &glConfig.openVRfovEye[0][1],
+		&glConfig.openVRfovEye[0][2], &glConfig.openVRfovEye[0][3]);
+
+	vr::HmdMatrix34_t mat;
+	
+	mat = hmd->GetEyeToHeadTransform( vr::Eye_Left );
+#if 0
+	Convert4x3Matrix(&mat, hmdEyeLeft);
+	MatrixRTInverse(hmdEyeLeft);
+#endif
+
+	mat = hmd->GetEyeToHeadTransform( vr::Eye_Right );
+#if 0
+	Convert4x3Matrix(&mat, hmdEyeRight);
+	MatrixRTInverse(hmdEyeRight);
+#endif
+}
+
 idStr extensions_string;
 
 /*
@@ -850,6 +902,7 @@ void R_InitOpenGL()
 	
 	R_SetNewMode( true );
 	
+	VR_Init();
 	
 	// input and sound systems need to be tied to the new window
 	Sys_InitInput();
@@ -1256,6 +1309,7 @@ If ref isn't specified, the full session UpdateScreen will be done.
 */
 void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref = NULL )
 {
+	assert(0);
 	// include extra space for OpenGL padding to word boundaries
 	int sysWidth = renderSystem->GetWidth();
 	int sysHeight = renderSystem->GetHeight();
@@ -1689,7 +1743,7 @@ void R_EnvShot_f( const idCmdArgs& args )
 	int			blends;
 	const char*  extension;
 	int			size;
-	int         res_w, res_h, old_fov_x, old_fov_y;
+	int         res_w, res_h, old_fov_left, old_fov_right, old_fov_bottom, old_fov_top;
 	
 	res_w = renderSystem->GetWidth();
 	res_h = renderSystem->GetHeight();
@@ -1768,8 +1822,10 @@ void R_EnvShot_f( const idCmdArgs& args )
 	
 	// so we return to that axis and fov after the fact.
 	oldAxis = primary.renderView.viewaxis;
-	old_fov_x = primary.renderView.fov_x;
-	old_fov_y = primary.renderView.fov_y;
+	old_fov_left = primary.renderView.fov_left;
+	old_fov_right = primary.renderView.fov_right;
+	old_fov_bottom = primary.renderView.fov_bottom;
+	old_fov_top = primary.renderView.fov_top;
 	
 	for( i = 0 ; i < 6 ; i++ )
 	{
@@ -1778,7 +1834,8 @@ void R_EnvShot_f( const idCmdArgs& args )
 		
 		extension = envDirection[ i ];
 		
-		ref.fov_x = ref.fov_y = 90;
+		ref.fov_right = ref.fov_top = 1;
+		ref.fov_left = ref.fov_bottom = -1;
 		ref.viewaxis = axis[i];
 		fullname.Format( "env/%s%s", baseName, extension );
 		
@@ -1787,8 +1844,10 @@ void R_EnvShot_f( const idCmdArgs& args )
 	
 	// restore the original resolution, axis and fov
 	ref.viewaxis = oldAxis;
-	ref.fov_x = old_fov_x;
-	ref.fov_y = old_fov_y;
+	ref.fov_left = old_fov_left;
+	ref.fov_right = old_fov_right;
+	ref.fov_bottom = old_fov_bottom;
+	ref.fov_top = old_fov_top;
 	cvarSystem->SetCVarInteger( "r_windowWidth", res_w );
 	cvarSystem->SetCVarInteger( "r_windowHeight", res_h );
 	R_SetNewMode( false ); // the same as "vid_restart"
@@ -2261,6 +2320,9 @@ void GfxInfo_f( const idCmdArgs& args )
 			break;
 		case STEREO3D_QUAD_BUFFER:
 			idLib::Printf( "STEREO3D_QUAD_BUFFER\n" );
+			break;
+		case STEREO3D_OPENVR:
+			idLib::Printf( "STEREO3D_OPENVR\n" );
 			break;
 		default:
 			idLib::Printf( "Unknown (%i)\n", renderSystem->GetStereo3DMode() );
@@ -3067,6 +3129,10 @@ idRenderSystemLocal::GetWidth
 */
 int idRenderSystemLocal::GetWidth() const
 {
+	if (glConfig.stereo3Dmode == STEREO3D_OPENVR)
+	{
+		return glConfig.openVRWidth;
+	}
 	if( glConfig.stereo3Dmode == STEREO3D_SIDE_BY_SIDE || glConfig.stereo3Dmode == STEREO3D_SIDE_BY_SIDE_COMPRESSED )
 	{
 		return glConfig.nativeScreenWidth >> 1;
@@ -3081,6 +3147,10 @@ idRenderSystemLocal::GetHeight
 */
 int idRenderSystemLocal::GetHeight() const
 {
+	if (glConfig.stereo3Dmode == STEREO3D_OPENVR)
+	{
+		return glConfig.openVRHeight;
+	}
 	if( glConfig.stereo3Dmode == STEREO3D_HDMI_720 )
 	{
 		return 720;
@@ -3163,7 +3233,11 @@ idRenderSystemLocal::UpdateStereo3DMode
 */
 void idRenderSystemLocal::UpdateStereo3DMode()
 {
-	if( glConfig.nativeScreenWidth == 1280 && glConfig.nativeScreenHeight == 1470 )
+	if (glConfig.openVREnabled)
+	{
+		glConfig.stereo3Dmode = STEREO3D_OPENVR;
+	}
+	else if( glConfig.nativeScreenWidth == 1280 && glConfig.nativeScreenHeight == 1470 )
 	{
 		glConfig.stereo3Dmode = STEREO3D_HDMI_720;
 	}

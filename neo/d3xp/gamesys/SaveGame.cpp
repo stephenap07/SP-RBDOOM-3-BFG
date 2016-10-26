@@ -775,8 +775,10 @@ void idSaveGame::WriteRenderView( const renderView_t& view )
 	WriteInt( 0 /* view.width */ );
 	WriteInt( 0 /* view.height */ );
 	
-	WriteFloat( view.fov_x );
-	WriteFloat( view.fov_y );
+	float fov_x = (atan(view.fov_right) - atan(view.fov_left)) * idMath::M_RAD2DEG;
+	float fov_y = (atan(view.fov_top) - atan(view.fov_bottom)) * idMath::M_RAD2DEG;
+	WriteFloat( fov_x );
+	WriteFloat( fov_y );
 	WriteVec3( view.vieworg );
 	WriteMat3( view.viewaxis );
 	
@@ -1662,6 +1664,7 @@ idRestoreGame::ReadRenderView
 void idRestoreGame::ReadRenderView( renderView_t& view )
 {
 	int i;
+	float fov_x, fov_y;
 	
 	ReadInt( view.viewID );
 	ReadInt( i /* view.x */ );
@@ -1669,8 +1672,14 @@ void idRestoreGame::ReadRenderView( renderView_t& view )
 	ReadInt( i /* view.width */ );
 	ReadInt( i /* view.height */ );
 	
-	ReadFloat( view.fov_x );
-	ReadFloat( view.fov_y );
+	ReadFloat( fov_x );
+	ReadFloat( fov_y );
+	fov_x = tan(fov_x * 0.5f * idMath::M_DEG2RAD);
+	fov_y = tan(fov_y * 0.5f * idMath::M_DEG2RAD);
+	view.fov_left = -fov_x;
+	view.fov_right = fov_x;
+	view.fov_bottom = -fov_y;
+	view.fov_top = fov_y;
 	ReadVec3( view.vieworg );
 	ReadMat3( view.viewaxis );
 	

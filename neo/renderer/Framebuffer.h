@@ -134,6 +134,7 @@ struct globalFramebuffers_t
 //	Framebuffer*				geometryBufferFBO;
 	Framebuffer*				smaaEdgesFBO;
 	Framebuffer*				smaaBlendFBO;
+	Framebuffer*				currentStereoRenderFBO;
 };
 extern globalFramebuffers_t globalFramebuffers;
 

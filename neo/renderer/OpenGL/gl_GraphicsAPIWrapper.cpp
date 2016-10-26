@@ -330,8 +330,11 @@ void GL_SetDefaultState()
 	glEnable( GL_DEPTH_TEST );
 	glEnable( GL_BLEND );
 	glEnable( GL_SCISSOR_TEST );
-	glDrawBuffer( GL_BACK );
-	glReadBuffer( GL_BACK );
+	if( !globalFramebuffers.currentStereoRenderFBO )
+	{
+		glDrawBuffer( GL_BACK );
+		glReadBuffer( GL_BACK );
+	}
 	
 	if( r_useScissor.GetBool() )
 	{

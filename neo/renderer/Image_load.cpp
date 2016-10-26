@@ -724,7 +724,7 @@ void idImage::CopyFramebuffer( int x, int y, int imageWidth, int imageHeight )
 	glBindTexture( target, texnum );
 	
 #if !defined(USE_GLES2)
-	if( Framebuffer::IsDefaultFramebufferActive() )
+	if( Framebuffer::IsDefaultFramebufferActive() && !globalFramebuffers.currentStereoRenderFBO )
 	{
 		glReadBuffer( GL_BACK );
 	}

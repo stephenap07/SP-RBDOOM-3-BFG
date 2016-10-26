@@ -284,8 +284,11 @@ idSecurityCamera::GetRenderView
 renderView_t* idSecurityCamera::GetRenderView()
 {
 	renderView_t* rv = idEntity::GetRenderView();
-	rv->fov_x = scanFov;
-	rv->fov_y = scanFov;
+	float scanFovTan = tan(scanFov * 0.5f * idMath::M_DEG2RAD);
+	rv->fov_left = -scanFovTan;
+	rv->fov_right = scanFovTan;
+	rv->fov_bottom = -scanFovTan;
+	rv->fov_top = scanFovTan;
 	rv->viewaxis = GetAxis().ToAngles().ToMat3();
 	rv->vieworg = GetPhysics()->GetOrigin() + viewOffset;
 	return rv;

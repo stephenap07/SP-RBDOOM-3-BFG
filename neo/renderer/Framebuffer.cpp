@@ -355,6 +355,12 @@ bool Framebuffer::IsBound()
 void Framebuffer::Unbind()
 {
 	RENDERLOG_PRINTF( "Framebuffer::Unbind()\n" );
+
+	if( renderSystem->GetStereo3DMode() != STEREO3D_OFF && globalFramebuffers.currentStereoRenderFBO )
+	{
+		globalFramebuffers.currentStereoRenderFBO->Bind();
+		return;
+	}
 	
 	//if(backEnd.glState.framebuffer != NULL)
 	{
@@ -366,7 +372,7 @@ void Framebuffer::Unbind()
 
 bool Framebuffer::IsDefaultFramebufferActive()
 {
-	return ( backEnd.glState.currentFramebuffer == NULL );
+	return ( backEnd.glState.currentFramebuffer == NULL || backEnd.glState.currentFramebuffer == globalFramebuffers.currentStereoRenderFBO );
 }
 
 void Framebuffer::AddColorBuffer( int format, int index, int multiSamples )

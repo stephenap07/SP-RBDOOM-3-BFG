@@ -59,7 +59,9 @@ enum stereo3DMode_t
 	// On the PC this can be configured as a custom video timing, but
 	// it definitely isn't a consumer level task.  The quad_buffer
 	// support can handle 720P-3D with apropriate driver support.
-	STEREO3D_HDMI_720
+	STEREO3D_HDMI_720,
+
+	STEREO3D_OPENVR
 };
 
 typedef enum
@@ -188,6 +190,11 @@ struct glconfig_t
 	float				physicalScreenWidthInCentimeters;
 	
 	float				pixelAspect;
+
+	bool				openVREnabled;
+	int					openVRWidth;
+	int					openVRHeight;
+	float				openVRfovEye[2][4];
 	
 	// RB begin
 #if !defined(__ANDROID__)

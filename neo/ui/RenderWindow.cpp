@@ -170,8 +170,10 @@ void idRenderWindow::Draw( int time, float x, float y )
 	refdef.shaderParms[2] = 1;
 	refdef.shaderParms[3] = 1;
 	
-	refdef.fov_x = 90;
-	refdef.fov_y = 2 * atan( ( float )drawRect.h / drawRect.w ) * idMath::M_RAD2DEG;
+	refdef.fov_left = -1;
+	refdef.fov_right = 1;
+	refdef.fov_bottom = -( float )drawRect.h / drawRect.w;
+	refdef.fov_top = -refdef.fov_bottom;
 	
 	refdef.time[0] = time;
 	refdef.time[1] = time;

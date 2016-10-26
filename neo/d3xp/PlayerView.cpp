@@ -700,11 +700,10 @@ float CentimetersToWorldUnits( const float cm )
 float	CalculateWorldSeparation(
 	const float screenSeparation,
 	const float convergenceDistance,
-	const float fov_x_degrees )
+	const float fov_right )
 {
 
-	const float fovRadians = DEG2RAD( fov_x_degrees );
-	const float screen = tan( fovRadians * 0.5f ) * fabs( screenSeparation );
+	const float screen = fov_right * fabs( screenSeparation );
 	const float worldSeparation = screen * convergenceDistance / 0.5f;
 	
 	return worldSeparation;
@@ -714,12 +713,12 @@ stereoDistances_t	CaclulateStereoDistances(
 	const float	interOcularCentimeters,		// distance between two eyes, typically 6.0 - 7.0
 	const float screenWidthCentimeters,		// read from operating system
 	const float convergenceWorldUnits,		// pass 0 for head mounted display mode
-	const float	fov_x_degrees )  			// edge to edge horizontal field of view, typically 60 - 90
+	const float	fov_right )  			// edge to edge horizontal field of view, typically 60 - 90
 {
 
 	stereoDistances_t	dists = {};
-	
-	if( convergenceWorldUnits == 0.0f )
+
+	if( glConfig.openVREnabled || convergenceWorldUnits == 0.0f )
 	{
 		// head mounted display mode
 		dists.worldSeparation = CentimetersToInches( interOcularCentimeters * 0.5 );
@@ -729,7 +728,7 @@ stereoDistances_t	CaclulateStereoDistances(
 	
 	// 3DTV mode
 	dists.screenSeparation = 0.5f * interOcularCentimeters / screenWidthCentimeters;
-	dists.worldSeparation = CalculateWorldSeparation( dists.screenSeparation, convergenceWorldUnits, fov_x_degrees );
+	dists.worldSeparation = CalculateWorldSeparation( dists.screenSeparation, convergenceWorldUnits, fov_right );
 	
 	return dists;
 }
@@ -740,7 +739,7 @@ float	GetScreenSeparationForGuis()
 										stereoRender_interOccularCentimeters.GetFloat(),
 										renderSystem->GetPhysicalScreenWidthInCentimeters(),
 										stereoRender_convergence.GetFloat(),
-										80.0f /* fov */ );
+										tan(80.0f * 0.5f * idMath::M_DEG2RAD) /* fov */ );
 										
 	return dists.screenSeparation;
 }
@@ -759,12 +758,21 @@ void idPlayerView::EmitStereoEyeView( const int eye, idMenuHandler_HUD* hudManag
 	}
 	
 	renderView_t eyeView = *view;
-	
+
+	if (glConfig.openVREnabled)
+	{
+		const int targetEye = ( eye == 1 ) ? 1 : 0;
+		eyeView.fov_left = glConfig.openVRfovEye[ targetEye ][0];
+		eyeView.fov_right = glConfig.openVRfovEye[ targetEye ][1];
+		eyeView.fov_bottom = glConfig.openVRfovEye[ targetEye ][2];
+		eyeView.fov_top = glConfig.openVRfovEye[ targetEye ][3];
+	}
+
 	const stereoDistances_t dists = CaclulateStereoDistances(
 										stereoRender_interOccularCentimeters.GetFloat(),
 										renderSystem->GetPhysicalScreenWidthInCentimeters(),
 										stereoRender_convergence.GetFloat(),
-										view->fov_x );
+										view->fov_right );
 										
 	eyeView.vieworg += eye * dists.worldSeparation * eyeView.viewaxis[1];
 	

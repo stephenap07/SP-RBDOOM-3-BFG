@@ -1763,8 +1763,12 @@ renderView_t* idEntity::GetRenderView()
 	memset( renderView, 0, sizeof( *renderView ) );
 	
 	renderView->vieworg = GetPhysics()->GetOrigin();
-	renderView->fov_x = 120;
-	renderView->fov_y = 120;
+	float fov_x = tan(120.f * 0.5f * idMath::M_DEG2RAD);
+	float fov_y = tan(120.f * 0.5f * idMath::M_DEG2RAD);
+	renderView->fov_left = -fov_x;
+	renderView->fov_right = fov_x;
+	renderView->fov_bottom = -fov_y;
+	renderView->fov_top = fov_y;
 	renderView->viewaxis = GetPhysics()->GetAxis();
 	
 	// copy global shader parms

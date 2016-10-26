@@ -201,9 +201,16 @@ bool		idRenderWorldLocal::ProcessDemoCommand( idDemoFile* readDemo, renderView_t
 		}
 		case DC_RENDERVIEW:
 		{
+			float fov_x, fov_y;
 			readDemo->ReadInt( renderView->viewID );
-			readDemo->ReadFloat( renderView->fov_x );
-			readDemo->ReadFloat( renderView->fov_y );
+			readDemo->ReadFloat( fov_x );
+			readDemo->ReadFloat( fov_y );
+			fov_x = tan(fov_x * 0.5f * idMath::M_DEG2RAD);
+			fov_y = tan(fov_y * 0.5f * idMath::M_DEG2RAD);
+			renderView->fov_right = fov_x;
+			renderView->fov_left = -fov_x;
+			renderView->fov_top = fov_y;
+			renderView->fov_bottom = -fov_y;
 			readDemo->ReadVec3( renderView->vieworg );
 			readDemo->ReadMat3( renderView->viewaxis );
 			readDemo->ReadBool( renderView->cramZNear );
@@ -542,6 +549,7 @@ WriteRenderView
 void	idRenderWorldLocal::WriteRenderView( const renderView_t* renderView )
 {
 	int i;
+	float fov_x, fov_y;
 	
 	// only the main renderWorld writes stuff to demos, not the wipes or
 	// menu renders
@@ -549,13 +557,16 @@ void	idRenderWorldLocal::WriteRenderView( const renderView_t* renderView )
 	{
 		return;
 	}
+
+	fov_x = (atan(renderView->fov_right) - atan(renderView->fov_left)) * idMath::M_RAD2DEG;
+	fov_y = (atan(renderView->fov_top) - atan(renderView->fov_bottom)) * idMath::M_RAD2DEG;
 	
 	// write the actual view command
 	common->WriteDemo()->WriteInt( DS_RENDER );
 	common->WriteDemo()->WriteInt( DC_RENDERVIEW );
 	common->WriteDemo()->WriteInt( renderView->viewID );
-	common->WriteDemo()->WriteFloat( renderView->fov_x );
-	common->WriteDemo()->WriteFloat( renderView->fov_y );
+	common->WriteDemo()->WriteFloat( fov_x );
+	common->WriteDemo()->WriteFloat( fov_y );
 	common->WriteDemo()->WriteVec3( renderView->vieworg );
 	common->WriteDemo()->WriteMat3( renderView->viewaxis );
 	common->WriteDemo()->WriteBool( renderView->cramZNear );

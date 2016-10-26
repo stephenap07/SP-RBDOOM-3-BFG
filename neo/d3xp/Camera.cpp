@@ -242,8 +242,15 @@ void idCameraView::GetViewParms( renderView_t* view )
 	{
 		view->viewaxis = ent->GetPhysics()->GetAxis();
 	}
-	
-	gameLocal.CalcFov( fov, view->fov_x, view->fov_y );
+
+	float fov_x, fov_y;
+	gameLocal.CalcFov( fov, fov_x, fov_y );
+	fov_x = tan(fov_x * 0.5f * idMath::M_DEG2RAD);
+	fov_y = tan(fov_y * 0.5f * idMath::M_DEG2RAD);
+	view->fov_left = -fov_x;
+	view->fov_right = fov_x;
+	view->fov_bottom = -fov_y;
+	view->fov_top = fov_y;
 }
 
 /*
@@ -528,6 +535,7 @@ void idCameraAnim::GetViewParms( renderView_t* view )
 	int				i;
 	int				cut;
 	idQuat			q1, q2, q3;
+	float			fov_x, fov_y;
 	
 	assert( view );
 	if( !view )
@@ -590,7 +598,7 @@ void idCameraAnim::GetViewParms( renderView_t* view )
 	{
 		view->viewaxis = camera[ 0 ].q.ToQuat().ToMat3();
 		view->vieworg = camera[ 0 ].t + offset;
-		view->fov_x = camera[ 0 ].fov;
+		fov_x = camera[ 0 ].fov;
 	}
 	else if( frame > camera.Num() - 2 )
 	{
@@ -620,7 +628,7 @@ void idCameraAnim::GetViewParms( renderView_t* view )
 			camFrame = &camera[ camera.Num() - 1 ];
 			view->viewaxis = camFrame->q.ToQuat().ToMat3();
 			view->vieworg = camFrame->t + offset;
-			view->fov_x = camFrame->fov;
+			fov_x = camFrame->fov;
 		}
 	}
 	else if( lerp == 0.0f )
@@ -628,7 +636,7 @@ void idCameraAnim::GetViewParms( renderView_t* view )
 		camFrame = &camera[ frame ];
 		view->viewaxis = camFrame[ 0 ].q.ToMat3();
 		view->vieworg = camFrame[ 0 ].t + offset;
-		view->fov_x = camFrame[ 0 ].fov;
+		fov_x = camFrame[ 0 ].fov;
 	}
 	else
 	{
@@ -639,10 +647,16 @@ void idCameraAnim::GetViewParms( renderView_t* view )
 		q3.Slerp( q1, q2, lerp );
 		view->viewaxis = q3.ToMat3();
 		view->vieworg = camFrame[ 0 ].t * invlerp + camFrame[ 1 ].t * lerp + offset;
-		view->fov_x = camFrame[ 0 ].fov * invlerp + camFrame[ 1 ].fov * lerp;
+		fov_x = camFrame[ 0 ].fov * invlerp + camFrame[ 1 ].fov * lerp;
 	}
 	
-	gameLocal.CalcFov( view->fov_x, view->fov_x, view->fov_y );
+	gameLocal.CalcFov( fov_x, fov_x, fov_y );
+	fov_x = tan(fov_x * 0.5f * idMath::M_DEG2RAD);
+	fov_y = tan(fov_y * 0.5f * idMath::M_DEG2RAD);
+	view->fov_left = -fov_x;
+	view->fov_right = fov_x;
+	view->fov_bottom = -fov_y;
+	view->fov_top = fov_y;
 	
 	// setup the pvs for this frame
 	UpdatePVSAreas( view->vieworg );
