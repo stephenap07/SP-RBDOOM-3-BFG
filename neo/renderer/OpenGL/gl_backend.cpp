@@ -264,15 +264,24 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 	
 	// create the stereoRenderImage if we haven't already
 	static idImage* stereoRenderImages[2];
-	static idImage* stereoDepthImages[2];
+	static idImage* stereoDepthImage;
 	static Framebuffer * stereoRenderFBO[2];
+	if( stereoDepthImage == NULL )
+	{
+		stereoDepthImage = globalImages->ImageFromFunction( "_stereoDepth", R_DepthImage );
+	}
+	// resize the stereo depth image if the main window has changed size
+	if( stereoDepthImage->GetUploadWidth() != renderSystem->GetWidth() ||
+		stereoDepthImage->GetUploadHeight() != renderSystem->GetHeight() )
+	{
+		stereoDepthImage->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
+	}
 	for( int i = 0; i < 2; i++ )
 	{
+
 		if( stereoRenderImages[i] == NULL )
 		{
 			stereoRenderImages[i] = globalImages->ImageFromFunction( va( "_stereoRender%i", i ), R_MakeStereoRenderImage );
-			stereoDepthImages[i] = globalImages->ImageFromFunction( va( "_stereoDepth%i", i ), R_DepthImage );
-
 			stereoRenderFBO[i] = new Framebuffer( va( "_stereoFBO%i", i ), renderSystem->GetWidth(), renderSystem->GetHeight() );
 
 			stereoRenderFBO[i]->Bind();
@@ -281,7 +290,7 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 			stereoRenderFBO[i]->AddDepthBuffer( GL_DEPTH24_STENCIL8 );
 		
 			stereoRenderFBO[i]->AttachImage2D( GL_TEXTURE_2D, stereoRenderImages[i], 0 );
-			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImages[i] );
+			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImage );
 
 			stereoRenderFBO[i]->Check();
 		}
@@ -291,11 +300,10 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 				stereoRenderImages[i]->GetUploadHeight() != renderSystem->GetHeight() )
 		{
 			stereoRenderImages[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
-			stereoDepthImages[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
 
 			stereoRenderFBO[i]->Bind();
 			stereoRenderFBO[i]->AttachImage2D( GL_TEXTURE_2D, stereoRenderImages[i], 0 );
-			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImages[i] );
+			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImage );
 			stereoRenderFBO[i]->Check();
 			stereoRenderFBO[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
 		}
