@@ -3590,7 +3590,15 @@ static int RB_DrawShaderPasses( const drawSurf_t* const* const drawSurfs, const 
 		// determine the stereoDepth offset
 		// guiStereoScreenOffset will always be zero for 3D views, so the !=
 		// check will never force an update due to the current sort value.
-		const float thisGuiStereoOffset = guiStereoScreenOffset * surf->sort;
+		float thisGuiStereoOffset;
+		if (glConfig.openVREnabled)
+		{
+			thisGuiStereoOffset = guiStereoScreenOffset * (1.5f - 0.5f * surf->sort);
+		}
+		else
+		{
+			thisGuiStereoOffset = guiStereoScreenOffset * surf->sort;
+		}
 		
 		// change the matrix and other space related vars if needed
 		if( surf->space != backEnd.currentSpace || thisGuiStereoOffset != currentGuiStereoOffset )

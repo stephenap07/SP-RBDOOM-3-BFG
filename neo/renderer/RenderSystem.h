@@ -195,6 +195,7 @@ struct glconfig_t
 	int					openVRWidth;
 	int					openVRHeight;
 	float				openVRfovEye[2][4];
+	float				openVRScreenSeparation;
 	
 	// RB begin
 #if !defined(__ANDROID__)

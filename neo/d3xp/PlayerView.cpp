@@ -718,7 +718,15 @@ stereoDistances_t	CaclulateStereoDistances(
 
 	stereoDistances_t	dists = {};
 
-	if( glConfig.openVREnabled || convergenceWorldUnits == 0.0f )
+	if( glConfig.openVREnabled )
+	{
+		// head mounted display mode
+		dists.worldSeparation = CentimetersToInches( interOcularCentimeters * 0.5 );
+		dists.screenSeparation = glConfig.openVRScreenSeparation;
+		return dists;
+	}
+
+	if( convergenceWorldUnits == 0.0f )
 	{
 		// head mounted display mode
 		dists.worldSeparation = CentimetersToInches( interOcularCentimeters * 0.5 );
@@ -777,7 +785,15 @@ void idPlayerView::EmitStereoEyeView( const int eye, idMenuHandler_HUD* hudManag
 	eyeView.vieworg += eye * dists.worldSeparation * eyeView.viewaxis[1];
 	
 	eyeView.viewEyeBuffer = stereoRender_swapEyes.GetBool() ? eye : -eye;
-	eyeView.stereoScreenSeparation = eye * dists.screenSeparation;
+	if (glConfig.openVREnabled)
+	{
+		// we are using fov instead
+		eyeView.stereoScreenSeparation = 0.f;
+	}
+	else
+	{
+		eyeView.stereoScreenSeparation = eye * dists.screenSeparation;
+	}
 	
 	SingleView( &eyeView, hudManager );
 }

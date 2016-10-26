@@ -853,6 +853,12 @@ static void VR_Init()
 		&glConfig.openVRfovEye[0][0], &glConfig.openVRfovEye[0][1],
 		&glConfig.openVRfovEye[0][2], &glConfig.openVRfovEye[0][3]);
 
+	glConfig.openVRScreenSeparation = 
+		0.5f * (glConfig.openVRfovEye[1][1] + glConfig.openVRfovEye[1][0])
+		/ (glConfig.openVRfovEye[1][1] - glConfig.openVRfovEye[1][0])
+		 - 0.5f * (glConfig.openVRfovEye[0][1] + glConfig.openVRfovEye[0][0])
+		/ (glConfig.openVRfovEye[0][1] - glConfig.openVRfovEye[0][0]);
+
 	vr::HmdMatrix34_t mat;
 	
 	mat = hmd->GetEyeToHeadTransform( vr::Eye_Left );

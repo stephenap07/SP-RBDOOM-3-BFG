@@ -141,6 +141,11 @@ void idSWF::Render( idRenderSystem* gui, int time, bool isSplitscreen )
 	const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
 	float scale = swfScale * sysHeight / ( float )frameHeight;
 	
+	if (glConfig.openVREnabled)
+	{
+		scale *= 0.5f;
+	}
+
 	swfRenderState_t renderState;
 	renderState.stereoDepth = ( stereoDepthType_t )mainspriteInstance->GetStereoDepth();
 	renderState.matrix.xx = scale;
