@@ -2542,6 +2542,21 @@ void R_TouchGui_f( const idCmdArgs& args )
 
 /*
 =================
+VR_ResetPose_f
+=================
+*/
+
+void VR_ResetPose_f( const idCmdArgs& args )
+{
+	if (glConfig.openVREnabled)
+	{
+		hmd->ResetSeatedZeroPose();
+	}
+}
+
+
+/*
+=================
 R_InitCvars
 =================
 */
@@ -2578,6 +2593,7 @@ void R_InitCommands()
 	cmdSystem->AddCommand( "listRenderLightDefs", R_ListRenderLightDefs_f, CMD_FL_RENDERER, "lists the light defs" );
 	cmdSystem->AddCommand( "listModes", R_ListModes_f, CMD_FL_RENDERER, "lists all video modes" );
 	cmdSystem->AddCommand( "reloadSurface", R_ReloadSurface_f, CMD_FL_RENDERER, "reloads the decl and images for selected surface" );
+	cmdSystem->AddCommand( "vr_resetPose", VR_ResetPose_f, CMD_FL_RENDERER, "recenters VR" );
 }
 
 /*
