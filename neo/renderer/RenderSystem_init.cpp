@@ -872,6 +872,8 @@ static void VR_Init()
 	Convert4x3Matrix(&mat, hmdEyeRight);
 	MatrixRTInverse(hmdEyeRight);
 #endif
+
+	glConfig.openVREyeScale = mat.m[0][3];
 }
 
 idStr extensions_string;

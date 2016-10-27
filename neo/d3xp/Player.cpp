@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "../framework/Common_local.h"
 #include "PredictedValue_impl.h"
 
+#include <openvr.h>
+
 idCVar flashlight_batteryDrainTimeMS( "flashlight_batteryDrainTimeMS", "30000", CVAR_INTEGER, "amount of time (in MS) it takes for full battery to drain (-1 == no battery drain)" );
 idCVar flashlight_batteryChargeTimeMS( "flashlight_batteryChargeTimeMS", "3000", CVAR_INTEGER, "amount of time (in MS) it takes to fully recharge battery" );
 idCVar flashlight_minActivatePercent( "flashlight_minActivatePercent", ".25", CVAR_FLOAT, "( 0.0 - 1.0 ) minimum amount of battery (%) needed to turn on flashlight" );
@@ -10534,6 +10536,39 @@ void idPlayer::GetViewPos( idVec3& origin, idMat3& axis ) const
 		
 		// adjust the origin based on the camera nodal distance (eye distance from neck)
 		origin += axis[0] * g_viewNodalX.GetFloat() + axis[2] * g_viewNodalZ.GetFloat();
+
+		/*if (glConfig.openVREnabled)
+		{
+			extern idCVar	stereoRender_interOccularCentimeters;
+			extern float CentimetersToInches( const float cm );
+			float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
+			// rescale head motion to virtual head motion.
+			float scale = virtualEyeScale / glConfig.openVREyeScale;
+
+			vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+			vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+			vr::TrackedDevicePose_t &hmdPose = trackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+			if (hmdPose.bPoseIsValid)
+			{
+				vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
+
+				// translation
+				float tx = scale * hmdMat.m[0][3];
+				float ty = scale * hmdMat.m[1][3];
+				float tz = scale * hmdMat.m[2][3];
+
+				origin += axis[0] * -tz + axis[1] * -tx + axis[2] * ty;
+
+				// rotation
+				idMat3 hmdAxis(
+					hmdMat.m[2][2], hmdMat.m[0][2], -hmdMat.m[1][2],
+					hmdMat.m[2][0], hmdMat.m[0][0], -hmdMat.m[1][0],
+					-hmdMat.m[2][1], -hmdMat.m[0][1], hmdMat.m[1][1]
+				);
+				axis = hmdAxis * axis;
+			}
+		}*/
 	}
 }
 
@@ -10667,6 +10702,41 @@ void idPlayer::CalculateRenderView()
 		renderView->fov_right = fov_x;
 		renderView->fov_bottom = -fov_y;
 		renderView->fov_top = fov_y;
+	}
+
+	if (glConfig.openVREnabled)
+	{
+		extern idCVar	stereoRender_interOccularCentimeters;
+		extern float CentimetersToInches( const float cm );
+		float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
+		// rescale head motion to virtual head motion.
+		float scale = virtualEyeScale / glConfig.openVREyeScale;
+
+		vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+		vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+		vr::TrackedDevicePose_t &hmdPose = trackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+		if (hmdPose.bPoseIsValid)
+		{
+			vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
+
+			// translation
+			float tx = scale * hmdMat.m[0][3];
+			float ty = scale * hmdMat.m[1][3];
+			float tz = scale * hmdMat.m[2][3];
+			renderView->vieworg +=
+				renderView->viewaxis[0]*-tz +
+				renderView->viewaxis[1]*-tx +
+				renderView->viewaxis[2]*ty;
+
+			// rotation
+			idMat3 hmdAxis(
+				hmdMat.m[2][2], hmdMat.m[0][2], -hmdMat.m[1][2],
+				hmdMat.m[2][0], hmdMat.m[0][0], -hmdMat.m[1][0],
+				-hmdMat.m[2][1], -hmdMat.m[0][1], hmdMat.m[1][1]
+			);
+			renderView->viewaxis = hmdAxis * renderView->viewaxis;
+		}
 	}
 	
 	if( renderView->fov_bottom == renderView->fov_top )
