@@ -333,6 +333,12 @@ void idSWF::RenderSprite( idRenderSystem* gui, idSWFSpriteInstance* spriteInstan
 				const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
 				const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
 				
+				if (glConfig.openVREnabled)
+				{
+					widthAdj = 0.18f * sysWidth;
+					heightAdj = 0.27f * sysHeight;
+				}
+
 				if( display.spriteInstance->name.Icmp( "_fullScreen" ) == 0 )
 				{
 					renderState2.matrix.tx = display.matrix.tx * renderState.matrix.xx;
