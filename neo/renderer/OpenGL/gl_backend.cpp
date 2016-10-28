@@ -726,6 +726,13 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
 	float ty = scale * hmdMat.m[1][3];
 	float tz = scale * hmdMat.m[2][3];
 
+	if (overridePitch)
+	{
+		float pitch = idMath::M_RAD2DEG * asin(axis[0][2]);
+		idAngles angles(pitch, 0, 0);
+		axis = angles.ToMat3() * axis;
+	}
+
 	origin +=
 		axis[0] * -tz +
 		axis[1] * -tx +
@@ -737,12 +744,6 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
 		hmdMat.m[2][0], hmdMat.m[0][0], -hmdMat.m[1][0],
 		-hmdMat.m[2][1], -hmdMat.m[0][1], hmdMat.m[1][1]
 	);
-	if (overridePitch)
-	{
-		float pitch = idMath::M_RAD2DEG * asin(axis[0][2]);
-		idAngles angles(pitch, 0, 0);
-		axis = angles.ToMat3() * axis;
-	}
 	axis = hmdAxis * axis;
 	return true;
 }
