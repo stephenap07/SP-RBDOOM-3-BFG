@@ -1520,6 +1520,16 @@ void RB_ShowOverdraw();
 void RB_RenderDebugTools( drawSurf_t** drawSurfs, int numDrawSurfs );
 void RB_ShutdownDebugTools();
 
+/*
+=============================================================
+
+VR
+
+=============================================================
+*/
+
+bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch = false);
+
 //=============================================
 
 #include "ResolutionScale.h"

@@ -699,3 +699,50 @@ void RB_ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	}
 	renderLog.EndFrame();
 }
+
+
+bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
+{
+	extern idCVar	stereoRender_interOccularCentimeters;
+	extern float CentimetersToInches( const float cm );
+	float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
+	// rescale head motion to virtual head motion.
+	float scale = virtualEyeScale / glConfig.openVREyeScale;
+
+	vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+	vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+	vr::TrackedDevicePose_t &hmdPose = trackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+
+	if (!hmdPose.bPoseIsValid)
+	{
+		return false;
+	}
+
+	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
+
+	// translation
+	float tx = scale * hmdMat.m[0][3];
+	float ty = scale * hmdMat.m[1][3];
+	float tz = scale * hmdMat.m[2][3];
+
+	origin +=
+		axis[0] * -tz +
+		axis[1] * -tx +
+		axis[2] * ty;
+
+	// rotation
+	idMat3 hmdAxis(
+		hmdMat.m[2][2], hmdMat.m[0][2], -hmdMat.m[1][2],
+		hmdMat.m[2][0], hmdMat.m[0][0], -hmdMat.m[1][0],
+		-hmdMat.m[2][1], -hmdMat.m[0][1], hmdMat.m[1][1]
+	);
+	if (overridePitch)
+	{
+		float pitch = idMath::M_RAD2DEG * asin(axis[0][2]);
+		idAngles angles(pitch, 0, 0);
+		axis = angles.ToMat3() * axis;
+	}
+	axis = hmdAxis * axis;
+	return true;
+}

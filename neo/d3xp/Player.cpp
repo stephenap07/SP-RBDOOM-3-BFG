@@ -33,8 +33,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "../framework/Common_local.h"
 #include "PredictedValue_impl.h"
 
-#include <openvr.h>
-
 idCVar flashlight_batteryDrainTimeMS( "flashlight_batteryDrainTimeMS", "30000", CVAR_INTEGER, "amount of time (in MS) it takes for full battery to drain (-1 == no battery drain)" );
 idCVar flashlight_batteryChargeTimeMS( "flashlight_batteryChargeTimeMS", "3000", CVAR_INTEGER, "amount of time (in MS) it takes to fully recharge battery" );
 idCVar flashlight_minActivatePercent( "flashlight_minActivatePercent", ".25", CVAR_FLOAT, "( 0.0 - 1.0 ) minimum amount of battery (%) needed to turn on flashlight" );
@@ -6432,8 +6430,16 @@ void idPlayer::UpdateFocus()
 		return;
 	}
 	
-	start = GetEyePosition();
-	end = start + firstPersonViewAxis[0] * 80.0f;
+	if (glConfig.openVREnabled)
+	{
+		start = GetEyePosition();
+		end = start + focusViewAxis[0] * 80.0f;
+	}
+	else
+	{
+		start = GetEyePosition();
+		end = start + firstPersonViewAxis[0] * 80.0f;
+	}
 	
 	// player identification -> names to the hud
 	if( common->IsMultiplayer() && IsLocallyControlled() )
@@ -10539,35 +10545,7 @@ void idPlayer::GetViewPos( idVec3& origin, idMat3& axis ) const
 
 		/*if (glConfig.openVREnabled)
 		{
-			extern idCVar	stereoRender_interOccularCentimeters;
-			extern float CentimetersToInches( const float cm );
-			float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
-			// rescale head motion to virtual head motion.
-			float scale = virtualEyeScale / glConfig.openVREyeScale;
-
-			vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-			vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
-
-			vr::TrackedDevicePose_t &hmdPose = trackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
-			if (hmdPose.bPoseIsValid)
-			{
-				vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
-
-				// translation
-				float tx = scale * hmdMat.m[0][3];
-				float ty = scale * hmdMat.m[1][3];
-				float tz = scale * hmdMat.m[2][3];
-
-				origin += axis[0] * -tz + axis[1] * -tx + axis[2] * ty;
-
-				// rotation
-				idMat3 hmdAxis(
-					hmdMat.m[2][2], hmdMat.m[0][2], -hmdMat.m[1][2],
-					hmdMat.m[2][0], hmdMat.m[0][0], -hmdMat.m[1][0],
-					-hmdMat.m[2][1], -hmdMat.m[0][1], hmdMat.m[1][1]
-				);
-				axis = hmdAxis * axis;
-			}
+			VR_CalculateView(origin, axis, true);
 		}*/
 	}
 }
@@ -10603,6 +10581,29 @@ void idPlayer::CalculateFirstPersonView()
 		// shakefrom sound stuff only happens in first person
 		firstPersonViewAxis = firstPersonViewAxis * playerView.ShakeAxis();
 #endif
+	}
+	if (glConfig.openVREnabled)
+	{
+		focusViewOrigin = firstPersonViewOrigin;
+		focusViewAxis = firstPersonViewAxis;
+
+		focusViewOrigin -= focusViewAxis[0] * g_viewNodalX.GetFloat() + focusViewAxis[2] * g_viewNodalZ.GetFloat();
+		focusViewOrigin.z += 13.f;
+
+		idVec3 pelvis = focusViewOrigin;
+		pelvis.z -= 27.f;
+
+		VR_CalculateView(focusViewOrigin, focusViewAxis, true);
+
+		flashlightOrigin = focusViewOrigin;
+		idVec3 up = focusViewOrigin - pelvis;
+		up.NormalizeFast();
+		idVec3 forward = firstPersonViewAxis[0];
+		idVec3 right = up.Cross(forward);
+		forward = right.Cross(up);
+		flashlightAxis[0] = forward;
+		flashlightAxis[1] = right;
+		flashlightAxis[2] = up;
 	}
 }
 
@@ -10647,6 +10648,8 @@ void idPlayer::CalculateRenderView()
 	renderView->time[1] = gameLocal.fast.time;
 	
 	renderView->viewID = 0;
+
+	bool overridePitch = false;
 	
 	// check if we should be drawing from a camera's POV
 	if( !noclip && ( gameLocal.GetCamera() || privateCameraView ) )
@@ -10686,6 +10689,7 @@ void idPlayer::CalculateRenderView()
 		}
 		else
 		{
+			overridePitch = true;
 			renderView->vieworg = firstPersonViewOrigin;
 			renderView->viewaxis = firstPersonViewAxis;
 			
@@ -10706,37 +10710,12 @@ void idPlayer::CalculateRenderView()
 
 	if (glConfig.openVREnabled)
 	{
-		extern idCVar	stereoRender_interOccularCentimeters;
-		extern float CentimetersToInches( const float cm );
-		float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
-		// rescale head motion to virtual head motion.
-		float scale = virtualEyeScale / glConfig.openVREyeScale;
-
-		vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-		vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
-
-		vr::TrackedDevicePose_t &hmdPose = trackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
-		if (hmdPose.bPoseIsValid)
+		if (overridePitch)
 		{
-			vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
-
-			// translation
-			float tx = scale * hmdMat.m[0][3];
-			float ty = scale * hmdMat.m[1][3];
-			float tz = scale * hmdMat.m[2][3];
-			renderView->vieworg +=
-				renderView->viewaxis[0]*-tz +
-				renderView->viewaxis[1]*-tx +
-				renderView->viewaxis[2]*ty;
-
-			// rotation
-			idMat3 hmdAxis(
-				hmdMat.m[2][2], hmdMat.m[0][2], -hmdMat.m[1][2],
-				hmdMat.m[2][0], hmdMat.m[0][0], -hmdMat.m[1][0],
-				-hmdMat.m[2][1], -hmdMat.m[0][1], hmdMat.m[1][1]
-			);
-			renderView->viewaxis = hmdAxis * renderView->viewaxis;
+			renderView->vieworg -= renderView->viewaxis[0] * g_viewNodalX.GetFloat() + renderView->viewaxis[2] * g_viewNodalZ.GetFloat();
+			renderView->vieworg.z += 13.f;
 		}
+		VR_CalculateView(renderView->vieworg, renderView->viewaxis, overridePitch);
 	}
 	
 	if( renderView->fov_bottom == renderView->fov_top )

@@ -2600,8 +2600,16 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	
 	if( isPlayerFlashlight )
 	{
-		viewWeaponOrigin = playerViewOrigin;
-		viewWeaponAxis = playerViewAxis;
+		if (glConfig.openVREnabled)
+		{
+			viewWeaponOrigin = owner->flashlightOrigin;
+			viewWeaponAxis = owner->flashlightAxis;
+		}
+		else
+		{
+			viewWeaponOrigin = playerViewOrigin;
+			viewWeaponAxis = playerViewAxis;
+		}
 		
 		fraccos = cos( ( gameLocal.framenum & 255 ) / 127.0f * idMath::PI );
 		
