@@ -3591,7 +3591,11 @@ static int RB_DrawShaderPasses( const drawSurf_t* const* const drawSurfs, const 
 		// guiStereoScreenOffset will always be zero for 3D views, so the !=
 		// check will never force an update due to the current sort value.
 		float thisGuiStereoOffset;
-		if (glConfig.openVREnabled)
+		if (surf->sort < 0.f)
+		{
+			thisGuiStereoOffset = 0.f;
+		}
+		else if (glConfig.openVREnabled)
 		{
 			thisGuiStereoOffset = guiStereoScreenOffset * (1.5f - 0.5f * surf->sort);
 		}

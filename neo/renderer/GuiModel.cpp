@@ -31,6 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "tr_local.h"
 
+const float idGuiModel::STEREO_DEPTH_DISABLE = -1.0f;
 const float idGuiModel::STEREO_DEPTH_NEAR = 0.0f;
 const float idGuiModel::STEREO_DEPTH_MID  = 0.5f;
 const float idGuiModel::STEREO_DEPTH_FAR  = 1.0f;
@@ -47,6 +48,7 @@ idGuiModel::idGuiModel()
 	{
 		shaderParms[i] = 1.0f;
 	}
+	viewEyeBuffer = 0;
 }
 
 /*
@@ -78,6 +80,17 @@ idGuiModel::ReadFromDemo
 */
 void idGuiModel::ReadFromDemo( idDemoFile* demo )
 {
+}
+
+void idGuiModel::SetViewEyeBuffer( int veb )
+{
+	if (veb == viewEyeBuffer)
+	{
+		return;
+	}
+	EmitFullScreen();
+	Clear();
+	viewEyeBuffer = veb;
 }
 
 /*
@@ -195,6 +208,9 @@ void idGuiModel::EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16],
 				case STEREO_DEPTH_TYPE_FAR:
 					drawSurf->sort = STEREO_DEPTH_FAR;
 					break;
+				case STEREO_DEPTH_TYPE_DISABLE:
+					drawSurf->sort = STEREO_DEPTH_DISABLE;
+					break;
 				case STEREO_DEPTH_TYPE_NONE:
 				default:
 					drawSurf->sort = defaultStereoDepth;
@@ -254,7 +270,7 @@ void idGuiModel::EmitFullScreen()
 		viewDef->renderView.stereoScreenSeparation = screenSeparation;
 		
 		extern idCVar stereoRender_swapEyes;
-		viewDef->renderView.viewEyeBuffer = 0;	// render to both buffers
+		viewDef->renderView.viewEyeBuffer = viewEyeBuffer;
 		if( stereoRender_swapEyes.GetBool() )
 		{
 			viewDef->renderView.stereoScreenSeparation = -screenSeparation;

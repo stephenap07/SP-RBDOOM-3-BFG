@@ -565,6 +565,7 @@ struct copyRenderCommand_t
 {
 	renderCommand_t		commandId;
 	renderCommand_t* 	next;
+	int					viewEyeBuffer;
 	int					x;
 	int					y;
 	int					imageWidth;
@@ -819,6 +820,7 @@ public:
 	virtual void			SetColor( const idVec4& color );
 	virtual uint32			GetColor();
 	virtual void			SetGLState( const uint64 glState ) ;
+	virtual void			SetStereoDepth( enum stereoDepthType_t );
 	virtual void			DrawFilled( const idVec4& color, float x, float y, float w, float h );
 	virtual void			DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, const idMaterial* material );
 	virtual void			DrawStretchPic( const idVec4& topLeft, const idVec4& topRight, const idVec4& bottomRight, const idVec4& bottomLeft, const idMaterial* material );
@@ -907,6 +909,7 @@ public:
 	int						guiRecursionLevel;		// to prevent infinite overruns
 	uint32					currentColorNativeBytesOrder;
 	uint64					currentGLState;
+	enum stereoDepthType_t	currentStereoDepth;
 	class idGuiModel* 		guiModel;
 	
 	idList<idFont*, TAG_FONT>		fonts;

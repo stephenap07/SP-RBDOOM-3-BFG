@@ -435,6 +435,9 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	{
 		return;
 	}
+
+	// everything here gets drawn twice in stereoscopic and needs to know which buffer.
+	tr.guiModel->SetViewEyeBuffer( view->viewEyeBuffer );
 	
 	// place the sound origin for the player
 	gameSoundWorld->PlaceListener( view->vieworg, view->viewaxis, player->entityNumber + 1 );
@@ -446,6 +449,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 		{
 			player->pdaMenu->Update();
 		}
+		tr.guiModel->SetViewEyeBuffer( 0 );
 		return;
 	}
 	
@@ -468,6 +472,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	
 	if( !hudManager )
 	{
+		tr.guiModel->SetViewEyeBuffer( 0 );
 		return;
 	}
 	
@@ -502,6 +507,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 		
 		if( player->spectating )
 		{
+			tr.guiModel->SetViewEyeBuffer( 0 );
 			return;
 		}
 		
@@ -570,6 +576,8 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 			renderSystem->DrawStretchPic( 0.0f, 0.0f, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0.0f, 0.0f, 1.0f, 1.0f, mtr );
 		}
 	}
+
+	tr.guiModel->SetViewEyeBuffer( 0 );
 }
 
 
@@ -1390,6 +1398,11 @@ void FullscreenFX_Warp::HighQuality()
 	center.x = renderSystem->GetVirtualWidth() / 2.0f;
 	center.y = renderSystem->GetVirtualHeight() / 2.0f;
 	radius = 200;
+
+	if (glConfig.openVREnabled)
+	{
+		center.x += renderSystem->GetVirtualWidth() * glConfig.openVRScreenSeparation * tr.guiModel->GetViewEyeBuffer() * 0.5;
+	}
 	
 	for( float i = 0; i < 360; i += STEP )
 	{
@@ -1971,6 +1984,8 @@ void FullscreenFXManager::Process( const renderView_t* view )
 		return;
 	}
 	
+	renderSystem->SetStereoDepth(STEREO_DEPTH_TYPE_DISABLE);
+	
 	// do the process
 	for( int i = 0; i < fx.Num(); i++ )
 	{
@@ -2012,6 +2027,8 @@ void FullscreenFXManager::Process( const renderView_t* view )
 			Blendback( pfx->GetFadeAlpha() );
 		}
 	}
+
+	renderSystem->SetStereoDepth(STEREO_DEPTH_TYPE_NONE);
 }
 
 

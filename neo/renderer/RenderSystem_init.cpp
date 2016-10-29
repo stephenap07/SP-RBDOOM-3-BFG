@@ -2624,6 +2624,7 @@ void idRenderSystemLocal::Clear()
 	currentRenderCrop = 0;
 	currentColorNativeBytesOrder = 0xFFFFFFFF;
 	currentGLState = 0;
+	currentStereoDepth = STEREO_DEPTH_TYPE_NONE;
 	guiRecursionLevel = 0;
 	guiModel = NULL;
 	memset( gammaTable, 0, sizeof( gammaTable ) );

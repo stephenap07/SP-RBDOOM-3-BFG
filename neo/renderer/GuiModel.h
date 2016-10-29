@@ -47,6 +47,9 @@ public:
 	void	WriteToDemo( idDemoFile* demo );
 	void	ReadFromDemo( idDemoFile* demo );
 	
+	void	SetViewEyeBuffer( int veb );
+	int		GetViewEyeBuffer() { return viewEyeBuffer; }
+	
 	// allocates memory for verts and indexes in frame-temporary buffer memory
 	void	BeginFrame();
 	
@@ -64,10 +67,13 @@ private:
 	void	EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16],
 						  bool depthHack, bool allowFullScreenStereoDepth, bool linkAsEntity );
 						  
+	int							viewEyeBuffer;				// -1 = left eye, 1 = right eye, 0 = monoscopic view or GUI
+	
 	guiModelSurface_t* 			surf;
 	
 	float						shaderParms[ MAX_ENTITY_SHADER_PARMS ];
 	
+	static const float STEREO_DEPTH_DISABLE;
 	static const float STEREO_DEPTH_NEAR;
 	static const float STEREO_DEPTH_MID;
 	static const float STEREO_DEPTH_FAR;

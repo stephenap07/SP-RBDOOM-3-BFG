@@ -359,8 +359,16 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 					RB_SetBuffer( cmds );
 					break;
 				case RC_COPY_RENDER:
+				{
+					const copyRenderCommand_t* crc = ( const copyRenderCommand_t* )cmds;
+					if( crc->viewEyeBuffer && crc->viewEyeBuffer != stereoEye )
+					{
+						// avoid unnecessary copy
+						continue;
+					}
 					RB_CopyRender( cmds );
 					break;
+				}
 				case RC_POST_PROCESS:
 				{
 					postProcessCommand_t* cmd = ( postProcessCommand_t* )cmds;
