@@ -6432,7 +6432,7 @@ void idPlayer::UpdateFocus()
 	
 	if (glConfig.openVREnabled)
 	{
-		start = GetEyePosition();
+		start = focusViewOrigin;
 		end = start + focusViewAxis[0] * 80.0f;
 	}
 	else
