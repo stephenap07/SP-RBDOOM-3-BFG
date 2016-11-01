@@ -3965,7 +3965,7 @@ void idWeapon::GetProjectileLaunchOriginAndAxis( idVec3& origin, idMat3& axis )
 	assert( owner != NULL );
 	
 	// calculate the muzzle position
-	if( barrelJointView != INVALID_JOINT && projectileDict.GetBool( "launchFromBarrel" ) )
+	if( barrelJointView != INVALID_JOINT )
 	{
 		// there is an explicit joint for the muzzle
 		// GetGlobalJointTransform( true, barrelJointView, muzzleOrigin, muzzleAxis );
@@ -3978,7 +3978,10 @@ void idWeapon::GetProjectileLaunchOriginAndAxis( idVec3& origin, idMat3& axis )
 		axis = playerViewAxis;
 	}
 	
-	axis = playerViewAxis;	// Fix for plasma rifle not firing correctly on initial shot of a burst fire
+	if (!IsGameStereoRendered())
+	{
+		axis = playerViewAxis;	// Fix for plasma rifle not firing correctly on initial shot of a burst fire
+	}
 }
 
 /*
@@ -4289,10 +4292,11 @@ void idWeapon::Event_LaunchProjectilesEllipse( int num_projectiles, float spread
 	}
 	
 	// calculate the muzzle position
-	if( barrelJointView != INVALID_JOINT && projectileDict.GetBool( "launchFromBarrel" ) )
+	if( barrelJointView != INVALID_JOINT )
 	{
 		// there is an explicit joint for the muzzle
-		GetGlobalJointTransform( true, barrelJointView, muzzleOrigin, muzzleAxis );
+		//GetGlobalJointTransform( true, barrelJointView, muzzleOrigin, muzzleAxis );
+		GetMuzzlePositionWithHacks( muzzleOrigin, muzzleAxis );
 	}
 	else
 	{

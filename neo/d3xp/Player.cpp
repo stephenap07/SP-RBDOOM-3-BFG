@@ -10398,11 +10398,14 @@ void idPlayer::CalculateViewWeaponPos( idVec3& origin, idMat3& axis )
 	}
 	
 	// speed sensitive idle drift
-	scale = xyspeed + 40.0f;
-	fracsin = scale * sin( MS2SEC( gameLocal.time ) ) * 0.01f;
-	angles.roll		+= fracsin;
-	angles.yaw		+= fracsin;
-	angles.pitch	+= fracsin;
+	if (!IsGameStereoRendered())
+	{
+		scale = xyspeed + 40.0f;
+		fracsin = scale * sin( MS2SEC( gameLocal.time ) ) * 0.01f;
+		angles.roll		+= fracsin;
+		angles.yaw		+= fracsin;
+		angles.pitch	+= fracsin;
+	}
 	
 	// decoupled weapon aiming in head mounted displays
 	angles.pitch += independentWeaponPitchAngle;
