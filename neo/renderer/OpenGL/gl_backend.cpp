@@ -702,6 +702,7 @@ void RB_ExecuteBackEndCommands( const emptyCommand_t* cmds )
 }
 
 
+float g_VRScale = 1.f;
 vr::TrackedDevicePose_t g_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
 extern vr::TrackedDeviceIndex_t g_openVRLeftController;
 extern vr::TrackedDeviceIndex_t g_openVRRightController;
@@ -739,6 +740,8 @@ void VR_Update()
 	}
 
 	vr::VRCompositor()->WaitGetPoses(g_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+	g_VRScale = VR_GetScale();
 }
 
 bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, bool overridePitch)
@@ -753,7 +756,7 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, boo
 		return false;
 	}
 
-	float scale = VR_GetScale();
+	float scale = g_VRScale;
 
 	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
 
@@ -791,8 +794,38 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, boo
 	return true;
 }
 
-// returns gun position relative to the head
-bool VR_GetGunPosition(idVec3 &origin, idMat3 &axis)
+// returns left controller position relative to the head
+bool VR_GetLeftController(idVec3 &origin, idMat3 &axis)
+{
+	if (g_openVRLeftController == vr::k_unTrackedDeviceIndexInvalid)
+	{
+		return false;
+	}
+
+	vr::TrackedDevicePose_t &hmdPose = g_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+	vr::TrackedDevicePose_t &handPose = g_rTrackedDevicePose[g_openVRLeftController];
+
+	if (!hmdPose.bPoseIsValid || !handPose.bPoseIsValid)
+	{
+		return false;
+	}
+
+	float scale = g_VRScale;
+
+	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
+	vr::HmdMatrix34_t &handMat = handPose.mDeviceToAbsoluteTracking;
+
+	origin.Set(
+		-scale * (handMat.m[2][3] - hmdMat.m[2][3]),
+		-scale * (handMat.m[0][3] - hmdMat.m[0][3]),
+		scale * (handMat.m[1][3] - hmdMat.m[1][3]) );
+	axis[0].Set(handMat.m[2][2], handMat.m[0][2], -handMat.m[1][2]);
+	axis[1].Set(handMat.m[2][0], handMat.m[0][0], -handMat.m[1][0]);
+	axis[2].Set(-handMat.m[2][1], -handMat.m[0][1], handMat.m[1][1]);
+}
+
+// returns right controller position relative to the head
+bool VR_GetRightController(idVec3 &origin, idMat3 &axis)
 {
 	if (g_openVRRightController == vr::k_unTrackedDeviceIndexInvalid)
 	{
@@ -807,7 +840,7 @@ bool VR_GetGunPosition(idVec3 &origin, idMat3 &axis)
 		return false;
 	}
 
-	float scale = VR_GetScale();
+	float scale = g_VRScale;
 
 	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
 	vr::HmdMatrix34_t &handMat = handPose.mDeviceToAbsoluteTracking;
@@ -832,7 +865,7 @@ void VR_MoveDelta(idVec3 &delta, float &height)
 		return;
 	}
 
-	float scale = VR_GetScale();
+	float scale = g_VRScale;
 
 	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
 

@@ -1533,7 +1533,8 @@ VR
 
 void VR_Update();
 bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, bool overridePitch = false);
-bool VR_GetGunPosition(idVec3 &origin, idMat3 &axis);
+bool VR_GetLeftController(idVec3 &origin, idMat3 &axis);
+bool VR_GetRightController(idVec3 &origin, idMat3 &axis);
 void VR_MoveDelta(idVec3 &delta, float &height);
 
 //=============================================

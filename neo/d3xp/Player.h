@@ -421,10 +421,17 @@ public:
 	// if a third person view is used
 	idVec3					firstPersonViewOrigin;
 	idMat3					firstPersonViewAxis;
-	idVec3					focusViewOrigin;
-	idMat3					focusViewAxis;
 	idVec3					flashlightOrigin;
 	idMat3					flashlightAxis;
+
+	idVec3					hmdOrigin;
+	idMat3					hmdAxis;
+	bool					hasLeftController;
+	idVec3					leftControllerOrigin;
+	idMat3					leftControllerAxis;
+	bool					hasRightController;
+	idVec3					rightControllerOrigin;
+	idMat3					rightControllerAxis;
 	
 	idDragEntity			dragEntity;
 	
