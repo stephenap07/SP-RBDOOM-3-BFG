@@ -8800,7 +8800,7 @@ void idPlayer::UpdateLaserSight()
 			!weapon.GetEntity()->ShowCrosshair() ||
 			AI_DEAD ||
 			weapon->IsHidden() ||
-			!weapon->GetMuzzlePositionWithHacks( muzzleOrigin, muzzleAxis ) )
+			!weapon->GetMuzzlePosition( muzzleOrigin, muzzleAxis ) )
 	{
 		// hide it
 		laserSightRenderEntity.allowSurfaceInViewID = -1;

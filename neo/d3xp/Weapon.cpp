@@ -2596,6 +2596,13 @@ bool idWeapon::GetMuzzlePositionWithHacks( idVec3& origin, idMat3& axis )
 	return true;
 }
 
+bool idWeapon::GetMuzzlePosition( idVec3& origin, idMat3& axis )
+{
+	origin = muzzleOrigin;
+	axis = muzzleAxis;
+	return hasMuzzle;
+}
+
 /*
 ================
 idWeapon::GetHandle
@@ -2844,8 +2851,8 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	}
 	else
 	{
-		idVec3 invOrigin;
-		idMat3 invAxis;
+		static idVec3 invOrigin;
+		static idMat3 invAxis;
 		if (glConfig.openVREnabled && owner->hasRightController && GetInverseHandle( invOrigin, invAxis ))
 		{
 			// remove pitch
@@ -2896,6 +2903,19 @@ void idWeapon::PresentWeapon( bool showViewModel )
 		
 		// kick up based on repeat firing
 		MuzzleRise( viewWeaponOrigin, viewWeaponAxis );
+
+		if( barrelJointView != INVALID_JOINT )
+		{
+			// there is an explicit joint for the muzzle
+			hasMuzzle = GetMuzzlePositionWithHacks( muzzleOrigin, muzzleAxis );
+		}
+		else
+		{
+			// go straight out of the view
+			hasMuzzle = false;
+			muzzleOrigin = playerViewOrigin;
+			muzzleAxis = playerViewAxis;
+		}
 	}
 	
 	// set the physics position and orientation
@@ -2951,23 +2971,27 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	if( showViewModel && !disabled && weaponSmoke && ( weaponSmokeStartTime != 0 ) )
 	{
 		// use the barrel joint if available
+		idVec3 smokeOrigin;
+		idMat3 smokeAxis;
 		
 		if( smokeJointView != INVALID_JOINT )
 		{
-			GetGlobalJointTransform( true, smokeJointView, muzzleOrigin, muzzleAxis );
+			GetGlobalJointTransform( true, smokeJointView, smokeOrigin, smokeAxis );
 		}
 		else if( barrelJointView != INVALID_JOINT )
 		{
-			GetGlobalJointTransform( true, barrelJointView, muzzleOrigin, muzzleAxis );
+			//GetGlobalJointTransform( true, barrelJointView, muzzleOrigin, muzzleAxis );
+			smokeOrigin = muzzleOrigin;
+			smokeAxis = muzzleAxis;
 		}
 		else
 		{
 			// default to going straight out the view
-			muzzleOrigin = playerViewOrigin;
-			muzzleAxis = playerViewAxis;
+			smokeOrigin = playerViewOrigin;
+			smokeAxis = playerViewAxis;
 		}
 		// spit out a particle
-		if( !gameLocal.smokeParticles->EmitSmoke( weaponSmoke, weaponSmokeStartTime, gameLocal.random.RandomFloat(), muzzleOrigin, muzzleAxis, timeGroup /*_D3XP*/ ) )
+		if( !gameLocal.smokeParticles->EmitSmoke( weaponSmoke, weaponSmokeStartTime, gameLocal.random.RandomFloat(), smokeOrigin, smokeAxis, timeGroup /*_D3XP*/ ) )
 		{
 			weaponSmokeStartTime = ( continuousSmoke ) ? gameLocal.time : 0;
 		}
@@ -2993,17 +3017,19 @@ void idWeapon::PresentWeapon( bool showViewModel )
 			{
 				if( part->smoke )
 				{
+					idVec3 smokeOrigin;
+					idMat3 smokeAxis;
 					if( part->joint != INVALID_JOINT )
 					{
-						GetGlobalJointTransform( true, part->joint, muzzleOrigin, muzzleAxis );
+						GetGlobalJointTransform( true, part->joint, smokeOrigin, smokeAxis );
 					}
 					else
 					{
 						// default to going straight out the view
-						muzzleOrigin = playerViewOrigin;
-						muzzleAxis = playerViewAxis;
+						smokeOrigin = playerViewOrigin;
+						smokeAxis = playerViewAxis;
 					}
-					if( !gameLocal.smokeParticles->EmitSmoke( part->particle, part->startTime, gameLocal.random.RandomFloat(), muzzleOrigin, muzzleAxis, timeGroup /*_D3XP*/ ) )
+					if( !gameLocal.smokeParticles->EmitSmoke( part->particle, part->startTime, gameLocal.random.RandomFloat(), smokeOrigin, smokeAxis, timeGroup /*_D3XP*/ ) )
 					{
 						part->active = false;	// all done
 						part->startTime = 0;
@@ -4191,35 +4217,6 @@ void idWeapon::Event_CreateProjectile()
 
 /*
 ================
-idWeapon::GetProjectileLaunchOriginAndAxis
-================
-*/
-void idWeapon::GetProjectileLaunchOriginAndAxis( idVec3& origin, idMat3& axis )
-{
-	assert( owner != NULL );
-	
-	// calculate the muzzle position
-	if( barrelJointView != INVALID_JOINT )
-	{
-		// there is an explicit joint for the muzzle
-		// GetGlobalJointTransform( true, barrelJointView, muzzleOrigin, muzzleAxis );
-		GetMuzzlePositionWithHacks( origin, axis );
-	}
-	else
-	{
-		// go straight out of the view
-		origin = playerViewOrigin;
-		axis = playerViewAxis;
-	}
-	
-	if (!IsGameStereoRendered())
-	{
-		axis = playerViewAxis;	// Fix for plasma rifle not firing correctly on initial shot of a burst fire
-	}
-}
-
-/*
-================
 idWeapon::Event_LaunchProjectiles
 ================
 */
@@ -4305,9 +4302,6 @@ void idWeapon::Event_LaunchProjectiles( int num_projectiles, float spread, float
 		worldModel.GetEntity()->SetShaderParm( SHADERPARM_DIVERSITY, renderEntity.shaderParms[ SHADERPARM_DIVERSITY ] );
 		worldModel.GetEntity()->SetShaderParm( SHADERPARM_TIMEOFFSET, renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] );
 	}
-	
-	// calculate the muzzle position
-	GetProjectileLaunchOriginAndAxis( muzzleOrigin, muzzleAxis );
 	
 	// add some to the kick time, incrementally moving repeat firing weapons back
 	if( kick_endtime < gameLocal.realClientTime )
@@ -4526,20 +4520,6 @@ void idWeapon::Event_LaunchProjectilesEllipse( int num_projectiles, float spread
 	{
 		worldModel.GetEntity()->SetShaderParm( SHADERPARM_DIVERSITY, renderEntity.shaderParms[ SHADERPARM_DIVERSITY ] );
 		worldModel.GetEntity()->SetShaderParm( SHADERPARM_TIMEOFFSET, renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] );
-	}
-	
-	// calculate the muzzle position
-	if( barrelJointView != INVALID_JOINT )
-	{
-		// there is an explicit joint for the muzzle
-		//GetGlobalJointTransform( true, barrelJointView, muzzleOrigin, muzzleAxis );
-		GetMuzzlePositionWithHacks( muzzleOrigin, muzzleAxis );
-	}
-	else
-	{
-		// go straight out of the view
-		muzzleOrigin = playerViewOrigin;
-		muzzleAxis = playerViewAxis;
 	}
 	
 	// add some to the kick time, incrementally moving repeat firing weapons back
