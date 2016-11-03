@@ -10363,12 +10363,37 @@ void idPlayer::CalculateViewWeaponPos( idVec3& origin, idMat3& axis )
 	idAngles	angles;
 	int			delta;
 	
+	// these cvars are just for hand tweaking before moving a value to the weapon def
+	idVec3	gunpos( g_gun_x.GetFloat(), g_gun_y.GetFloat(), g_gun_z.GetFloat() );
+
+	if (glConfig.openVREnabled && !glConfig.openVRSeated)
+	{
+		origin = hmdOrigin;
+
+		// remove pitch
+		float pitch = idMath::M_RAD2DEG * asin(firstPersonViewAxis[0][2]);
+		axis = idAngles(pitch, 0, 0).ToMat3() * firstPersonViewAxis;
+
+		if (hasRightController)
+		{
+			idVec3 dir = rightControllerOrigin;
+			dir.z += 12;
+			dir = idAngles(0,18.f,0).ToMat3() * dir;
+			dir.NormalizeFast();
+			axis = dir.ToMat3() * axis;
+		}
+		else
+		{
+			axis = hmdAxis * axis;
+		}
+
+		origin += axis * gunpos;
+		return;
+	}
+	
 	// CalculateRenderView must have been called first
 	const idVec3& viewOrigin = firstPersonViewOrigin;
 	const idMat3& viewAxis = firstPersonViewAxis;
-	
-	// these cvars are just for hand tweaking before moving a value to the weapon def
-	idVec3	gunpos( g_gun_x.GetFloat(), g_gun_y.GetFloat(), g_gun_z.GetFloat() );
 	
 	// as the player changes direction, the gun will take a small lag
 	idVec3	gunOfs = GunAcceleratingOffset();

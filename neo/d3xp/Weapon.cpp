@@ -2631,6 +2631,7 @@ bool idWeapon::GetInverseHandle( idVec3& origin, idMat3& axis )
 	}
 	else if( weaponIconName == "guis/assets/hud/icons/grenade_new.tga" )
 	{
+		return false;
 		//jointName = "Rhand";
 		jointName = "nadebody";
 	}
@@ -2648,6 +2649,7 @@ bool idWeapon::GetInverseHandle( idVec3& origin, idMat3& axis )
 	}
 	else if( weaponIconName == "guis/assets/hud/icons/soul_cube.tga" )
 	{
+		return false;
 		jointName = "Rhand1";
 	}
 
