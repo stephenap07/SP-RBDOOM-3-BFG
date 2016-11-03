@@ -2512,8 +2512,16 @@ bool idWeapon::GetMuzzlePositionWithHacks( idVec3& origin, idMat3& axis )
 	// workaround hacks...
 	const idStr& weaponIconName = pdaIcon;
 	
-	origin = playerViewOrigin;
-	axis = playerViewAxis;
+	if (glConfig.openVREnabled && !glConfig.openVRSeated)
+	{
+		origin = viewWeaponOrigin;
+		axis = viewWeaponAxis;
+	}
+	else
+	{
+		origin = playerViewOrigin;
+		axis = playerViewAxis;
+	}
 	
 	if( weaponIconName == "guis/assets/hud/icons/grenade_new.tga" )
 	{
@@ -2834,31 +2842,30 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	}
 	else
 	{
-		// calculate weapon position based on player movement bobbing
-		owner->CalculateViewWeaponPos( viewWeaponOrigin, viewWeaponAxis );
-
 		idVec3 vrOrigin;
 		idMat3 vrAxis;
-		if (glConfig.openVREnabled && VR_GetGunPosition(vrOrigin, vrAxis))
+		idVec3 invOrigin;
+		idMat3 invAxis;
+		if (glConfig.openVREnabled && VR_GetGunPosition( vrOrigin, vrAxis ) && GetInverseHandle( invOrigin, invAxis ))
 		{
-			idVec3 invOrigin;
-			idMat3 invAxis;
-			if (GetInverseHandle( invOrigin, invAxis ))
-			{
-				// remove pitch
-				float pitch = idMath::M_RAD2DEG * asin(viewWeaponAxis[0][2]);
-				idAngles angles(pitch, 0, 0);
-				viewWeaponAxis = angles.ToMat3() * viewWeaponAxis;
+			// remove pitch
+			float pitch = idMath::M_RAD2DEG * asin(playerViewAxis[0][2]);
+			idAngles angles(pitch, 0, 0);
+			viewWeaponAxis = angles.ToMat3() * playerViewAxis;
 
-				// apply controller tracking
-				viewWeaponOrigin = owner->focusViewOrigin + viewWeaponAxis * vrOrigin;
-				angles.Set(45.f,0.f,0.f);
-				viewWeaponAxis = angles.ToMat3() * vrAxis * viewWeaponAxis;
+			// apply controller tracking
+			viewWeaponOrigin = owner->focusViewOrigin + viewWeaponAxis * vrOrigin;
+			angles.Set(45.f,0.f,0.f);
+			viewWeaponAxis = angles.ToMat3() * vrAxis * viewWeaponAxis;
 
-				// recenter weapon to controller
-				viewWeaponOrigin += viewWeaponAxis * invOrigin;
-				viewWeaponAxis = invAxis * viewWeaponAxis;
-			}
+			// recenter weapon to controller
+			viewWeaponOrigin += viewWeaponAxis * invOrigin;
+			viewWeaponAxis = invAxis * viewWeaponAxis;
+		}
+		else
+		{
+			// calculate weapon position based on player movement bobbing
+			owner->CalculateViewWeaponPos( viewWeaponOrigin, viewWeaponAxis );
 		}
 		
 		// hide offset is for dropping the gun when approaching a GUI or NPC
@@ -4764,8 +4771,17 @@ void idWeapon::Event_Melee()
 	
 	if( !common->IsClient() )
 	{
-		idVec3 start = playerViewOrigin;
-		idVec3 end = start + playerViewAxis[0] * ( meleeDistance * owner->PowerUpModifier( MELEE_DISTANCE ) );
+		idVec3 start, end;
+		if (glConfig.openVREnabled && !glConfig.openVRSeated)
+		{
+			start = viewWeaponOrigin;
+			end = start + viewWeaponAxis[0] * ( meleeDistance * owner->PowerUpModifier( MELEE_DISTANCE ) );
+		}
+		else
+		{
+			start = playerViewOrigin;
+			end = start + playerViewAxis[0] * ( meleeDistance * owner->PowerUpModifier( MELEE_DISTANCE ) );
+		}
 		gameLocal.clip.TracePoint( tr, start, end, MASK_SHOT_RENDERMODEL, owner );
 		if( tr.fraction < 1.0f )
 		{
