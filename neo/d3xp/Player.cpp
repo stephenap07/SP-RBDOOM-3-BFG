@@ -10608,25 +10608,33 @@ void idPlayer::CalculateFirstPersonView()
 		focusViewAxis = firstPersonViewAxis;
 
 		focusViewOrigin -= focusViewAxis[0] * g_viewNodalX.GetFloat() + focusViewAxis[2] * g_viewNodalZ.GetFloat();
+
 		if (glConfig.openVRSeated)
 		{
 			focusViewOrigin.z += 13.f;
+
+			idVec3 pelvis = focusViewOrigin;
+			pelvis.z -= 27.f;
+
+			VR_CalculateView(focusViewOrigin, focusViewAxis, eyeOffset, true);
+
+			flashlightOrigin = focusViewOrigin;
+			idVec3 up = focusViewOrigin - pelvis;
+			up.NormalizeFast();
+			idVec3 forward = firstPersonViewAxis[0];
+			idVec3 left = up.Cross(forward);
+			forward = left.Cross(up);
+			flashlightAxis[0] = forward;
+			flashlightAxis[1] = left;
+			flashlightAxis[2] = up;
 		}
+		else
+		{
+			VR_CalculateView(focusViewOrigin, focusViewAxis, eyeOffset, true);
 
-		idVec3 pelvis = focusViewOrigin;
-		pelvis.z -= 27.f;
-
-		VR_CalculateView(focusViewOrigin, focusViewAxis, eyeOffset, true);
-
-		flashlightOrigin = focusViewOrigin;
-		idVec3 up = focusViewOrigin - pelvis;
-		up.NormalizeFast();
-		idVec3 forward = firstPersonViewAxis[0];
-		idVec3 right = up.Cross(forward);
-		forward = right.Cross(up);
-		flashlightAxis[0] = forward;
-		flashlightAxis[1] = right;
-		flashlightAxis[2] = up;
+			flashlightOrigin = focusViewOrigin;
+			flashlightAxis = focusViewAxis;
+		}
 	}
 }
 
