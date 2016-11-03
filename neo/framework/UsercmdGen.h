@@ -92,7 +92,8 @@ public:
 		mx(),
 		my(),
 		pos( 0.0f, 0.0f, 0.0f ),
-		speedSquared( 0.0f )
+		speedSquared( 0.0f ),
+		vrDelta(0,0,0)
 	{
 		angles[0] = 0;
 		angles[1] = 0;
@@ -118,6 +119,8 @@ public:
 	// Clients are authoritative on their positions
 	idVec3		pos;
 	float		speedSquared;
+
+	idVec3		vrDelta;
 	
 public:
 	void		Serialize( class idSerializer& s, const usercmd_t& base );

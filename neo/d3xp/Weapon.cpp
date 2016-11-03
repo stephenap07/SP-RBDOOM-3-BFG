@@ -2590,6 +2590,209 @@ bool idWeapon::GetMuzzlePositionWithHacks( idVec3& origin, idMat3& axis )
 
 /*
 ================
+idWeapon::GetHandle
+================
+*/
+bool idWeapon::GetInverseHandle( idVec3& origin, idMat3& axis )
+{
+	const idStr& weaponIconName = pdaIcon;
+
+	char * jointName = NULL;
+
+	if( weaponIconName == "guis/assets/hud/icons/chainsaw_new.tga" )
+	{
+		jointName = "chainsaw";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/pistol_new.tga" )
+	{
+		jointName = "Bod";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/shotgun_new.tga" )
+	{
+		jointName = "body";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/machinegun_new.tga" )
+	{
+		//jointName = "Ext";
+		jointName = "Bod";
+		//jointName = "Rhand";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/chaingun_new.tga" )
+	{
+		jointName = "chaingun";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/grenade_new.tga" )
+	{
+		//jointName = "Rhand";
+		jointName = "nadebody";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/plasmagun_new.tga" )
+	{
+		jointName = "pgbody2";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/rocketlauncher_new.tga" )
+	{
+		jointName = "RLBODY";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/bfg_new.tga" )
+	{
+		jointName = "Body";
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/soul_cube.tga" )
+	{
+		jointName = "Rhand1";
+	}
+
+	if (!jointName)
+	{
+		return false;
+	}
+
+	jointHandle_t joint = animator.GetJointHandle( jointName );
+
+	static jointHandle_t jointOverride = INVALID_JOINT;
+	if (jointOverride != INVALID_JOINT)
+	{
+		joint = jointOverride;
+	}
+
+	if (joint == INVALID_JOINT)
+	{
+		return false;
+	}
+
+	if( !animator.GetJointTransform( joint, gameLocal.time, origin, axis ) )
+	{
+		return false;
+	}
+
+	// inverse axis
+	idVec3 dir = axis[0];
+	idVec3 up = axis[1];
+	idVec3 left = -axis[2];
+	axis[0] = dir;
+	axis[1] = left;
+	axis[2] = up;
+	axis = axis.Inverse();
+
+	// inverse origin
+	origin = axis * -origin;
+
+	if( weaponIconName == "guis/assets/hud/icons/chainsaw_new.tga" )
+	{
+		static idAngles csAngle1(0,90,0);
+		static idAngles csAngle2(0,0,-9);
+		static idAngles csAngle3(-20,0,0);
+		idMat3 csAxis = csAngle1.ToMat3() * csAngle2.ToMat3() * csAngle3.ToMat3();
+		idAngles tempAngles = csAxis.ToAngles();
+		axis = axis * csAxis;
+
+		static idVec3 csOrigin(-2,1.4f,-3);
+		origin = csAxis * origin + csOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/pistol_new.tga" )
+	{
+		static idAngles pistolAngles(14,0,0);
+		static idVec3 pistolOrigin(0,0,-1.5f);
+		idMat3 pistolAxis = pistolAngles.ToMat3();
+		axis = axis * pistolAxis;
+		origin = pistolAxis * origin + pistolOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/shotgun_new.tga" )
+	{
+		static idAngles shotgunAngle1(0,-92,0);
+		static idAngles shotgunAngle2(14,0,0);
+		static idAngles shotgunAngle3(0,0,0);
+		idMat3 shotgunAxis = shotgunAngle1.ToMat3() * shotgunAngle2.ToMat3() * shotgunAngle3.ToMat3();
+		axis = axis * shotgunAxis;
+
+		static idVec3 shotgunOrigin(-2,0,-3);
+		origin = shotgunAxis * origin + shotgunOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/machinegun_new.tga" )
+	{
+		static idAngles mgAngle1(0,26,0);
+		static idAngles mgAngle2(17,0,0);
+		static idAngles mgAngle3(0,0,-4);
+		idMat3 mgAxis = mgAngle1.ToMat3() * mgAngle2.ToMat3() * mgAngle3.ToMat3();
+		idAngles tempAngles = mgAxis.ToAngles();
+		axis = axis * mgAxis;
+
+		static idVec3 mgOrigin(-4,-2,0);
+		origin = mgAxis * origin + mgOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/chaingun_new.tga" )
+	{
+		static idAngles chaingunAngle1(14,0,0);
+		static idAngles chaingunAngle2(0,0,0);
+		static idAngles chaingunAngle3(0,0,0);
+		idMat3 chaingunAxis = chaingunAngle1.ToMat3() * chaingunAngle2.ToMat3() * chaingunAngle3.ToMat3();
+		axis = axis * chaingunAxis;
+
+		static idVec3 chaingunOrigin(0,0,-10);
+		origin = chaingunAxis * origin + chaingunOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/grenade_new.tga" )
+	{
+		static idAngles grenadeAngle1(0,-99,0);
+		static idAngles grenadeAngle2(0,0,-45);
+		static idAngles grenadeAngle3(0,0,0);
+		idMat3 grenadeAxis = grenadeAngle1.ToMat3() * grenadeAngle2.ToMat3() * grenadeAngle3.ToMat3();
+		axis = axis * grenadeAxis;
+
+		static idVec3 grenadeOrigin(0,0,0);
+		origin = grenadeAxis * origin + grenadeOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/plasmagun_new.tga" )
+	{
+		static idAngles pgAngle1(0,90,0);
+		static idAngles pgAngle2(0,0,0);
+		static idAngles pgAngle3(0,0,0);
+		idMat3 pgAxis = pgAngle1.ToMat3() * pgAngle2.ToMat3() * pgAngle3.ToMat3();
+		axis = axis * pgAxis;
+
+		static idVec3 pgOrigin(-1.5f,0,-1.5f);
+		origin = pgAxis * origin + pgOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/rocketlauncher_new.tga" )
+	{
+		static idAngles rlAngle1(0,90,0);
+		static idAngles rlAngle2(23,0,0);
+		static idAngles rlAngle3(0,0,0);
+		idMat3 rlAxis = rlAngle1.ToMat3() * rlAngle2.ToMat3() * rlAngle3.ToMat3();
+		axis = axis * rlAxis;
+
+		static idVec3 rlOrigin(-1.5f,0,-2);
+		origin = rlAxis * origin + rlOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/bfg_new.tga" )
+	{
+		static idAngles bfgAngle1(14,0,0);
+		static idAngles bfgAngle2(0,0,0);
+		static idAngles bfgAngle3(0,0,0);
+		idMat3 bfgAxis = bfgAngle1.ToMat3() * bfgAngle2.ToMat3() * bfgAngle3.ToMat3();
+		axis = axis * bfgAxis;
+
+		static idVec3 bfgOrigin(0,0,0);
+		origin = bfgAxis * origin + bfgOrigin;
+	}
+	else if( weaponIconName == "guis/assets/hud/icons/soul_cube.tga" )
+	{
+		static idAngles cubeAngle1(180,0,0);
+		static idAngles cubeAngle2(0,99,0);
+		static idAngles cubeAngle3(0,0,-45);
+		idMat3 cubeAxis = cubeAngle1.ToMat3() * cubeAngle2.ToMat3() * cubeAngle3.ToMat3();
+		axis = axis * cubeAxis;
+
+		static idVec3 cubeOrigin(0,0,0);
+		origin = cubeAxis * origin + cubeOrigin;
+	}
+
+	return true;
+}
+
+/*
+================
 idWeapon::PresentWeapon
 ================
 */
@@ -2633,6 +2836,30 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	{
 		// calculate weapon position based on player movement bobbing
 		owner->CalculateViewWeaponPos( viewWeaponOrigin, viewWeaponAxis );
+
+		idVec3 vrOrigin;
+		idMat3 vrAxis;
+		if (glConfig.openVREnabled && VR_GetGunPosition(vrOrigin, vrAxis))
+		{
+			idVec3 invOrigin;
+			idMat3 invAxis;
+			if (GetInverseHandle( invOrigin, invAxis ))
+			{
+				// remove pitch
+				float pitch = idMath::M_RAD2DEG * asin(viewWeaponAxis[0][2]);
+				idAngles angles(pitch, 0, 0);
+				viewWeaponAxis = angles.ToMat3() * viewWeaponAxis;
+
+				// apply controller tracking
+				viewWeaponOrigin = owner->focusViewOrigin + viewWeaponAxis * vrOrigin;
+				angles.Set(45.f,0.f,0.f);
+				viewWeaponAxis = angles.ToMat3() * vrAxis * viewWeaponAxis;
+
+				// recenter weapon to controller
+				viewWeaponOrigin += viewWeaponAxis * invOrigin;
+				viewWeaponAxis = invAxis * viewWeaponAxis;
+			}
+		}
 		
 		// hide offset is for dropping the gun when approaching a GUI or NPC
 		// This is simpler to manage than doing the weapon put-away animation

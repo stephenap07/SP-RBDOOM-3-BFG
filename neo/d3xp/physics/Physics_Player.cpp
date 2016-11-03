@@ -226,6 +226,11 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 		// calculate position we are trying to move to
 		end = current.origin + time_left * current.velocity;
 		
+		if (bumpcount == 0)
+		{
+			end += command.vrDelta;
+		}
+		
 		// see if we can make it there
 		gameLocal.clip.Translation( trace, current.origin, end, clipModel, clipModel->GetAxis(), clipMask, self );
 		
@@ -817,7 +822,7 @@ void idPhysics_Player::WalkMove()
 	
 	// don't do anything if standing still
 	vel = current.velocity - ( current.velocity * gravityNormal ) * gravityNormal;
-	if( !vel.LengthSqr() )
+	if( !vel.LengthSqr() && !command.vrDelta.x && !command.vrDelta.y )
 	{
 		return;
 	}

@@ -819,6 +819,8 @@ safeMode:
 }
 
 vr::IVRSystem * hmd;
+vr::TrackedDeviceIndex_t g_openVRLeftController = vr::k_unTrackedDeviceIndexInvalid;
+vr::TrackedDeviceIndex_t g_openVRRightController = vr::k_unTrackedDeviceIndexInvalid;
 
 static void VR_Init()
 {
@@ -839,7 +841,6 @@ static void VR_Init()
 	}
 
 	//vr::VRCompositor()->ForceInterleavedReprojectionOn( true );
-	vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
 
 	glConfig.openVREnabled = true;
 
@@ -861,8 +862,8 @@ static void VR_Init()
 
 	vr::HmdMatrix34_t mat;
 	
-	mat = hmd->GetEyeToHeadTransform( vr::Eye_Left );
 #if 0
+	mat = hmd->GetEyeToHeadTransform( vr::Eye_Left );
 	Convert4x3Matrix(&mat, hmdEyeLeft);
 	MatrixRTInverse(hmdEyeLeft);
 #endif
@@ -874,6 +875,21 @@ static void VR_Init()
 #endif
 
 	glConfig.openVREyeScale = mat.m[0][3];
+
+	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
+	g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
+
+	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid
+		|| g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		glConfig.openVRSeated = false;
+		vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
+	}
+	else
+	{
+		glConfig.openVRSeated = true;
+		vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
+	}
 }
 
 idStr extensions_string;

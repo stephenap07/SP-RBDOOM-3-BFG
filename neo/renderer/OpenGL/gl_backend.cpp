@@ -153,14 +153,7 @@ const void GL_BlockingSwapBuffers()
 	
 	if (glConfig.openVREnabled)
 	{
-		//glFinish();
-		//vr::VRCompositor()->PostPresentHandoff();
-
-		//extern vr::IVRSystem * hmd;
-		//vr::VREvent_t e;
-		//while( hmd->PollNextEvent( &e, sizeof( e ) ) ) { }
-		vr::TrackedDevicePose_t m_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-		vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+		VR_Update();
 	}
 
 	const int beforeFence = Sys_Milliseconds();
@@ -709,30 +702,66 @@ void RB_ExecuteBackEndCommands( const emptyCommand_t* cmds )
 }
 
 
-bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
+vr::TrackedDevicePose_t g_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+extern vr::TrackedDeviceIndex_t g_openVRLeftController;
+extern vr::TrackedDeviceIndex_t g_openVRRightController;
+
+float VR_GetScale()
 {
 	extern idCVar	stereoRender_interOccularCentimeters;
 	extern float CentimetersToInches( const float cm );
 	float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
 	// rescale head motion to virtual head motion.
-	float scale = virtualEyeScale / glConfig.openVREyeScale;
+	return virtualEyeScale / glConfig.openVREyeScale;
+}
 
-	vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-	vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+void VR_Update()
+{
+	//glFinish();
+	//vr::VRCompositor()->PostPresentHandoff();
 
-	vr::TrackedDevicePose_t &hmdPose = trackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid
+		|| g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		if (glConfig.openVRSeated)
+		{
+			glConfig.openVRSeated = false;
+			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
+		}
+	}
+	else
+	{
+		if (!glConfig.openVRSeated)
+		{
+			glConfig.openVRSeated = true;
+			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
+		}
+	}
+
+	vr::VRCompositor()->WaitGetPoses(g_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+}
+
+bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, bool overridePitch)
+{
+	//vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+	//vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+	vr::TrackedDevicePose_t &hmdPose = g_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
 
 	if (!hmdPose.bPoseIsValid)
 	{
 		return false;
 	}
 
+	float scale = VR_GetScale();
+
 	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
 
 	// translation
-	float tx = scale * hmdMat.m[0][3];
-	float ty = scale * hmdMat.m[1][3];
-	float tz = scale * hmdMat.m[2][3];
+	idVec3 hmdOrigin(
+		-scale * hmdMat.m[2][3],
+		-scale * hmdMat.m[0][3],
+		scale * hmdMat.m[1][3]);
 
 	if (overridePitch)
 	{
@@ -741,10 +770,16 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
 		axis = angles.ToMat3() * axis;
 	}
 
-	origin +=
-		axis[0] * -tz +
-		axis[1] * -tx +
-		axis[2] * ty;
+	if (!glConfig.openVRSeated)
+	{
+		origin.z -= eyeOffset.z;
+		// ignore x and y
+		origin += axis[2] * hmdOrigin.z;
+	}
+	else
+	{
+		origin += axis * hmdOrigin;
+	}
 
 	// rotation
 	idMat3 hmdAxis(
@@ -755,3 +790,69 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
 	axis = hmdAxis * axis;
 	return true;
 }
+
+// returns gun position relative to the head
+bool VR_GetGunPosition(idVec3 &origin, idMat3 &axis)
+{
+	if (g_openVRRightController == vr::k_unTrackedDeviceIndexInvalid)
+	{
+		return false;
+	}
+
+	vr::TrackedDevicePose_t &hmdPose = g_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+	vr::TrackedDevicePose_t &handPose = g_rTrackedDevicePose[g_openVRRightController];
+
+	if (!hmdPose.bPoseIsValid || !handPose.bPoseIsValid)
+	{
+		return false;
+	}
+
+	float scale = VR_GetScale();
+
+	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
+	vr::HmdMatrix34_t &handMat = handPose.mDeviceToAbsoluteTracking;
+
+	origin.Set(
+		-scale * (handMat.m[2][3] - hmdMat.m[2][3]),
+		-scale * (handMat.m[0][3] - hmdMat.m[0][3]),
+		scale * (handMat.m[1][3] - hmdMat.m[1][3]) );
+	axis[0].Set(handMat.m[2][2], handMat.m[0][2], -handMat.m[1][2]);
+	axis[1].Set(handMat.m[2][0], handMat.m[0][0], -handMat.m[1][0]);
+	axis[2].Set(-handMat.m[2][1], -handMat.m[0][1], handMat.m[1][1]);
+}
+
+void VR_MoveDelta(idVec3 &delta, float &height)
+{
+	vr::TrackedDevicePose_t &hmdPose = g_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+
+	if (!hmdPose.bPoseIsValid)
+	{
+		delta.Set(0,0,0);
+		height = 0.f;
+		return;
+	}
+
+	float scale = VR_GetScale();
+
+	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
+
+	float hmdX = -scale * hmdMat.m[2][3];
+	float hmdY = -scale * hmdMat.m[0][3];
+	height = scale * hmdMat.m[1][3];
+
+	static bool hasLast = false;
+	static float lastX;
+	static float lastY;
+	if (hasLast)
+	{
+		delta.Set( hmdX - lastX, hmdY - lastY, 0);
+	}
+	else
+	{
+		delta.Set(0,0,0);
+	}
+	hasLast = true;
+	lastX = hmdX;
+	lastY = hmdY;
+}
+

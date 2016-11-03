@@ -8273,6 +8273,23 @@ void idPlayer::Move()
 		idMat3	axis;
 		GetViewPos( org, axis );
 		
+		if (glConfig.openVREnabled && !glConfig.openVRSeated)
+		{
+			float height;
+			VR_MoveDelta( usercmd.vrDelta, height );
+
+			idAngles angles = viewAngles + viewBobAngles + playerView.AngleOffset();
+			angles.pitch = 0;
+			angles.roll = 0;
+
+			usercmd.vrDelta = usercmd.vrDelta * angles.ToMat3();
+
+			if (height < 12*4.5f)
+			{
+				usercmd.buttons |= BUTTON_CROUCH;
+			}
+		}
+
 		physicsObj.SetPlayerInput( usercmd, axis[0] );
 	}
 	
@@ -10548,7 +10565,7 @@ void idPlayer::GetViewPos( idVec3& origin, idMat3& axis ) const
 
 		/*if (glConfig.openVREnabled)
 		{
-			VR_CalculateView(origin, axis, true);
+			VR_CalculateView(origin, axis, eyeOffset, true);
 		}*/
 	}
 }
@@ -10591,12 +10608,15 @@ void idPlayer::CalculateFirstPersonView()
 		focusViewAxis = firstPersonViewAxis;
 
 		focusViewOrigin -= focusViewAxis[0] * g_viewNodalX.GetFloat() + focusViewAxis[2] * g_viewNodalZ.GetFloat();
-		focusViewOrigin.z += 13.f;
+		if (glConfig.openVRSeated)
+		{
+			focusViewOrigin.z += 13.f;
+		}
 
 		idVec3 pelvis = focusViewOrigin;
 		pelvis.z -= 27.f;
 
-		VR_CalculateView(focusViewOrigin, focusViewAxis, true);
+		VR_CalculateView(focusViewOrigin, focusViewAxis, eyeOffset, true);
 
 		flashlightOrigin = focusViewOrigin;
 		idVec3 up = focusViewOrigin - pelvis;
@@ -10716,9 +10736,12 @@ void idPlayer::CalculateRenderView()
 		if (overridePitch)
 		{
 			renderView->vieworg -= renderView->viewaxis[0] * g_viewNodalX.GetFloat() + renderView->viewaxis[2] * g_viewNodalZ.GetFloat();
-			renderView->vieworg.z += 13.f;
+			if (glConfig.openVRSeated)
+			{
+				renderView->vieworg.z += 13.f;
+			}
 		}
-		VR_CalculateView(renderView->vieworg, renderView->viewaxis, overridePitch);
+		VR_CalculateView(renderView->vieworg, renderView->viewaxis, eyeOffset, overridePitch);
 	}
 	
 	if( renderView->fov_bottom == renderView->fov_top )
