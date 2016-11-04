@@ -142,6 +142,37 @@ idCVar g_weaponShadows( "g_weaponShadows", "0", CVAR_BOOL | CVAR_ARCHIVE, "Cast 
 
 extern idCVar cg_predictedSpawn_debug;
 
+class idDeclSkinBaseVR : public idDeclBase
+{
+	virtual const char* 	GetName() const { return ""; }
+	virtual declType_t		GetType() const { return DECL_SKIN; }
+	virtual declState_t		GetState() const { return DS_PARSED; }
+	virtual bool			IsImplicit() const { return false; }
+	virtual bool			IsValid() const { return true; }
+	virtual void			Invalidate() {}
+	virtual void			Reload() {}
+	virtual void			EnsureNotPurged() {}
+	virtual int				Index() const { return -1; }
+	virtual int				GetLineNum() const { return 0; }
+	virtual const char* 	GetFileName() const { return ""; }
+	virtual void			GetText( char* text ) const { text[0] = '\0'; }
+	virtual int				GetTextLength() const { return 1; }
+	virtual void			SetText( const char* text ) {}
+	virtual bool			ReplaceSourceFileText() { return false; }
+	virtual bool			SourceFileChanged() const { return false; }
+	virtual void			MakeDefault() {}
+	virtual bool			EverReferenced() const { return false; }
+	virtual bool			SetDefaultText() { return false; }
+	virtual const char* 	DefaultDefinition() const { return ""; }
+	virtual bool			Parse( const char* text, const int textLength, bool allowBinaryVersion ) { return false; }
+	virtual void			FreeData() {}
+	virtual size_t			Size() const { return 0; }
+	virtual void			List() const {}
+	virtual void			Print() const {}
+};
+
+idDeclSkinBaseVR g_skinBaseVR;
+
 class idDeclSkinVR : public idDeclSkin
 {
 public:
@@ -199,6 +230,14 @@ public:
 			g_skin = new idDeclSkinVR();
 		}
 		g_skin->wrapped = wrap;
+		if (wrap)
+		{
+			g_skin->base = wrap->base;
+		}
+		else
+		{
+			g_skin->base = &g_skinBaseVR;
+		}
 		return g_skin;
 	}
 
