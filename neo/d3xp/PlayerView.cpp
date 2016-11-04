@@ -263,6 +263,11 @@ void idPlayerView::DamageImpulse( idVec3 localKickDir, const idDict* damageDef )
 		// keep shotgun from obliterating the view
 		return;
 	}
+
+	if (glConfig.openVREnabled)
+	{
+		return;
+	}
 	
 	float dvTime = damageDef->GetFloat( "dv_time" );
 	if( dvTime )
