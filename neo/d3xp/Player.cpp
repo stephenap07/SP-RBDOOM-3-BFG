@@ -10652,6 +10652,9 @@ void idPlayer::CalculateFirstPersonView()
 			flashlightAxis[0] = forward;
 			flashlightAxis[1] = left;
 			flashlightAxis[2] = up;
+
+			hasLeftController = false;
+			hasRightController = false;
 		}
 		else
 		{
