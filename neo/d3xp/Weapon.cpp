@@ -142,6 +142,83 @@ idCVar g_weaponShadows( "g_weaponShadows", "0", CVAR_BOOL | CVAR_ARCHIVE, "Cast 
 
 extern idCVar cg_predictedSpawn_debug;
 
+class idDeclSkinVR : public idDeclSkin
+{
+public:
+	idDeclSkinVR()
+	{
+		wrapped = NULL;
+
+		const idMaterial* nodraw = declManager->FindMaterial( "textures/common/nodraw" );
+
+		skinMapping_t map;
+
+		map.from = declManager->FindMaterial( "models/characters/player/arm2" );
+		map.to = nodraw;
+		mappings.Append( map );
+
+		map.from = declManager->FindMaterial( "models/weapons/berserk/fist" );
+		map.to = nodraw;
+		mappings.Append( map );
+
+		map.from = declManager->FindMaterial( "models/weapons/hands/hand" );
+		map.to = nodraw;
+		mappings.Append( map );
+	}
+
+	virtual const idMaterial* RemapShaderBySkin( const idMaterial* shader ) const
+	{
+		const idMaterial *result = idDeclSkin::RemapShaderBySkin( shader );
+		if (result != shader)
+		{
+			return result;
+		}
+
+		if (wrapped)
+		{
+			return wrapped->RemapShaderBySkin( shader );
+		}
+	
+		// didn't find a match or wildcard, so stay the same
+		return shader;
+	}
+
+	static idDeclSkin * GetSkin()
+	{
+		if (!g_skin)
+		{
+			g_skin = new idDeclSkinVR();
+		}
+		return g_skin;
+	}
+
+	static idDeclSkin * WrapSkin(const idDeclSkin * wrap)
+	{
+		if (!g_skin)
+		{
+			g_skin = new idDeclSkinVR();
+		}
+		g_skin->wrapped = wrap;
+		return g_skin;
+	}
+
+	static const idDeclSkin * GetWrappedSkin()
+	{
+		if (!g_skin)
+		{
+			g_skin = new idDeclSkinVR();
+		}
+		return g_skin->wrapped;
+	}
+
+protected:
+	static idDeclSkinVR * g_skin;
+
+	const idDeclSkin * wrapped;
+};
+
+idDeclSkinVR *idDeclSkinVR::g_skin = NULL;
+
 /***********************************************************************
 
 	init
@@ -3139,6 +3216,27 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	{
 		owner->SetControllerShake( highMagnitude, highDuration, lowMagnitude, lowDuration );
 	}
+
+	if (glConfig.openVREnabled && !isPlayerFlashlight)
+	{
+		if (glConfig.openVRSeated)
+		{
+			if( idDeclSkinVR::GetSkin() == renderEntity.customSkin )
+			{
+				// unwrap the skin
+				renderEntity.customSkin = idDeclSkinVR::GetWrappedSkin();
+				UpdateVisuals();
+			}
+		}
+		else if (pdaIcon != "guis/assets/hud/icons/fists_new.tga")
+		{
+			if( idDeclSkinVR::GetSkin() != renderEntity.customSkin )
+			{
+				renderEntity.customSkin = idDeclSkinVR::WrapSkin(renderEntity.customSkin);
+				UpdateVisuals();
+			}
+		}
+	}
 }
 
 /*
@@ -4053,8 +4151,18 @@ void idWeapon::Event_SetSkin( const char* skinname )
 		skinDecl = declManager->FindSkin( skinname );
 	}
 	
+	const idDeclSkin * currentSkin;
+	if (glConfig.openVREnabled && !isPlayerFlashlight)
+	{
+		currentSkin = idDeclSkinVR::GetWrappedSkin();
+	}
+	else
+	{
+		currentSkin = renderEntity.customSkin;
+	}
+
 	// Don't update if the skin hasn't changed.
-	if( renderEntity.customSkin == skinDecl && worldModel.GetEntity() != NULL && worldModel.GetEntity()->GetSkin() == skinDecl )
+	if( currentSkin == skinDecl && worldModel.GetEntity() != NULL && worldModel.GetEntity()->GetSkin() == skinDecl )
 	{
 		return;
 	}
