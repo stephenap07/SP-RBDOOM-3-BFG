@@ -1132,8 +1132,7 @@ int idJoystickWin32::PollInputEvents( int inputDeviceNum )
 						//Sys_QueEvent( SE_KEY, K_JOY_TRIGGER1, pressed, 0, NULL, 0 );
 						break;
 					case vr::k_EButton_SteamVR_Touchpad:
-						PostInputEvent( inputDeviceNum, J_ACTION3, pressed);
-						//Sys_QueEvent( SE_KEY, K_JOY_TRIGGER1, pressed, 0, NULL, 0 );
+						PostInputEvent( inputDeviceNum, J_ACTION1, pressed);
 						break;
 					default:
 						printf("test");
@@ -1157,7 +1156,7 @@ int idJoystickWin32::PollInputEvents( int inputDeviceNum )
 						//Sys_QueEvent( SE_KEY, K_JOY_TRIGGER2, pressed, 0, NULL, inputDeviceNum);
 						break;
 					case vr::k_EButton_SteamVR_Touchpad:
-						PostInputEvent( inputDeviceNum, J_ACTION1, pressed);
+						PostInputEvent( inputDeviceNum, J_ACTION3, pressed);
 						break;
 					default:
 						printf("test");

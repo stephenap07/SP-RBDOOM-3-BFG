@@ -8272,6 +8272,8 @@ void idPlayer::Move()
 		idVec3	org;
 		idMat3	axis;
 		GetViewPos( org, axis );
+
+		idVec3 forward = axis[0];
 		
 		if (glConfig.openVREnabled && !glConfig.openVRSeated)
 		{
@@ -8288,9 +8290,14 @@ void idPlayer::Move()
 			{
 				usercmd.buttons |= BUTTON_CROUCH;
 			}
+
+			if (hasLeftController)
+			{
+				forward = leftControllerAxis[0] * idAngles(0, viewAngles.yaw, 0).ToMat3();
+			}
 		}
 
-		physicsObj.SetPlayerInput( usercmd, axis[0] );
+		physicsObj.SetPlayerInput( usercmd, forward );
 	}
 	
 	// FIXME: physics gets disabled somehow
