@@ -142,122 +142,6 @@ idCVar g_weaponShadows( "g_weaponShadows", "0", CVAR_BOOL | CVAR_ARCHIVE, "Cast 
 
 extern idCVar cg_predictedSpawn_debug;
 
-class idDeclSkinBaseVR : public idDeclBase
-{
-	virtual const char* 	GetName() const { return ""; }
-	virtual declType_t		GetType() const { return DECL_SKIN; }
-	virtual declState_t		GetState() const { return DS_PARSED; }
-	virtual bool			IsImplicit() const { return false; }
-	virtual bool			IsValid() const { return true; }
-	virtual void			Invalidate() {}
-	virtual void			Reload() {}
-	virtual void			EnsureNotPurged() {}
-	virtual int				Index() const { return -1; }
-	virtual int				GetLineNum() const { return 0; }
-	virtual const char* 	GetFileName() const { return ""; }
-	virtual void			GetText( char* text ) const { text[0] = '\0'; }
-	virtual int				GetTextLength() const { return 1; }
-	virtual void			SetText( const char* text ) {}
-	virtual bool			ReplaceSourceFileText() { return false; }
-	virtual bool			SourceFileChanged() const { return false; }
-	virtual void			MakeDefault() {}
-	virtual bool			EverReferenced() const { return false; }
-	virtual bool			SetDefaultText() { return false; }
-	virtual const char* 	DefaultDefinition() const { return ""; }
-	virtual bool			Parse( const char* text, const int textLength, bool allowBinaryVersion ) { return false; }
-	virtual void			FreeData() {}
-	virtual size_t			Size() const { return 0; }
-	virtual void			List() const {}
-	virtual void			Print() const {}
-};
-
-idDeclSkinBaseVR g_skinBaseVR;
-
-class idDeclSkinVR : public idDeclSkin
-{
-public:
-	idDeclSkinVR()
-	{
-		wrapped = NULL;
-
-		const idMaterial* nodraw = declManager->FindMaterial( "textures/common/nodraw" );
-
-		skinMapping_t map;
-
-		map.from = declManager->FindMaterial( "models/characters/player/arm2" );
-		map.to = nodraw;
-		mappings.Append( map );
-
-		map.from = declManager->FindMaterial( "models/weapons/berserk/fist" );
-		map.to = nodraw;
-		mappings.Append( map );
-
-		map.from = declManager->FindMaterial( "models/weapons/hands/hand" );
-		map.to = nodraw;
-		mappings.Append( map );
-	}
-
-	virtual const idMaterial* RemapShaderBySkin( const idMaterial* shader ) const
-	{
-		const idMaterial *result = idDeclSkin::RemapShaderBySkin( shader );
-		if (result != shader)
-		{
-			return result;
-		}
-
-		if (wrapped)
-		{
-			return wrapped->RemapShaderBySkin( shader );
-		}
-	
-		// didn't find a match or wildcard, so stay the same
-		return shader;
-	}
-
-	static idDeclSkin * GetSkin()
-	{
-		if (!g_skin)
-		{
-			g_skin = new idDeclSkinVR();
-		}
-		return g_skin;
-	}
-
-	static idDeclSkin * WrapSkin(const idDeclSkin * wrap)
-	{
-		if (!g_skin)
-		{
-			g_skin = new idDeclSkinVR();
-		}
-		g_skin->wrapped = wrap;
-		if (wrap)
-		{
-			g_skin->base = wrap->base;
-		}
-		else
-		{
-			g_skin->base = &g_skinBaseVR;
-		}
-		return g_skin;
-	}
-
-	static const idDeclSkin * GetWrappedSkin()
-	{
-		if (!g_skin)
-		{
-			g_skin = new idDeclSkinVR();
-		}
-		return g_skin->wrapped;
-	}
-
-protected:
-	static idDeclSkinVR * g_skin;
-
-	const idDeclSkin * wrapped;
-};
-
-idDeclSkinVR *idDeclSkinVR::g_skin = NULL;
-
 /***********************************************************************
 
 	init
@@ -3278,18 +3162,20 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	{
 		if (glConfig.openVRSeated)
 		{
-			if( idDeclSkinVR::GetSkin() == renderEntity.customSkin )
+			if( &vrWrapperSkin == renderEntity.customSkin )
 			{
 				// unwrap the skin
-				renderEntity.customSkin = idDeclSkinVR::GetWrappedSkin();
+				renderEntity.customSkin = vrWrapperSkin.GetWrapped();
 				UpdateVisuals();
 			}
 		}
 		else if (pdaIcon != "guis/assets/hud/icons/fists_new.tga")
 		{
-			if( idDeclSkinVR::GetSkin() != renderEntity.customSkin )
+			if( &vrWrapperSkin != renderEntity.customSkin )
 			{
-				renderEntity.customSkin = idDeclSkinVR::WrapSkin(renderEntity.customSkin);
+				vrWrapperSkin.SetWrapper(tr.vrSkin);
+				vrWrapperSkin.SetWrapped(renderEntity.customSkin);
+				renderEntity.customSkin = &vrWrapperSkin;
 				UpdateVisuals();
 			}
 		}
@@ -4211,7 +4097,7 @@ void idWeapon::Event_SetSkin( const char* skinname )
 	const idDeclSkin * currentSkin;
 	if (glConfig.openVREnabled && !isPlayerFlashlight)
 	{
-		currentSkin = idDeclSkinVR::GetWrappedSkin();
+		currentSkin = vrWrapperSkin.GetWrapped();
 	}
 	else
 	{

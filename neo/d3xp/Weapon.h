@@ -351,6 +351,8 @@ private:
 	
 	idHashTable<WeaponParticle_t>	weaponParticles;
 	idHashTable<WeaponLight_t>		weaponLights;
+
+	idDeclSkinWrapper		vrWrapperSkin;
 	
 	// sound
 	const idSoundShader* 	sndHum;
