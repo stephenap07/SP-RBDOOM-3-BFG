@@ -1108,6 +1108,11 @@ void idUsercmdGenLocal::VRMove()
 
 	cmd.vrHeadAxis = cmd.vrHeadAxis * invRotation;
 	cmd.vrHeadOrigin = vrRelativeHeadOrigin;
+
+	if (cmd.vrHeadOrigin.z < 12*4.5f)
+	{
+		cmd.buttons |= BUTTON_CROUCH;
+	}
 }
 
 /*
@@ -1577,23 +1582,6 @@ void idUsercmdGenLocal::VRControllers()
 				assert( !"Unknown joystick event" );
 			}
 		}
-	}
-
-	extern bool g_vrHasHeadPose;
-	extern idVec3 g_vrHeadOrigin;
-
-	if (!g_vrHasHeadPose)
-	{
-		return;
-	}
-
-	if (g_vrHeadOrigin.z < 12*4.5f)
-	{
-		Key(K_JOY8, true);
-	}
-	else
-	{
-		Key(K_JOY8, false);
 	}
 }
 
