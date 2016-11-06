@@ -33,8 +33,6 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "win_local.h"
 
-#include <openvr.h>
-
 #define DINPUT_BUFFERSIZE           256
 
 /*
@@ -971,10 +969,6 @@ void idJoystickWin32::PostInputEvent( int inputDeviceNum, int event, int value, 
 idJoystickWin32::PollInputEvents
 ========================
 */
-extern vr::IVRSystem * hmd;
-extern vr::TrackedDeviceIndex_t g_openVRLeftController;
-extern vr::TrackedDeviceIndex_t g_openVRRightController;
-
 int idJoystickWin32::PollInputEvents( int inputDeviceNum )
 {
 	numEvents = 0;
@@ -1075,137 +1069,6 @@ int idJoystickWin32::PollInputEvents( int inputDeviceNum )
 	if( xis.Gamepad.sThumbRY != old.Gamepad.sThumbRY )
 	{
 		PostInputEvent( inputDeviceNum, J_AXIS_RIGHT_Y, -xis.Gamepad.sThumbRY );
-	}
-
-	if (hmd)
-	{
-		g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
-		g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
-
-		vr::VREvent_t e;
-		while( hmd->PollNextEvent( &e, sizeof( e ) ) )
-		{
-			vr::ETrackedControllerRole role;
-
-			switch (e.eventType)
-			{
-			/*case vr::VREvent_TrackedDeviceActivated:
-				role = hmd->GetControllerRoleForTrackedDeviceIndex(e.trackedDeviceIndex);
-				switch(role)
-				{
-				case vr::TrackedControllerRole_LeftHand:
-					g_openVRLeftController = e.trackedDeviceIndex;
-					break;
-				case vr::TrackedControllerRole_RightHand:
-					g_openVRRightController = e.trackedDeviceIndex;
-					break;
-				}
-				break;
-			case vr::VREvent_TrackedDeviceDeactivated:
-				if (e.trackedDeviceIndex == g_openVRLeftController)
-				{
-					g_openVRLeftController = vr::k_unTrackedDeviceIndexInvalid;
-				}
-				else if (e.trackedDeviceIndex == g_openVRRightController)
-				{
-					g_openVRRightController = vr::k_unTrackedDeviceIndexInvalid;
-				}
-				break;*/
-			case vr::VREvent_ButtonPress:
-			case vr::VREvent_ButtonUnpress:
-			{
-				bool pressed = e.eventType == vr::VREvent_ButtonPress;
-				if (e.trackedDeviceIndex == g_openVRLeftController)
-				{
-					switch(e.data.controller.button)
-					{
-					case vr::k_EButton_ApplicationMenu:
-						PostInputEvent( inputDeviceNum, J_ACTION10, pressed);
-						//Sys_QueEvent( SE_KEY, K_JOY10, pressed, 0, NULL, 0 );
-						break;
-					case vr::k_EButton_Grip:
-						PostInputEvent( inputDeviceNum, J_ACTION5, pressed);
-						//Sys_QueEvent( SE_KEY, K_JOY5, pressed, 0, NULL, 0 );
-						break;
-					case vr::k_EButton_SteamVR_Trigger:
-						PostInputEvent( inputDeviceNum, J_AXIS_LEFT_TRIG, pressed? 255*128 : 0);
-						//Sys_QueEvent( SE_KEY, K_JOY_TRIGGER1, pressed, 0, NULL, 0 );
-						break;
-					case vr::k_EButton_SteamVR_Touchpad:
-						PostInputEvent( inputDeviceNum, J_ACTION1, pressed);
-						break;
-					default:
-						printf("test");
-						break;
-					}
-				}
-				else if (e.trackedDeviceIndex == g_openVRRightController)
-				{
-					switch(e.data.controller.button)
-					{
-					case vr::k_EButton_ApplicationMenu:
-						PostInputEvent( inputDeviceNum, J_ACTION9, pressed);
-						//Sys_QueEvent( SE_KEY, K_JOY9, pressed, 0, NULL, inputDeviceNum );
-						break;
-					case vr::k_EButton_Grip:
-						PostInputEvent( inputDeviceNum, J_ACTION6, pressed);
-						//Sys_QueEvent( SE_KEY, K_JOY6, pressed, 0, NULL, inputDeviceNum );
-						break;
-					case vr::k_EButton_SteamVR_Trigger:
-						PostInputEvent( inputDeviceNum, J_AXIS_RIGHT_TRIG, pressed? 255*128 : 0);
-						//Sys_QueEvent( SE_KEY, K_JOY_TRIGGER2, pressed, 0, NULL, inputDeviceNum);
-						break;
-					case vr::k_EButton_SteamVR_Touchpad:
-						PostInputEvent( inputDeviceNum, J_ACTION3, pressed);
-						break;
-					default:
-						printf("test");
-						break;
-					}
-				}
-				break;
-			}
-			}
-		}
-
-		static short sOldThumbLX = 0;
-		static short sOldThumbLY = 0;
-		if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
-		{
-			vr::VRControllerState_t state;
-			hmd->GetControllerState(g_openVRLeftController, &state);
-			short sThumbLX = (short)(state.rAxis[0].x * 32767);
-			short sThumbLY = (short)(state.rAxis[0].y * -32767);
-			if (sThumbLX != sOldThumbLX)
-			{
-				PostInputEvent( inputDeviceNum, J_AXIS_LEFT_X, sThumbLX );
-				sOldThumbLX = sThumbLX;
-			}
-			if (sThumbLY != sOldThumbLY)
-			{
-				PostInputEvent( inputDeviceNum, J_AXIS_LEFT_Y, sThumbLY );
-				sOldThumbLY = sThumbLY;
-			}
-		}
-		static short sOldThumbRX = 0;
-		static short sOldThumbRY = 0;
-		if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
-		{
-			vr::VRControllerState_t state;
-			hmd->GetControllerState(g_openVRRightController, &state);
-			short sThumbRX = (short)(state.rAxis[0].x * 32767);
-			short sThumbRY = (short)(state.rAxis[0].y * -32767);
-			if (sThumbRX != sOldThumbRX)
-			{
-				PostInputEvent( inputDeviceNum, J_AXIS_RIGHT_X, sThumbRX );
-				sOldThumbRX = sThumbRX;
-			}
-			if (sThumbRY != sOldThumbRY)
-			{
-				PostInputEvent( inputDeviceNum, J_AXIS_RIGHT_Y, sThumbRY );
-				sOldThumbRY = sThumbRY;
-			}
-		}
 	}
 	
 	return numEvents;
