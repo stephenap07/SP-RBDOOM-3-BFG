@@ -163,6 +163,10 @@ private:
 	// physics state for client interpolation
 	playerPState_t			previous;
 	playerPState_t			next;
+
+	bool					hasCurrentHeadOrigin;
+	idVec3					currentHeadOrigin;
+	idVec3					vrDelta;
 	
 	// properties
 	float					walkSpeed;

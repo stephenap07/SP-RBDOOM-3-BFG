@@ -8272,32 +8272,8 @@ void idPlayer::Move()
 		idVec3	org;
 		idMat3	axis;
 		GetViewPos( org, axis );
-
-		idVec3 forward = axis[0];
 		
-		if (glConfig.openVREnabled && !glConfig.openVRSeated)
-		{
-			float height;
-			VR_MoveDelta( usercmd.vrDelta, height );
-
-			idAngles angles = viewAngles + viewBobAngles + playerView.AngleOffset();
-			angles.pitch = 0;
-			angles.roll = 0;
-
-			usercmd.vrDelta = usercmd.vrDelta * angles.ToMat3();
-
-			if (height < 12*4.5f)
-			{
-				usercmd.buttons |= BUTTON_CROUCH;
-			}
-
-			if (hasLeftController)
-			{
-				forward = leftControllerAxis[0] * idAngles(0, viewAngles.yaw, 0).ToMat3();
-			}
-		}
-
-		physicsObj.SetPlayerInput( usercmd, forward );
+		physicsObj.SetPlayerInput( usercmd, axis[0] );
 	}
 	
 	// FIXME: physics gets disabled somehow
@@ -10381,9 +10357,9 @@ void idPlayer::CalculateViewWeaponPos( idVec3& origin, idMat3& axis )
 		float pitch = idMath::M_RAD2DEG * asin(firstPersonViewAxis[0][2]);
 		axis = idAngles(pitch, 0, 0).ToMat3() * firstPersonViewAxis;
 
-		if (hasRightController)
+		if (usercmd.vrHasRightController)
 		{
-			idVec3 dir = rightControllerOrigin;
+			idVec3 dir = usercmd.vrRightControllerOrigin;
 			dir.z += 12;
 			dir = idAngles(0,18.f,0).ToMat3() * dir;
 			dir.NormalizeFast();
@@ -10463,6 +10439,41 @@ void idPlayer::CalculateViewWeaponPos( idVec3& origin, idMat3& axis )
 	const idMat3	scaledMat = anglesMat * g_gunScale.GetFloat();
 	
 	axis = scaledMat * viewAxis;
+}
+
+/*
+===============
+idPlayer::CalculateVRView
+===============
+*/
+bool idPlayer::CalculateVRView( idVec3& origin, idMat3& axis, bool overridePitch )
+{
+	if (!usercmd.vrHasHead)
+	{
+		return false;
+	}
+
+	if (overridePitch)
+	{
+		float pitch = idMath::M_RAD2DEG * asin(axis[0][2]);
+		idAngles angles(pitch, 0, 0);
+		axis = angles.ToMat3() * axis;
+	}
+
+	if (!glConfig.openVRSeated)
+	{
+		origin.z -= eyeOffset.z;
+		// ignore x and y
+		origin += axis[2] * usercmd.vrHeadOrigin.z;
+	}
+	else
+	{
+		origin += axis * usercmd.vrHeadOrigin;
+	}
+
+	axis = usercmd.vrHeadAxis * axis;
+
+	return true;
 }
 
 /*
@@ -10594,11 +10605,6 @@ void idPlayer::GetViewPos( idVec3& origin, idMat3& axis ) const
 		
 		// adjust the origin based on the camera nodal distance (eye distance from neck)
 		origin += axis[0] * g_viewNodalX.GetFloat() + axis[2] * g_viewNodalZ.GetFloat();
-
-		/*if (glConfig.openVREnabled)
-		{
-			VR_CalculateView(origin, axis, eyeOffset, true);
-		}*/
 	}
 }
 
@@ -10636,10 +10642,10 @@ void idPlayer::CalculateFirstPersonView()
 	}
 	if (glConfig.openVREnabled)
 	{
-		hmdOrigin = firstPersonViewOrigin;
 		hmdAxis = firstPersonViewAxis;
-
-		hmdOrigin -= hmdAxis[0] * g_viewNodalX.GetFloat() + hmdAxis[2] * g_viewNodalZ.GetFloat();
+		hmdOrigin = firstPersonViewOrigin
+			- firstPersonViewAxis[0] * g_viewNodalX.GetFloat()
+			- firstPersonViewAxis[2] * g_viewNodalZ.GetFloat();
 
 		if (glConfig.openVRSeated)
 		{
@@ -10648,7 +10654,7 @@ void idPlayer::CalculateFirstPersonView()
 			idVec3 pelvis = hmdOrigin;
 			pelvis.z -= 27.f;
 
-			VR_CalculateView(hmdOrigin, hmdAxis, eyeOffset, true);
+			CalculateVRView(hmdOrigin, hmdAxis, true);
 
 			flashlightOrigin = hmdOrigin;
 			idVec3 up = hmdOrigin - pelvis;
@@ -10659,15 +10665,10 @@ void idPlayer::CalculateFirstPersonView()
 			flashlightAxis[0] = forward;
 			flashlightAxis[1] = left;
 			flashlightAxis[2] = up;
-
-			hasLeftController = false;
-			hasRightController = false;
 		}
 		else
 		{
-			VR_CalculateView(hmdOrigin, hmdAxis, eyeOffset, true);
-			hasLeftController = VR_GetLeftController(leftControllerOrigin, leftControllerAxis);
-			hasRightController = VR_GetRightController(rightControllerOrigin, rightControllerAxis);
+			CalculateVRView(hmdOrigin, hmdAxis, true);
 
 			flashlightOrigin = hmdOrigin;
 			flashlightAxis = hmdAxis;
@@ -10786,7 +10787,7 @@ void idPlayer::CalculateRenderView()
 				renderView->vieworg.z += 13.f;
 			}
 		}
-		VR_CalculateView(renderView->vieworg, renderView->viewaxis, eyeOffset, overridePitch);
+		CalculateVRView(renderView->vieworg, renderView->viewaxis, overridePitch);
 	}
 	
 	if( renderView->fov_bottom == renderView->fov_top )

@@ -426,12 +426,6 @@ public:
 
 	idVec3					hmdOrigin;
 	idMat3					hmdAxis;
-	bool					hasLeftController;
-	idVec3					leftControllerOrigin;
-	idMat3					leftControllerAxis;
-	bool					hasRightController;
-	idVec3					rightControllerOrigin;
-	idMat3					rightControllerAxis;
 	
 	idDragEntity			dragEntity;
 	
@@ -537,6 +531,7 @@ public:
 	float					DefaultFov() const;
 	float					CalcFov( bool honorZoom );
 	void					CalculateViewWeaponPos( idVec3& origin, idMat3& axis );
+	bool					CalculateVRView( idVec3& origin, idMat3& axis, bool overridePitch );
 	idVec3					GetEyePosition() const;
 	void					GetViewPos( idVec3& origin, idMat3& axis ) const;
 	void					OffsetThirdPersonView( float angle, float range, float height, bool clip );

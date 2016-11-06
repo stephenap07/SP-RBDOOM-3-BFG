@@ -255,17 +255,17 @@ which will determine the head kick direction
 */
 void idPlayerView::DamageImpulse( idVec3 localKickDir, const idDict* damageDef )
 {
+	if (glConfig.openVREnabled)
+	{
+		return;
+	}
+
 	//
 	// double vision effect
 	//
 	if( lastDamageTime > 0.0f && SEC2MS( lastDamageTime ) + IMPULSE_DELAY > gameLocal.slow.time )
 	{
 		// keep shotgun from obliterating the view
-		return;
-	}
-
-	if (glConfig.openVREnabled)
-	{
 		return;
 	}
 	

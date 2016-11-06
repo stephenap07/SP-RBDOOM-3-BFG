@@ -1531,8 +1531,15 @@ VR
 =============================================================
 */
 
-void VR_Update();
-bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, bool overridePitch = false);
+const sysEvent_t &VR_SysEventNext();
+
+int VR_PollJoystickInputEvents();
+int VR_ReturnJoystickInputEvent( const int n, int& action, int& value );
+
+void VR_PreSwap(GLuint left, GLuint right);
+void VR_PostSwap();
+
+bool VR_GetHead(idVec3 &origin, idMat3 &axis);
 bool VR_GetLeftController(idVec3 &origin, idMat3 &axis);
 bool VR_GetRightController(idVec3 &origin, idMat3 &axis);
 void VR_MoveDelta(idVec3 &delta, float &height);
