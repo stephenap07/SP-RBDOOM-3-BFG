@@ -10670,8 +10670,13 @@ void idPlayer::CalculateFirstPersonView()
 		{
 			CalculateVRView(hmdOrigin, hmdAxis, true);
 
-			flashlightOrigin = hmdOrigin;
-			flashlightAxis = hmdAxis;
+			// remove pitch
+			idMat3 axis = firstPersonViewAxis;
+			float pitch = idMath::M_RAD2DEG * asin(axis[0][2]);
+			idAngles angles(pitch, 0, 0);
+			axis = angles.ToMat3() * axis;
+			flashlightOrigin = hmdOrigin + usercmd.vrLeftControllerOrigin * axis;
+			flashlightAxis = usercmd.vrLeftControllerAxis * axis;
 		}
 	}
 }

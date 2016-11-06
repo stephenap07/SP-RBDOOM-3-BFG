@@ -946,11 +946,11 @@ void VR_PostSwap()
 					VR_SysEventQue( SE_KEY, K_JOY5, pressed );
 					break;
 				case vr::k_EButton_SteamVR_Trigger:
-					VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 );
+					VR_JoyEventQue( J_ACTION1, pressed );
 					VR_SysEventQue( SE_KEY, K_JOY_TRIGGER1, pressed );
 					break;
 				case vr::k_EButton_SteamVR_Touchpad:
-					VR_JoyEventQue( J_ACTION1, pressed );
+					VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 );
 					VR_SysEventQue( SE_KEY, K_JOY1, pressed );
 					break;
 				default:
@@ -1075,6 +1075,8 @@ bool VR_GetHead(idVec3 &origin, idMat3 &axis)
 
 	origin = g_vrHeadOrigin;
 	axis = g_vrHeadAxis;
+
+	return true;
 }
 
 // returns left controller position relative to the head

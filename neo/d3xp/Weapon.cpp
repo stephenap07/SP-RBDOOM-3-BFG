@@ -2936,34 +2936,52 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	
 	if( isPlayerFlashlight )
 	{
+		bool doAdjust = true;
+
 		if (glConfig.openVREnabled)
 		{
 			viewWeaponOrigin = owner->flashlightOrigin;
 			viewWeaponAxis = owner->flashlightAxis;
+
+			if (!glConfig.openVRSeated)
+			{
+				static idAngles flAngle1(0,85,0);
+				static idAngles flAngle2(112,0,0);
+				static idAngles flAngle3(0,1,0);
+				idMat3 flAxis = flAngle1.ToMat3() * flAngle2.ToMat3() * flAngle3.ToMat3();
+				idAngles tempAngles = flAxis.ToAngles();
+				viewWeaponAxis = flAxis * viewWeaponAxis;
+
+				static idVec3 flOrigin(6.5,-6.75,-18.75);
+				viewWeaponOrigin += viewWeaponAxis * flOrigin;
+
+				doAdjust = false;
+			}
 		}
-		else
+		
+		if (doAdjust)
 		{
 			viewWeaponOrigin = playerViewOrigin;
 			viewWeaponAxis = playerViewAxis;
-		}
 		
-		fraccos = cos( ( gameLocal.framenum & 255 ) / 127.0f * idMath::PI );
+			fraccos = cos( ( gameLocal.framenum & 255 ) / 127.0f * idMath::PI );
 		
-		static unsigned int divisor = 32;
-		unsigned int val = ( gameLocal.framenum + gameLocal.framenum / divisor ) & 255;
-		fraccos2 = cos( val / 127.0f * idMath::PI );
+			static unsigned int divisor = 32;
+			unsigned int val = ( gameLocal.framenum + gameLocal.framenum / divisor ) & 255;
+			fraccos2 = cos( val / 127.0f * idMath::PI );
 		
-		static idVec3 baseAdjustPos = idVec3( -8.0f, -20.0f, -10.0f );		// rt, fwd, up
-		static float pscale = 0.5f;
-		static float yscale = 0.125f;
-		idVec3 adjustPos = baseAdjustPos;// + ( idVec3( fraccos, 0.0f, fraccos2 ) * scale );
-		viewWeaponOrigin += adjustPos.x * viewWeaponAxis[1] + adjustPos.y * viewWeaponAxis[0] + adjustPos.z * viewWeaponAxis[2];
-//		viewWeaponOrigin += owner->viewBob;
+			static idVec3 baseAdjustPos = idVec3( -8.0f, -20.0f, -10.0f );		// rt, fwd, up
+			static float pscale = 0.5f;
+			static float yscale = 0.125f;
+			idVec3 adjustPos = baseAdjustPos;// + ( idVec3( fraccos, 0.0f, fraccos2 ) * scale );
+			viewWeaponOrigin += adjustPos.x * viewWeaponAxis[1] + adjustPos.y * viewWeaponAxis[0] + adjustPos.z * viewWeaponAxis[2];
+	//		viewWeaponOrigin += owner->viewBob;
 
-		static idAngles baseAdjustAng = idAngles( 88.0f, 10.0f, 0.0f );		//
-		idAngles adjustAng = baseAdjustAng + idAngles( fraccos * pscale, fraccos2 * yscale, 0.0f );
-//		adjustAng += owner->GetViewBobAngles();
-		viewWeaponAxis = adjustAng.ToMat3() * viewWeaponAxis;
+			static idAngles baseAdjustAng = idAngles( 88.0f, 10.0f, 0.0f );		//
+			idAngles adjustAng = baseAdjustAng + idAngles( fraccos * pscale, fraccos2 * yscale, 0.0f );
+	//		adjustAng += owner->GetViewBobAngles();
+			viewWeaponAxis = adjustAng.ToMat3() * viewWeaponAxis;
+		}
 	}
 	else
 	{
