@@ -828,6 +828,7 @@ private:
 	int						landChange;
 	int						landTime;
 	
+	idAngles				lastViewAngles;
 	
 	int						currentWeapon;
 	idPredictedValue< int >	idealWeapon;

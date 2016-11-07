@@ -1549,6 +1549,8 @@ idPlayer::idPlayer():
 	viewBob					= vec3_zero;
 	landChange				= 0;
 	landTime				= 0;
+
+	lastViewAngles			= ang_zero;
 	
 	currentWeapon			= -1;
 	previousWeapon			= -1;
@@ -7030,9 +7032,23 @@ void idPlayer::UpdateViewAngles()
 	
 	if( !noclip && ( gameLocal.inCinematic || privateCameraView || gameLocal.GetCamera() || influenceActive == INFLUENCE_LEVEL2 || objectiveSystemOpen ) )
 	{
-		// no view changes at all, but we still want to update the deltas or else when
-		// we get out of this mode, our view will snap to a kind of random angle
+		for ( i = 0; i < 3; i++ )
+		{
+			cmdAngles[i] = SHORT2ANGLE( usercmd.angles[i] );
+			if ( influenceActive == INFLUENCE_LEVEL3 )
+			{
+				viewAngles[i] += idMath::ClampFloat( -1.0f, 1.0f, idMath::AngleDelta( idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[i]) + deltaViewAngles[i] ) , viewAngles[i] ) );
+			}
+			else
+			{
+				viewAngles[i] = idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[i]) + deltaViewAngles[i] );
+			}
+		}
 		UpdateDeltaViewAngles( viewAngles );
+		for ( i = 0; i < 3; i++ )
+		{
+			viewAngles[i] -= lastViewAngles[i];
+		}
 		return;
 	}
 	
@@ -7119,6 +7135,8 @@ void idPlayer::UpdateViewAngles()
 		viewAngles.pitch = std::max( viewAngles.pitch, pm_minviewpitch.GetFloat() * restrict );
 	}
 	
+	lastViewAngles = viewAngles;
+
 	UpdateDeltaViewAngles( viewAngles );
 	
 	// orient the model towards the direction we're looking
@@ -10738,6 +10756,7 @@ void idPlayer::CalculateRenderView()
 		}
 		else
 		{
+			renderView->viewaxis = firstPersonViewAxis;
 			gameLocal.GetCamera()->GetViewParms( renderView );
 		}
 	}
