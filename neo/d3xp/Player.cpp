@@ -7032,22 +7032,23 @@ void idPlayer::UpdateViewAngles()
 	
 	if( !noclip && ( gameLocal.inCinematic || privateCameraView || gameLocal.GetCamera() || influenceActive == INFLUENCE_LEVEL2 || objectiveSystemOpen ) )
 	{
-		for ( i = 0; i < 3; i++ )
+		if (glConfig.openVREnabled)
 		{
-			cmdAngles[i] = SHORT2ANGLE( usercmd.angles[i] );
+			cmdAngles.yaw = SHORT2ANGLE( usercmd.angles[YAW] );
 			if ( influenceActive == INFLUENCE_LEVEL3 )
 			{
-				viewAngles[i] += idMath::ClampFloat( -1.0f, 1.0f, idMath::AngleDelta( idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[i]) + deltaViewAngles[i] ) , viewAngles[i] ) );
+				viewAngles.yaw += idMath::ClampFloat( -1.0f, 1.0f, idMath::AngleDelta( idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[YAW]) + deltaViewAngles.yaw ) , viewAngles.yaw ) );
 			}
 			else
 			{
-				viewAngles[i] = idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[i]) + deltaViewAngles[i] );
+				viewAngles.yaw = idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[YAW]) + deltaViewAngles.yaw );
 			}
+			UpdateDeltaViewAngles( viewAngles );
+			viewAngles.yaw -= lastViewAngles.yaw;
 		}
-		UpdateDeltaViewAngles( viewAngles );
-		for ( i = 0; i < 3; i++ )
+		else
 		{
-			viewAngles[i] -= lastViewAngles[i];
+			UpdateDeltaViewAngles( viewAngles );
 		}
 		return;
 	}
@@ -10756,8 +10757,12 @@ void idPlayer::CalculateRenderView()
 		}
 		else
 		{
-			renderView->viewaxis = firstPersonViewAxis;
 			gameLocal.GetCamera()->GetViewParms( renderView );
+
+			float pitch = idMath::M_RAD2DEG * asin(firstPersonViewAxis[0][2]);
+			idAngles angles(pitch, 0, 0);
+			idMat3 axis = angles.ToMat3() * firstPersonViewAxis;
+			renderView->viewaxis = axis * renderView->viewaxis;
 		}
 	}
 	else
