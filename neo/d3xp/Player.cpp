@@ -10462,9 +10462,12 @@ bool idPlayer::CalculateVRView( idVec3& origin, idMat3& axis, bool overridePitch
 
 	if (!glConfig.openVRSeated)
 	{
-		origin.z -= eyeOffset.z;
-		// ignore x and y
-		origin += axis[2] * usercmd.vrHeadOrigin.z;
+		if (overridePitch)
+		{
+			origin.z -= eyeOffset.z;
+			// ignore x and y
+			origin += axis[2] * usercmd.vrHeadOrigin.z;
+		}
 	}
 	else
 	{
