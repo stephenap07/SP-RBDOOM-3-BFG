@@ -193,6 +193,7 @@ struct glconfig_t
 	float				pixelAspect;
 
 	bool				openVREnabled;
+	bool				openVRSeated;
 	int					openVRWidth;
 	int					openVRHeight;
 	float				openVRfovEye[2][4];

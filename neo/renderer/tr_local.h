@@ -890,6 +890,7 @@ public:
 	const idMaterial* 		defaultPointLight;
 	const idMaterial* 		defaultProjectedLight;
 	const idMaterial* 		defaultMaterial;
+	const idDeclSkin* 		vrSkin;
 	idImage* 				testImage;
 	idCinematic* 			testVideo;
 	int						testVideoStartTime;
@@ -1531,7 +1532,43 @@ VR
 =============================================================
 */
 
-bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch = false);
+const sysEvent_t &VR_SysEventNext();
+
+int VR_PollJoystickInputEvents();
+int VR_ReturnJoystickInputEvent( const int n, int& action, int& value );
+
+void VR_PreSwap(GLuint left, GLuint right);
+void VR_PostSwap();
+
+bool VR_GetHead(idVec3 &origin, idMat3 &axis);
+bool VR_GetLeftController(idVec3 &origin, idMat3 &axis);
+bool VR_GetRightController(idVec3 &origin, idMat3 &axis);
+void VR_MoveDelta(idVec3 &delta, float &height);
+
+class idDeclSkinVR : public idDeclSkin
+{
+public:
+	idDeclSkinVR()
+	{
+		base = &idDeclNullSkinBase::instance;
+
+		const idMaterial* nodraw = declManager->FindMaterial( "textures/common/nodraw" );
+
+		skinMapping_t map;
+
+		map.from = declManager->FindMaterial( "models/characters/player/arm2" );
+		map.to = nodraw;
+		mappings.Append( map );
+
+		map.from = declManager->FindMaterial( "models/weapons/berserk/fist" );
+		map.to = nodraw;
+		mappings.Append( map );
+
+		map.from = declManager->FindMaterial( "models/weapons/hands/hand" );
+		map.to = nodraw;
+		mappings.Append( map );
+	}
+};
 
 //=============================================
 

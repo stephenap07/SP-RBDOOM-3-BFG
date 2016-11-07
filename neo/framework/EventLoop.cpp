@@ -27,6 +27,9 @@ If you have questions concerning this license or the applicable additional terms
 */
 
 #include "precompiled.h"
+
+#include "../renderer/tr_local.h"
+
 #pragma hdrstop
 
 idCVar idEventLoop::com_journal( "com_journal", "0", CVAR_INIT | CVAR_SYSTEM, "1 = record journal, 2 = play back journal", 0, 2, idCmdSystem::ArgCompletion_Integer<0, 2> );
@@ -86,7 +89,18 @@ sysEvent_t	idEventLoop::GetRealEvent()
 	}
 	else
 	{
-		ev = Sys_GetEvent();
+		if (glConfig.openVREnabled)
+		{
+			ev = VR_SysEventNext();
+			if (ev.evType == SE_NONE)
+			{
+				ev = Sys_GetEvent();
+			}
+		}
+		else
+		{
+			ev = Sys_GetEvent();
+		}
 		
 		// write the journal value out if needed
 		if( com_journal.GetInteger() == 1 )

@@ -255,6 +255,11 @@ which will determine the head kick direction
 */
 void idPlayerView::DamageImpulse( idVec3 localKickDir, const idDict* damageDef )
 {
+	if (glConfig.openVREnabled)
+	{
+		return;
+	}
+
 	//
 	// double vision effect
 	//

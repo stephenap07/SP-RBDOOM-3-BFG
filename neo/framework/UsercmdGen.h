@@ -92,7 +92,8 @@ public:
 		mx(),
 		my(),
 		pos( 0.0f, 0.0f, 0.0f ),
-		speedSquared( 0.0f )
+		speedSquared( 0.0f ),
+		vrHeadOrigin(0,0,0)
 	{
 		angles[0] = 0;
 		angles[1] = 0;
@@ -118,6 +119,17 @@ public:
 	// Clients are authoritative on their positions
 	idVec3		pos;
 	float		speedSquared;
+
+	bool		vrHasHead;
+	idMat3		vrHeadAxis;
+	idVec3		vrHeadOrigin;
+
+	bool		vrHasLeftController;
+	idMat3		vrLeftControllerAxis;
+	idVec3		vrLeftControllerOrigin;
+	bool		vrHasRightController;
+	idMat3		vrRightControllerAxis;
+	idVec3		vrRightControllerOrigin;
 	
 public:
 	void		Serialize( class idSerializer& s, const usercmd_t& base );

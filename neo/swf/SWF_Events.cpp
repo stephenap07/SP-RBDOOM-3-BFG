@@ -27,6 +27,7 @@ If you have questions concerning this license or the applicable additional terms
 */
 #pragma hdrstop
 #include "precompiled.h"
+#include "../renderer/tr_local.h"
 
 /*
 ===================
@@ -471,16 +472,26 @@ bool idSWF::HandleEvent( const sysEvent_t* event )
 		// Mouse position in screen space needs to be converted to SWF space
 		if( event->evType == SE_MOUSE_ABSOLUTE )
 		{
-			const float pixelAspect = renderSystem->GetPixelAspect();
-			const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
-			const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
-			float scale = swfScale * sysHeight / ( float )frameHeight;
-			float invScale = 1.0f / scale;
-			float tx = 0.5f * ( sysWidth - ( frameWidth * scale ) );
-			float ty = 0.5f * ( sysHeight - ( frameHeight * scale ) );
+			if (glConfig.openVREnabled)
+			{
+				float scaleX = frameWidth / glConfig.nativeScreenWidth;
+				float scaleY = frameHeight / glConfig.nativeScreenHeight;
+				mouseX = idMath::Ftoi( event->evValue * scaleX );
+				mouseY = idMath::Ftoi( event->evValue2 * scaleY );
+			}
+			else
+			{
+				const float pixelAspect = renderSystem->GetPixelAspect();
+				const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
+				const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
+				float scale = swfScale * sysHeight / ( float )frameHeight;
+				float invScale = 1.0f / scale;
+				float tx = 0.5f * ( sysWidth - ( frameWidth * scale ) );
+				float ty = 0.5f * ( sysHeight - ( frameHeight * scale ) );
 			
-			mouseX = idMath::Ftoi( ( static_cast<float>( event->evValue ) - tx ) * invScale );
-			mouseY = idMath::Ftoi( ( static_cast<float>( event->evValue2 ) - ty ) * invScale );
+				mouseX = idMath::Ftoi( ( static_cast<float>( event->evValue ) - tx ) * invScale );
+				mouseY = idMath::Ftoi( ( static_cast<float>( event->evValue2 ) - ty ) * invScale );
+			}
 		}
 		else
 		{

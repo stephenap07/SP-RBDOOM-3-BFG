@@ -27,6 +27,9 @@ If you have questions concerning this license or the applicable additional terms
 */
 
 #include "precompiled.h"
+
+#include "../renderer/tr_local.h"
+
 #pragma hdrstop
 
 idCVar joy_mergedThreshold( "joy_mergedThreshold", "1", CVAR_BOOL | CVAR_ARCHIVE, "If the thresholds aren't merged, you drift more off center" );
@@ -261,6 +264,7 @@ private:
 	void			HandleJoystickAxis( int keyNum, float unclampedValue, float threshold, bool positive );
 	void			JoystickMove();
 	void			JoystickMove2();
+	void			VRMove();
 	void			MouseMove();
 	void			CmdButtons();
 	
@@ -269,6 +273,7 @@ private:
 	void			Mouse();
 	void			Keyboard();
 	void			Joystick( int deviceNum );
+	void			VRControllers();
 	
 	void			Key( int keyNum, bool down );
 	
@@ -301,6 +306,10 @@ private:
 	float			lastLookValuePitch;
 	float			lastLookValueYaw;
 	
+	bool			hadLeftControllerYaw;
+	float			oldLeftControllerYaw;
+	idVec3			vrRelativeHeadOrigin;
+
 	static idCVar	in_yawSpeed;
 	static idCVar	in_pitchSpeed;
 	static idCVar	in_angleSpeedKey;
@@ -1047,6 +1056,65 @@ void idUsercmdGenLocal::JoystickMove2()
 	HandleJoystickAxis( K_JOY_TRIGGER2, joystickAxis[ AXIS_RIGHT_TRIG ], triggerThreshold, true );
 }
 
+
+/*
+=================
+idUsercmdGenLocal::VRMove
+=================
+*/
+void idUsercmdGenLocal::VRMove()
+{
+	cmd.vrHasHead = VR_GetHead(cmd.vrHeadOrigin, cmd.vrHeadAxis);
+	if (!cmd.vrHasHead)
+	{
+		cmd.vrHasLeftController = false;
+		cmd.vrHasRightController = false;
+		return;
+	}
+
+	cmd.vrHasLeftController = VR_GetLeftController(cmd.vrLeftControllerOrigin, cmd.vrLeftControllerAxis);
+	cmd.vrHasRightController = VR_GetRightController(cmd.vrRightControllerOrigin, cmd.vrRightControllerAxis);
+	if (!cmd.vrHasLeftController || !cmd.vrHasRightController)
+	{
+		cmd.vrHasLeftController = false;
+		cmd.vrHasRightController = false;
+		return;
+	}
+
+	// left controller is our 'body' direction so
+	// rotate by the 'body'
+	float yaw = cmd.vrLeftControllerAxis.ToAngles().yaw;
+	if (hadLeftControllerYaw)
+	{
+		viewangles[YAW] += yaw - oldLeftControllerYaw;
+	}
+	hadLeftControllerYaw = true;
+	oldLeftControllerYaw = yaw;
+
+	// face everything relative to the 'body'
+	idMat3 invRotation = idAngles(0, -yaw, 0).ToMat3();
+
+	cmd.vrLeftControllerAxis = cmd.vrLeftControllerAxis * invRotation;
+	cmd.vrLeftControllerOrigin = (cmd.vrLeftControllerOrigin - cmd.vrHeadOrigin) * invRotation;
+
+	cmd.vrRightControllerAxis = cmd.vrRightControllerAxis * invRotation;
+	cmd.vrRightControllerOrigin = (cmd.vrRightControllerOrigin - cmd.vrHeadOrigin) * invRotation;
+
+	idVec3 vrDelta;
+	float vrHeight;
+	VR_MoveDelta(vrDelta, vrHeight);
+	vrRelativeHeadOrigin += vrDelta * invRotation;
+	vrRelativeHeadOrigin.z = vrHeight;
+
+	cmd.vrHeadAxis = cmd.vrHeadAxis * invRotation;
+	cmd.vrHeadOrigin = vrRelativeHeadOrigin;
+
+	if (cmd.vrHeadOrigin.z < 12*4.5f)
+	{
+		cmd.buttons |= BUTTON_CROUCH;
+	}
+}
+
 /*
 ==============
 idUsercmdGenLocal::CmdButtons
@@ -1164,6 +1232,11 @@ void idUsercmdGenLocal::MakeCurrent()
 		mouseDx = 0;
 		mouseDy = 0;
 	}
+
+	if (glConfig.openVREnabled)
+	{
+		VRMove();
+	}
 	
 	for( int i = 0; i < 3; i++ )
 	{
@@ -1277,6 +1350,8 @@ void idUsercmdGenLocal::Clear()
 	mouseDx = mouseDy = 0;
 	mouseButton = 0;
 	mouseDown = false;
+
+	hadLeftControllerYaw = false;
 }
 
 /*
@@ -1472,6 +1547,45 @@ void idUsercmdGenLocal::Joystick( int deviceNum )
 }
 
 /*
+===============
+idUsercmdGenLocal::VRControllers
+===============
+*/
+void idUsercmdGenLocal::VRControllers()
+{
+	int numEvents = VR_PollJoystickInputEvents();
+
+	for( int i = 0; i < numEvents; i++ )
+	{
+		int action;
+		int value;
+		if( VR_ReturnJoystickInputEvent( i, action, value ) )
+		{
+//		common->Printf("idUsercmdGenLocal::Joystick: i = %i / action = %i / value = %i\n", i, action, value);
+
+			if( action >= J_ACTION1 && action <= J_ACTION_MAX )
+			{
+				int joyButton = K_JOY1 + ( action - J_ACTION1 );
+				Key( joyButton, ( value != 0 ) );
+			}
+			else if( ( action >= J_AXIS_MIN ) && ( action <= J_AXIS_MAX ) )
+			{
+				joystickAxis[ action - J_AXIS_MIN ] = static_cast<float>( value ) / 32767.0f;
+			}
+			else if( action >= J_DPAD_UP && action <= J_DPAD_RIGHT )
+			{
+				int joyButton = K_JOY_DPAD_UP + ( action - J_DPAD_UP );
+				Key( joyButton, ( value != 0 ) );
+			}
+			else
+			{
+				assert( !"Unknown joystick event" );
+			}
+		}
+	}
+}
+
+/*
 ================
 idUsercmdGenLocal::MouseState
 ================
@@ -1511,6 +1625,11 @@ void idUsercmdGenLocal::BuildCurrentUsercmd( int deviceNum )
 	if( deviceNum >= 0 && in_useJoystick.GetBool() )
 	{
 		Joystick( deviceNum );
+	}
+
+	if (glConfig.openVREnabled)
+	{
+		VRControllers();
 	}
 	
 	// create the usercmd

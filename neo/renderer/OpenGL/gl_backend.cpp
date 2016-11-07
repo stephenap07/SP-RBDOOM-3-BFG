@@ -153,14 +153,7 @@ const void GL_BlockingSwapBuffers()
 	
 	if (glConfig.openVREnabled)
 	{
-		//glFinish();
-		//vr::VRCompositor()->PostPresentHandoff();
-
-		//extern vr::IVRSystem * hmd;
-		//vr::VREvent_t e;
-		//while( hmd->PollNextEvent( &e, sizeof( e ) ) ) { }
-		vr::TrackedDevicePose_t m_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-		vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+		VR_PostSwap();
 	}
 
 	const int beforeFence = Sys_Milliseconds();
@@ -535,10 +528,7 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 		case STEREO3D_OPENVR:
 			if (glConfig.openVREnabled)
 			{
-				vr::Texture_t leftEyeTexture = {(void*)stereoRenderImages[0]->GetTexNum(), vr::API_OpenGL, vr::ColorSpace_Gamma };
-				vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
-				vr::Texture_t rightEyeTexture = {(void*)stereoRenderImages[1]->GetTexNum(), vr::API_OpenGL, vr::ColorSpace_Gamma };
-				vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture );
+				VR_PreSwap(stereoRenderImages[0]->GetTexNum(), stereoRenderImages[1]->GetTexNum());
 			}
 
 			GL_SelectTexture( 0 );
@@ -708,31 +698,350 @@ void RB_ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	renderLog.EndFrame();
 }
 
+extern vr::IVRSystem * hmd;
+float g_vrScaleX = 1.f;
+float g_vrScaleY = 1.f;
+float g_vrScaleZ = 1.f;
+extern vr::TrackedDeviceIndex_t g_openVRLeftController;
+extern vr::TrackedDeviceIndex_t g_openVRRightController;
 
-bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
+bool g_vrHasHeadPose;
+idVec3 g_vrHeadOrigin;
+idMat3 g_vrHeadAxis;
+bool g_vrHadHead;
+idVec3 g_vrHeadLastOrigin;
+idVec3 g_vrHeadMoveDelta;
+
+bool g_vrHasLeftControllerPose;
+idVec3 g_vrLeftControllerOrigin;
+idMat3 g_vrLeftControllerAxis;
+
+bool g_vrHasRightControllerPose;
+idVec3 g_vrRightControllerOrigin;
+idMat3 g_vrRightControllerAxis;
+
+#define MAX_VREVENTS 256
+
+int g_vrSysEventIndex;
+int g_vrSysEventCount;
+sysEvent_t g_vrSysEvents[MAX_VREVENTS];
+
+int g_vrJoyEventCount;
+struct {
+	int action;
+	int value;
+} g_vrJoyEvents[MAX_VREVENTS];
+
+void VR_ClearEvents()
 {
+	g_vrSysEventIndex = 0;
+	g_vrSysEventCount = 0;
+	g_vrJoyEventCount = 0;
+}
+
+void VR_SysEventQue(sysEventType_t type, int value, int value2)
+{
+	assert(g_vrSysEventCount < MAX_VREVENTS);
+	sysEvent_t * ev = &g_vrSysEvents[g_vrSysEventCount++];
+
+	ev->evType = type;
+	ev->evValue = value;
+	ev->evValue2 = value2;
+	ev->evPtrLength = 0;
+	ev->evPtr = NULL;
+	ev->inputDevice = 0;
+}
+
+const sysEvent_t &VR_SysEventNext()
+{
+	assert(g_vrSysEventIndex < MAX_VREVENTS);
+	if (g_vrSysEventIndex >= g_vrSysEventCount)
+	{
+		sysEvent_t &ev = g_vrSysEvents[g_vrSysEventIndex];
+		ev.evType = SE_NONE;
+		return ev;
+	}
+	return g_vrSysEvents[g_vrSysEventIndex++];
+}
+
+int VR_PollJoystickInputEvents()
+{
+	return g_vrJoyEventCount;
+}
+
+void VR_JoyEventQue( int action, int value )
+{
+	assert(g_vrJoyEventCount < MAX_VREVENTS);
+	g_vrJoyEvents[g_vrJoyEventCount].action = action;
+	g_vrJoyEvents[g_vrJoyEventCount].value = value;
+	g_vrJoyEventCount++;
+}
+
+int VR_ReturnJoystickInputEvent( const int n, int& action, int& value )
+{
+	if (n < 0 || n > g_vrJoyEventCount)
+	{
+		return 0;
+	}
+	action = g_vrJoyEvents[n].action;
+	value = g_vrJoyEvents[n].value;
+	return 1;
+}
+
+
+bool VR_ConvertPose(const vr::TrackedDevicePose_t &pose, idVec3 &origin, idMat3 &axis)
+{
+	if (!pose.bPoseIsValid)
+	{
+		return false;
+	}
+
+	const vr::HmdMatrix34_t &poseMat = pose.mDeviceToAbsoluteTracking;
+
+	origin.Set(
+		g_vrScaleX * poseMat.m[2][3],
+		g_vrScaleY * poseMat.m[0][3],
+		g_vrScaleZ * poseMat.m[1][3] );
+	axis[0].Set(poseMat.m[2][2], poseMat.m[0][2], -poseMat.m[1][2]);
+	axis[1].Set(poseMat.m[2][0], poseMat.m[0][0], -poseMat.m[1][0]);
+	axis[2].Set(-poseMat.m[2][1], -poseMat.m[0][1], poseMat.m[1][1]);
+
+	return true;
+}
+
+void VR_PreSwap(GLuint left, GLuint right)
+{
+	vr::Texture_t leftEyeTexture = {(void*)left, vr::API_OpenGL, vr::ColorSpace_Gamma };
+	vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
+	vr::Texture_t rightEyeTexture = {(void*)right, vr::API_OpenGL, vr::ColorSpace_Gamma };
+	vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture );
+}
+
+void VR_PostSwap()
+{
+	//vr::VRCompositor()->PostPresentHandoff();
+
+	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid
+		|| g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		if (glConfig.openVRSeated)
+		{
+			glConfig.openVRSeated = false;
+			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
+		}
+	}
+	else
+	{
+		if (!glConfig.openVRSeated)
+		{
+			glConfig.openVRSeated = true;
+			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
+		}
+	}
+
+	vr::TrackedDevicePose_t rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+	vr::VRCompositor()->WaitGetPoses(rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
+	g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
+
 	extern idCVar	stereoRender_interOccularCentimeters;
 	extern float CentimetersToInches( const float cm );
 	float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
 	// rescale head motion to virtual head motion.
 	float scale = virtualEyeScale / glConfig.openVREyeScale;
+	g_vrScaleX = -scale;
+	g_vrScaleY = -scale;
+	g_vrScaleZ = scale;
 
-	vr::TrackedDevicePose_t trackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-	vr::VRCompositor()->GetLastPoses(trackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+	vr::TrackedDevicePose_t &hmdPose = rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+	g_vrHasHeadPose = hmdPose.bPoseIsValid;
+	if (hmdPose.bPoseIsValid)
+	{
+		VR_ConvertPose( hmdPose, g_vrHeadOrigin, g_vrHeadAxis );
 
-	vr::TrackedDevicePose_t &hmdPose = trackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+		if (g_vrHadHead)
+		{
+			g_vrHeadMoveDelta = g_vrHeadOrigin - g_vrHeadLastOrigin;
+			g_vrHeadLastOrigin = g_vrHeadOrigin;
+		}
+		else
+		{
+			g_vrHadHead = true;
+			g_vrHeadMoveDelta.Zero();
+		}
+	}
+	else
+	{
+		g_vrHadHead = false;
+	}
 
-	if (!hmdPose.bPoseIsValid)
+	g_vrHasLeftControllerPose = false;
+	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRLeftController];
+		if (handPose.bPoseIsValid)
+		{
+			g_vrHasLeftControllerPose = true;
+			VR_ConvertPose( handPose, g_vrLeftControllerOrigin, g_vrLeftControllerAxis );
+		}
+	}
+
+	g_vrHasRightControllerPose = false;
+	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRRightController];
+		if (handPose.bPoseIsValid)
+		{
+			g_vrHasRightControllerPose = true;
+			VR_ConvertPose( handPose, g_vrRightControllerOrigin, g_vrRightControllerAxis );
+		}
+	}
+
+	VR_ClearEvents();
+
+	vr::VREvent_t e;
+	while( hmd->PollNextEvent( &e, sizeof( e ) ) )
+	{
+		//vr::ETrackedControllerRole role;
+
+		switch (e.eventType)
+		{
+		/*case vr::VREvent_TrackedDeviceActivated:
+			role = hmd->GetControllerRoleForTrackedDeviceIndex(e.trackedDeviceIndex);
+			switch(role)
+			{
+			case vr::TrackedControllerRole_LeftHand:
+				g_openVRLeftController = e.trackedDeviceIndex;
+				break;
+			case vr::TrackedControllerRole_RightHand:
+				g_openVRRightController = e.trackedDeviceIndex;
+				break;
+			}
+			break;
+		case vr::VREvent_TrackedDeviceDeactivated:
+			if (e.trackedDeviceIndex == g_openVRLeftController)
+			{
+				g_openVRLeftController = vr::k_unTrackedDeviceIndexInvalid;
+			}
+			else if (e.trackedDeviceIndex == g_openVRRightController)
+			{
+				g_openVRRightController = vr::k_unTrackedDeviceIndexInvalid;
+			}
+			break;*/
+		case vr::VREvent_ButtonPress:
+		case vr::VREvent_ButtonUnpress:
+		{
+			bool pressed = e.eventType == vr::VREvent_ButtonPress;
+			if (e.trackedDeviceIndex == g_openVRLeftController)
+			{
+				switch(e.data.controller.button)
+				{
+				case vr::k_EButton_ApplicationMenu:
+					VR_JoyEventQue( J_ACTION10, pressed );
+					VR_SysEventQue( SE_KEY, K_JOY10, pressed );
+					break;
+				case vr::k_EButton_Grip:
+					VR_JoyEventQue( J_ACTION5, pressed );
+					VR_SysEventQue( SE_KEY, K_JOY5, pressed );
+					break;
+				case vr::k_EButton_SteamVR_Trigger:
+					VR_JoyEventQue( J_ACTION1, pressed );
+					VR_SysEventQue( SE_KEY, K_JOY_TRIGGER1, pressed );
+					break;
+				case vr::k_EButton_SteamVR_Touchpad:
+					VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 );
+					VR_SysEventQue( SE_KEY, K_JOY1, pressed );
+					break;
+				default:
+					printf("break!");
+					break;
+				}
+			}
+			else if (e.trackedDeviceIndex == g_openVRRightController)
+			{
+				switch(e.data.controller.button)
+				{
+				case vr::k_EButton_ApplicationMenu:
+					VR_JoyEventQue( J_ACTION9, pressed );
+					VR_SysEventQue( SE_KEY, K_JOY9, pressed );
+					break;
+				case vr::k_EButton_Grip:
+					VR_JoyEventQue( J_ACTION6, pressed );
+					VR_SysEventQue( SE_KEY, K_JOY6, pressed );
+					break;
+				case vr::k_EButton_SteamVR_Trigger:
+					VR_JoyEventQue( J_AXIS_RIGHT_TRIG, pressed? 255*128 : 0 );
+					VR_SysEventQue( SE_KEY, K_JOY_TRIGGER2, pressed );
+					break;
+				case vr::k_EButton_SteamVR_Touchpad:
+					VR_JoyEventQue( J_ACTION3, pressed );
+					VR_SysEventQue( SE_KEY, K_JOY3, pressed );
+					break;
+				default:
+					printf("break!");
+					break;
+				}
+			}
+			break;
+		}
+		}
+	}
+
+	static short sOldThumbLX = 0;
+	static short sOldThumbLY = 0;
+	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		vr::VRControllerState_t state;
+		hmd->GetControllerState(g_openVRLeftController, &state);
+		short sThumbLX = (short)(state.rAxis[0].x * 32767);
+		short sThumbLY = (short)(state.rAxis[0].y * -32767);
+		if (sThumbLX != sOldThumbLX)
+		{
+			VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, ( sThumbLX < -16384 ) );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, ( sThumbLX > 16384 ) );
+			sOldThumbLX = sThumbLX;
+		}
+		if (sThumbLY != sOldThumbLY)
+		{
+			VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, ( sThumbLY < -16384 ) );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, ( sThumbLY > 16384 ) );
+			sOldThumbLY = sThumbLY;
+		}
+	}
+	static short sOldThumbRX = 0;
+	static short sOldThumbRY = 0;
+	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		vr::VRControllerState_t state;
+		hmd->GetControllerState(g_openVRRightController, &state);
+		short sThumbRX = (short)(state.rAxis[0].x * 32767);
+		short sThumbRY = (short)(state.rAxis[0].y * -32767);
+		if (sThumbRX != sOldThumbRX)
+		{
+			VR_JoyEventQue( J_AXIS_RIGHT_X, sThumbRX );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK2_LEFT, ( sThumbRX < -16384 ) );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK2_RIGHT, ( sThumbRX > 16384 ) );
+			sOldThumbRX = sThumbRX;
+		}
+		if (sThumbRY != sOldThumbRY)
+		{
+			VR_JoyEventQue( J_AXIS_RIGHT_Y, sThumbRY );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK2_UP, ( sThumbRY < -16384 ) );
+			VR_SysEventQue( SE_KEY, K_JOY_STICK2_DOWN, ( sThumbRY > 16384 ) );
+			sOldThumbRY = sThumbRY;
+		}
+	}
+}
+
+bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, bool overridePitch)
+{
+	if (!g_vrHasHeadPose)
 	{
 		return false;
 	}
-
-	vr::HmdMatrix34_t &hmdMat = hmdPose.mDeviceToAbsoluteTracking;
-
-	// translation
-	float tx = scale * hmdMat.m[0][3];
-	float ty = scale * hmdMat.m[1][3];
-	float tz = scale * hmdMat.m[2][3];
 
 	if (overridePitch)
 	{
@@ -741,17 +1050,78 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, bool overridePitch)
 		axis = angles.ToMat3() * axis;
 	}
 
-	origin +=
-		axis[0] * -tz +
-		axis[1] * -tx +
-		axis[2] * ty;
+	if (!glConfig.openVRSeated)
+	{
+		origin.z -= eyeOffset.z;
+		// ignore x and y
+		origin += axis[2] * g_vrHeadOrigin.z;
+	}
+	else
+	{
+		origin += axis * g_vrHeadOrigin;
+	}
 
-	// rotation
-	idMat3 hmdAxis(
-		hmdMat.m[2][2], hmdMat.m[0][2], -hmdMat.m[1][2],
-		hmdMat.m[2][0], hmdMat.m[0][0], -hmdMat.m[1][0],
-		-hmdMat.m[2][1], -hmdMat.m[0][1], hmdMat.m[1][1]
-	);
-	axis = hmdAxis * axis;
+	axis = g_vrHeadAxis * axis;
+
 	return true;
 }
+
+bool VR_GetHead(idVec3 &origin, idMat3 &axis)
+{
+	if (!g_vrHasHeadPose)
+	{
+		return false;
+	}
+
+	origin = g_vrHeadOrigin;
+	axis = g_vrHeadAxis;
+
+	return true;
+}
+
+// returns left controller position relative to the head
+bool VR_GetLeftController(idVec3 &origin, idMat3 &axis)
+{
+	if (!g_vrHasLeftControllerPose || !g_vrHasHeadPose)
+	{
+		return false;
+	}
+
+	origin = g_vrLeftControllerOrigin;
+	axis = g_vrLeftControllerAxis;
+
+	return true;
+}
+
+// returns right controller position relative to the head
+bool VR_GetRightController(idVec3 &origin, idMat3 &axis)
+{
+	if (!g_vrHasRightControllerPose || !g_vrHasHeadPose)
+	{
+		return false;
+	}
+
+	origin = g_vrRightControllerOrigin;
+	axis = g_vrRightControllerAxis;
+
+	return true;
+}
+
+void VR_MoveDelta(idVec3 &delta, float &height)
+{
+	if (!g_vrHasHeadPose)
+	{
+		height = 0.f;
+		delta.Set(0,0,0);
+		return;
+	}
+
+	height = g_vrHeadOrigin.z;
+
+	delta.x = g_vrHeadMoveDelta.x;
+	delta.y = g_vrHeadMoveDelta.y;
+	delta.z = 0.f;
+
+	g_vrHeadMoveDelta.Zero();
+}
+

@@ -421,10 +421,11 @@ public:
 	// if a third person view is used
 	idVec3					firstPersonViewOrigin;
 	idMat3					firstPersonViewAxis;
-	idVec3					focusViewOrigin;
-	idMat3					focusViewAxis;
 	idVec3					flashlightOrigin;
 	idMat3					flashlightAxis;
+
+	idVec3					hmdOrigin;
+	idMat3					hmdAxis;
 	
 	idDragEntity			dragEntity;
 	
@@ -530,6 +531,7 @@ public:
 	float					DefaultFov() const;
 	float					CalcFov( bool honorZoom );
 	void					CalculateViewWeaponPos( idVec3& origin, idMat3& axis );
+	bool					CalculateVRView( idVec3& origin, idMat3& axis, bool overridePitch );
 	idVec3					GetEyePosition() const;
 	void					GetViewPos( idVec3& origin, idMat3& axis ) const;
 	void					OffsetThirdPersonView( float angle, float range, float height, bool clip );
@@ -826,6 +828,7 @@ private:
 	int						landChange;
 	int						landTime;
 	
+	idAngles				lastViewAngles;
 	
 	int						currentWeapon;
 	idPredictedValue< int >	idealWeapon;

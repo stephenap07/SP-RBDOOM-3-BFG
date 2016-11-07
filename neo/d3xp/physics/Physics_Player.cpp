@@ -226,6 +226,11 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 		// calculate position we are trying to move to
 		end = current.origin + time_left * current.velocity;
 		
+		if (bumpcount == 0)
+		{
+			end += vrDelta;
+		}
+		
 		// see if we can make it there
 		gameLocal.clip.Translation( trace, current.origin, end, clipModel, clipModel->GetAxis(), clipMask, self );
 		
@@ -815,9 +820,16 @@ void idPhysics_Player::WalkMove()
 		}
 	}
 	
+	if (hasCurrentHeadOrigin)
+	{
+		vrDelta = command.vrHeadOrigin - currentHeadOrigin;
+		vrDelta.z = 0;
+		vrDelta = viewForward * vrDelta.x - viewRight * vrDelta.y;
+	}
+
 	// don't do anything if standing still
 	vel = current.velocity - ( current.velocity * gravityNormal ) * gravityNormal;
-	if( !vel.LengthSqr() )
+	if( !vel.LengthSqr() && !vrDelta.x && !vrDelta.y )
 	{
 		return;
 	}
@@ -825,6 +837,8 @@ void idPhysics_Player::WalkMove()
 	gameLocal.push.InitSavingPushedEntityPositions();
 	
 	idPhysics_Player::SlideMove( false, true, true, true );
+
+	vrDelta.Zero();
 }
 
 /*
@@ -1713,6 +1727,9 @@ idPhysics_Player::idPhysics_Player()
 	ladderNormal.Zero();
 	waterLevel = WATERLEVEL_NONE;
 	waterType = 0;
+
+	hasCurrentHeadOrigin = false;
+	vrDelta.Zero();
 }
 
 /*
@@ -1945,6 +1962,10 @@ bool idPhysics_Player::Evaluate( int timeStepMSec, int endTimeMSec )
 	
 	idPhysics_Player::MovePlayer( timeStepMSec );
 	
+	currentHeadOrigin = command.vrHeadOrigin;
+	hasCurrentHeadOrigin = true;
+	vrDelta.Zero();
+
 	clipModel->Link( gameLocal.clip, self, 0, current.origin, clipModel->GetAxis() );
 	
 	if( IsOutsideWorld() )
