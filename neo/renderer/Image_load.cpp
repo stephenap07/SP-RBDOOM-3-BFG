@@ -746,8 +746,8 @@ void idImage::CopyFramebuffer( int x, int y, int imageWidth, int imageHeight )
 		{
 			glBindFramebuffer( GL_READ_FRAMEBUFFER, globalFramebuffers.hdrFBO->GetFramebuffer() );
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, globalFramebuffers.hdrNonMSAAFBO->GetFramebuffer() );
-			glBlitFramebuffer( 0, 0, glConfig.nativeScreenWidth, glConfig.nativeScreenHeight,
-							   0, 0, glConfig.nativeScreenWidth, glConfig.nativeScreenHeight,
+			glBlitFramebuffer( 0, 0, imageWidth, imageHeight,
+							   0, 0, imageWidth, imageHeight,
 							   GL_COLOR_BUFFER_BIT,
 							   GL_LINEAR );
 	
