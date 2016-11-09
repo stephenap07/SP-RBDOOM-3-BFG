@@ -7137,6 +7137,10 @@ void idPlayer::UpdateViewAngles()
 	}
 	
 	lastViewAngles = viewAngles;
+	if (glConfig.openVREnabled)
+	{
+		lastViewAngles.yaw += hmdAxis.ToAngles().yaw;
+	}
 
 	UpdateDeltaViewAngles( viewAngles );
 	
