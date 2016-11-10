@@ -3591,13 +3591,9 @@ static int RB_DrawShaderPasses( const drawSurf_t* const* const drawSurfs, const 
 		// guiStereoScreenOffset will always be zero for 3D views, so the !=
 		// check will never force an update due to the current sort value.
 		float thisGuiStereoOffset;
-		if (surf->sort < 0.f)
+		if (surf->sort < 0.f || glConfig.openVREnabled)
 		{
 			thisGuiStereoOffset = 0.f;
-		}
-		else if (glConfig.openVREnabled)
-		{
-			thisGuiStereoOffset = guiStereoScreenOffset * (1.5f - 0.5f * surf->sort);
 		}
 		else
 		{
@@ -5351,7 +5347,7 @@ void RB_DrawViewInternal( const viewDef_t* viewDef, const int stereoEye )
 	{
 		renderLog.OpenMainBlock( MRB_DRAW_SHADER_PASSES );
 		float guiScreenOffset;
-		if( viewDef->viewEntitys != NULL )
+		if( viewDef->viewEntitys != NULL || glConfig.openVREnabled)
 		{
 			// guiScreenOffset will be 0 in non-gui views
 			guiScreenOffset = 0.0f;
@@ -5646,6 +5642,137 @@ void RB_DrawView( const void* data, const int stereoEye )
 	
 	RB_ShowOverdraw();
 	
+	// TODO VR some of this may be better done else where.
+	if (glConfig.openVREnabled
+		&& cmd->viewDef->guiMode != GUIMODE_NONE
+		&& cmd->viewDef->guiMode != GUIMODE_FULLSCREEN)
+	{
+		const int targetEye = ( stereoEye == -1 ) ? 1 : 0;
+		cmd->viewDef->renderView.fov_left = glConfig.openVRfovEye[ targetEye ][0];
+		cmd->viewDef->renderView.fov_right = glConfig.openVRfovEye[ targetEye ][1];
+		cmd->viewDef->renderView.fov_bottom = glConfig.openVRfovEye[ targetEye ][2];
+		cmd->viewDef->renderView.fov_top = glConfig.openVRfovEye[ targetEye ][3];
+		cmd->viewDef->renderView.stereoScreenSeparation = 0.f;
+		R_SetupProjectionMatrix(cmd->viewDef);
+		idRenderMatrix::Transpose( *( idRenderMatrix* )cmd->viewDef->projectionMatrix, cmd->viewDef->projectionRenderMatrix );
+
+		for (viewEntity_t * viewEntity = cmd->viewDef->viewEntitys; viewEntity; viewEntity = viewEntity->next)
+		{
+			if (!viewEntity->isGuiSurface)
+			{
+				continue;
+			}
+			if (cmd->viewDef->guiMode == GUIMODE_SHELL)
+			{
+				static bool wasSeated = true;
+				if (wasSeated && !glConfig.openVRSeated)
+				{
+					tr.guiModel->UpdateVRShell();
+				}
+				wasSeated = glConfig.openVRSeated;
+
+				idVec3 vrShellOrigin;
+				idMat3 vrShellAxis;
+				if (!tr.guiModel->GetVRShell(vrShellOrigin,vrShellAxis))
+				{
+					vrShellOrigin.Zero();
+					vrShellAxis.Identity();
+				}
+
+				float guiHeight = 12*5.3f;
+				float guiScale = guiHeight / renderSystem->GetVirtualHeight();
+				float guiWidth = guiHeight * renderSystem->GetVirtualWidth() / renderSystem->GetVirtualHeight();
+				float guiForward = guiHeight + 12.f;
+
+				idVec3 guiOrigin(
+					guiForward,
+					guiWidth*0.5f,
+					guiHeight*0.5f
+				);
+				idMat3 guiAxis(
+					 0, -guiScale,  0,
+					 0,  0, -guiScale,
+					-guiScale,  0,  0
+				);
+
+				guiOrigin = guiOrigin * vrShellAxis + vrShellOrigin;
+				guiAxis = guiAxis * vrShellAxis;
+
+				idVec3 vrHeadOrigin;
+				idMat3 vrHeadAxis;
+				if (VR_GetHead(vrHeadOrigin, vrHeadAxis))
+				{
+					vrHeadAxis.InverseFastSelf();
+					vrHeadOrigin = vrHeadAxis * -vrHeadOrigin;
+				}
+				else
+				{
+					vrHeadOrigin.Zero();
+					vrHeadAxis = mat3_identity;
+				}
+				vrHeadOrigin.y += 1.5f * stereoEye;
+
+				idVec3 mvpOrigin = guiOrigin * vrHeadAxis + vrHeadOrigin;
+				idMat3 mvpAxis = guiAxis * vrHeadAxis;
+
+				float unflippedMatrix[16];
+				R_AxisToModelMatrix(mvpAxis, mvpOrigin, unflippedMatrix);
+
+				static float s_flipMatrix[16] =
+				{
+					// convert from our coordinate system (looking down X)
+					// to OpenGL's coordinate system (looking down -Z)
+					 0, 0, -1, 0,
+					-1, 0,  0, 0,
+					 0, 1,  0, 0,
+					 0, 0,  0, 1
+				};
+				R_MatrixMultiply( unflippedMatrix, s_flipMatrix, viewEntity->modelViewMatrix );
+
+				idRenderMatrix viewMat;
+				idRenderMatrix::Transpose( *( idRenderMatrix* )viewEntity->modelViewMatrix, viewMat );
+				idRenderMatrix::Multiply( cmd->viewDef->projectionRenderMatrix, viewMat, viewEntity->mvp );
+			}
+			else //if (cmd->viewDef->guiMode == GUIMODE_HUD)
+			{
+				static float guiHeight = 36.f;
+				static float guiForward = 27.f;
+				float guiScale = guiHeight / renderSystem->GetVirtualHeight();
+				float guiWidth = guiHeight * renderSystem->GetVirtualWidth() / renderSystem->GetVirtualHeight();
+				float guiUp = 0.f;
+				idVec3 guiOrigin(
+					guiForward,
+					guiWidth*0.5f,
+					guiHeight*0.5f + guiUp
+				);
+				idMat3 guiAxis(
+					 0, -guiScale,  0,
+					 0,  0, -guiScale,
+					-guiScale,  0,  0
+				);
+
+				guiOrigin.y += 1.5f * stereoEye;
+
+				float unflippedMatrix[16];
+				R_AxisToModelMatrix(guiAxis, guiOrigin, unflippedMatrix);
+
+				static float s_flipMatrix[16] =
+				{
+					// convert from our coordinate system (looking down X)
+					// to OpenGL's coordinate system (looking down -Z)
+					 0, 0, -1, 0,
+					-1, 0,  0, 0,
+					 0, 1,  0, 0,
+					 0, 0,  0, 1
+				};
+				R_MatrixMultiply( unflippedMatrix, s_flipMatrix, viewEntity->modelViewMatrix );
+
+				idRenderMatrix viewMat;
+				idRenderMatrix::Transpose( *( idRenderMatrix* )viewEntity->modelViewMatrix, viewMat );
+				idRenderMatrix::Multiply( cmd->viewDef->projectionRenderMatrix, viewMat, viewEntity->mvp );
+			}
+		}
+	}
 	// render the scene
 	RB_DrawViewInternal( cmd->viewDef, stereoEye );
 	

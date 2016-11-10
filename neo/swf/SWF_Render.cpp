@@ -136,14 +136,24 @@ void idSWF::Render( idRenderSystem* gui, int time, bool isSplitscreen )
 		}
 	}
 	
-	const float pixelAspect = renderSystem->GetPixelAspect();
-	const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
-	const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
-	float scale = swfScale * sysHeight / ( float )frameHeight;
-	
+	float sysWidth, sysHeight;
 	if (glConfig.openVREnabled)
 	{
-		scale *= 0.5f;
+		sysWidth = renderSystem->GetVirtualWidth();
+		sysHeight = renderSystem->GetVirtualHeight();
+	}
+	else
+	{
+		const float pixelAspect = renderSystem->GetPixelAspect();
+		sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
+		sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
+	}
+
+	float scale = swfScale * sysHeight / ( float )frameHeight;
+	
+	if (glConfig.openVREnabled && isHUD)
+	{
+		scale *= 0.75f;
 	}
 
 	swfRenderState_t renderState;
@@ -156,6 +166,14 @@ void idSWF::Render( idRenderSystem* gui, int time, bool isSplitscreen )
 	renderBorder = renderState.matrix.tx / scale;
 	
 	scaleToVirtual.Set( ( float )renderSystem->GetVirtualWidth() / sysWidth, ( float )renderSystem->GetVirtualHeight() / sysHeight );
+	
+	if (tr.guiModel->GetMode() == GUIMODE_SHELL)
+	{
+		renderState.activeMasks = STENCIL_INCR;
+		gui->SetGLState( GLStateForRenderState( renderState ) );
+		DrawStretchPic( 0.0f, 0.0f, sysWidth, sysHeight, 0, 0, 1, 1, white );
+		renderState.activeMasks = 1;
+	}
 	
 	RenderSprite( gui, mainspriteInstance, renderState, time, isSplitscreen );
 	
@@ -193,6 +211,14 @@ void idSWF::Render( idRenderSystem* gui, int time, bool isSplitscreen )
 		}
 	}
 	
+	if (tr.guiModel->GetMode() == GUIMODE_SHELL)
+	{
+		renderState.activeMasks = STENCIL_DECR;
+		gui->SetGLState( GLStateForRenderState( renderState ) );
+		DrawStretchPic( 0.0f, 0.0f, sysWidth, sysHeight, 0, 0, 1, 1, white );
+		renderState.activeMasks = 0;
+	}
+
 	// restore the GL State
 	gui->SetGLState( 0 );
 }
@@ -329,14 +355,24 @@ void idSWF::RenderSprite( idRenderSystem* gui, idSWFSpriteInstance* spriteInstan
 				float widthAdj = swf_titleSafe.GetFloat() * frameWidth;
 				float heightAdj = swf_titleSafe.GetFloat() * frameHeight;
 				
-				const float pixelAspect = renderSystem->GetPixelAspect();
-				const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
-				const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
-				
+				float sysWidth, sysHeight;
 				if (glConfig.openVREnabled)
 				{
-					widthAdj = 0.18f * sysWidth;
-					heightAdj = 0.27f * sysHeight;
+					sysWidth = renderSystem->GetVirtualWidth();
+					sysHeight = renderSystem->GetVirtualHeight();
+					if (isHUD)
+					{
+						static float hudWidthAdj = 320;
+						static float hudHeightAdj = 78;
+						widthAdj = hudWidthAdj;
+						heightAdj = hudHeightAdj;
+					}
+				}
+				else
+				{
+					const float pixelAspect = renderSystem->GetPixelAspect();
+					sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
+					sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
 				}
 
 				if( display.spriteInstance->name.Icmp( "_fullScreen" ) == 0 )

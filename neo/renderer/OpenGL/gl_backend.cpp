@@ -821,12 +821,19 @@ void VR_PostSwap()
 {
 	//vr::VRCompositor()->PostPresentHandoff();
 
+	glConfig.openVRSeated = (vr::VRCompositor()->GetTrackingSpace() == vr::TrackingUniverseSeated);
+
+	vr::TrackedDevicePose_t rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+	vr::VRCompositor()->WaitGetPoses(rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
+	g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
+
 	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid
 		|| g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
 	{
 		if (glConfig.openVRSeated)
 		{
-			glConfig.openVRSeated = false;
 			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
 		}
 	}
@@ -834,16 +841,9 @@ void VR_PostSwap()
 	{
 		if (!glConfig.openVRSeated)
 		{
-			glConfig.openVRSeated = true;
 			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
 		}
 	}
-
-	vr::TrackedDevicePose_t rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-	vr::VRCompositor()->WaitGetPoses(rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
-
-	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
-	g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
 
 	extern idCVar	stereoRender_interOccularCentimeters;
 	extern float CentimetersToInches( const float cm );

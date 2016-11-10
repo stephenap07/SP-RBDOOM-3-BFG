@@ -218,6 +218,8 @@ private:
 	idStr			filename;
 	ID_TIME_T		timestamp;
 	
+	bool			isHUD;
+
 	float			frameWidth;
 	float			frameHeight;
 	uint16			frameRate;

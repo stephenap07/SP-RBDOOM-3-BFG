@@ -51,6 +51,7 @@ idGuiModel::idGuiModel()
 	viewEyeBuffer = 0;
 	mode = GUIMODE_SHELL;
 	vrShellActive = false;
+	vrShellNeedsUpdate = true;
 	vrShellOrigin.Zero();
 	vrShellAxis.Identity();
 }
@@ -102,6 +103,11 @@ void idGuiModel::SetViewEyeBuffer( int veb )
 	viewEyeBuffer = veb;
 }
 
+/*
+================
+idGuiModel::SetMode
+================
+*/
 void idGuiModel::SetMode(guiMode_t a_mode)
 {
 	if (a_mode != mode)
@@ -114,33 +120,63 @@ void idGuiModel::SetMode(guiMode_t a_mode)
 
 /*
 ================
+idGuiModel::UpdateVRShell
+================
+*/
+bool idGuiModel::UpdateVRShell()
+{
+	vrShellNeedsUpdate = !VR_GetHead( vrShellOrigin, vrShellAxis );
+	if (vrShellNeedsUpdate)
+	{
+		return false;
+	}
+	idVec3 forward;
+	if (vrShellAxis[0].z > 0.707f) // head pitched up
+	{
+		forward = -vrShellAxis[2];
+	}
+	else if (vrShellAxis[0].z < -0.707f) // head pitched down
+	{
+		forward = vrShellAxis[2];
+	}
+	else
+	{
+		forward = vrShellAxis[0];
+	}
+	static idVec3 up(0,0,1);
+	forward.ProjectOntoPlane(up);
+	vrShellAxis = forward.ToMat3();
+	return true;
+}
+
+/*
+================
 idGuiModel::ActivateVRShell
 ================
 */
-// TODO VR UI Review
 void idGuiModel::ActivateVRShell(bool b)
 {
 	if (!vrShellActive && b)
 	{
-		VR_GetHead( vrShellOrigin, vrShellAxis );
-		idVec3 forward;
-		if (vrShellAxis[0].z > 0.707f) // head pitched up
-		{
-			forward = -vrShellAxis[2];
-		}
-		else if (vrShellAxis[0].z < -0.707f) // head pitched down
-		{
-			forward = vrShellAxis[2];
-		}
-		else
-		{
-			forward = vrShellAxis[0];
-		}
-		static idVec3 up(0,0,1);
-		forward.ProjectOntoPlane(up);
-		vrShellAxis = forward.ToMat3();
+		vrShellNeedsUpdate = true;
 	}
 	vrShellActive = b;
+}
+
+/*
+================
+idGuiModel::GetVRShell
+================
+*/
+bool idGuiModel::GetVRShell( idVec3 &origin, idMat3 &axis )
+{
+	if (vrShellNeedsUpdate && !UpdateVRShell())
+	{
+		return false;
+	}
+	origin = vrShellOrigin;
+	axis = vrShellAxis;
+	return true;
 }
 
 /*
@@ -247,16 +283,26 @@ void idGuiModel::EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16],
 			// override sort with the stereoDepth
 			//drawSurf->sort = stereoDepth;
 			
+			float zoffset = 0;
+
+			static float zoffsetNone = 0;
+			static float zoffsetNear = 0;
+			static float zoffsetMid = 32;
+			static float zoffsetFar = 64;
+
 			switch( guiSurf.stereoType )
 			{
 				case STEREO_DEPTH_TYPE_NEAR:
 					drawSurf->sort = STEREO_DEPTH_NEAR;
+					zoffset = zoffsetNear;
 					break;
 				case STEREO_DEPTH_TYPE_MID:
 					drawSurf->sort = STEREO_DEPTH_MID;
+					zoffset = zoffsetMid;
 					break;
 				case STEREO_DEPTH_TYPE_FAR:
 					drawSurf->sort = STEREO_DEPTH_FAR;
+					zoffset = zoffsetFar;
 					break;
 				case STEREO_DEPTH_TYPE_DISABLE:
 					drawSurf->sort = STEREO_DEPTH_DISABLE;
@@ -264,7 +310,26 @@ void idGuiModel::EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16],
 				case STEREO_DEPTH_TYPE_NONE:
 				default:
 					drawSurf->sort = defaultStereoDepth;
+					zoffset = zoffsetNone;
 					break;
+			}
+
+			if (glConfig.openVREnabled)
+			{
+				int minIndex = indexPointer[guiSurf.firstIndex];
+				int maxIndex = minIndex;
+				int endIndex = guiSurf.firstIndex + guiSurf.numIndexes;
+				for (int j = guiSurf.firstIndex + 1; j < endIndex; j++)
+				{
+					int index = indexPointer[j];
+					assert(index < numVerts);
+					if (index < minIndex) minIndex = index;
+					if (index > maxIndex) maxIndex = index;
+				}
+				for (int index = minIndex; index <= maxIndex; index++)
+				{
+					vertexPointer[index].xyz.z -= zoffset;
+				}
 			}
 		}
 	}
@@ -381,7 +446,7 @@ void idGuiModel::EmitFullScreen()
 	tr.viewDef = viewDef;
 	
 	EmitSurfaces( viewDef->worldSpace.modelMatrix, viewDef->worldSpace.modelViewMatrix,
-				  false /* depthHack */ , stereoEnabled /* stereoDepthSort */, false /* link as entity */ );
+				  false /* depthHack */ , stereoEnabled /* stereoDepthSort */, true /* link as entity */ );
 				  
 	tr.viewDef = oldViewDef;
 	

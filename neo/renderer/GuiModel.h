@@ -51,10 +51,11 @@ public:
 	int		GetViewEyeBuffer() { return viewEyeBuffer; }
 
 	void	SetMode(guiMode_t a_mode);
+	guiMode_t	GetMode() { return mode; }
 
+	bool	UpdateVRShell();
 	void	ActivateVRShell( bool b );
-	const idVec3 &GetVRShellOrigin() { return vrShellOrigin; }
-	const idMat3 &GetVRShellAxis() { return vrShellAxis; }
+	bool	GetVRShell( idVec3 &origin, idMat3 &axis );
 	
 	// allocates memory for verts and indexes in frame-temporary buffer memory
 	void	BeginFrame();
@@ -78,6 +79,7 @@ private:
 	guiMode_t					mode;
 
 	bool						vrShellActive;
+	bool						vrShellNeedsUpdate;
 	idVec3						vrShellOrigin;
 	idMat3						vrShellAxis;
 	

@@ -32,8 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "Common_local.h"
-#include "../renderer/Image.h" // now I did it!
-#include "../renderer/ImageOpts.h"
+#include "../renderer/tr_local.h"
 
 // RB begin
 #if defined(USE_DOOMCLASSIC)
@@ -284,8 +283,9 @@ void idCommonLocal::Draw()
 	// RB end
 	else if( game && game->Shell_IsActive() )
 	{
-		bool gameDraw = game->Draw( game->GetLocalClientNum() );
-		if( !gameDraw )
+		// TODO VR look at getting head tracking working when paused.
+		//bool gameDraw = game->Draw( game->GetLocalClientNum() );
+		//if( !gameDraw )
 		{
 			renderSystem->SetColor( colorBlack );
 			renderSystem->DrawStretchPic( 0, 0, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0, 0, 1, 1, whiteMaterial );
@@ -338,9 +338,11 @@ void idCommonLocal::Draw()
 		// draw the wipe material on top of this if it hasn't completed yet
 		DrawWipeModel();
 		
+		tr.guiModel->SetMode(GUIMODE_HUD);
 		Dialog().Render( loadGUI != NULL );
 		
 		// draw the half console / notify console on top of everything
+		tr.guiModel->SetMode(GUIMODE_HUD);
 		console->Draw( false );
 	}
 }

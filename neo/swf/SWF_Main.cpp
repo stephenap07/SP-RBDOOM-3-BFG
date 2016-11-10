@@ -130,6 +130,8 @@ idSWF::idSWF( const char* filename_, idSoundWorld* soundWorld_ )
 	filename.ToLower();
 	filename.BackSlashesToSlashes();
 	filename.SetFileExtension( ".swf" );
+
+	isHUD = ( filename.Find("hud", false) != -1 );
 	
 	timestamp = fileSystem->GetTimestamp( filename );
 	
