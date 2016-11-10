@@ -81,6 +81,14 @@ enum stereoDepthType_t
 	STEREO_DEPTH_TYPE_FAR
 };
 
+enum guiMode_t
+{
+	GUIMODE_NONE,
+	GUIMODE_SHELL,
+	GUIMODE_HUD,
+	GUIMODE_FULLSCREEN,
+};
+
 
 enum graphicsVendor_t
 {

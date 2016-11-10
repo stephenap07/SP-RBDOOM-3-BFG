@@ -452,6 +452,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	{
 		if( player->pdaMenu != NULL )
 		{
+			tr.guiModel->SetMode(GUIMODE_SHELL);
 			player->pdaMenu->Update();
 		}
 		tr.guiModel->SetViewEyeBuffer( 0 );
@@ -473,6 +474,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	}
 	
 	// process the frame
+	tr.guiModel->SetMode(GUIMODE_FULLSCREEN);
 	fxManager->Process( &hackedView );
 	
 	if( !hudManager )
@@ -508,6 +510,8 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 				}
 			}
 		}
+		
+		tr.guiModel->SetMode(GUIMODE_HUD);
 		player->DrawHUD( hudManager );
 		
 		if( player->spectating )
@@ -560,8 +564,11 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 		
 		if( bfgVision )
 		{
+			tr.guiModel->SetMode(GUIMODE_FULLSCREEN);
+			float extend = -0.5f * glConfig.openVRScreenSeparation * renderSystem->GetVirtualWidth();
+			float offset = -extend * view->viewEyeBuffer;
 			renderSystem->SetColor4( 1.0f, 1.0f, 1.0f, 1.0f );
-			renderSystem->DrawStretchPic( 0.0f, 0.0f, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0.0f, 0.0f, 1.0f, 1.0f, bfgMaterial );
+			renderSystem->DrawStretchPic( offset - extend, 0.0f, renderSystem->GetVirtualWidth() + extend * 2, renderSystem->GetVirtualHeight(), 0.0f, 0.0f, 1.0f, 1.0f, bfgMaterial );
 		}
 		
 	}
@@ -569,6 +576,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	// test a single material drawn over everything
 	if( g_testPostProcess.GetString()[0] )
 	{
+		tr.guiModel->SetMode(GUIMODE_FULLSCREEN);
 		const idMaterial* mtr = declManager->FindMaterial( g_testPostProcess.GetString(), false );
 		if( !mtr )
 		{
@@ -852,6 +860,7 @@ void idPlayerView::RenderPlayerView( idMenuHandler_HUD* hudManager )
 	{
 		SingleView( view, hudManager );
 	}
+	tr.guiModel->SetMode(GUIMODE_FULLSCREEN);
 	ScreenFade();
 }
 

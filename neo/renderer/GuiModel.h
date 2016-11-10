@@ -49,6 +49,12 @@ public:
 	
 	void	SetViewEyeBuffer( int veb );
 	int		GetViewEyeBuffer() { return viewEyeBuffer; }
+
+	void	SetMode(guiMode_t a_mode);
+
+	void	ActivateVRShell( bool b );
+	const idVec3 &GetVRShellOrigin() { return vrShellOrigin; }
+	const idMat3 &GetVRShellAxis() { return vrShellAxis; }
 	
 	// allocates memory for verts and indexes in frame-temporary buffer memory
 	void	BeginFrame();
@@ -68,6 +74,12 @@ private:
 						  bool depthHack, bool allowFullScreenStereoDepth, bool linkAsEntity );
 						  
 	int							viewEyeBuffer;				// -1 = left eye, 1 = right eye, 0 = monoscopic view or GUI
+
+	guiMode_t					mode;
+
+	bool						vrShellActive;
+	idVec3						vrShellOrigin;
+	idMat3						vrShellAxis;
 	
 	guiModelSurface_t* 			surf;
 	

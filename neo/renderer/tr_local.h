@@ -456,7 +456,7 @@ struct viewDef_t
 	bool				isXraySubview;
 	
 	bool				isEditor;
-	bool				is2Dgui;
+	guiMode_t			guiMode;
 	
 	int					numClipPlanes;			// mirrors will often use a single clip plane
 	idPlane				clipPlanes[MAX_CLIP_PLANES];		// in world space, the positive side

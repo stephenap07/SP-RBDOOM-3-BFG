@@ -49,6 +49,10 @@ idGuiModel::idGuiModel()
 		shaderParms[i] = 1.0f;
 	}
 	viewEyeBuffer = 0;
+	mode = GUIMODE_SHELL;
+	vrShellActive = false;
+	vrShellOrigin.Zero();
+	vrShellAxis.Identity();
 }
 
 /*
@@ -82,6 +86,11 @@ void idGuiModel::ReadFromDemo( idDemoFile* demo )
 {
 }
 
+/*
+================
+idGuiModel::SetViewEyeBuffer
+================
+*/
 void idGuiModel::SetViewEyeBuffer( int veb )
 {
 	if (veb == viewEyeBuffer)
@@ -91,6 +100,47 @@ void idGuiModel::SetViewEyeBuffer( int veb )
 	EmitFullScreen();
 	Clear();
 	viewEyeBuffer = veb;
+}
+
+void idGuiModel::SetMode(guiMode_t a_mode)
+{
+	if (a_mode != mode)
+	{
+		EmitFullScreen();
+		Clear();
+	}
+	mode = a_mode;
+}
+
+/*
+================
+idGuiModel::ActivateVRShell
+================
+*/
+// TODO VR UI Review
+void idGuiModel::ActivateVRShell(bool b)
+{
+	if (!vrShellActive && b)
+	{
+		VR_GetHead( vrShellOrigin, vrShellAxis );
+		idVec3 forward;
+		if (vrShellAxis[0].z > 0.707f) // head pitched up
+		{
+			forward = -vrShellAxis[2];
+		}
+		else if (vrShellAxis[0].z < -0.707f) // head pitched down
+		{
+			forward = vrShellAxis[2];
+		}
+		else
+		{
+			forward = vrShellAxis[0];
+		}
+		static idVec3 up(0,0,1);
+		forward.ProjectOntoPlane(up);
+		vrShellAxis = forward.ToMat3();
+	}
+	vrShellActive = b;
 }
 
 /*
@@ -258,7 +308,7 @@ void idGuiModel::EmitFullScreen()
 	SCOPED_PROFILE_EVENT( "Gui::EmitFullScreen" );
 	
 	viewDef_t* viewDef = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *viewDef ), FRAME_ALLOC_VIEW_DEF );
-	viewDef->is2Dgui = true;
+	viewDef->guiMode = mode;
 	tr.GetCroppedViewport( &viewDef->viewport );
 	
 	bool stereoEnabled = ( renderSystem->GetStereo3DMode() != STEREO3D_OFF );

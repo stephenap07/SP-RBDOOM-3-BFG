@@ -7460,6 +7460,7 @@ void idPlayer::TogglePDA()
 	if( pdaMenu != NULL )
 	{
 		objectiveSystemOpen = !objectiveSystemOpen;
+		tr.guiModel->ActivateVRShell( objectiveSystemOpen );
 		pdaMenu->ActivateMenu( objectiveSystemOpen );
 		
 		if( objectiveSystemOpen )

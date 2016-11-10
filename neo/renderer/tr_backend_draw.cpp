@@ -3843,7 +3843,7 @@ static int RB_DrawShaderPasses( const drawSurf_t* const* const drawSurfs, const 
 						}
 						else
 						{
-							if( backEnd.viewDef->is2Dgui )
+							if( backEnd.viewDef->guiMode != GUIMODE_NONE )
 							{
 								// RB: 2D fullscreen drawing like warp or damage blend effects
 								renderProgManager.BindShader_TextureVertexColor_sRGB();
@@ -4397,7 +4397,7 @@ static void RB_CalculateAdaptation()
 
 static void RB_Tonemap( const viewDef_t* viewDef )
 {
-	RENDERLOG_PRINTF( "---------- RB_Tonemap( avg = %f, max = %f, key = %f, is2Dgui = %i ) ----------\n", backEnd.hdrAverageLuminance, backEnd.hdrMaxLuminance, backEnd.hdrKey, ( int )viewDef->is2Dgui );
+	RENDERLOG_PRINTF( "---------- RB_Tonemap( avg = %f, max = %f, key = %f, is2Dgui = %i ) ----------\n", backEnd.hdrAverageLuminance, backEnd.hdrMaxLuminance, backEnd.hdrKey, ( int )viewDef->guiMode );
 	
 	//postProcessCommand_t* cmd = ( postProcessCommand_t* )data;
 	//const idScreenRect& viewport = cmd->viewDef->viewport;
@@ -4441,7 +4441,7 @@ static void RB_Tonemap( const viewDef_t* viewDef )
 	}
 	
 	float screenCorrectionParm[4];
-	if( viewDef->is2Dgui )
+	if( viewDef->guiMode != GUIMODE_NONE )
 	{
 		screenCorrectionParm[0] = 2.0f;
 		screenCorrectionParm[1] = 1.0f;
@@ -4497,7 +4497,7 @@ static void RB_Tonemap( const viewDef_t* viewDef )
 
 static void RB_Bloom( const viewDef_t* viewDef )
 {
-	if( viewDef->is2Dgui || !r_useHDR.GetBool() )
+	if( viewDef->guiMode != GUIMODE_NONE || !r_useHDR.GetBool() )
 	{
 		return;
 	}
@@ -4623,7 +4623,7 @@ static void RB_Bloom( const viewDef_t* viewDef )
 
 static void RB_SSAO( const viewDef_t* viewDef )
 {
-	if( !viewDef->viewEntitys || viewDef->is2Dgui )
+	if( !viewDef->viewEntitys || viewDef->guiMode != GUIMODE_NONE )
 	{
 		// 3D views only
 		return;
@@ -4931,7 +4931,7 @@ static void RB_SSAO( const viewDef_t* viewDef )
 
 static void RB_SSGI( const viewDef_t* viewDef )
 {
-	if( !viewDef->viewEntitys || viewDef->is2Dgui )
+	if( !viewDef->viewEntitys || viewDef->guiMode != GUIMODE_NONE )
 	{
 		// 3D views only
 		return;
@@ -5248,7 +5248,7 @@ void RB_DrawViewInternal( const viewDef_t* viewDef, const int stereoEye )
 	//GL_CheckErrors();
 	
 	// RB begin
-	bool useHDR = r_useHDR.GetBool() && !viewDef->is2Dgui;
+	bool useHDR = r_useHDR.GetBool() && viewDef->guiMode == GUIMODE_NONE;
 	
 	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
 	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
