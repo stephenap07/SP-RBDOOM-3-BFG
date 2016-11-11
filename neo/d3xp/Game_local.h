@@ -623,12 +623,18 @@ public:
 	{
 		return mapFileName.c_str();
 	}
+
+	bool 			 		IsMapIntro()
+	{
+		return mapIsIntro;
+	}
 	
 	const char* 			GetMPPlayerDefName() const;
 	
 private:
 	const static int		INITIAL_SPAWN_COUNT = 1;
 	
+	bool					mapIsIntro;
 	idStr					mapFileName;			// name of the map, empty string if no map loaded
 	idMapFile* 				mapFile;				// will be NULL during the game unless in-game editing is used
 	bool					mapCycleLoaded;

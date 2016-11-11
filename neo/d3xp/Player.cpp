@@ -5873,7 +5873,10 @@ void idPlayer::UpdateWeapon()
 	}
 	
 	// update weapon state, particles, dlights, etc
-	weapon.GetEntity()->PresentWeapon( CanShowWeaponViewmodel() );
+	if (!gameLocal.IsMapIntro())
+	{
+		weapon.GetEntity()->PresentWeapon( CanShowWeaponViewmodel() );
+	}
 }
 
 /*
@@ -7592,7 +7595,7 @@ idPlayer::PerformImpulse
 */
 void idPlayer::PerformImpulse( int impulse )
 {
-	bool isIntroMap = ( idStr::FindText( gameLocal.GetMapFileName(), "mars_city1" ) >= 0 );
+	bool isIntroMap = gameLocal.IsMapIntro();
 	
 	// Normal 1 - 0 Keys.
 	if( impulse >= IMPULSE_0 && impulse <= IMPULSE_12 && !isIntroMap )

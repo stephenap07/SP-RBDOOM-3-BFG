@@ -974,6 +974,7 @@ void idGameLocal::LoadMap( const char* mapName, int randseed )
 		}
 	}
 	mapFileName = mapFile->GetName();
+	mapIsIntro = ( idStr::FindText( mapFileName, "mars_city1" ) >= 0 );
 	
 	// load the collision map
 	collisionModelManager->LoadMap( mapFile );
