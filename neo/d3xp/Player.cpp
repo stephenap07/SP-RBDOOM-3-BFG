@@ -10834,7 +10834,8 @@ void idPlayer::CalculateRenderView()
 			if (!lastViewWasCamera)
 			{
 				lastHeadOrigin = usercmd.vrHeadOrigin;
-				lastHeadAxisInv = usercmd.vrHeadAxis.Inverse();
+				float yaw = usercmd.vrHeadAxis.ToAngles().yaw;
+				lastHeadAxisInv = idAngles(0,-yaw,0).ToMat3();
 			}
 			renderView->vrMoveAxis = lastHeadAxisInv * renderView->viewaxis;
 			renderView->vieworg += (usercmd.vrHeadOrigin - lastHeadOrigin) * renderView->vrMoveAxis;
