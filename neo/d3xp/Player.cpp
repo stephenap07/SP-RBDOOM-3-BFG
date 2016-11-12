@@ -5874,10 +5874,7 @@ void idPlayer::UpdateWeapon()
 	}
 	
 	// update weapon state, particles, dlights, etc
-	if (!gameLocal.IsMapIntro())
-	{
-		weapon.GetEntity()->PresentWeapon( CanShowWeaponViewmodel() );
-	}
+	weapon.GetEntity()->PresentWeapon( CanShowWeaponViewmodel() );
 }
 
 /*

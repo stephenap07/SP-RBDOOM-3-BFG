@@ -2818,6 +2818,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	playerViewOrigin = owner->firstPersonViewOrigin;
 	playerViewAxis = owner->firstPersonViewAxis;
 	
+	bool hidden = false;
 	if( isPlayerFlashlight )
 	{
 		bool doAdjust = true;
@@ -2869,6 +2870,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	}
 	else
 	{
+		bool shouldHide = false;
 		static idVec3 invOrigin;
 		static idMat3 invAxis;
 		if (glConfig.openVREnabled
@@ -2898,6 +2900,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 		{
 			// calculate weapon position based on player movement bobbing
 			owner->CalculateViewWeaponPos( viewWeaponOrigin, viewWeaponAxis );
+			shouldHide = (pdaIcon == "guis/assets/hud/icons/fists_new.tga");
 		}
 		
 		// hide offset is for dropping the gun when approaching a GUI or NPC
@@ -2918,6 +2921,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 		}
 		else
 		{
+			hidden = shouldHide && hide;
 			hideOffset = hideEnd;
 			if( hide && disabled )
 			{
@@ -2963,7 +2967,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	renderEntity.weaponDepthHack = g_useWeaponDepthHack.GetBool();
 	
 	// present the model
-	if( showViewModel )
+	if( showViewModel && !hidden )
 	{
 		Present();
 	}
