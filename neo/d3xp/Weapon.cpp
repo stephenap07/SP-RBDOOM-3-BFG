@@ -2871,7 +2871,10 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	{
 		static idVec3 invOrigin;
 		static idMat3 invAxis;
-		if (glConfig.openVREnabled && owner->usercmd.vrHasRightController && GetInverseHandle( invOrigin, invAxis ))
+		if (glConfig.openVREnabled
+			&& owner->usercmd.vrHasLeftController
+			&& owner->usercmd.vrHasRightController
+			&& GetInverseHandle( invOrigin, invAxis ))
 		{
 			// remove pitch
 			float pitch = idMath::M_RAD2DEG * asin(playerViewAxis[0][2]);
@@ -2879,9 +2882,13 @@ void idWeapon::PresentWeapon( bool showViewModel )
 			viewWeaponAxis = angles.ToMat3() * playerViewAxis;
 
 			// apply controller tracking
-			viewWeaponOrigin = owner->hmdOrigin + viewWeaponAxis * owner->usercmd.vrRightControllerOrigin;
+			const idMat3 &vrFaceForward = owner->GetVRFaceForward();
+
+			viewWeaponOrigin = owner->hmdOrigin + viewWeaponAxis * vrFaceForward * (owner->usercmd.vrRightControllerOrigin - owner->usercmd.vrHeadOrigin);
 			angles.Set(45.f,0.f,0.f);
-			viewWeaponAxis = angles.ToMat3() * owner->usercmd.vrRightControllerAxis * viewWeaponAxis;
+			idMat3 vrRightControllerAxis = owner->usercmd.vrRightControllerAxis * vrFaceForward;
+
+			viewWeaponAxis = angles.ToMat3() * vrRightControllerAxis * viewWeaponAxis;
 
 			// recenter weapon to controller
 			viewWeaponOrigin += viewWeaponAxis * invOrigin;

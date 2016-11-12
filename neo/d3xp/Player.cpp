@@ -1550,7 +1550,8 @@ idPlayer::idPlayer():
 	landChange				= 0;
 	landTime				= 0;
 
-	lastViewAngles			= ang_zero;
+	lastViewWasCamera		= false;
+	hadLeftControllerYaw	= false;
 	
 	currentWeapon			= -1;
 	previousWeapon			= -1;
@@ -7035,24 +7036,10 @@ void idPlayer::UpdateViewAngles()
 	
 	if( !noclip && ( gameLocal.inCinematic || privateCameraView || gameLocal.GetCamera() || influenceActive == INFLUENCE_LEVEL2 || objectiveSystemOpen ) )
 	{
-		if (glConfig.openVREnabled)
-		{
-			cmdAngles.yaw = SHORT2ANGLE( usercmd.angles[YAW] );
-			if ( influenceActive == INFLUENCE_LEVEL3 )
-			{
-				viewAngles.yaw += idMath::ClampFloat( -1.0f, 1.0f, idMath::AngleDelta( idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[YAW]) + deltaViewAngles.yaw ) , viewAngles.yaw ) );
-			}
-			else
-			{
-				viewAngles.yaw = idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[YAW]) + deltaViewAngles.yaw );
-			}
-			UpdateDeltaViewAngles( viewAngles );
-			viewAngles.yaw -= lastViewAngles.yaw;
-		}
-		else
-		{
-			UpdateDeltaViewAngles( viewAngles );
-		}
+		// no view changes at all, but we still want to update the deltas or else when
+		// we get out of this mode, our view will snap to a kind of random angle
+		UpdateDeltaViewAngles( viewAngles );
+		hadLeftControllerYaw = false;
 		return;
 	}
 	
@@ -7069,6 +7056,7 @@ void idPlayer::UpdateViewAngles()
 			viewAngles.roll = 40.0f;
 			viewAngles.pitch = -15.0f;
 		}
+		hadLeftControllerYaw = false;
 		return;
 	}
 	
@@ -7091,6 +7079,12 @@ void idPlayer::UpdateViewAngles()
 	if( !centerView.IsDone( gameLocal.time ) )
 	{
 		viewAngles.pitch = centerView.GetCurrentValue( gameLocal.time );
+	}
+
+	if (glConfig.openVREnabled)
+	{
+		viewAngles.pitch = 0;
+		viewAngles.roll = 0;
 	}
 	
 	// clamp the pitch
@@ -7139,10 +7133,21 @@ void idPlayer::UpdateViewAngles()
 		viewAngles.pitch = std::max( viewAngles.pitch, pm_minviewpitch.GetFloat() * restrict );
 	}
 	
-	lastViewAngles = viewAngles;
-	if (glConfig.openVREnabled)
+	if (usercmd.vrHasLeftController)
 	{
-		lastViewAngles.yaw += hmdAxis.ToAngles().yaw;
+		float yaw = usercmd.vrLeftControllerAxis.ToAngles().yaw;
+		vrFaceForward = idAngles(0, -yaw, 0).ToMat3();
+		if (hadLeftControllerYaw)
+		{
+			viewAngles[YAW] += yaw - oldLeftControllerYaw;
+		}
+		hadLeftControllerYaw = true;
+		oldLeftControllerYaw = yaw;
+	}
+	else
+	{
+		vrFaceForward.Identity();
+		hadLeftControllerYaw = false;
 	}
 
 	UpdateDeltaViewAngles( viewAngles );
@@ -10386,7 +10391,7 @@ void idPlayer::CalculateViewWeaponPos( idVec3& origin, idMat3& axis )
 
 		if (usercmd.vrHasRightController)
 		{
-			idVec3 dir = usercmd.vrRightControllerOrigin;
+			idVec3 dir = (usercmd.vrRightControllerOrigin - usercmd.vrHeadOrigin) * vrFaceForward;
 			dir.z += 12;
 			dir = idAngles(0,18.f,0).ToMat3() * dir;
 			dir.NormalizeFast();
@@ -10501,7 +10506,14 @@ bool idPlayer::CalculateVRView( idVec3& origin, idMat3& axis, bool overridePitch
 		origin += axis * usercmd.vrHeadOrigin;
 	}
 
-	axis = usercmd.vrHeadAxis * axis;
+	if (usercmd.vrHasLeftController)
+	{
+		axis = usercmd.vrHeadAxis * vrFaceForward * axis;
+	}
+	else
+	{
+		axis = usercmd.vrHeadAxis * axis;
+	}
 
 	return true;
 }
@@ -10705,8 +10717,8 @@ void idPlayer::CalculateFirstPersonView()
 			float pitch = idMath::M_RAD2DEG * asin(axis[0][2]);
 			idAngles angles(pitch, 0, 0);
 			axis = angles.ToMat3() * axis;
-			flashlightOrigin = hmdOrigin + usercmd.vrLeftControllerOrigin * axis;
-			flashlightAxis = usercmd.vrLeftControllerAxis * axis;
+			flashlightOrigin = hmdOrigin + (usercmd.vrLeftControllerOrigin - usercmd.vrHeadOrigin) * vrFaceForward * axis;
+			flashlightAxis = usercmd.vrLeftControllerAxis * vrFaceForward * axis;
 		}
 	}
 }
@@ -10754,10 +10766,12 @@ void idPlayer::CalculateRenderView()
 	renderView->viewID = 0;
 
 	bool overridePitch = false;
+	bool camera;
 	
 	// check if we should be drawing from a camera's POV
 	if( !noclip && ( gameLocal.GetCamera() || privateCameraView ) )
 	{
+		camera = true;
 		// get origin, axis, and fov
 		if( privateCameraView )
 		{
@@ -10766,15 +10780,11 @@ void idPlayer::CalculateRenderView()
 		else
 		{
 			gameLocal.GetCamera()->GetViewParms( renderView );
-
-			float pitch = idMath::M_RAD2DEG * asin(firstPersonViewAxis[0][2]);
-			idAngles angles(pitch, 0, 0);
-			idMat3 axis = angles.ToMat3() * firstPersonViewAxis;
-			renderView->viewaxis = axis * renderView->viewaxis;
 		}
 	}
 	else
 	{
+		camera = false;
 		if( g_stopTime.GetBool() )
 		{
 			renderView->vieworg = firstPersonViewOrigin;
@@ -10819,15 +10829,44 @@ void idPlayer::CalculateRenderView()
 
 	if (glConfig.openVREnabled)
 	{
-		if (overridePitch)
+		if (camera)
 		{
-			renderView->vieworg -= renderView->viewaxis[0] * g_viewNodalX.GetFloat() + renderView->viewaxis[2] * g_viewNodalZ.GetFloat();
-			if (glConfig.openVRSeated)
+			if (!lastViewWasCamera)
 			{
-				renderView->vieworg.z += 13.f;
+				lastHeadOrigin = usercmd.vrHeadOrigin;
+				lastHeadAxisInv = usercmd.vrHeadAxis.Inverse();
+			}
+			renderView->vrMoveAxis = lastHeadAxisInv * renderView->viewaxis;
+			renderView->vieworg += (usercmd.vrHeadOrigin - lastHeadOrigin) * renderView->vrMoveAxis;
+			renderView->viewaxis = usercmd.vrHeadAxis * renderView->vrMoveAxis;
+			renderView->vrHadHead = usercmd.vrHasHead;
+			renderView->vrHeadOrigin = usercmd.vrHeadOrigin;
+			renderView->vrHeadAxis = usercmd.vrHeadAxis;
+		}
+		else
+		{
+			if (overridePitch)
+			{
+				renderView->vieworg -= renderView->viewaxis[0] * g_viewNodalX.GetFloat() + renderView->viewaxis[2] * g_viewNodalZ.GetFloat();
+				if (glConfig.openVRSeated)
+				{
+					renderView->vieworg.z += 13.f;
+				}
+			}
+			CalculateVRView(renderView->vieworg, renderView->viewaxis, overridePitch);
+			renderView->vrHadHead = usercmd.vrHasHead;
+			renderView->vrHeadOrigin = usercmd.vrHeadOrigin;
+			renderView->vrHeadAxis = usercmd.vrHeadAxis;
+			if (usercmd.vrHasLeftController)
+			{
+				renderView->vrMoveAxis = vrFaceForward * firstPersonViewAxis;
+			}
+			else
+			{
+				renderView->vrMoveAxis.Identity();
 			}
 		}
-		CalculateVRView(renderView->vieworg, renderView->viewaxis, overridePitch);
+		lastViewWasCamera = camera;
 	}
 	
 	if( renderView->fov_bottom == renderView->fov_top )

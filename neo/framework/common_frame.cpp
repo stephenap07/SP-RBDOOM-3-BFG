@@ -283,9 +283,8 @@ void idCommonLocal::Draw()
 	// RB end
 	else if( game && game->Shell_IsActive() )
 	{
-		// TODO VR look at getting head tracking working when paused.
-		//bool gameDraw = game->Draw( game->GetLocalClientNum() );
-		//if( !gameDraw )
+		bool gameDraw = game->Draw( game->GetLocalClientNum() );
+		if( !gameDraw )
 		{
 			renderSystem->SetColor( colorBlack );
 			renderSystem->DrawStretchPic( 0, 0, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0, 0, 1, 1, whiteMaterial );

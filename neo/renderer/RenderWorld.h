@@ -239,6 +239,12 @@ typedef struct renderView_s
 	// the viewEyeBuffer may be of a different polarity than stereoScreenSeparation if the eyes have been swapped
 	int						viewEyeBuffer;				// -1 = left eye, 1 = right eye, 0 = monoscopic view or GUI
 	float					stereoScreenSeparation;		// projection matrix horizontal offset, positive or negative based on camera eye
+
+	// for last moment visual correction and reduction of lag
+	bool					vrHadHead;
+	idVec3					vrHeadOrigin;
+	idMat3					vrHeadAxis;
+	idMat3					vrMoveAxis;
 } renderView_t;
 
 

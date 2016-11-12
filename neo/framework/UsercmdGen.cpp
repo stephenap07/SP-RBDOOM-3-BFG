@@ -1067,8 +1067,11 @@ void idUsercmdGenLocal::VRMove()
 	cmd.vrHasHead = VR_GetHead(cmd.vrHeadOrigin, cmd.vrHeadAxis);
 	if (!cmd.vrHasHead)
 	{
+		cmd.vrHeadAxis.Identity();
 		cmd.vrHasLeftController = false;
+		cmd.vrLeftControllerAxis.Identity();
 		cmd.vrHasRightController = false;
+		cmd.vrRightControllerAxis.Identity();
 		return;
 	}
 
@@ -1077,37 +1080,11 @@ void idUsercmdGenLocal::VRMove()
 	if (!cmd.vrHasLeftController || !cmd.vrHasRightController)
 	{
 		cmd.vrHasLeftController = false;
+		cmd.vrLeftControllerAxis.Identity();
 		cmd.vrHasRightController = false;
+		cmd.vrRightControllerAxis.Identity();
 		return;
 	}
-
-	// left controller is our 'body' direction so
-	// rotate by the 'body'
-	float yaw = cmd.vrLeftControllerAxis.ToAngles().yaw;
-	if (hadLeftControllerYaw)
-	{
-		viewangles[YAW] += yaw - oldLeftControllerYaw;
-	}
-	hadLeftControllerYaw = true;
-	oldLeftControllerYaw = yaw;
-
-	// face everything relative to the 'body'
-	idMat3 invRotation = idAngles(0, -yaw, 0).ToMat3();
-
-	cmd.vrLeftControllerAxis = cmd.vrLeftControllerAxis * invRotation;
-	cmd.vrLeftControllerOrigin = (cmd.vrLeftControllerOrigin - cmd.vrHeadOrigin) * invRotation;
-
-	cmd.vrRightControllerAxis = cmd.vrRightControllerAxis * invRotation;
-	cmd.vrRightControllerOrigin = (cmd.vrRightControllerOrigin - cmd.vrHeadOrigin) * invRotation;
-
-	idVec3 vrDelta;
-	float vrHeight;
-	VR_MoveDelta(vrDelta, vrHeight);
-	vrRelativeHeadOrigin += vrDelta * invRotation;
-	vrRelativeHeadOrigin.z = vrHeight;
-
-	cmd.vrHeadAxis = cmd.vrHeadAxis * invRotation;
-	cmd.vrHeadOrigin = vrRelativeHeadOrigin;
 
 	if (cmd.vrHeadOrigin.z < 12*4.5f)
 	{

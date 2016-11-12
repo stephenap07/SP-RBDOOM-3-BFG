@@ -5643,10 +5643,49 @@ void RB_DrawView( const void* data, const int stereoEye )
 	RB_ShowOverdraw();
 	
 	// TODO VR some of this may be better done else where.
+	idVec3 vrHeadOrigin;
+	idMat3 vrHeadAxis;
 	if (glConfig.openVREnabled
-		&& cmd->viewDef->guiMode != GUIMODE_NONE
-		&& cmd->viewDef->guiMode != GUIMODE_FULLSCREEN)
+		&& cmd->viewDef->guiMode == GUIMODE_NONE
+		&& cmd->viewDef->renderView.vrHadHead
+		&& VR_GetHead(vrHeadOrigin, vrHeadAxis))
 	{
+		// last moment update of view to reduce lag
+		idVec3 vrDeltaOrigin = (vrHeadOrigin - cmd->viewDef->renderView.vrHeadOrigin) * cmd->viewDef->renderView.vrMoveAxis;
+		idMat3 vrDeltaAxis = vrHeadAxis * cmd->viewDef->renderView.vrHeadAxis.Inverse();
+
+		cmd->viewDef->renderView.vieworg += vrDeltaOrigin;
+		cmd->viewDef->renderView.viewaxis = vrDeltaAxis * cmd->viewDef->renderView.viewaxis;
+
+		R_SetupViewMatrix( cmd->viewDef );
+
+		idRenderMatrix::Transpose( *( idRenderMatrix* )cmd->viewDef->projectionMatrix, cmd->viewDef->projectionRenderMatrix );
+		idRenderMatrix viewRenderMatrix;
+		idRenderMatrix::Transpose( *( idRenderMatrix* )cmd->viewDef->worldSpace.modelViewMatrix, viewRenderMatrix );
+		idRenderMatrix::Multiply( cmd->viewDef->projectionRenderMatrix, viewRenderMatrix, cmd->viewDef->worldSpace.mvp );
+
+		for (viewEntity_t * vEntity = cmd->viewDef->viewEntitys; vEntity; vEntity = vEntity->next)
+		{
+			R_MatrixMultiply( vEntity->modelMatrix,cmd->viewDef->worldSpace.modelViewMatrix, vEntity->modelViewMatrix );
+
+			idRenderMatrix viewMat;
+			idRenderMatrix::Transpose( *( idRenderMatrix* )vEntity->modelViewMatrix, viewMat );
+			idRenderMatrix::Multiply( cmd->viewDef->projectionRenderMatrix, viewMat, vEntity->mvp );
+			if( vEntity->weaponDepthHack )
+			{
+				idRenderMatrix::ApplyDepthHack( vEntity->mvp );
+			}
+			if( vEntity->modelDepthHack != 0.0f )
+			{
+				idRenderMatrix::ApplyModelDepthHack( vEntity->mvp, vEntity->modelDepthHack );
+			}
+		}
+	}
+	else if (glConfig.openVREnabled &&
+		(cmd->viewDef->guiMode == GUIMODE_SHELL ||
+		 cmd->viewDef->guiMode == GUIMODE_HUD))
+	{
+		// Put 2D GUI in a 3D world
 		const int targetEye = ( stereoEye == -1 ) ? 1 : 0;
 		cmd->viewDef->renderView.fov_left = glConfig.openVRfovEye[ targetEye ][0];
 		cmd->viewDef->renderView.fov_right = glConfig.openVRfovEye[ targetEye ][1];

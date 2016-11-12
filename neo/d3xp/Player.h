@@ -797,6 +797,11 @@ public:
 	{
 		numProjectileKills = 0;
 	}
+
+	const idMat3 &GetVRFaceForward()
+	{
+		return vrFaceForward;
+	}
 private:
 	// Stats & achievements
 	idAchievementManager	achievementManager;
@@ -828,7 +833,14 @@ private:
 	int						landChange;
 	int						landTime;
 	
-	idAngles				lastViewAngles;
+	bool					lastViewWasCamera;
+	idVec3					lastHeadOrigin;
+	idMat3					lastHeadAxisInv;
+	
+	bool					hadLeftControllerYaw;
+	float					oldLeftControllerYaw;
+	
+	idMat3					vrFaceForward;
 	
 	int						currentWeapon;
 	idPredictedValue< int >	idealWeapon;
