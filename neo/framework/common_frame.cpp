@@ -251,6 +251,7 @@ void idCommonLocal::Draw()
 	
 	if( loadGUI != NULL )
 	{
+		tr.guiModel->SetMode( GUIMODE_SHELL );
 		loadGUI->Render( renderSystem, Sys_Milliseconds() );
 	}
 	// RB begin
