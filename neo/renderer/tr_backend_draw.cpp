@@ -5654,8 +5654,15 @@ void RB_DrawView( const void* data, const int stereoEye )
 		idVec3 vrDeltaOrigin = (vrHeadOrigin - cmd->viewDef->renderView.vrHeadOrigin) * cmd->viewDef->renderView.vrMoveAxis;
 		idMat3 vrDeltaAxis = vrHeadAxis * cmd->viewDef->renderView.vrHeadAxis.Inverse();
 
-		cmd->viewDef->renderView.vieworg += vrDeltaOrigin;
-		cmd->viewDef->renderView.viewaxis = vrDeltaAxis * cmd->viewDef->renderView.viewaxis;
+		idVec3 &vieworg = cmd->viewDef->renderView.vieworg;
+		idMat3 &viewaxis = cmd->viewDef->renderView.viewaxis;
+		float stereoOffset = -stereoEye * glConfig.openVRHalfIPD;
+		vieworg -= stereoOffset * viewaxis[1];
+
+		vieworg += vrDeltaOrigin;
+		viewaxis = vrDeltaAxis * viewaxis;
+
+		vieworg += stereoOffset * viewaxis[1];
 
 		R_SetupViewMatrix( cmd->viewDef );
 
@@ -5714,8 +5721,8 @@ void RB_DrawView( const void* data, const int stereoEye )
 				idMat3 vrShellAxis;
 				if (!tr.guiModel->GetVRShell(vrShellOrigin,vrShellAxis))
 				{
-					vrShellOrigin.Zero();
-					vrShellAxis.Identity();
+					vrShellOrigin = VR_GetSeatedOrigin();
+					vrShellAxis = VR_GetSeatedAxis();
 				}
 
 				float guiHeight = 12*5.3f;
@@ -5741,15 +5748,15 @@ void RB_DrawView( const void* data, const int stereoEye )
 				idMat3 vrHeadAxis;
 				if (VR_GetHead(vrHeadOrigin, vrHeadAxis))
 				{
-					vrHeadAxis.InverseFastSelf();
+					vrHeadAxis.InverseSelf();
 					vrHeadOrigin = vrHeadAxis * -vrHeadOrigin;
 				}
 				else
 				{
-					vrHeadOrigin.Zero();
-					vrHeadAxis = mat3_identity;
+					vrHeadAxis = VR_GetSeatedAxisInverse();
+					vrHeadOrigin = vrHeadAxis * -VR_GetSeatedOrigin();
 				}
-				vrHeadOrigin.y += 1.5f * stereoEye;
+				vrHeadOrigin.y += glConfig.openVRHalfIPD * stereoEye;
 
 				idVec3 mvpOrigin = guiOrigin * vrHeadAxis + vrHeadOrigin;
 				idMat3 mvpAxis = guiAxis * vrHeadAxis;

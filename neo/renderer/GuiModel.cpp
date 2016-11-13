@@ -125,6 +125,12 @@ idGuiModel::UpdateVRShell
 */
 bool idGuiModel::UpdateVRShell()
 {
+	if (glConfig.openVRSeated)
+	{
+		vrShellOrigin = VR_GetSeatedOrigin();
+		vrShellAxis = VR_GetSeatedAxis();
+		return true;
+	}
 	vrShellNeedsUpdate = !VR_GetHead( vrShellOrigin, vrShellAxis );
 	if (vrShellNeedsUpdate)
 	{

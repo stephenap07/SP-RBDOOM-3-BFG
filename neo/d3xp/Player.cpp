@@ -7078,7 +7078,7 @@ void idPlayer::UpdateViewAngles()
 		viewAngles.pitch = centerView.GetCurrentValue( gameLocal.time );
 	}
 
-	if (glConfig.openVREnabled)
+	if (glConfig.openVREnabled && !glConfig.openVRSeated)
 	{
 		viewAngles.pitch = 0;
 		viewAngles.roll = 0;
@@ -7140,6 +7140,11 @@ void idPlayer::UpdateViewAngles()
 		}
 		hadLeftControllerYaw = true;
 		oldLeftControllerYaw = yaw;
+	}
+	else if (usercmd.vrHasHead)
+	{
+		vrFaceForward = VR_GetSeatedAxisInverse();
+		hadLeftControllerYaw = false;
 	}
 	else
 	{
@@ -10404,8 +10409,18 @@ void idPlayer::CalculateViewWeaponPos( idVec3& origin, idMat3& axis )
 	}
 	
 	// CalculateRenderView must have been called first
-	const idVec3& viewOrigin = firstPersonViewOrigin;
-	const idMat3& viewAxis = firstPersonViewAxis;
+	idVec3 viewOrigin;
+	idMat3 viewAxis;
+	if (glConfig.openVREnabled)
+	{
+		viewOrigin = flashlightOrigin;
+		viewAxis = flashlightAxis;
+	}
+	else
+	{
+		viewOrigin = firstPersonViewOrigin;
+		viewAxis = firstPersonViewAxis;
+	}
 	
 	// as the player changes direction, the gun will take a small lag
 	idVec3	gunOfs = GunAcceleratingOffset();
@@ -10500,7 +10515,7 @@ bool idPlayer::CalculateVRView( idVec3& origin, idMat3& axis, bool overridePitch
 	}
 	else
 	{
-		origin += axis * usercmd.vrHeadOrigin;
+		origin += (usercmd.vrHeadOrigin - VR_GetSeatedOrigin()) * vrFaceForward * axis;
 	}
 
 	if (usercmd.vrHasLeftController)
@@ -10688,22 +10703,25 @@ void idPlayer::CalculateFirstPersonView()
 
 		if (glConfig.openVRSeated)
 		{
-			hmdOrigin.z += 13.f;
-
-			idVec3 pelvis = hmdOrigin;
-			pelvis.z -= 27.f;
+			hmdOrigin.z += 11.f;
 
 			CalculateVRView(hmdOrigin, hmdAxis, true);
 
-			flashlightOrigin = hmdOrigin;
-			idVec3 up = hmdOrigin - pelvis;
-			up.NormalizeFast();
-			idVec3 forward = firstPersonViewAxis[0];
-			idVec3 left = up.Cross(forward);
-			forward = left.Cross(up);
-			flashlightAxis[0] = forward;
-			flashlightAxis[1] = left;
-			flashlightAxis[2] = up;
+			const idVec3 &seatedOrigin = VR_GetSeatedOrigin();
+
+			idVec3 pelvis(0,0,-27.f);
+			idVec3 neck = usercmd.vrHeadOrigin - seatedOrigin + usercmd.vrHeadAxis[2] * -5;
+			idMat3 shoulderAxis;
+			shoulderAxis[2] = neck - pelvis;
+			shoulderAxis[2].NormalizeFast();
+			shoulderAxis[0].Set(1,0,0);
+			shoulderAxis[1] = shoulderAxis[2].Cross(shoulderAxis[0]);
+			shoulderAxis[1].NormalizeFast();
+			shoulderAxis[0] = shoulderAxis[1].Cross(shoulderAxis[2]);
+			shoulderAxis[0].NormalizeFast();
+
+			flashlightOrigin = hmdOrigin + hmdAxis[2] * -5;
+			flashlightAxis = shoulderAxis * vrFaceForward * firstPersonViewAxis;
 		}
 		else
 		{
@@ -10830,9 +10848,17 @@ void idPlayer::CalculateRenderView()
 		{
 			if (!lastViewWasCamera)
 			{
-				lastHeadOrigin = usercmd.vrHeadOrigin;
-				float yaw = usercmd.vrHeadAxis.ToAngles().yaw;
-				lastHeadAxisInv = idAngles(0,-yaw,0).ToMat3();
+				if (glConfig.openVRSeated)
+				{
+					lastHeadOrigin = VR_GetSeatedOrigin();
+					lastHeadAxisInv = VR_GetSeatedAxisInverse();
+				}
+				else
+				{
+					lastHeadOrigin = usercmd.vrHeadOrigin;
+					float yaw = usercmd.vrHeadAxis.ToAngles().yaw;
+					lastHeadAxisInv = idAngles(0,-yaw,0).ToMat3();
+				}
 			}
 			renderView->vrMoveAxis = lastHeadAxisInv * renderView->viewaxis;
 			renderView->vieworg += (usercmd.vrHeadOrigin - lastHeadOrigin) * renderView->vrMoveAxis;
@@ -10848,14 +10874,14 @@ void idPlayer::CalculateRenderView()
 				renderView->vieworg -= renderView->viewaxis[0] * g_viewNodalX.GetFloat() + renderView->viewaxis[2] * g_viewNodalZ.GetFloat();
 				if (glConfig.openVRSeated)
 				{
-					renderView->vieworg.z += 13.f;
+					renderView->vieworg.z += 11.f;
 				}
 			}
 			CalculateVRView(renderView->vieworg, renderView->viewaxis, overridePitch);
 			renderView->vrHadHead = usercmd.vrHasHead;
 			renderView->vrHeadOrigin = usercmd.vrHeadOrigin;
 			renderView->vrHeadAxis = usercmd.vrHeadAxis;
-			if (usercmd.vrHasLeftController)
+			if (usercmd.vrHasHead)
 			{
 				renderView->vrMoveAxis = vrFaceForward * firstPersonViewAxis;
 			}

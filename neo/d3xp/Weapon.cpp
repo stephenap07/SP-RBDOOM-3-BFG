@@ -2843,12 +2843,14 @@ void idWeapon::PresentWeapon( bool showViewModel )
 				doAdjust = false;
 			}
 		}
-		
-		if (doAdjust)
+		else
 		{
 			viewWeaponOrigin = playerViewOrigin;
 			viewWeaponAxis = playerViewAxis;
+		}
 		
+		if (doAdjust)
+		{
 			fraccos = cos( ( gameLocal.framenum & 255 ) / 127.0f * idMath::PI );
 		
 			static unsigned int divisor = 32;

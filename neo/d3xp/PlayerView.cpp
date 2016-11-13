@@ -800,7 +800,7 @@ void idPlayerView::EmitStereoEyeView( const int eye, idMenuHandler_HUD* hudManag
 	// first chance update of VR head tracking
 	idVec3 vrHeadOrigin;
 	idMat3 vrHeadAxis;
-	if (player->usercmd.vrHasHead && player->usercmd.vrHasLeftController &&
+	if (player->usercmd.vrHasHead &&
 		VR_GetHead(vrHeadOrigin, vrHeadAxis))
 	{
 		idVec3 vrDeltaOrigin = (vrHeadOrigin - player->usercmd.vrHeadOrigin) * eyeView.vrMoveAxis;
@@ -818,16 +818,16 @@ void idPlayerView::EmitStereoEyeView( const int eye, idMenuHandler_HUD* hudManag
 										stereoRender_convergence.GetFloat(),
 										view->fov_right );
 										
-	eyeView.vieworg += eye * dists.worldSeparation * eyeView.viewaxis[1];
-	
 	eyeView.viewEyeBuffer = stereoRender_swapEyes.GetBool() ? eye : -eye;
 	if (glConfig.openVREnabled)
 	{
+		eyeView.vieworg += eye * glConfig.openVRHalfIPD * eyeView.viewaxis[1];
 		// we are using fov instead
 		eyeView.stereoScreenSeparation = 0.f;
 	}
 	else
 	{
+		eyeView.vieworg += eye * dists.worldSeparation * eyeView.viewaxis[1];
 		eyeView.stereoScreenSeparation = eye * dists.screenSeparation;
 	}
 	

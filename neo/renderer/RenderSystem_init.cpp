@@ -153,8 +153,8 @@ idCVar r_offsetUnits( "r_offsetunits", "-600", CVAR_RENDERER | CVAR_FLOAT, "poly
 #endif
 // RB end
 
-idCVar r_selfShadow( "r_selfShadow", "1", CVAR_RENDERER | CVAR_FLOAT, "allows all materials to cast shadows on themselves" );
-idCVar r_selfShadowAdjust( "r_selfShadowAdjust", "1", CVAR_RENDERER | CVAR_FLOAT, "adjust shaders to work around self shadow popping artifacts" );
+idCVar r_selfShadow( "r_selfShadow", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "allows all materials to cast shadows on themselves" );
+idCVar r_selfShadowAdjust( "r_selfShadowAdjust", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "adjust shaders to work around self shadow popping artifacts" );
 idCVar r_shadowPolygonOffset( "r_shadowPolygonOffset", "-1", CVAR_RENDERER | CVAR_FLOAT, "bias value added to depth test for stencil shadow drawing" );
 idCVar r_shadowPolygonFactor( "r_shadowPolygonFactor", "0", CVAR_RENDERER | CVAR_FLOAT, "scale value for stencil shadow drawing" );
 idCVar r_subviewOnly( "r_subviewOnly", "0", CVAR_RENDERER | CVAR_BOOL, "1 = don't render main view, allowing subviews to be debugged" );
@@ -284,6 +284,8 @@ idCVar r_useHierarchicalDepthBuffer( "r_useHierarchicalDepthBuffer", "1", CVAR_R
 
 idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [0.0 .. 1.0]", 0.0f, 1.0f );
 // RB end
+
+idCVar vr_playerHeightCM( "vr_playerHeightCM", "171", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "player height for vr in centimeters" );
 
 const char* fileExten[3] = { "tga", "png", "jpg" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
@@ -821,8 +823,17 @@ safeMode:
 }
 
 vr::IVRSystem * hmd;
+float g_vrScaleX = 1.f;
+float g_vrScaleY = 1.f;
+float g_vrScaleZ = 1.f;
 vr::TrackedDeviceIndex_t g_openVRLeftController = vr::k_unTrackedDeviceIndexInvalid;
 vr::TrackedDeviceIndex_t g_openVRRightController = vr::k_unTrackedDeviceIndexInvalid;
+idVec3 g_SeatedOrigin;
+idMat3 g_SeatedAxis;
+idMat3 g_SeatedAxisInverse;
+
+void VR_ConvertMatrix(const vr::HmdMatrix34_t &poseMat, idVec3 &origin, idMat3 &axis);
+void VR_UpdateScaling();
 
 static void VR_Init()
 {
@@ -876,7 +887,8 @@ static void VR_Init()
 	MatrixRTInverse(hmdEyeRight);
 #endif
 
-	glConfig.openVREyeScale = mat.m[0][3];
+	glConfig.openVRUnscaledHalfIPD = mat.m[0][3];
+	VR_UpdateScaling();
 
 	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
 	g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
@@ -885,13 +897,15 @@ static void VR_Init()
 		|| g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
 	{
 		glConfig.openVRSeated = false;
-		vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
 	}
 	else
 	{
 		glConfig.openVRSeated = true;
-		vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
 	}
+
+	vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
+	VR_ConvertMatrix(hmd->GetSeatedZeroPoseToStandingAbsoluteTrackingPose(), g_SeatedOrigin, g_SeatedAxis);
+	g_SeatedAxisInverse = g_SeatedAxis.Inverse();
 }
 
 idStr extensions_string;

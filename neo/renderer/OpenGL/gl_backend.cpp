@@ -699,11 +699,14 @@ void RB_ExecuteBackEndCommands( const emptyCommand_t* cmds )
 }
 
 extern vr::IVRSystem * hmd;
-float g_vrScaleX = 1.f;
-float g_vrScaleY = 1.f;
-float g_vrScaleZ = 1.f;
+extern float g_vrScaleX;
+extern float g_vrScaleY;
+extern float g_vrScaleZ;
 extern vr::TrackedDeviceIndex_t g_openVRLeftController;
 extern vr::TrackedDeviceIndex_t g_openVRRightController;
+extern idVec3 g_SeatedOrigin;
+extern idMat3 g_SeatedAxis;
+extern idMat3 g_SeatedAxisInverse;
 
 bool g_vrHasHeadPose;
 idVec3 g_vrHeadOrigin;
@@ -788,6 +791,16 @@ int VR_ReturnJoystickInputEvent( const int n, int& action, int& value )
 	return 1;
 }
 
+void VR_ConvertMatrix(const vr::HmdMatrix34_t &poseMat, idVec3 &origin, idMat3 &axis)
+{
+	origin.Set(
+		g_vrScaleX * poseMat.m[2][3],
+		g_vrScaleY * poseMat.m[0][3],
+		g_vrScaleZ * poseMat.m[1][3] );
+	axis[0].Set(poseMat.m[2][2], poseMat.m[0][2], -poseMat.m[1][2]);
+	axis[1].Set(poseMat.m[2][0], poseMat.m[0][0], -poseMat.m[1][0]);
+	axis[2].Set(-poseMat.m[2][1], -poseMat.m[0][1], poseMat.m[1][1]);
+}
 
 bool VR_ConvertPose(const vr::TrackedDevicePose_t &pose, idVec3 &origin, idMat3 &axis)
 {
@@ -796,17 +809,21 @@ bool VR_ConvertPose(const vr::TrackedDevicePose_t &pose, idVec3 &origin, idMat3 
 		return false;
 	}
 
-	const vr::HmdMatrix34_t &poseMat = pose.mDeviceToAbsoluteTracking;
-
-	origin.Set(
-		g_vrScaleX * poseMat.m[2][3],
-		g_vrScaleY * poseMat.m[0][3],
-		g_vrScaleZ * poseMat.m[1][3] );
-	axis[0].Set(poseMat.m[2][2], poseMat.m[0][2], -poseMat.m[1][2]);
-	axis[1].Set(poseMat.m[2][0], poseMat.m[0][0], -poseMat.m[1][0]);
-	axis[2].Set(-poseMat.m[2][1], -poseMat.m[0][1], poseMat.m[1][1]);
+	VR_ConvertMatrix(pose.mDeviceToAbsoluteTracking, origin, axis);
 
 	return true;
+}
+
+void VR_UpdateScaling()
+{
+	const float m2i = 1 / 0.0254f; // meters to inches
+	const float cm2i = 1 / 2.54f; // centimeters to inches
+	float ratio = 76.5f / (vr_playerHeightCM.GetFloat() * cm2i); // converts player height to character height
+	glConfig.openVRScale = m2i * ratio;
+	glConfig.openVRHalfIPD = glConfig.openVRUnscaledHalfIPD * glConfig.openVRScale;
+	g_vrScaleX = -glConfig.openVRScale;
+	g_vrScaleY = -glConfig.openVRScale;
+	g_vrScaleZ = glConfig.openVRScale;
 }
 
 void VR_PreSwap(GLuint left, GLuint right)
@@ -821,8 +838,6 @@ void VR_PostSwap()
 {
 	//vr::VRCompositor()->PostPresentHandoff();
 
-	glConfig.openVRSeated = (vr::VRCompositor()->GetTrackingSpace() == vr::TrackingUniverseSeated);
-
 	vr::TrackedDevicePose_t rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
 	vr::VRCompositor()->WaitGetPoses(rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
 
@@ -834,25 +849,22 @@ void VR_PostSwap()
 	{
 		if (glConfig.openVRSeated)
 		{
-			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
+			glConfig.openVRSeated = false;
 		}
 	}
 	else
 	{
 		if (!glConfig.openVRSeated)
 		{
-			vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
+			glConfig.openVRSeated = true;
 		}
 	}
 
-	extern idCVar	stereoRender_interOccularCentimeters;
-	extern float CentimetersToInches( const float cm );
-	float virtualEyeScale = 0.5f * CentimetersToInches(stereoRender_interOccularCentimeters.GetFloat());
-	// rescale head motion to virtual head motion.
-	float scale = virtualEyeScale / glConfig.openVREyeScale;
-	g_vrScaleX = -scale;
-	g_vrScaleY = -scale;
-	g_vrScaleZ = scale;
+	if (vr_playerHeightCM.IsModified())
+	{
+		vr_playerHeightCM.ClearModified();
+		VR_UpdateScaling();
+	}
 
 	vr::TrackedDevicePose_t &hmdPose = rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
 	g_vrHasHeadPose = hmdPose.bPoseIsValid;
@@ -1125,3 +1137,17 @@ void VR_MoveDelta(idVec3 &delta, float &height)
 	g_vrHeadMoveDelta.Zero();
 }
 
+const idVec3 &VR_GetSeatedOrigin()
+{
+	return g_SeatedOrigin;
+}
+
+const idMat3 &VR_GetSeatedAxis()
+{
+	return g_SeatedAxis;
+}
+
+const idMat3 &VR_GetSeatedAxisInverse()
+{
+	return g_SeatedAxisInverse;
+}

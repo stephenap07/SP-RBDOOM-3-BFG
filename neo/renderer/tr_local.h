@@ -1135,6 +1135,8 @@ extern idCVar r_useHierarchicalDepthBuffer;
 extern idCVar r_exposure;
 // RB end
 
+extern idCVar vr_playerHeightCM;
+
 /*
 ====================================================================
 
@@ -1546,6 +1548,10 @@ bool VR_GetHead(idVec3 &origin, idMat3 &axis);
 bool VR_GetLeftController(idVec3 &origin, idMat3 &axis);
 bool VR_GetRightController(idVec3 &origin, idMat3 &axis);
 void VR_MoveDelta(idVec3 &delta, float &height);
+
+const idVec3 &VR_GetSeatedOrigin();
+const idMat3 &VR_GetSeatedAxis();
+const idMat3 &VR_GetSeatedAxisInverse();
 
 class idDeclSkinVR : public idDeclSkin
 {
