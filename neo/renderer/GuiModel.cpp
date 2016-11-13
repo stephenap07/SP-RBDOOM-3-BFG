@@ -151,6 +151,7 @@ bool idGuiModel::UpdateVRShell()
 	}
 	static idVec3 up(0,0,1);
 	forward.ProjectOntoPlane(up);
+	forward.Normalize();
 	vrShellAxis = forward.ToMat3();
 	return true;
 }
