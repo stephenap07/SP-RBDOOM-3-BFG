@@ -791,6 +791,226 @@ int VR_ReturnJoystickInputEvent( const int n, int& action, int& value )
 	return 1;
 }
 
+static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
+{
+	switch(button)
+	{
+	case vr::k_EButton_ApplicationMenu:
+		if (left)
+		{
+			// pda
+			VR_JoyEventQue( J_ACTION10, pressed );
+			VR_SysEventQue( SE_KEY, K_JOY10, pressed );
+		}
+		else
+		{
+			// pause menu
+			VR_JoyEventQue( J_ACTION9, pressed );
+			VR_SysEventQue( SE_KEY, K_JOY9, pressed );
+		}
+		break;
+	case vr::k_EButton_Grip:
+		if (left)
+		{
+			//  prev weapon
+			VR_JoyEventQue( J_ACTION5, pressed );
+			// prev pda menu
+			VR_SysEventQue( SE_KEY, K_JOY5, pressed );
+		}
+		else
+		{
+			// next weapon
+			VR_JoyEventQue( J_ACTION6, pressed );
+			// next pda menu
+			VR_SysEventQue( SE_KEY, K_JOY6, pressed );
+		}
+		break;
+	case vr::k_EButton_SteamVR_Trigger:
+		if (left)
+		{
+			// jump
+			VR_JoyEventQue( J_ACTION1, pressed );
+			// menu back
+			VR_SysEventQue( SE_KEY, K_JOY2, pressed );
+		}
+		else
+		{
+			// fire weapon
+			VR_JoyEventQue( J_AXIS_RIGHT_TRIG, pressed? 255*128 : 0 );
+			// cursor click
+			VR_SysEventQue( SE_KEY, K_MOUSE1, pressed );
+		}
+		break;
+	case vr::k_EButton_SteamVR_Touchpad:
+		if (left)
+		{
+			// flashlight
+			VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 );
+			// menu back
+			VR_SysEventQue( SE_KEY, K_JOY2, pressed );
+		}
+		else
+		{
+			// reload weapon
+			VR_JoyEventQue( J_ACTION3, pressed );
+			// menu select
+			VR_SysEventQue( SE_KEY, K_JOY1, pressed );
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+static void VR_GenJoyAxisEvents()
+{
+	static short sOldThumbLX = 0;
+	static short sOldThumbLY = 0;
+	static bool bOldThumbLL = false;
+	static bool bOldThumbLR = false;
+	static bool bOldThumbLU = false;
+	static bool bOldThumbLD = false;
+	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		vr::VRControllerState_t state;
+		hmd->GetControllerState(g_openVRLeftController, &state);
+		short sThumbLX = (short)(state.rAxis[0].x * 32767);
+		short sThumbLY = (short)(state.rAxis[0].y * -32767);
+		if (sThumbLX != sOldThumbLX)
+		{
+			sOldThumbLX = sThumbLX;
+
+			VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
+
+			bool bThumbLL = ( sThumbLX < -16384 );
+			if (bThumbLL != bOldThumbLL)
+			{
+				bOldThumbLL = bThumbLL;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, bThumbLL );
+			}
+
+			bool bThumbLR = ( sThumbLX > 16384 );
+			if (bThumbLR != bOldThumbLR)
+			{
+				bOldThumbLR = bThumbLR;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, bThumbLR );
+			}
+		}
+		if (sThumbLY != sOldThumbLY)
+		{
+			sOldThumbLY = sThumbLY;
+
+			VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
+
+			bool bThumbLU = ( sThumbLY < -16384 );
+			if (bThumbLU != bOldThumbLU)
+			{
+				bOldThumbLU = bThumbLU;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, bThumbLU );
+			}
+
+			bool bThumbLD = ( sThumbLY > 16384 );
+			if (bThumbLD != bOldThumbLD)
+			{
+				bOldThumbLD = bThumbLD;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, bThumbLD );
+			}
+		}
+	}
+	static short sOldThumbRX = 0;
+	static short sOldThumbRY = 0;
+	static bool bOldThumbRL = false;
+	static bool bOldThumbRR = false;
+	static bool bOldThumbRU = false;
+	static bool bOldThumbRD = false;
+	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
+	{
+		vr::VRControllerState_t state;
+		hmd->GetControllerState(g_openVRRightController, &state);
+		short sThumbRX = (short)(state.rAxis[0].x * 32767);
+		short sThumbRY = (short)(state.rAxis[0].y * -32767);
+		if (sThumbRX != sOldThumbRX)
+		{
+			sOldThumbRX = sThumbRX;
+
+			VR_JoyEventQue( J_AXIS_RIGHT_X, sThumbRX );
+
+			bool bThumbRL = ( sThumbRX < -16384 );
+			if (bThumbRL != bOldThumbRL)
+			{
+				bOldThumbRL = bThumbRL;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK2_LEFT, bThumbRL );
+			}
+
+			bool bThumbRR = ( sThumbRX > 16384 );
+			if (bThumbRR != bOldThumbRR)
+			{
+				bOldThumbRR = bThumbRR;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK2_RIGHT, bThumbRR );
+			}
+		}
+		if (sThumbRY != sOldThumbRY)
+		{
+			sOldThumbRY = sThumbRY;
+
+			VR_JoyEventQue( J_AXIS_RIGHT_Y, sThumbRY );
+
+			bool bThumbRU = ( sThumbRY < -16384 );
+			if (bThumbRU != bOldThumbRU)
+			{
+				bOldThumbRU = bThumbRU;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK2_UP, bThumbRU );
+			}
+
+			bool bThumbRD = ( sThumbRY > 16384 );
+			if (bThumbRD != bOldThumbRD)
+			{
+				bOldThumbRD = bThumbRD;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK2_DOWN, bThumbRD );
+			}
+		}
+	}
+}
+
+static void VR_GenMouseEvents()
+{
+	// virtual head tracking mouse for shell UI
+	idVec3 shellOrigin;
+	idMat3 shellAxis;
+	if (g_vrHadHead && tr.guiModel->GetVRShell(shellOrigin, shellAxis))
+	{
+		const float virtualWidth = renderSystem->GetVirtualWidth();
+		const float virtualHeight = renderSystem->GetVirtualHeight();
+		float guiHeight = 12*5.3f;
+		float guiScale = guiHeight / virtualHeight;
+		float guiWidth = virtualWidth * guiScale;
+		float guiForward = guiHeight + 12.f;
+		idVec3 upperLeft = shellOrigin
+			+ shellAxis[0] * guiForward
+			+ shellAxis[1] * 0.5f * guiWidth
+			+ shellAxis[2] * 0.5f * guiHeight;
+		idMat3 invShellAxis = shellAxis.Inverse();
+		idVec3 rayStart = (g_vrHeadOrigin - upperLeft) * invShellAxis;
+		idVec3 rayDir = g_vrHeadAxis[0] * invShellAxis;
+		if (rayDir.x != 0)
+		{
+			static int oldX, oldY;
+			float wx = rayStart.y - rayStart.x * rayDir.y / rayDir.x;
+			float wy = rayStart.z - rayStart.x * rayDir.z / rayDir.x;
+			int x = -wx * glConfig.nativeScreenWidth / guiWidth;
+			int y = -wy * glConfig.nativeScreenHeight / guiHeight;
+			if (x >= 0 && x < glConfig.nativeScreenWidth &&
+				y >= 0 && y < glConfig.nativeScreenHeight &&
+				(x!= oldX || y != oldY))
+			{
+				oldX = x;
+				oldY = y;
+				VR_SysEventQue( SE_MOUSE_ABSOLUTE, x, y );
+			}
+		}
+	}
+}
+
 void VR_ConvertMatrix(const vr::HmdMatrix34_t &poseMat, idVec3 &origin, idMat3 &axis)
 {
 	origin.Set(
@@ -942,110 +1162,23 @@ void VR_PostSwap()
 			}
 			break;*/
 		case vr::VREvent_ButtonPress:
-		case vr::VREvent_ButtonUnpress:
-		{
-			bool pressed = e.eventType == vr::VREvent_ButtonPress;
-			if (e.trackedDeviceIndex == g_openVRLeftController)
+			if (e.trackedDeviceIndex == g_openVRLeftController || e.trackedDeviceIndex == g_openVRRightController)
 			{
-				switch(e.data.controller.button)
-				{
-				case vr::k_EButton_ApplicationMenu:
-					VR_JoyEventQue( J_ACTION10, pressed );
-					VR_SysEventQue( SE_KEY, K_JOY10, pressed );
-					break;
-				case vr::k_EButton_Grip:
-					VR_JoyEventQue( J_ACTION5, pressed );
-					VR_SysEventQue( SE_KEY, K_JOY5, pressed );
-					break;
-				case vr::k_EButton_SteamVR_Trigger:
-					VR_JoyEventQue( J_ACTION1, pressed );
-					VR_SysEventQue( SE_KEY, K_JOY_TRIGGER1, pressed );
-					break;
-				case vr::k_EButton_SteamVR_Touchpad:
-					VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 );
-					VR_SysEventQue( SE_KEY, K_JOY1, pressed );
-					break;
-				default:
-					printf("break!");
-					break;
-				}
+				VR_GenButtonEvent(e.data.controller.button, e.trackedDeviceIndex == g_openVRLeftController, true);
 			}
-			else if (e.trackedDeviceIndex == g_openVRRightController)
+			break;
+		case vr::VREvent_ButtonUnpress:
+			if (e.trackedDeviceIndex == g_openVRLeftController || e.trackedDeviceIndex == g_openVRRightController)
 			{
-				switch(e.data.controller.button)
-				{
-				case vr::k_EButton_ApplicationMenu:
-					VR_JoyEventQue( J_ACTION9, pressed );
-					VR_SysEventQue( SE_KEY, K_JOY9, pressed );
-					break;
-				case vr::k_EButton_Grip:
-					VR_JoyEventQue( J_ACTION6, pressed );
-					VR_SysEventQue( SE_KEY, K_JOY6, pressed );
-					break;
-				case vr::k_EButton_SteamVR_Trigger:
-					VR_JoyEventQue( J_AXIS_RIGHT_TRIG, pressed? 255*128 : 0 );
-					VR_SysEventQue( SE_KEY, K_JOY_TRIGGER2, pressed );
-					break;
-				case vr::k_EButton_SteamVR_Touchpad:
-					VR_JoyEventQue( J_ACTION3, pressed );
-					VR_SysEventQue( SE_KEY, K_JOY3, pressed );
-					break;
-				default:
-					printf("break!");
-					break;
-				}
+				VR_GenButtonEvent(e.data.controller.button, e.trackedDeviceIndex == g_openVRLeftController, false);
 			}
 			break;
 		}
-		}
 	}
 
-	static short sOldThumbLX = 0;
-	static short sOldThumbLY = 0;
-	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
-	{
-		vr::VRControllerState_t state;
-		hmd->GetControllerState(g_openVRLeftController, &state);
-		short sThumbLX = (short)(state.rAxis[0].x * 32767);
-		short sThumbLY = (short)(state.rAxis[0].y * -32767);
-		if (sThumbLX != sOldThumbLX)
-		{
-			VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, ( sThumbLX < -16384 ) );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, ( sThumbLX > 16384 ) );
-			sOldThumbLX = sThumbLX;
-		}
-		if (sThumbLY != sOldThumbLY)
-		{
-			VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, ( sThumbLY < -16384 ) );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, ( sThumbLY > 16384 ) );
-			sOldThumbLY = sThumbLY;
-		}
-	}
-	static short sOldThumbRX = 0;
-	static short sOldThumbRY = 0;
-	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
-	{
-		vr::VRControllerState_t state;
-		hmd->GetControllerState(g_openVRRightController, &state);
-		short sThumbRX = (short)(state.rAxis[0].x * 32767);
-		short sThumbRY = (short)(state.rAxis[0].y * -32767);
-		if (sThumbRX != sOldThumbRX)
-		{
-			VR_JoyEventQue( J_AXIS_RIGHT_X, sThumbRX );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK2_LEFT, ( sThumbRX < -16384 ) );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK2_RIGHT, ( sThumbRX > 16384 ) );
-			sOldThumbRX = sThumbRX;
-		}
-		if (sThumbRY != sOldThumbRY)
-		{
-			VR_JoyEventQue( J_AXIS_RIGHT_Y, sThumbRY );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK2_UP, ( sThumbRY < -16384 ) );
-			VR_SysEventQue( SE_KEY, K_JOY_STICK2_DOWN, ( sThumbRY > 16384 ) );
-			sOldThumbRY = sThumbRY;
-		}
-	}
+	VR_GenJoyAxisEvents();
+
+	VR_GenMouseEvents();
 }
 
 bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, bool overridePitch)

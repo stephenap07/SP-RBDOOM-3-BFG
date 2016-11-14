@@ -337,14 +337,6 @@ bool idSWF::HandleEvent( const sysEvent_t* event )
 			return false;
 		}
 		const char* keyName = idKeyInput::KeyNumToString( ( keyNum_t )event->evValue );
-		if (strcmp(keyName, "JOY_TRIGGER2") == 0)
-		{
-			keyName = "JOY1";
-		}
-		if (strcmp(keyName, "JOY_TRIGGER1") == 0)
-		{
-			keyName = "JOY2";
-		}
 		idSWFScriptVar var = shortcutKeys->Get( keyName );
 		// anything more than 32 levels of indirection we can be pretty sure is an infinite loop
 		for( int runaway = 0; runaway < 32; runaway++ )

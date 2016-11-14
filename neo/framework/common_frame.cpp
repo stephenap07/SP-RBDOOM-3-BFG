@@ -338,7 +338,7 @@ void idCommonLocal::Draw()
 		// draw the wipe material on top of this if it hasn't completed yet
 		DrawWipeModel();
 		
-		tr.guiModel->SetMode(GUIMODE_HUD);
+		tr.guiModel->SetMode(GUIMODE_SHELL);
 		Dialog().Render( loadGUI != NULL );
 		
 		// draw the half console / notify console on top of everything
