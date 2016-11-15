@@ -304,7 +304,10 @@ void idImage::SetTexParameters()
 	if( glConfig.textureLODBiasAvailable && ( usage != TD_FONT ) )
 	{
 		// use a blurring LOD bias in combination with high anisotropy to fix our aliasing grate textures...
-		glTexParameterf( target, GL_TEXTURE_LOD_BIAS_EXT, r_lodBias.GetFloat() );
+		if( filter == TF_DEFAULT )
+		{
+			glTexParameterf( target, GL_TEXTURE_LOD_BIAS_EXT, r_lodBias.GetFloat() );
+		}
 	}
 	
 	// set the wrap/clamp modes

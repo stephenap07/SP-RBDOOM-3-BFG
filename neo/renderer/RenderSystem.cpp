@@ -252,12 +252,14 @@ static void R_CheckCvars()
 		r_maxAnisotropicFiltering.ClearModified();
 		r_useTrilinearFiltering.ClearModified();
 		r_lodBias.ClearModified();
+		GL_SelectTexture( 0 );
 		for( int i = 0 ; i < globalImages->images.Num() ; i++ )
 		{
-			if( globalImages->images[i] )
+			idImage * image = globalImages->images[i];
+			if( image )
 			{
-				globalImages->images[i]->Bind();
-				globalImages->images[i]->SetTexParameters();
+				image->Bind();
+				image->SetTexParameters();
 			}
 		}
 	}
