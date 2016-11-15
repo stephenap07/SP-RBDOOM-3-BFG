@@ -285,6 +285,7 @@ idCVar r_useHierarchicalDepthBuffer( "r_useHierarchicalDepthBuffer", "1", CVAR_R
 idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [0.0 .. 1.0]", 0.0f, 1.0f );
 // RB end
 
+idCVar vr_resolutionScale( "vr_resolutionScale", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "hmd resolution scaling, restart required" );
 idCVar vr_playerHeightCM( "vr_playerHeightCM", "171", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "player height for vr in centimeters" );
 
 const char* fileExten[3] = { "tga", "png", "jpg" };
@@ -833,7 +834,6 @@ idMat3 g_SeatedAxis;
 idMat3 g_SeatedAxisInverse;
 
 void VR_ConvertMatrix(const vr::HmdMatrix34_t &poseMat, idVec3 &origin, idMat3 &axis);
-void VR_UpdateScaling();
 
 static void VR_Init()
 {
@@ -857,7 +857,7 @@ static void VR_Init()
 
 	glConfig.openVREnabled = true;
 
-	hmd->GetRecommendedRenderTargetSize( (uint32_t*)&glConfig.openVRWidth, (uint32_t*)&glConfig.openVRHeight );
+	VR_UpdateResolution();
 
 	hmd->GetProjectionRaw( vr::Eye_Left,
 		&glConfig.openVRfovEye[1][0], &glConfig.openVRfovEye[1][1],

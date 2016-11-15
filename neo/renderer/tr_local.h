@@ -1135,6 +1135,7 @@ extern idCVar r_useHierarchicalDepthBuffer;
 extern idCVar r_exposure;
 // RB end
 
+extern idCVar vr_resolutionScale;
 extern idCVar vr_playerHeightCM;
 
 /*
@@ -1537,6 +1538,9 @@ VR
 */
 
 const sysEvent_t &VR_SysEventNext();
+
+void VR_UpdateResolution();
+void VR_UpdateScaling();
 
 int VR_PollJoystickInputEvents();
 int VR_ReturnJoystickInputEvent( const int n, int& action, int& value );

@@ -1107,6 +1107,22 @@ bool VR_ConvertPose(const vr::TrackedDevicePose_t &pose, idVec3 &origin, idMat3 
 	return true;
 }
 
+void VR_UpdateResolution()
+{
+	vr_resolutionScale.ClearModified();
+	float scale = vr_resolutionScale.GetFloat();
+	uint32_t width, height;
+	hmd->GetRecommendedRenderTargetSize( &width, &height );
+	width = width * scale;
+	height = height * scale;
+	if (width < 540) width = 640;
+	else if (width > 8000) width = 8000;
+	if (height < 540) height = 480;
+	else if (height > 8000) height = 8000;
+	glConfig.openVRWidth = width;
+	glConfig.openVRHeight = height;
+}
+
 void VR_UpdateScaling()
 {
 	const float m2i = 1 / 0.0254f; // meters to inches
@@ -1121,6 +1137,7 @@ void VR_UpdateScaling()
 
 void VR_PreSwap(GLuint left, GLuint right)
 {
+	GL_ViewportAndScissor(0, 0, glConfig.openVRWidth, glConfig.openVRHeight);
 	vr::Texture_t leftEyeTexture = {(void*)left, vr::API_OpenGL, vr::ColorSpace_Gamma };
 	vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
 	vr::Texture_t rightEyeTexture = {(void*)right, vr::API_OpenGL, vr::ColorSpace_Gamma };

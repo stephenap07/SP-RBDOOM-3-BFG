@@ -237,6 +237,13 @@ See if some cvars that we watch have changed
 */
 static void R_CheckCvars()
 {
+#if 0
+	if (vr_resolutionScale.IsModified())
+	{
+		VR_UpdateResolution();
+	}
+#endif
+
 	// gamma stuff
 	if( r_gamma.IsModified() || r_brightness.IsModified() )
 	{
