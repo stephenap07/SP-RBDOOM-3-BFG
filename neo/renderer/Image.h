@@ -97,6 +97,7 @@ public:
 	}
 
 	GLuint		GetTexNum() const { return texnum; }
+	GLenum		GetTarget() const;
 	
 	// Makes this image active on the current GL texture unit.
 	// automatically enables or disables cube mapping

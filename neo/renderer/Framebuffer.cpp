@@ -443,6 +443,11 @@ void Framebuffer::AddDepthBuffer( int format, int multiSamples )
 	GL_CheckErrors();
 }
 
+void Framebuffer::AttachImage2D( const idImage* image, int index, int mipmapLod )
+{
+	AttachImage2D( image->GetTarget(), image, index, mipmapLod );
+}
+
 void Framebuffer::AttachImage2D( int target, const idImage* image, int index, int mipmapLod )
 {
 	if( ( target != GL_TEXTURE_2D ) && ( target != GL_TEXTURE_2D_MULTISAMPLE ) && ( target < GL_TEXTURE_CUBE_MAP_POSITIVE_X || target > GL_TEXTURE_CUBE_MAP_NEGATIVE_Z ) )
@@ -458,6 +463,11 @@ void Framebuffer::AttachImage2D( int target, const idImage* image, int index, in
 	}
 	
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, target, image->texnum, mipmapLod );
+}
+
+void Framebuffer::AttachImageDepth( const idImage* image )
+{
+	AttachImageDepth( image->GetTarget(), image );
 }
 
 void Framebuffer::AttachImageDepth( int target, const idImage* image )

@@ -577,6 +577,24 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 	}
 }
 
+GLenum idImage::GetTarget() const
+{
+	switch( opts.textureType )
+	{
+	case TT_2D:
+		return GL_TEXTURE_2D;
+	case TT_CUBIC:
+		return GL_TEXTURE_CUBE_MAP;
+	case TT_2D_ARRAY:
+		return GL_TEXTURE_2D_ARRAY;
+	case TT_2D_MULTISAMPLE:
+		return GL_TEXTURE_2D_MULTISAMPLE;
+	default:
+		assert(0);
+	}
+	return GL_TEXTURE_2D;
+}
+
 /*
 ==============
 Bind

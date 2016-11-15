@@ -63,8 +63,10 @@ public:
 	void					AddColorBuffer( int format, int index, int multiSamples = 0 );
 	void					AddDepthBuffer( int format, int multiSamples = 0 );
 	
+	void					AttachImage2D( const idImage* image, int index, int mipmapLod = 0 );
 	void					AttachImage2D( int target, const idImage* image, int index, int mipmapLod = 0 );
 	void					AttachImage3D( const idImage* image );
+	void					AttachImageDepth( const idImage* image );
 	void					AttachImageDepth( int target, const idImage* image );
 	void					AttachImageDepthLayer( const idImage* image, int layer );
 	
