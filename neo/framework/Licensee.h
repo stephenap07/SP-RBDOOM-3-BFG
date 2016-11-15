@@ -45,7 +45,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #define	BASE_GAMEDIR					"base"
 
-#define CONFIG_FILE						"D3BFGConfig.cfg"
+#define CONFIG_FILE						"D3BFGVRConfig.cfg"
 
 // see ASYNC_PROTOCOL_VERSION
 // use a different major for each game
