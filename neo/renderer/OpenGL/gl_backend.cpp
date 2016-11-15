@@ -1251,7 +1251,10 @@ void VR_PostSwap()
 
 	VR_GenJoyAxisEvents();
 
-	VR_GenMouseEvents();
+	if( !glConfig.openVRSeated )
+	{
+		VR_GenMouseEvents();
+	}
 }
 
 bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, bool overridePitch)
