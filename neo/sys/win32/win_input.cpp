@@ -232,7 +232,11 @@ bool IN_InitDIMouse()
 	}
 	
 	// set the cooperativity level.
+#ifdef NDEBUG
 	hr = win32.g_pMouse->SetCooperativeLevel( win32.hWnd, DISCL_EXCLUSIVE | DISCL_FOREGROUND );
+#else
+	hr = win32.g_pMouse->SetCooperativeLevel( win32.hWnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND );
+#endif
 	
 	if( FAILED( hr ) )
 	{
@@ -290,6 +294,7 @@ void IN_ActivateMouse()
 	}
 	
 	win32.mouseGrabbed = true;
+#ifdef NDEBUG
 	for( i = 0; i < 10; i++ )
 	{
 		if( ::ShowCursor( false ) < 0 )
@@ -297,6 +302,7 @@ void IN_ActivateMouse()
 			break;
 		}
 	}
+#endif
 	
 	// we may fail to reacquire if the window has been recreated
 	hr = win32.g_pMouse->Acquire();
@@ -306,7 +312,12 @@ void IN_ActivateMouse()
 	}
 	
 	// set the cooperativity level.
+#ifdef NDEBUG
 	hr = win32.g_pMouse->SetCooperativeLevel( win32.hWnd, DISCL_EXCLUSIVE | DISCL_FOREGROUND );
+#else
+	hr = win32.g_pMouse->SetCooperativeLevel( win32.hWnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND );
+#endif
+	
 }
 
 /*
@@ -325,6 +336,7 @@ void IN_DeactivateMouse()
 	
 	win32.g_pMouse->Unacquire();
 	
+#ifdef NDEBUG
 	for( i = 0; i < 10; i++ )
 	{
 		if( ::ShowCursor( true ) >= 0 )
@@ -332,6 +344,7 @@ void IN_DeactivateMouse()
 			break;
 		}
 	}
+#endif
 	win32.mouseGrabbed = false;
 }
 
