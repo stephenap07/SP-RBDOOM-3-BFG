@@ -942,7 +942,7 @@ static void RB_FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSurfs )
 	}
 	
 	// if we are just doing 2D rendering, no need to fill the depth buffer
-	if( backEnd.viewDef->viewEntitys == NULL )
+	if( backEnd.viewDef->guiMode != GUIMODE_NONE )
 	{
 		return;
 	}
@@ -1786,7 +1786,7 @@ static void RB_AmbientPass( const drawSurf_t* const* drawSurfs, int numDrawSurfs
 	}
 	
 	// if we are just doing 2D rendering, no need to fill the depth buffer
-	if( backEnd.viewDef->viewEntitys == NULL )
+	if( backEnd.viewDef->guiMode != GUIMODE_NONE )
 	{
 		return;
 	}
@@ -3519,7 +3519,7 @@ static int RB_DrawShaderPasses( const drawSurf_t* const* const drawSurfs, const 
 								const float guiStereoScreenOffset, const int stereoEye )
 {
 	// only obey skipAmbient if we are rendering a view
-	if( backEnd.viewDef->viewEntitys && r_skipAmbient.GetBool() )
+	if( backEnd.viewDef->guiMode == GUIMODE_NONE && r_skipAmbient.GetBool() )
 	{
 		return numDrawSurfs;
 	}
@@ -5488,7 +5488,7 @@ Experimental feature
 */
 void RB_MotionBlur()
 {
-	if( !backEnd.viewDef->viewEntitys )
+	if( backEnd.viewDef->guiMode != GUIMODE_NONE )
 	{
 		// 3D views only
 		return;
@@ -5618,7 +5618,7 @@ void RB_DrawView( const void* data, const int stereoEye )
 	
 	// skip render bypasses everything that has models, assuming
 	// them to be 3D views, but leaves 2D rendering visible
-	if( r_skipRender.GetBool() && backEnd.viewDef->viewEntitys )
+	if( r_skipRender.GetBool() && backEnd.viewDef->guiMode == GUIMODE_NONE )
 	{
 		return;
 	}
@@ -5628,7 +5628,8 @@ void RB_DrawView( const void* data, const int stereoEye )
 	// that all gl calls just return if the context isn't valid
 	
 	// RB: not really needed
-	//if( r_skipRenderContext.GetBool() && backEnd.viewDef->viewEntitys )
+	//if( r_skipRenderContext.GetBool() && backEnd.viewDef->guiMode == GUIMODE_NONE )
+
 	//{
 	//	GLimp_DeactivateContext();
 	//}
@@ -5822,7 +5823,7 @@ void RB_DrawView( const void* data, const int stereoEye )
 	
 	// restore the context for 2D drawing if we were stubbing it out
 	// RB: not really needed
-	//if( r_skipRenderContext.GetBool() && backEnd.viewDef->viewEntitys )
+	//if( r_skipRenderContext.GetBool() && backEnd.viewDef->guiMode == GUIMODE_NONE )
 	//{
 	//	GLimp_ActivateContext();
 	//	GL_SetDefaultState();

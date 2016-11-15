@@ -821,7 +821,7 @@ void idImage::CopyDepthbuffer( int x, int y, int imageWidth, int imageHeight )
 	
 	opts.width = imageWidth;
 	opts.height = imageHeight;
-	glCopyTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, x, y, imageWidth, imageHeight, 0 );
+	glCopyTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, x, y, imageWidth, imageHeight, 0 );
 	
 	backEnd.pc.c_copyFrameBuffer++;
 }
