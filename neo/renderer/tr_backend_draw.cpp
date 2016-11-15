@@ -4413,13 +4413,11 @@ static void RB_Tonemap( const viewDef_t* viewDef )
 	
 	GL_SelectTexture( 0 );
 	
-#if defined(USE_HDR_MSAA)
 	if( glConfig.multisamples > 0 )
 	{
 		globalImages->currentRenderHDRImageNoMSAA->Bind();
 	}
 	else
-#endif
 	{
 		globalImages->currentRenderHDRImage->Bind();
 	}
@@ -5443,7 +5441,6 @@ void RB_DrawViewInternal( const viewDef_t* viewDef, const int stereoEye )
 						   GL_LINEAR );
 		*/
 		
-#if defined(USE_HDR_MSAA)
 		if( glConfig.multisamples > 0 )
 		{
 			glBindFramebuffer( GL_READ_FRAMEBUFFER, globalFramebuffers.hdrFBO->GetFramebuffer() );
@@ -5462,7 +5459,6 @@ void RB_DrawViewInternal( const viewDef_t* viewDef, const int stereoEye )
 							   GL_LINEAR );
 		}
 		else
-#endif
 		{
 			glBindFramebuffer( GL_READ_FRAMEBUFFER_EXT, globalFramebuffers.hdrFBO->GetFramebuffer() );
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER_EXT, globalFramebuffers.hdr64FBO->GetFramebuffer() );

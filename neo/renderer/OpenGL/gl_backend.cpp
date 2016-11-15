@@ -226,10 +226,24 @@ R_MakeStereoRenderImage
 static void R_MakeStereoRenderImage( idImage* image )
 {
 	idImageOpts	opts;
+	opts.textureType = ( glConfig.multisamples > 0 ) ? TT_2D_MULTISAMPLE : TT_2D;
 	opts.width = renderSystem->GetWidth();
 	opts.height = renderSystem->GetHeight();
 	opts.numLevels = 1;
 	opts.format = FMT_RGBA8;
+	opts.msaaSamples = glConfig.multisamples;
+	image->AllocImage( opts, TF_LINEAR, TR_CLAMP );
+}
+
+static void R_MakeStereoRenderImage_NoMSAA( idImage* image )
+{
+	idImageOpts	opts;
+	opts.textureType = TT_2D;
+	opts.width = renderSystem->GetWidth();
+	opts.height = renderSystem->GetHeight();
+	opts.numLevels = 1;
+	opts.format = FMT_RGBA8;
+	opts.msaaSamples = 0;
 	image->AllocImage( opts, TF_LINEAR, TR_CLAMP );
 }
 
@@ -254,51 +268,92 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 	// textures anyway, so there isn't any benefit to rendering to BACK_RIGHT for
 	// that eye.
 	glDrawBuffer( GL_BACK_LEFT );
-	
-	// create the stereoRenderImage if we haven't already
-	static idImage* stereoRenderImages[2];
+
+	int renderSystemWidth = renderSystem->GetWidth();
+	int renderSystemHeight = renderSystem->GetHeight();
+	bool stereoMultisample = ( glConfig.multisamples > 0 ) && !r_useHDR.GetBool();
+
+	// create the stereoDepthImage if we haven't already
 	static idImage* stereoDepthImage;
-	static Framebuffer * stereoRenderFBO[2];
 	if( stereoDepthImage == NULL )
 	{
 		stereoDepthImage = globalImages->ImageFromFunction( "_stereoDepth", R_DepthImage );
 	}
-	// resize the stereo depth image if the main window has changed size
-	if( stereoDepthImage->GetUploadWidth() != renderSystem->GetWidth() ||
-		stereoDepthImage->GetUploadHeight() != renderSystem->GetHeight() )
+	// resize stereoDepthImage if the main window has changed size
+	if( stereoDepthImage->GetUploadWidth() != renderSystemWidth ||
+		stereoDepthImage->GetUploadHeight() != renderSystemHeight )
 	{
-		stereoDepthImage->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
+		stereoDepthImage->Resize( renderSystemWidth, renderSystemHeight );
 	}
+	// create the stereoMSAARenderImage if we haven't already
+	static idImage* stereoMSAARenderImage;
+	static Framebuffer * stereoMSAARenderFBO;
+	if( stereoMultisample && !stereoMSAARenderImage )
+	{
+		if( !stereoMSAARenderImage )
+		{
+			stereoMSAARenderImage = globalImages->ImageFromFunction( "_stereoMSAARender", R_MakeStereoRenderImage );
+			stereoMSAARenderFBO = new Framebuffer( "_stereoMSAAFBO", renderSystemWidth, renderSystemHeight );
+
+			stereoMSAARenderFBO->Bind();
+
+			stereoMSAARenderFBO->AddColorBuffer( GL_RGBA, 0, glConfig.multisamples );
+			stereoMSAARenderFBO->AddDepthBuffer( GL_DEPTH24_STENCIL8, glConfig.multisamples );
+	
+			stereoMSAARenderFBO->AttachImage2D( stereoMSAARenderImage, 0 );
+			stereoMSAARenderFBO->AttachImageDepth( stereoDepthImage );
+
+			stereoMSAARenderFBO->Check();
+		}
+		// resize stereoDepthImage if the main window has changed size
+		if( stereoMSAARenderImage->GetUploadWidth() != renderSystemWidth ||
+			stereoMSAARenderImage->GetUploadHeight() != renderSystemHeight )
+		{
+			stereoMSAARenderImage->Resize( renderSystemWidth, renderSystemHeight );
+			stereoMSAARenderFBO->Bind();
+			stereoMSAARenderFBO->AttachImage2D( stereoMSAARenderImage, 0 );
+			stereoMSAARenderFBO->AttachImageDepth( stereoDepthImage );
+			stereoMSAARenderFBO->Check();
+			stereoMSAARenderFBO->Resize( renderSystemWidth, renderSystemHeight );
+		}
+	}
+	static idImage* stereoRenderImages[2];
+	static Framebuffer * stereoRenderFBO[2];
 	for( int i = 0; i < 2; i++ )
 	{
-
 		if( stereoRenderImages[i] == NULL )
 		{
-			stereoRenderImages[i] = globalImages->ImageFromFunction( va( "_stereoRender%i", i ), R_MakeStereoRenderImage );
-			stereoRenderFBO[i] = new Framebuffer( va( "_stereoFBO%i", i ), renderSystem->GetWidth(), renderSystem->GetHeight() );
+			stereoRenderImages[i] = globalImages->ImageFromFunction( va( "_stereoRender%i", i ), R_MakeStereoRenderImage_NoMSAA );
+			stereoRenderFBO[i] = new Framebuffer( va( "_stereoFBO%i", i ), renderSystemWidth, renderSystemHeight );
 
 			stereoRenderFBO[i]->Bind();
 
-			stereoRenderFBO[i]->AddColorBuffer( GL_RGBA, 0 );
-			stereoRenderFBO[i]->AddDepthBuffer( GL_DEPTH24_STENCIL8 );
-		
-			stereoRenderFBO[i]->AttachImage2D( GL_TEXTURE_2D, stereoRenderImages[i], 0 );
-			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImage );
+			stereoRenderFBO[i]->AddColorBuffer( GL_RGBA8, 0 );
+			stereoRenderFBO[i]->AttachImage2D( stereoRenderImages[i], 0 );
+
+			if( !stereoMultisample )
+			{
+				stereoRenderFBO[i]->AddDepthBuffer( GL_DEPTH24_STENCIL8 );
+				stereoRenderFBO[i]->AttachImageDepth( stereoDepthImage );
+			}
 
 			stereoRenderFBO[i]->Check();
 		}
 		
 		// resize the stereo render image if the main window has changed size
-		if( stereoRenderImages[i]->GetUploadWidth() != renderSystem->GetWidth() ||
-				stereoRenderImages[i]->GetUploadHeight() != renderSystem->GetHeight() )
+		if( stereoRenderImages[i]->GetUploadWidth() != renderSystemWidth ||
+				stereoRenderImages[i]->GetUploadHeight() != renderSystemHeight )
 		{
-			stereoRenderImages[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
+			stereoRenderImages[i]->Resize( renderSystemWidth, renderSystemHeight );
 
 			stereoRenderFBO[i]->Bind();
-			stereoRenderFBO[i]->AttachImage2D( GL_TEXTURE_2D, stereoRenderImages[i], 0 );
-			stereoRenderFBO[i]->AttachImageDepth( GL_TEXTURE_2D, stereoDepthImage );
+			stereoRenderFBO[i]->AttachImage2D( stereoRenderImages[i], 0 );
+			if( !stereoMultisample )
+			{
+				stereoRenderFBO[i]->AttachImageDepth( stereoDepthImage );
+			}
 			stereoRenderFBO[i]->Check();
-			stereoRenderFBO[i]->Resize( renderSystem->GetWidth(), renderSystem->GetHeight() );
+			stereoRenderFBO[i]->Resize( renderSystemWidth, renderSystemHeight );
 		}
 	}
 	
@@ -318,7 +373,15 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 		const int targetEye = ( stereoEye == 1 ) ? 1 : 0;
 		
 		// Set the back end into a known default state to fix any stale render state issues
-		globalFramebuffers.currentStereoRenderFBO = stereoRenderFBO[ targetEye ];
+		if( stereoMultisample )
+		{
+			globalFramebuffers.currentStereoRenderFBO = stereoMSAARenderFBO;
+			globalFramebuffers.currentStereoRenderNonMSAAFBO = stereoRenderFBO[ targetEye ];
+		}
+		else
+		{
+			globalFramebuffers.currentStereoRenderFBO = stereoRenderFBO[ targetEye ];
+		}
 		GL_SetDefaultState();
 		renderProgManager.Unbind();
 		renderProgManager.ZeroUniforms();
@@ -376,6 +439,16 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 					common->Error( "RB_ExecuteBackEndCommands: bad commandId" );
 					break;
 			}
+		}
+
+		if( stereoMultisample )
+		{
+			glBindFramebuffer( GL_READ_FRAMEBUFFER, stereoMSAARenderFBO->GetFramebuffer() );
+			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, stereoRenderFBO[ targetEye ]->GetFramebuffer() );
+			glBlitFramebuffer( 0, 0, renderSystemWidth, renderSystemHeight,
+							   0, 0, renderSystemWidth, renderSystemHeight,
+							   GL_COLOR_BUFFER_BIT,
+							   GL_LINEAR );
 		}
 	}
 	
@@ -457,7 +530,7 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 			if( stereoRender_warp.GetBool() )
 			{
 				// this is the Rift warp
-				// renderSystem->GetWidth() / GetHeight() have returned equal values (640 for initial Rift)
+				// renderSystemWidth / GetHeight() have returned equal values (640 for initial Rift)
 				// and we are going to warp them onto a symetric square region of each half of the screen
 				
 				renderProgManager.BindShader_StereoWarp();
@@ -514,14 +587,14 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 			stereoRenderImages[0]->Bind();
 			GL_SelectTexture( 1 );
 			stereoRenderImages[1]->Bind();
-			GL_ViewportAndScissor( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight() );
+			GL_ViewportAndScissor( 0, 0, renderSystemWidth, renderSystemHeight );
 			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			
 			GL_SelectTexture( 0 );
 			stereoRenderImages[1]->Bind();
 			GL_SelectTexture( 1 );
 			stereoRenderImages[0]->Bind();
-			GL_ViewportAndScissor( renderSystem->GetWidth(), 0, renderSystem->GetWidth(), renderSystem->GetHeight() );
+			GL_ViewportAndScissor( renderSystemWidth, 0, renderSystemWidth, renderSystemHeight );
 			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			break;
 
@@ -551,14 +624,14 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 			stereoRenderImages[0]->Bind();
 			GL_SelectTexture( 0 );
 			stereoRenderImages[1]->Bind();
-			GL_ViewportAndScissor( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight() );
+			GL_ViewportAndScissor( 0, 0, renderSystemWidth, renderSystemHeight );
 			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			
 			GL_SelectTexture( 1 );
 			stereoRenderImages[1]->Bind();
 			GL_SelectTexture( 0 );
 			stereoRenderImages[0]->Bind();
-			GL_ViewportAndScissor( 0, renderSystem->GetHeight(), renderSystem->GetWidth(), renderSystem->GetHeight() );
+			GL_ViewportAndScissor( 0, renderSystemHeight, renderSystemWidth, renderSystemHeight );
 			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			break;
 			
@@ -574,7 +647,7 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 			
-			GL_ViewportAndScissor( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight() * 2 );
+			GL_ViewportAndScissor( 0, 0, renderSystemWidth, renderSystemHeight * 2 );
 			renderProgManager.BindShader_StereoInterlace();
 			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			

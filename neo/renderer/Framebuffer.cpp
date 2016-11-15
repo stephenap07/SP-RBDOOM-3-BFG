@@ -103,37 +103,25 @@ void Framebuffer::Init()
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr", screenWidth, screenHeight );
 	globalFramebuffers.hdrFBO->Bind();
 	
-#if defined(USE_HDR_MSAA)
-	if( glConfig.multisamples )
-	{
-		globalFramebuffers.hdrFBO->AddColorBuffer( GL_RGBA16F, 0, glConfig.multisamples );
-		globalFramebuffers.hdrFBO->AddDepthBuffer( GL_DEPTH24_STENCIL8, glConfig.multisamples );
+	globalFramebuffers.hdrFBO->AddColorBuffer( GL_RGBA16F, 0, glConfig.multisamples );
+	globalFramebuffers.hdrFBO->AddDepthBuffer( GL_DEPTH24_STENCIL8, glConfig.multisamples );
 		
-		globalFramebuffers.hdrFBO->AttachImage2D( GL_TEXTURE_2D_MULTISAMPLE, globalImages->currentRenderHDRImage, 0 );
-		globalFramebuffers.hdrFBO->AttachImageDepth( GL_TEXTURE_2D_MULTISAMPLE, globalImages->currentDepthImage );
-	}
-	else
-#endif
-	{
-		globalFramebuffers.hdrFBO->AddColorBuffer( GL_RGBA16F, 0 );
-		globalFramebuffers.hdrFBO->AddDepthBuffer( GL_DEPTH24_STENCIL8 );
-		
-		globalFramebuffers.hdrFBO->AttachImage2D( GL_TEXTURE_2D, globalImages->currentRenderHDRImage, 0 );
-		globalFramebuffers.hdrFBO->AttachImageDepth( GL_TEXTURE_2D, globalImages->currentDepthImage );
-	}
+	globalFramebuffers.hdrFBO->AttachImage2D( globalImages->currentRenderHDRImage, 0 );
+	globalFramebuffers.hdrFBO->AttachImageDepth( globalImages->currentDepthImage );
 	
 	globalFramebuffers.hdrFBO->Check();
 	
 	// HDR no MSAA
-#if defined(USE_HDR_MSAA)
-	globalFramebuffers.hdrNonMSAAFBO = new Framebuffer( "_hdrNoMSAA", screenWidth, screenHeight );
-	globalFramebuffers.hdrNonMSAAFBO->Bind();
+	if( glConfig.multisamples )
+	{
+		globalFramebuffers.hdrNonMSAAFBO = new Framebuffer( "_hdrNoMSAA", screenWidth, screenHeight );
+		globalFramebuffers.hdrNonMSAAFBO->Bind();
 	
-	globalFramebuffers.hdrNonMSAAFBO->AddColorBuffer( GL_RGBA16F, 0 );
-	globalFramebuffers.hdrNonMSAAFBO->AttachImage2D( GL_TEXTURE_2D, globalImages->currentRenderHDRImageNoMSAA, 0 );
+		globalFramebuffers.hdrNonMSAAFBO->AddColorBuffer( GL_RGBA16F, 0 );
+		globalFramebuffers.hdrNonMSAAFBO->AttachImage2D( globalImages->currentRenderHDRImageNoMSAA, 0 );
 	
-	globalFramebuffers.hdrNonMSAAFBO->Check();
-#endif
+		globalFramebuffers.hdrNonMSAAFBO->Check();
+	}
 	
 	// HDR DOWNSCALE
 	
@@ -216,31 +204,22 @@ void Framebuffer::CheckFramebuffers()
 		globalImages->currentRenderHDRImage->Resize( screenWidth, screenHeight );
 		globalImages->currentDepthImage->Resize( screenWidth, screenHeight );
 		
-#if defined(USE_HDR_MSAA)
 		if( glConfig.multisamples )
 		{
 			globalImages->currentRenderHDRImageNoMSAA->Resize( screenWidth, screenHeight );
 			
 			globalFramebuffers.hdrNonMSAAFBO->Bind();
-			globalFramebuffers.hdrNonMSAAFBO->AttachImage2D( GL_TEXTURE_2D, globalImages->currentRenderHDRImageNoMSAA, 0 );
+			globalFramebuffers.hdrNonMSAAFBO->AttachImage2D( globalImages->currentRenderHDRImageNoMSAA, 0 );
 			globalFramebuffers.hdrNonMSAAFBO->Check();
 
 			globalFramebuffers.hdrNonMSAAFBO->width = screenWidth;
 			globalFramebuffers.hdrNonMSAAFBO->height = screenHeight;
-			
-			globalFramebuffers.hdrFBO->Bind();
-			globalFramebuffers.hdrFBO->AttachImage2D( GL_TEXTURE_2D_MULTISAMPLE, globalImages->currentRenderHDRImage, 0 );
-			globalFramebuffers.hdrFBO->AttachImageDepth( GL_TEXTURE_2D_MULTISAMPLE, globalImages->currentDepthImage );
-			globalFramebuffers.hdrFBO->Check();
 		}
-		else
-#endif
-		{
-			globalFramebuffers.hdrFBO->Bind();
-			globalFramebuffers.hdrFBO->AttachImage2D( GL_TEXTURE_2D, globalImages->currentRenderHDRImage, 0 );
-			globalFramebuffers.hdrFBO->AttachImageDepth( GL_TEXTURE_2D, globalImages->currentDepthImage );
-			globalFramebuffers.hdrFBO->Check();
-		}
+
+		globalFramebuffers.hdrFBO->Bind();
+		globalFramebuffers.hdrFBO->AttachImage2D( globalImages->currentRenderHDRImage, 0 );
+		globalFramebuffers.hdrFBO->AttachImageDepth( globalImages->currentDepthImage );
+		globalFramebuffers.hdrFBO->Check();
 		
 		globalFramebuffers.hdrFBO->width = screenWidth;
 		globalFramebuffers.hdrFBO->height = screenHeight;

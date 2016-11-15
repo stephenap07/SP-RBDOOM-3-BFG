@@ -163,11 +163,7 @@ static void R_RGBA8LinearImage( idImage* image )
 void R_DepthImage( idImage* image )
 {
 	// RB: NULL data and MSAA support
-#if defined(USE_HDR_MSAA)
 	int msaaSamples = glConfig.multisamples;
-#else
-	int msaaSamples = 0;
-#endif
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_DEPTH, msaaSamples );
 	// RB end
 }
@@ -175,11 +171,7 @@ void R_DepthImage( idImage* image )
 // RB begin
 static void R_HDR_RGBA16FImage_ResNative( idImage* image )
 {
-#if defined(USE_HDR_MSAA)
 	int msaaSamples = glConfig.multisamples;
-#else
-	int msaaSamples = 0;
-#endif
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_RGBA16F, msaaSamples );
 }
 
@@ -846,9 +838,10 @@ void idImageManager::CreateIntrinsicImages()
 	randomImage256 = globalImages->ImageFromFunction( "_random256", R_CreateRandom256Image );
 	
 	currentRenderHDRImage = globalImages->ImageFromFunction( "_currentRenderHDR", R_HDR_RGBA16FImage_ResNative );
-#if defined(USE_HDR_MSAA)
-	currentRenderHDRImageNoMSAA = globalImages->ImageFromFunction( "_currentRenderHDRNoMSAA", R_HDR_RGBA16FImage_ResNative_NoMSAA );
-#endif
+	if( glConfig.multisamples )
+	{
+		currentRenderHDRImageNoMSAA = globalImages->ImageFromFunction( "_currentRenderHDRNoMSAA", R_HDR_RGBA16FImage_ResNative_NoMSAA );
+	}
 	currentRenderHDRImageQuarter = globalImages->ImageFromFunction( "_currentRenderHDRQuarter", R_HDR_RGBA16FImage_ResQuarter );
 	currentRenderHDRImage64 = globalImages->ImageFromFunction( "_currentRenderHDR64", R_HDR_RGBA16FImage_Res64 );
 	
