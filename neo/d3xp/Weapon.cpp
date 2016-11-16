@@ -615,6 +615,10 @@ void idWeapon::Restore( idRestoreGame* savefile )
 	savefile->ReadInt( zoomFov );
 	
 	savefile->ReadJoint( barrelJointView );
+	if (barrelJointView == INVALID_JOINT && idStr::Icmp( "weapon_grabber", weaponDef->GetName() ) == 0)
+	{
+		barrelJointView = animator.GetJointHandle( "particle_upper" );
+	}
 	savefile->ReadJoint( flashJointView );
 	savefile->ReadJoint( ejectJointView );
 	savefile->ReadJoint( guiLightJointView );
@@ -1098,6 +1102,10 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 	
 	// find some joints in the model for locating effects
 	barrelJointView = animator.GetJointHandle( "barrel" );
+	if (barrelJointView == INVALID_JOINT && idStr::Icmp( "weapon_grabber", weaponDef->GetName() ) == 0)
+	{
+		barrelJointView = animator.GetJointHandle( "particle_upper" );
+	}
 	flashJointView = animator.GetJointHandle( "flash" );
 	ejectJointView = animator.GetJointHandle( "eject" );
 	guiLightJointView = animator.GetJointHandle( "guiLight" );
@@ -2658,6 +2666,10 @@ bool idWeapon::GetInverseHandle( idVec3& origin, idMat3& axis )
 	{
 		return false;
 		jointName = "Rhand1";
+	}
+	else if(idStr::Icmp( "weapon_grabber", weaponDef->GetName() ) == 0)
+	{
+		jointName = "grabber_root";
 	}
 
 	if (!jointName)
