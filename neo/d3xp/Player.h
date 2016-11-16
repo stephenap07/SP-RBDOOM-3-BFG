@@ -833,7 +833,7 @@ private:
 	int						landChange;
 	int						landTime;
 	
-	bool					lastViewWasCamera;
+	bool					hasCameraFirstFrame;
 	idVec3					lastHeadOrigin;
 	idMat3					lastHeadAxisInv;
 	

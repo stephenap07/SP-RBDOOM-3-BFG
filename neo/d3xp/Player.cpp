@@ -1550,7 +1550,7 @@ idPlayer::idPlayer():
 	landChange				= 0;
 	landTime				= 0;
 
-	lastViewWasCamera		= false;
+	hasCameraFirstFrame		= false;
 	hadLeftControllerYaw	= false;
 	
 	currentWeapon			= -1;
@@ -10846,9 +10846,10 @@ void idPlayer::CalculateRenderView()
 	{
 		if (camera)
 		{
-			if (!lastViewWasCamera)
+			if (!hasCameraFirstFrame)
 			{
-				if (glConfig.openVRSeated)
+				hasCameraFirstFrame = usercmd.vrHasHead;
+				if (glConfig.openVRSeated || !hasCameraFirstFrame)
 				{
 					lastHeadOrigin = VR_GetSeatedOrigin();
 					lastHeadAxisInv = VR_GetSeatedAxisInverse();
@@ -10869,6 +10870,7 @@ void idPlayer::CalculateRenderView()
 		}
 		else
 		{
+			hasCameraFirstFrame = false;
 			if (overridePitch)
 			{
 				renderView->vieworg -= renderView->viewaxis[0] * g_viewNodalX.GetFloat() + renderView->viewaxis[2] * g_viewNodalZ.GetFloat();
@@ -10890,7 +10892,6 @@ void idPlayer::CalculateRenderView()
 				renderView->vrMoveAxis.Identity();
 			}
 		}
-		lastViewWasCamera = camera;
 	}
 	
 	if( renderView->fov_bottom == renderView->fov_top )

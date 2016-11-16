@@ -98,6 +98,9 @@ public:
 		angles[0] = 0;
 		angles[1] = 0;
 		angles[2] = 0;
+		vrHasHead = false;
+		vrHasLeftController = false;
+		vrHasRightController = false;
 	}
 	
 	// Syncronized
