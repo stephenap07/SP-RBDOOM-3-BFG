@@ -10663,7 +10663,14 @@ void idPlayer::GetViewPos( idVec3& origin, idMat3& axis ) const
 	else
 	{
 		origin = GetEyePosition() + viewBob;
-		angles = viewAngles + viewBobAngles + playerView.AngleOffset();
+		if (glConfig.openVREnabled)
+		{
+			angles = viewAngles + playerView.AngleOffset();
+		}
+		else
+		{
+			angles = viewAngles + viewBobAngles + playerView.AngleOffset();
+		}
 		
 		axis = angles.ToMat3() * physicsObj.GetGravityAxis();
 		
