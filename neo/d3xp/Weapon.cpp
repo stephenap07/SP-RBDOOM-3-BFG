@@ -2671,6 +2671,10 @@ bool idWeapon::GetInverseHandle( idVec3& origin, idMat3& axis )
 	{
 		jointName = "grabber_root";
 	}
+	else if( idStr::Icmp( "weapon_shotgun_double", weaponDef->GetName() ) == 0 )
+	{
+		jointName = "gunbody";
+	}
 
 	if (!jointName)
 	{
@@ -2815,6 +2819,17 @@ bool idWeapon::GetInverseHandle( idVec3& origin, idMat3& axis )
 
 		static idVec3 cubeOrigin(0,0,0);
 		origin = cubeAxis * origin + cubeOrigin;
+	}
+	else if( idStr::Icmp( "weapon_shotgun_double", weaponDef->GetName() ) == 0 )
+	{
+		static idAngles shotgunAngle1(0,88,0);
+		static idAngles shotgunAngle2(0,0,0);
+		static idAngles shotgunAngle3(0,0,0);
+		idMat3 shotgunAxis = shotgunAngle1.ToMat3() * shotgunAngle2.ToMat3() * shotgunAngle3.ToMat3();
+		axis = axis * shotgunAxis;
+
+		static idVec3 shotgunOrigin(-4,0,-3);
+		origin = shotgunAxis * origin + shotgunOrigin;
 	}
 
 	return true;
@@ -4625,7 +4640,7 @@ void idWeapon::Event_LaunchProjectilesEllipse( int num_projectiles, float spread
 			spin = ( float )DEG2RAD( 360.0f ) * gameLocal.random.RandomFloat();
 			anga = idMath::Sin( spreadRadA * gameLocal.random.RandomFloat() );
 			angb = idMath::Sin( spreadRadB * gameLocal.random.RandomFloat() );
-			dir = playerViewAxis[ 0 ] + playerViewAxis[ 2 ] * ( angb * idMath::Sin( spin ) ) - playerViewAxis[ 1 ] * ( anga * idMath::Cos( spin ) );
+			dir = muzzleAxis[ 0 ] + muzzleAxis[ 2 ] * ( angb * idMath::Sin( spin ) ) - muzzleAxis[ 1 ] * ( anga * idMath::Cos( spin ) );
 			dir.Normalize();
 			
 			gameLocal.SpawnEntityDef( projectileDict, &ent );
@@ -4644,10 +4659,10 @@ void idWeapon::Event_LaunchProjectilesEllipse( int num_projectiles, float spread
 			// make sure the projectile starts inside the bounding box of the owner
 			if( i == 0 )
 			{
-				muzzle_pos = muzzleOrigin + playerViewAxis[ 0 ] * 2.0f;
-				if( ( ownerBounds - projBounds ).RayIntersection( muzzle_pos, playerViewAxis[0], distance ) )
+				muzzle_pos = muzzleOrigin + muzzleAxis[ 0 ] * 2.0f;
+				if( ( ownerBounds - projBounds ).RayIntersection( muzzle_pos, muzzleAxis[0], distance ) )
 				{
-					start = muzzle_pos + distance * playerViewAxis[0];
+					start = muzzle_pos + distance * muzzleAxis[0];
 				}
 				else
 				{
