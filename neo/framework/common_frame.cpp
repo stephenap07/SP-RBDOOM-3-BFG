@@ -258,6 +258,7 @@ void idCommonLocal::Draw()
 #if defined(USE_DOOMCLASSIC)
 	else if( currentGame == DOOM_CLASSIC || currentGame == DOOM2_CLASSIC )
 	{
+		tr.guiModel->SetMode( GUIMODE_SHELL );
 		const float sysWidth = renderSystem->GetWidth() * renderSystem->GetPixelAspect();
 		const float sysHeight = renderSystem->GetHeight();
 		const float sysAspect = sysWidth / sysHeight;
