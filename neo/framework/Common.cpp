@@ -95,10 +95,10 @@ idCVar com_pause( "com_pause", "0", CVAR_BOOL | CVAR_SYSTEM | CVAR_NOCHEAT, "set
 
 extern idCVar g_demoMode;
 
-idCVar com_engineHz( "com_engineHz", "120", CVAR_FLOAT | CVAR_ARCHIVE, "Frames per second the engine runs at", 10.0f, 1024.0f );
-float com_engineHz_latched = 120.0f; // Latched version of cvar, updated between map loads
+idCVar com_engineHz( "com_engineHz", "90", CVAR_FLOAT | CVAR_ARCHIVE, "Frames per second the engine runs at", 10.0f, 1024.0f );
+float com_engineHz_latched = 90.0f; // Latched version of cvar, updated between map loads
 int64 com_engineHz_numerator = 100LL * 1000LL;
-int64 com_engineHz_denominator = 100LL * 120LL;
+int64 com_engineHz_denominator = 100LL * 90LL;
 
 // RB begin
 int com_editors = 0;
