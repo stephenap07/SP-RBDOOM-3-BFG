@@ -837,8 +837,8 @@ private:
 	idVec3					lastHeadOrigin;
 	idMat3					lastHeadAxisInv;
 	
-	bool					hadLeftControllerYaw;
-	float					oldLeftControllerYaw;
+	bool					hadBodyYaw;
+	float					oldBodyYaw;
 	
 	idMat3					vrFaceForward;
 	

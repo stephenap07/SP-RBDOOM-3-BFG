@@ -1199,24 +1199,28 @@ void VR_PostSwap()
 	}
 
 	g_vrHasLeftControllerPose = false;
-	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
-	{
-		vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRLeftController];
-		if (handPose.bPoseIsValid)
-		{
-			g_vrHasLeftControllerPose = true;
-			VR_ConvertPose( handPose, g_vrLeftControllerOrigin, g_vrLeftControllerAxis );
-		}
-	}
-
 	g_vrHasRightControllerPose = false;
-	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
+
+	if( !vr_forceGamepad.GetBool() )
 	{
-		vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRRightController];
-		if (handPose.bPoseIsValid)
+		if( g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid )
 		{
-			g_vrHasRightControllerPose = true;
-			VR_ConvertPose( handPose, g_vrRightControllerOrigin, g_vrRightControllerAxis );
+			vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRLeftController];
+			if( handPose.bPoseIsValid )
+			{
+				g_vrHasLeftControllerPose = true;
+				VR_ConvertPose( handPose, g_vrLeftControllerOrigin, g_vrLeftControllerAxis );
+			}
+		}
+
+		if( g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid )
+		{
+			vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRRightController];
+			if( handPose.bPoseIsValid )
+			{
+				g_vrHasRightControllerPose = true;
+				VR_ConvertPose( handPose, g_vrRightControllerOrigin, g_vrRightControllerAxis );
+			}
 		}
 	}
 
@@ -1288,7 +1292,7 @@ bool VR_CalculateView(idVec3 &origin, idMat3 &axis, const idVec3 &eyeOffset, boo
 		axis = angles.ToMat3() * axis;
 	}
 
-	if (!glConfig.openVRSeated)
+	if (!vr_seated.GetBool())
 	{
 		origin.z -= eyeOffset.z;
 		// ignore x and y

@@ -305,10 +305,6 @@ private:
 	int				lastPollTime;
 	float			lastLookValuePitch;
 	float			lastLookValueYaw;
-	
-	bool			hadLeftControllerYaw;
-	float			oldLeftControllerYaw;
-	idVec3			vrRelativeHeadOrigin;
 
 	static idCVar	in_yawSpeed;
 	static idCVar	in_pitchSpeed;
@@ -1083,10 +1079,9 @@ void idUsercmdGenLocal::VRMove()
 		cmd.vrLeftControllerAxis.Identity();
 		cmd.vrHasRightController = false;
 		cmd.vrRightControllerAxis.Identity();
-		return;
 	}
 
-	if (cmd.vrHeadOrigin.z < 12*4.5f)
+	if (!vr_seated.GetBool() && cmd.vrHeadOrigin.z < 12*4.5f)
 	{
 		cmd.buttons |= BUTTON_CROUCH;
 	}
@@ -1327,8 +1322,6 @@ void idUsercmdGenLocal::Clear()
 	mouseDx = mouseDy = 0;
 	mouseButton = 0;
 	mouseDown = false;
-
-	hadLeftControllerYaw = false;
 }
 
 /*

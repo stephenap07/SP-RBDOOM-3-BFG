@@ -820,9 +820,17 @@ void idPhysics_Player::WalkMove()
 		}
 	}
 
-	if (hasCurrentHeadOrigin && command.vrHasHead && command.vrHasLeftController)
+	if (hasCurrentHeadOrigin && command.vrHasHead)
 	{
-		float yaw = command.vrLeftControllerAxis.ToAngles().yaw;
+		float yaw;
+		if( command.vrHasLeftController )
+		{
+			yaw = command.vrLeftControllerAxis.ToAngles().yaw;
+		}
+		else
+		{
+			yaw = command.vrHeadAxis.ToAngles().yaw;
+		}
 		idMat3 invRotation = idAngles(0, -yaw, 0).ToMat3();
 		vrDelta = (command.vrHeadOrigin - currentHeadOrigin) * invRotation;
 		vrDelta.z = 0;
@@ -1965,7 +1973,7 @@ bool idPhysics_Player::Evaluate( int timeStepMSec, int endTimeMSec )
 	idPhysics_Player::MovePlayer( timeStepMSec );
 	
 	currentHeadOrigin = command.vrHeadOrigin;
-	hasCurrentHeadOrigin = command.vrHasHead && command.vrHasLeftController;
+	hasCurrentHeadOrigin = command.vrHasHead && !vr_seated.GetBool();
 	vrDelta.Zero();
 
 	clipModel->Link( gameLocal.clip, self, 0, current.origin, clipModel->GetAxis() );

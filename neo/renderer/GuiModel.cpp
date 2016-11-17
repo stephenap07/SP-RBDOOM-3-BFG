@@ -125,7 +125,7 @@ idGuiModel::UpdateVRShell
 */
 bool idGuiModel::UpdateVRShell()
 {
-	if (glConfig.openVRSeated)
+	if (vr_seated.GetBool())
 	{
 		vrShellOrigin = VR_GetSeatedOrigin();
 		vrShellAxis = VR_GetSeatedAxis();

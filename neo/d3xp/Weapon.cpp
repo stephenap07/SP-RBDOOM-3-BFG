@@ -2520,7 +2520,7 @@ bool idWeapon::GetMuzzlePositionWithHacks( idVec3& origin, idMat3& axis )
 	// workaround hacks...
 	const idStr& weaponIconName = pdaIcon;
 	
-	if (glConfig.openVREnabled && !glConfig.openVRSeated)
+	if (glConfig.openVREnabled && !vr_seated.GetBool())
 	{
 		origin = viewWeaponOrigin;
 		axis = viewWeaponAxis;
@@ -2840,7 +2840,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 			viewWeaponOrigin = owner->flashlightOrigin;
 			viewWeaponAxis = owner->flashlightAxis;
 
-			if (!glConfig.openVRSeated)
+			if (!vr_seated.GetBool() && owner->usercmd.vrHasLeftController)
 			{
 				static idAngles flAngle1(0,85,0);
 				static idAngles flAngle2(112,0,0);
@@ -2888,6 +2888,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 		static idVec3 invOrigin;
 		static idMat3 invAxis;
 		if (glConfig.openVREnabled
+			&& !vr_seated.GetBool()
 			&& owner->usercmd.vrHasLeftController
 			&& owner->usercmd.vrHasRightController
 			&& GetInverseHandle( invOrigin, invAxis ))
@@ -3185,7 +3186,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 
 	if (glConfig.openVREnabled && !isPlayerFlashlight)
 	{
-		if (glConfig.openVRSeated)
+		if (!owner->usercmd.vrHasRightController)
 		{
 			if( &vrWrapperSkin == renderEntity.customSkin )
 			{
@@ -4828,7 +4829,7 @@ void idWeapon::Event_Melee()
 	if( !common->IsClient() )
 	{
 		idVec3 start, end;
-		if (glConfig.openVREnabled && !glConfig.openVRSeated)
+		if (glConfig.openVREnabled && !vr_seated.GetBool())
 		{
 			start = viewWeaponOrigin;
 			end = start + viewWeaponAxis[0] * ( meleeDistance * owner->PowerUpModifier( MELEE_DISTANCE ) );
