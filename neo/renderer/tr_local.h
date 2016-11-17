@@ -1140,6 +1140,7 @@ extern idCVar vr_playerHeightCM;
 extern idCVar vr_aimLook;
 extern idCVar vr_seated;
 extern idCVar vr_forceGamepad;
+extern idCVar vr_knockbackScale;
 
 /*
 ====================================================================

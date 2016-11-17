@@ -10015,6 +10015,7 @@ void idPlayer::Damage( idEntity* inflictor, idEntity* attacker, const idVec3& di
 		idVec3 kick = dir;
 		kick.Normalize();
 		kick *= g_knockback.GetFloat() * knockback * attackerPushScale / 200.0f;
+		kick *= vr_knockbackScale.GetFloat();
 		physicsObj.SetLinearVelocity( physicsObj.GetLinearVelocity() + kick );
 		
 		// set the timer so that the player can't cancel out the movement immediately
