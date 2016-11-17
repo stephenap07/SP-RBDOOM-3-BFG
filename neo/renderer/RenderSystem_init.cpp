@@ -287,6 +287,7 @@ idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOA
 
 idCVar vr_resolutionScale( "vr_resolutionScale", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "hmd resolution scaling, restart required" );
 idCVar vr_playerHeightCM( "vr_playerHeightCM", "171", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "player height for vr in centimeters" );
+idCVar vr_aimLook( "vr_aimLook", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "aim where you look" );
 
 const char* fileExten[3] = { "tga", "png", "jpg" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };

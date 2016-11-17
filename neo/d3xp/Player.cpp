@@ -10709,19 +10709,27 @@ void idPlayer::CalculateFirstPersonView()
 
 			const idVec3 &seatedOrigin = VR_GetSeatedOrigin();
 
-			idVec3 pelvis(0,0,-27.f);
-			idVec3 neck = usercmd.vrHeadOrigin - seatedOrigin + usercmd.vrHeadAxis[2] * -5;
-			idMat3 shoulderAxis;
-			shoulderAxis[2] = neck - pelvis;
-			shoulderAxis[2].NormalizeFast();
-			shoulderAxis[0].Set(1,0,0);
-			shoulderAxis[1] = shoulderAxis[2].Cross(shoulderAxis[0]);
-			shoulderAxis[1].NormalizeFast();
-			shoulderAxis[0] = shoulderAxis[1].Cross(shoulderAxis[2]);
-			shoulderAxis[0].NormalizeFast();
-
 			flashlightOrigin = hmdOrigin + hmdAxis[2] * -5;
-			flashlightAxis = shoulderAxis * vrFaceForward * firstPersonViewAxis;
+
+			if (vr_aimLook.GetBool())
+			{
+				flashlightAxis = vrFaceForward * hmdAxis;
+			}
+			else
+			{
+				idVec3 pelvis(0,0,-27.f);
+				idVec3 neck = usercmd.vrHeadOrigin - seatedOrigin + usercmd.vrHeadAxis[2] * -5;
+				idMat3 shoulderAxis;
+				shoulderAxis[2] = neck - pelvis;
+				shoulderAxis[2].NormalizeFast();
+				shoulderAxis[0].Set(1,0,0);
+				shoulderAxis[1] = shoulderAxis[2].Cross(shoulderAxis[0]);
+				shoulderAxis[1].NormalizeFast();
+				shoulderAxis[0] = shoulderAxis[1].Cross(shoulderAxis[2]);
+				shoulderAxis[0].NormalizeFast();
+
+				flashlightAxis = shoulderAxis * vrFaceForward * firstPersonViewAxis;
+			}
 		}
 		else
 		{
