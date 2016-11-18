@@ -781,6 +781,9 @@ extern idVec3 g_SeatedOrigin;
 extern idMat3 g_SeatedAxis;
 extern idMat3 g_SeatedAxisInverse;
 
+vr::VRControllerState_t g_vrLeftControllerState;
+vr::VRControllerState_t g_vrRightControllerState;
+
 bool g_vrHasHeadPose;
 idVec3 g_vrHeadOrigin;
 idMat3 g_vrHeadAxis;
@@ -880,63 +883,60 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 	case vr::k_EButton_ApplicationMenu:
 		if (left)
 		{
-			// pda
-			VR_JoyEventQue( J_ACTION10, pressed );
-			VR_SysEventQue( SE_KEY, K_JOY10, pressed );
+			VR_JoyEventQue( J_ACTION10, pressed ); // pda
+			VR_SysEventQue( SE_KEY, K_JOY10, pressed ); // pda
 		}
 		else
 		{
-			// pause menu
-			VR_JoyEventQue( J_ACTION9, pressed );
-			VR_SysEventQue( SE_KEY, K_JOY9, pressed );
+			VR_JoyEventQue( J_ACTION9, pressed ); // pause menu
+			VR_SysEventQue( SE_KEY, K_JOY9, pressed ); // pause menu
 		}
 		break;
 	case vr::k_EButton_Grip:
 		if (left)
 		{
-			//  prev weapon
-			VR_JoyEventQue( J_ACTION5, pressed );
-			// prev pda menu
-			VR_SysEventQue( SE_KEY, K_JOY5, pressed );
+			//VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
+			VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 ); // flashlight
+			VR_SysEventQue( SE_KEY, K_JOY5, pressed ); // prev pda menu
 		}
 		else
 		{
-			// next weapon
-			VR_JoyEventQue( J_ACTION6, pressed );
-			// next pda menu
-			VR_SysEventQue( SE_KEY, K_JOY6, pressed );
+			//VR_JoyEventQue( J_ACTION6, pressed ); // next weapon
+			VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
+			VR_SysEventQue( SE_KEY, K_JOY6, pressed ); // next pda menu
 		}
 		break;
 	case vr::k_EButton_SteamVR_Trigger:
 		if (left)
 		{
-			// jump
-			VR_JoyEventQue( J_ACTION1, pressed );
-			// menu back
-			VR_SysEventQue( SE_KEY, K_JOY2, pressed );
+			VR_JoyEventQue( J_ACTION1, pressed ); // jump
+			VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
 		}
 		else
 		{
-			// fire weapon
-			VR_JoyEventQue( J_AXIS_RIGHT_TRIG, pressed? 255*128 : 0 );
-			// cursor click
-			VR_SysEventQue( SE_KEY, K_MOUSE1, pressed );
+			VR_JoyEventQue( J_AXIS_RIGHT_TRIG, pressed? 255*128 : 0 ); // fire weapon
+			VR_SysEventQue( SE_KEY, K_MOUSE1, pressed ); // cursor click
 		}
 		break;
 	case vr::k_EButton_SteamVR_Touchpad:
 		if (left)
 		{
-			// flashlight
-			VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 );
-			// menu back
-			VR_SysEventQue( SE_KEY, K_JOY2, pressed );
+			//VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 ); // flashlight
+			VR_JoyEventQue( J_ACTION7, pressed ); // run
+			VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
 		}
 		else
 		{
-			// reload weapon
-			VR_JoyEventQue( J_ACTION3, pressed );
-			// menu select
-			VR_SysEventQue( SE_KEY, K_JOY1, pressed );
+			//VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
+			if (g_vrRightControllerState.rAxis[0].x < -0.1f)
+			{
+				VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
+			}
+			else
+			{
+				VR_JoyEventQue( J_ACTION6, pressed ); //  next weapon
+			}
+			VR_SysEventQue( SE_KEY, K_JOY1, pressed ); // menu select
 		}
 		break;
 	default:
@@ -954,48 +954,73 @@ static void VR_GenJoyAxisEvents()
 	static bool bOldThumbLD = false;
 	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
 	{
-		vr::VRControllerState_t state;
+		vr::VRControllerState_t &state = g_vrLeftControllerState;
 		hmd->GetControllerState(g_openVRLeftController, &state);
-		short sThumbLX = (short)(state.rAxis[0].x * 32767);
-		short sThumbLY = (short)(state.rAxis[0].y * -32767);
-		if (sThumbLX != sOldThumbLX)
+		static bool wasTouched;
+		static float startX, startY;
+		uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
+		if( mask & state.ulButtonTouched )
 		{
-			sOldThumbLX = sThumbLX;
-
-			VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
-
-			bool bThumbLL = ( sThumbLX < -16384 );
-			if (bThumbLL != bOldThumbLL)
+			if (!wasTouched)
 			{
-				bOldThumbLL = bThumbLL;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, bThumbLL );
+				wasTouched = true;
+				startX = state.rAxis[0].x;
+				startY = state.rAxis[0].y;
 			}
-
-			bool bThumbLR = ( sThumbLX > 16384 );
-			if (bThumbLR != bOldThumbLR)
+			int sThumbLX = idMath::ClampShort((int)((state.rAxis[0].x - startX) * 32767));
+			int sThumbLY = idMath::ClampShort((int)((state.rAxis[0].y - startY) * -32767));
+			if (sThumbLX != sOldThumbLX)
 			{
-				bOldThumbLR = bThumbLR;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, bThumbLR );
+				sOldThumbLX = sThumbLX;
+
+				VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
+
+				bool bThumbLL = ( sThumbLX < -16384 );
+				if (bThumbLL != bOldThumbLL)
+				{
+					bOldThumbLL = bThumbLL;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, bThumbLL );
+				}
+
+				bool bThumbLR = ( sThumbLX > 16384 );
+				if (bThumbLR != bOldThumbLR)
+				{
+					bOldThumbLR = bThumbLR;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, bThumbLR );
+				}
+			}
+			if (sThumbLY != sOldThumbLY)
+			{
+				sOldThumbLY = sThumbLY;
+
+				VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
+
+				bool bThumbLU = ( sThumbLY < -16384 );
+				if (bThumbLU != bOldThumbLU)
+				{
+					bOldThumbLU = bThumbLU;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, bThumbLU );
+				}
+
+				bool bThumbLD = ( sThumbLY > 16384 );
+				if (bThumbLD != bOldThumbLD)
+				{
+					bOldThumbLD = bThumbLD;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, bThumbLD );
+				}
 			}
 		}
-		if (sThumbLY != sOldThumbLY)
+		else
 		{
-			sOldThumbLY = sThumbLY;
-
-			VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
-
-			bool bThumbLU = ( sThumbLY < -16384 );
-			if (bThumbLU != bOldThumbLU)
+			if( wasTouched )
 			{
-				bOldThumbLU = bThumbLU;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, bThumbLU );
-			}
-
-			bool bThumbLD = ( sThumbLY > 16384 );
-			if (bThumbLD != bOldThumbLD)
-			{
-				bOldThumbLD = bThumbLD;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, bThumbLD );
+				wasTouched = false;
+				VR_JoyEventQue( J_AXIS_LEFT_X, 0 );
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, 0 );
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, 0 );
+				VR_JoyEventQue( J_AXIS_LEFT_Y, 0 );
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, 0 );
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, 0 );
 			}
 		}
 	}
@@ -1007,50 +1032,56 @@ static void VR_GenJoyAxisEvents()
 	static bool bOldThumbRD = false;
 	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
 	{
-		vr::VRControllerState_t state;
+		vr::VRControllerState_t &state = g_vrRightControllerState;
 		hmd->GetControllerState(g_openVRRightController, &state);
-		short sThumbRX = (short)(state.rAxis[0].x * 32767);
-		short sThumbRY = (short)(state.rAxis[0].y * -32767);
-		if (sThumbRX != sOldThumbRX)
+#if 0
+		int axisType = hmd->GetInt32TrackedDeviceProperty( g_openVRRightController, vr::Prop_Axis0Type_Int32 );
+		if( axisType == vr::k_eControllerAxis_Joystick )
 		{
-			sOldThumbRX = sThumbRX;
-
-			VR_JoyEventQue( J_AXIS_RIGHT_X, sThumbRX );
-
-			bool bThumbRL = ( sThumbRX < -16384 );
-			if (bThumbRL != bOldThumbRL)
+			short sThumbRX = (short)(state.rAxis[0].x * 32767);
+			short sThumbRY = (short)(state.rAxis[0].y * -32767);
+			if (sThumbRX != sOldThumbRX)
 			{
-				bOldThumbRL = bThumbRL;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK2_LEFT, bThumbRL );
+				sOldThumbRX = sThumbRX;
+
+				VR_JoyEventQue( J_AXIS_RIGHT_X, sThumbRX );
+
+				bool bThumbRL = ( sThumbRX < -16384 );
+				if (bThumbRL != bOldThumbRL)
+				{
+					bOldThumbRL = bThumbRL;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK2_LEFT, bThumbRL );
+				}
+
+				bool bThumbRR = ( sThumbRX > 16384 );
+				if (bThumbRR != bOldThumbRR)
+				{
+					bOldThumbRR = bThumbRR;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK2_RIGHT, bThumbRR );
+				}
 			}
-
-			bool bThumbRR = ( sThumbRX > 16384 );
-			if (bThumbRR != bOldThumbRR)
+			if (sThumbRY != sOldThumbRY)
 			{
-				bOldThumbRR = bThumbRR;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK2_RIGHT, bThumbRR );
+				sOldThumbRY = sThumbRY;
+
+				VR_JoyEventQue( J_AXIS_RIGHT_Y, sThumbRY );
+
+				bool bThumbRU = ( sThumbRY < -16384 );
+				if (bThumbRU != bOldThumbRU)
+				{
+					bOldThumbRU = bThumbRU;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK2_UP, bThumbRU );
+				}
+
+				bool bThumbRD = ( sThumbRY > 16384 );
+				if (bThumbRD != bOldThumbRD)
+				{
+					bOldThumbRD = bThumbRD;
+					VR_SysEventQue( SE_KEY, K_JOY_STICK2_DOWN, bThumbRD );
+				}
 			}
 		}
-		if (sThumbRY != sOldThumbRY)
-		{
-			sOldThumbRY = sThumbRY;
-
-			VR_JoyEventQue( J_AXIS_RIGHT_Y, sThumbRY );
-
-			bool bThumbRU = ( sThumbRY < -16384 );
-			if (bThumbRU != bOldThumbRU)
-			{
-				bOldThumbRU = bThumbRU;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK2_UP, bThumbRU );
-			}
-
-			bool bThumbRD = ( sThumbRY > 16384 );
-			if (bThumbRD != bOldThumbRD)
-			{
-				bOldThumbRD = bThumbRD;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK2_DOWN, bThumbRD );
-			}
-		}
+#endif
 	}
 }
 
@@ -1241,6 +1272,8 @@ void VR_PostSwap()
 
 	VR_ClearEvents();
 
+	VR_GenJoyAxisEvents();
+
 	vr::VREvent_t e;
 	while( hmd->PollNextEvent( &e, sizeof( e ) ) )
 	{
@@ -1284,8 +1317,6 @@ void VR_PostSwap()
 			break;
 		}
 	}
-
-	VR_GenJoyAxisEvents();
 
 	if( !glConfig.openVRSeated )
 	{
