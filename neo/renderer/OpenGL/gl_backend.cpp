@@ -796,6 +796,15 @@ bool g_vrHasRightControllerPose;
 idVec3 g_vrRightControllerOrigin;
 idMat3 g_vrRightControllerAxis;
 
+bool g_poseReset;
+
+void VR_ResetPose()
+{
+	g_poseReset = true;
+	hmd->ResetSeatedZeroPose();
+}
+
+
 #define MAX_VREVENTS 256
 
 int g_vrSysEventIndex;
@@ -1176,6 +1185,12 @@ void VR_PostSwap()
 		VR_UpdateScaling();
 	}
 
+	if( vr_seated.IsModified() )
+	{
+		vr_seated.ClearModified();
+		tr.guiModel->UpdateVRShell();
+	}
+
 	vr::TrackedDevicePose_t &hmdPose = rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd];
 	g_vrHasHeadPose = hmdPose.bPoseIsValid;
 	if (hmdPose.bPoseIsValid)
@@ -1275,6 +1290,14 @@ void VR_PostSwap()
 	if( !glConfig.openVRSeated )
 	{
 		VR_GenMouseEvents();
+	}
+
+	if (g_poseReset)
+	{
+		g_poseReset = false;
+		VR_ConvertMatrix(hmd->GetSeatedZeroPoseToStandingAbsoluteTrackingPose(), g_SeatedOrigin, g_SeatedAxis);
+		g_SeatedAxisInverse = g_SeatedAxis.Inverse();
+		tr.guiModel->UpdateVRShell();
 	}
 }
 

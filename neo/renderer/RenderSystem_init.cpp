@@ -2592,7 +2592,7 @@ void VR_ResetPose_f( const idCmdArgs& args )
 {
 	if (glConfig.openVREnabled)
 	{
-		hmd->ResetSeatedZeroPose();
+		VR_ResetPose();
 	}
 }
 
