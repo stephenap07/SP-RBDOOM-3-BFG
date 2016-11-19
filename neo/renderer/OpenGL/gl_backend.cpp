@@ -922,19 +922,23 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 		if (left)
 		{
 			//VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 ); // flashlight
-			VR_JoyEventQue( J_ACTION7, pressed ); // run
+			//VR_JoyEventQue( J_ACTION7, pressed ); // run
 			VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
 		}
 		else
 		{
 			//VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
-			if (g_vrRightControllerState.rAxis[0].x < -0.1f)
+			if (g_vrRightControllerState.rAxis[0].x < -0.4f)
 			{
 				VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
 			}
-			else
+			else if (g_vrRightControllerState.rAxis[0].x > 0.4f)
 			{
 				VR_JoyEventQue( J_ACTION6, pressed ); //  next weapon
+			}
+			else
+			{
+				VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
 			}
 			VR_SysEventQue( SE_KEY, K_JOY1, pressed ); // menu select
 		}
@@ -956,6 +960,7 @@ static void VR_GenJoyAxisEvents()
 	{
 		vr::VRControllerState_t &state = g_vrLeftControllerState;
 		hmd->GetControllerState(g_openVRLeftController, &state);
+#if 0
 		static bool wasTouched;
 		static float startX, startY;
 		uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
@@ -1023,6 +1028,50 @@ static void VR_GenJoyAxisEvents()
 				VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, 0 );
 			}
 		}
+#else
+		short sThumbLX = (short)(state.rAxis[0].x * 32767);
+		short sThumbLY = (short)(state.rAxis[0].y * -32767);
+		if (sThumbLX != sOldThumbLX)
+		{
+			sOldThumbLX = sThumbLX;
+
+			VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
+
+			bool bThumbLL = ( sThumbLX < -16384 );
+			if (bThumbLL != bOldThumbLL)
+			{
+				bOldThumbLL = bThumbLL;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, bThumbLL );
+			}
+
+			bool bThumbLR = ( sThumbLX > 16384 );
+			if (bThumbLR != bOldThumbLR)
+			{
+				bOldThumbLR = bThumbLR;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, bThumbLR );
+			}
+		}
+		if (sThumbLY != sOldThumbLY)
+		{
+			sOldThumbLY = sThumbLY;
+
+			VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
+
+			bool bThumbLU = ( sThumbLY < -16384 );
+			if (bThumbLU != bOldThumbLU)
+			{
+				bOldThumbLU = bThumbLU;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, bThumbLU );
+			}
+
+			bool bThumbLD = ( sThumbLY > 16384 );
+			if (bThumbLD != bOldThumbLD)
+			{
+				bOldThumbLD = bThumbLD;
+				VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, bThumbLD );
+			}
+		}
+#endif
 	}
 	static short sOldThumbRX = 0;
 	static short sOldThumbRY = 0;
