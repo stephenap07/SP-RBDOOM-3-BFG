@@ -1064,7 +1064,15 @@ void idUsercmdGenLocal::VRControlMove()
 	if( VR_GetLeftControllerAxis(axis) )
 	{
 		cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y );
-		cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x );
+		if( vr_strafing.GetBool() )
+		{
+			cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x );
+		}
+	}
+	if( vr_turning.GetInteger() && VR_GetRightControllerAxis(axis) && fabs(axis.y) < 0.5 )
+	{
+		const float yawSpeed =			joy_yawSpeed.GetFloat();
+		viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -axis.x * yawSpeed;
 	}
 }
 

@@ -928,17 +928,31 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 		else
 		{
 			//VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
-			if (g_vrRightControllerState.rAxis[0].x < -0.4f)
+			if( vr_turning.GetInteger() == 0 )
 			{
-				VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
-			}
-			else if (g_vrRightControllerState.rAxis[0].x > 0.4f)
-			{
-				VR_JoyEventQue( J_ACTION6, pressed ); //  next weapon
+				if (g_vrRightControllerState.rAxis[0].x < -0.4f)
+				{
+					VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
+				}
+				else if (g_vrRightControllerState.rAxis[0].x > 0.4f)
+				{
+					VR_JoyEventQue( J_ACTION6, pressed ); //  next weapon
+				}
+				else
+				{
+					VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
+				}
 			}
 			else
 			{
-				VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
+				if (g_vrRightControllerState.rAxis[0].y < -0.5f)
+				{
+					VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
+				}
+				else if (g_vrRightControllerState.rAxis[0].y > 0.5f)
+				{
+					VR_JoyEventQue( J_ACTION6, pressed ); //  next weapon
+				}
 			}
 			VR_SysEventQue( SE_KEY, K_JOY1, pressed ); // menu select
 		}

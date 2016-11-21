@@ -291,6 +291,9 @@ idCVar vr_aimLook( "vr_aimLook", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, 
 idCVar vr_seated( "vr_seated", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "seated mode" );
 idCVar vr_forceGamepad( "vr_forceGamepad", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "force using the gamepad to control weapons" );
 idCVar vr_knockbackScale( "vr_knockbackScale", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "how much knockback affects you" );
+idCVar vr_strafing( "vr_strafing", "1", CVAR_ARCHIVE | CVAR_BOOL, "enable/disable left control strafing" );
+idCVar vr_turning( "vr_turning", "0", CVAR_ARCHIVE | CVAR_BOOL, "0 no turning | 1 touch turning" );
+idCVar vr_moveClick( "vr_moveClick", "0", CVAR_ARCHIVE | CVAR_INTEGER, "0 touch walk | 1 touch walk & press run | 2 click walk" );
 
 const char* fileExten[3] = { "tga", "png", "jpg" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
