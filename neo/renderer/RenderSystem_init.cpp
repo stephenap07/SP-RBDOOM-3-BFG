@@ -292,8 +292,11 @@ idCVar vr_seated( "vr_seated", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "s
 idCVar vr_forceGamepad( "vr_forceGamepad", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "force using the gamepad to control weapons" );
 idCVar vr_knockbackScale( "vr_knockbackScale", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "how much knockback affects you" );
 idCVar vr_strafing( "vr_strafing", "1", CVAR_ARCHIVE | CVAR_BOOL, "enable/disable left control strafing" );
+idCVar vr_forwardOnly( "vr_forwardOnly", "0", CVAR_ARCHIVE | CVAR_BOOL, "left touchpad only moves forward" );
+idCVar vr_maxRadius( "vr_maxRadius", "0.9", CVAR_ARCHIVE | CVAR_FLOAT, "smaller values make it easier to hit max movement speed" );
 idCVar vr_turning( "vr_turning", "0", CVAR_ARCHIVE | CVAR_BOOL, "0 no turning | 1 touch turning" );
-idCVar vr_moveClick( "vr_moveClick", "0", CVAR_ARCHIVE | CVAR_INTEGER, "0 touch walk | 1 touch walk & press run | 2 click walk" );
+idCVar vr_responseCurve( "vr_responseCurve", "-1", CVAR_ARCHIVE | CVAR_FLOAT, "interpoloate between linear and square curves, -1 for inverse square" );
+idCVar vr_moveMode( "vr_moveMode", "0", CVAR_ARCHIVE | CVAR_INTEGER, "	0 touch walk | 1 touch walk & hold run | 2 touch walk & click run | 3 click walk | 4 click walk & hold run | 5 click walk & double click run | 6 hold walk" );
 
 const char* fileExten[3] = { "tga", "png", "jpg" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };

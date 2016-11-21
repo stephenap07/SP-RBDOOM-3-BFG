@@ -781,6 +781,7 @@ extern idVec3 g_SeatedOrigin;
 extern idMat3 g_SeatedAxis;
 extern idMat3 g_SeatedAxisInverse;
 
+bool g_vrLeftControllerWasPressed;
 vr::VRControllerState_t g_vrLeftControllerState;
 vr::VRControllerState_t g_vrRightControllerState;
 
@@ -825,6 +826,7 @@ void VR_ClearEvents()
 	g_vrSysEventIndex = 0;
 	g_vrSysEventCount = 0;
 	g_vrJoyEventCount = 0;
+	g_vrLeftControllerWasPressed = false;
 }
 
 void VR_SysEventQue(sysEventType_t type, int value, int value2)
@@ -921,6 +923,10 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 	case vr::k_EButton_SteamVR_Touchpad:
 		if (left)
 		{
+			if (pressed)
+			{
+				g_vrLeftControllerWasPressed = true;
+			}
 			//VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 ); // flashlight
 			//VR_JoyEventQue( J_ACTION7, pressed ); // run
 			VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
@@ -1547,6 +1553,17 @@ bool VR_GetRightControllerAxis(idVec2 &axis)
 	axis.x = g_vrRightControllerState.rAxis[0].x;
 	axis.y = g_vrRightControllerState.rAxis[0].y;
 	return true;
+}
+
+bool VR_LeftControllerWasPressed()
+{
+	return g_vrLeftControllerWasPressed;
+}
+
+bool VR_LeftControllerIsPressed()
+{
+	uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
+	return ( g_vrLeftControllerState.ulButtonPressed & mask ) != 0;
 }
 
 const idVec3 &VR_GetSeatedOrigin()

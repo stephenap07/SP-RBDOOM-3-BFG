@@ -282,6 +282,9 @@ private:
 	int				impulseSequence;
 	int				impulse;
 	
+	bool			vrWasClicked;
+	bool			vrWasDoubleClicked;
+
 	buttonState_t	toggled_crouch;
 	buttonState_t	toggled_run;
 	buttonState_t	toggled_zoom;
@@ -351,6 +354,9 @@ idUsercmdGenLocal::idUsercmdGenLocal()
 	
 	impulseSequence = 0;
 	impulse = 0;
+
+	vrWasClicked = false;
+	vrWasDoubleClicked = false;
 	
 	toggled_crouch.Clear();
 	toggled_run.Clear();
@@ -1063,11 +1069,101 @@ void idUsercmdGenLocal::VRControlMove()
 	idVec2 axis;
 	if( VR_GetLeftControllerAxis(axis) )
 	{
-		cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y );
-		if( vr_strafing.GetBool() )
+		if( !vrWasClicked )
 		{
-			cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x );
+			vrWasClicked = VR_LeftControllerWasPressed();
 		}
+		else if ( !vrWasDoubleClicked )
+		{
+			vrWasDoubleClicked = VR_LeftControllerWasPressed();
+		}
+
+		const int moveMode = vr_moveMode.GetInteger();
+
+		bool move = false;
+		switch( moveMode )
+		{
+		case 0:
+			move = true;
+			break;
+		case 1:
+			move = true;
+			if( VR_LeftControllerIsPressed() )
+			{
+				cmd.buttons |= BUTTON_RUN;
+			}
+			break;
+		case 2:
+			if (vrWasClicked)
+			{
+				cmd.buttons |= BUTTON_RUN;
+			}
+			move = true;
+			break;
+		case 3:
+			if( vrWasClicked )
+			{
+				move = true;
+			}
+			break;
+		case 4:
+			if( vrWasClicked )
+			{
+				move = true;
+			}
+			if( VR_LeftControllerIsPressed() )
+			{
+				cmd.buttons |= BUTTON_RUN;
+			}
+			break;
+		case 5:
+			if( vrWasClicked )
+			{
+				move = true;
+			}
+			if( vrWasDoubleClicked )
+			{
+				cmd.buttons |= BUTTON_RUN;
+			}
+			break;
+		case 6:
+			if( VR_LeftControllerIsPressed() )
+			{
+				move = true;
+			}
+			break;
+		}
+
+		if ( move )
+		{
+			if( vr_forwardOnly.GetBool() )
+			{
+				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED );
+			}
+			else
+			{
+				CircleToSquare( axis.x, axis.y );
+				const float response = vr_responseCurve.GetFloat();
+				if( response != 0 )
+				{
+					float lenSq = axis.LengthSqr();
+					float len = sqrtf(lenSq);
+					float dif = lenSq - len;
+					len += dif * response;
+					axis *= len;
+				}
+				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y );
+				if( vr_strafing.GetBool() )
+				{
+					cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x );
+				}
+			}
+		}
+	}
+	else
+	{
+		vrWasClicked = false;
+		vrWasDoubleClicked = false;
 	}
 	if( vr_turning.GetInteger() && VR_GetRightControllerAxis(axis) && fabs(axis.y) < 0.5 )
 	{
@@ -1199,9 +1295,6 @@ void idUsercmdGenLocal::MakeCurrent()
 		{
 			JoystickMove();
 		}
-
-		// VR joystick movement
-		VRControlMove();
 		
 		// keyboard angle adjustment
 		AdjustAngles();
@@ -1215,6 +1308,9 @@ void idUsercmdGenLocal::MakeCurrent()
 		// aim assist
 		AimAssist();
 		
+		// VR joystick movement
+		VRControlMove();
+
 		// check to make sure the angles haven't wrapped
 		if( viewangles[PITCH] - oldAngles[PITCH] > 90 )
 		{

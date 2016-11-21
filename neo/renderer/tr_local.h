@@ -1142,7 +1142,10 @@ extern idCVar vr_seated;
 extern idCVar vr_forceGamepad;
 extern idCVar vr_knockbackScale;
 extern idCVar vr_strafing;
+extern idCVar vr_forwardOnly;
 extern idCVar vr_turning;
+extern idCVar vr_responseCurve;
+extern idCVar vr_moveMode;
 
 /*
 ====================================================================
@@ -1564,6 +1567,8 @@ void VR_ShakeLeftController();
 void VR_ShakeRightController();
 bool VR_GetLeftControllerAxis(idVec2 &axis);
 bool VR_GetRightControllerAxis(idVec2 &axis);
+bool VR_LeftControllerWasPressed();
+bool VR_LeftControllerIsPressed();
 
 const idVec3 &VR_GetSeatedOrigin();
 const idMat3 &VR_GetSeatedAxis();
