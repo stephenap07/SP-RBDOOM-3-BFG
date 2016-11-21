@@ -3803,6 +3803,7 @@ void idPlayer::WeaponFireFeedback( const idDict* weaponDef )
 	
 	if( IsLocallyControlled() )
 	{
+		VR_ShakeRightController();
 		SetControllerShake( highMagnitude, highDuration, lowMagnitude, lowDuration );
 	}
 }
@@ -9787,6 +9788,8 @@ void idPlayer::ControllerShakeFromDamage( int damage )
 		float lowMag = highMag * 0.75f;
 		int lowDuration = idMath::Ftoi( highDuration );
 		
+		VR_ShakeLeftController();
+		VR_ShakeRightController();
 		SetControllerShake( highMag, highDuration, lowMag, lowDuration );
 	}
 	

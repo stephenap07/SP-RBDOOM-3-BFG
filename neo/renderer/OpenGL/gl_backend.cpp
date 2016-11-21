@@ -1487,6 +1487,22 @@ void VR_MoveDelta(idVec3 &delta, float &height)
 	g_vrHeadMoveDelta.Zero();
 }
 
+void VR_ShakeLeftController()
+{
+	if( g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid )
+	{
+		hmd->TriggerHapticPulse(g_openVRLeftController, 0, 3999);
+	}
+}
+
+void VR_ShakeRightController()
+{
+	if( g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid )
+	{
+		hmd->TriggerHapticPulse(g_openVRRightController, 0, 3999);
+	}
+}
+
 bool VR_GetLeftControllerAxis(idVec2 &axis)
 {
 	if( g_openVRLeftController == vr::k_unTrackedDeviceIndexInvalid )

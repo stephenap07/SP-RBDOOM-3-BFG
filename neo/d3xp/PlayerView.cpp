@@ -353,6 +353,10 @@ Called when a weapon fires, generates head twitches, etc
 */
 void idPlayerView::WeaponFireFeedback( const idDict* weaponDef )
 {
+	if( glConfig.openVREnabled )
+	{
+		return;
+	}
 	int recoilTime = weaponDef->GetInt( "recoilTime" );
 	// don't shorten a damage kick in progress
 	if( recoilTime && kickFinishTime < gameLocal.slow.time )

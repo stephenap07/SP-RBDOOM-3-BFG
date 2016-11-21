@@ -1558,6 +1558,8 @@ bool VR_GetHead(idVec3 &origin, idMat3 &axis);
 bool VR_GetLeftController(idVec3 &origin, idMat3 &axis);
 bool VR_GetRightController(idVec3 &origin, idMat3 &axis);
 void VR_MoveDelta(idVec3 &delta, float &height);
+void VR_ShakeLeftController();
+void VR_ShakeRightController();
 bool VR_GetLeftControllerAxis(idVec2 &axis);
 bool VR_GetRightControllerAxis(idVec2 &axis);
 

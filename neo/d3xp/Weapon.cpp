@@ -4536,10 +4536,7 @@ void idWeapon::Event_LaunchProjectiles( int num_projectiles, float spread, float
 		MuzzleFlashLight();
 	}
 	
-	if (!glConfig.openVREnabled)
-	{
-		owner->WeaponFireFeedback( &weaponDef->dict );
-	}
+	owner->WeaponFireFeedback( &weaponDef->dict );
 	
 	// reset muzzle smoke
 	weaponSmokeStartTime = gameLocal.realClientTime;
