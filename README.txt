@@ -1,15 +1,6 @@
-    ____   ____   ____                           _____  ____   ______ ______
-   / __ \ / __ ) / __ \ ____   ____   ____ ___  |__  / / __ ) / ____// ____/
-  / /_/ // __  |/ / / // __ \ / __ \ / __ `__ \  /_ < / __  |/ /_   / / __  
- / _, _// /_/ // /_/ // /_/ // /_/ // / / / / /___/ // /_/ // __/  / /_/ /  
-/_/ |_|/_____//_____/ \____/ \____//_/ /_/ /_//____//_____//_/     \____/   
-_________________________________________
+This is an OpenVR port of RBDOOM-3-BFG
 
-
-RBDOOM-3-BFG Readme - https://github.com/RobertBeckebans/RBDOOM-3-BFG
-
-Thank you for downloading RBDOOM-3-BFG.
-
+Only submit issues to: https://github.com/Codes4Fun/RBDOOM-3-BFG/issues.
 
 
 _______________________________________
@@ -21,59 +12,34 @@ _______________________________
 
 This file contains the following sections:
 
-	1) SYSTEM REQUIREMENT
-
-	2) GENERAL NOTES
+	1) GENERAL NOTES
 	
-	3) LICENSE
+	2) LICENSE
 	
-	4) GETTING THE SOURCE CODE
+	3) GETTING THE SOURCE CODE
 
-	5) COMPILING ON WIN32 WITH VISUAL C++ 2013 EXPRESS EDITION
+	4) COMPILING ON WIN32 WITH VISUAL C++ 2013 EXPRESS EDITION
 
-	6) COMPILING ON GNU/LINUX
+	5) COMPILING ON GNU/LINUX
 	
-	7) INSTALLATION, GETTING THE GAMEDATA, RUNNING THE GAME
+	6) INSTALLATION, GETTING THE GAMEDATA, RUNNING THE GAME
 	
-	8) OVERALL CHANGES
+	7) OVERALL CHANGES
 	
-	9) CONSOLE VARIABLES
+	8) CONSOLE VARIABLES
 	
-	10) KNOWN ISSUES
+	9) KNOWN ISSUES
 	
-	11) BUG REPORTS
+	10) BUG REPORTS
 	
-	12) GAME MODIFICATIONS
+	11) GAME MODIFICATIONS
 	
-	13) CODE LICENSE EXCEPTIONS
-
-
-
-___________________________________
-
-1) SYSTEM REQUIREMENTS
-__________________________
-
-
-
-Minimum system requirements:
-
-	CPU: 2 GHz Intel compatible
-	System Memory: 512MB
-	Graphics card: Any graphics card that supports Direct3D 10 and OpenGL >= 3.2
-
-Recommended system requirements:
-
-	CPU: 3 GHz + Intel compatible
-	System Memory: 1024MB+
-	Graphics card: Geforce 9600 GT, ATI HD 5650 or higher. 
-
-
+	12) CODE LICENSE EXCEPTIONS
 
 
 _______________________________
 
-2) GENERAL NOTES
+1) GENERAL NOTES
 ______________________
 
 This release does not contain any game data, the game data is still
@@ -107,7 +73,7 @@ of stencil shadows via the "depth fail" method, a functionality commonly known a
 
 _______________________________
 
-3) LICENSE
+2) LICENSE
 ______________________
 
 
@@ -118,21 +84,20 @@ ADDITIONAL TERMS:  The Doom 3 BFG Edition GPL Source Code is also subject to cer
 
 ____________________________________________
 
-4) GETTING THE SOURCE CODE
+3) GETTING THE SOURCE CODE
 ___________________________________
 
 This project's GitHub.net Git repository can be checked out through Git with the following instruction set: 
 
-	> git clone https://github.com/RobertBeckebans/RBDOOM-3-BFG.git
+	> git clone https://github.com/Codes4Fun/RBDOOM-3-BFG.git
 
 If you don't want to use git, you can download the source as a zip file at
-	https://github.com/RobertBeckebans/RBDOOM-3-BFG/archive/master.zip
-
+	https://github.com/Codes4Fun/RBDOOM-3-BFG/archive/openvr.zip
 
 
 ___________________________________________________________________
 
-5) COMPILING ON WIN32 WITH VISUAL C++ 2013 EXPRESS EDITION
+4) COMPILING ON WIN32 WITH VISUAL C++ 2013 EXPRESS EDITION
 __________________________________________________________
 
 1. Download and install the Visual C++ 2013 Express Edition.
@@ -156,7 +121,7 @@ __________________________________________________________
 
 __________________________________
 
-6) COMPILING ON GNU/LINUX
+5) COMPILING ON GNU/LINUX
 _________________________
 
 
@@ -202,7 +167,7 @@ _________________________
 
 ___________________________________________________
 
-7) INSTALLATION, GETTING THE GAMEDATA, RUNNING THE GAME
+6) INSTALLATION, GETTING THE GAMEDATA, RUNNING THE GAME
 __________________________________________
 
 
@@ -272,7 +237,7 @@ Anyway:
 
 ___________________________________________________
 
-8) OVERALL CHANGES
+7) OVERALL CHANGES
 __________________________________________
 
 - Flexible build system using CMake
@@ -314,8 +279,28 @@ __________________________________________
 
 ___________________________________________________
 
-9) CONSOLE VARIABLES
+8) CONSOLE VARIABLES
 __________________________________________
+
+vr_resetPose - for seated mode, sets your position and forward direction.
+
+vr_resolutionScale - default 1.0, scales resolution, requires a restart
+
+vr_playerHeightCM - default 171, set your height in centimeters
+
+vr_aimLook [0 or 1] - default 0, in seated mode shoot where you look
+
+vr_seated [0 or 1] - default 0, seated mode
+
+vr_forceGamepad [0 or 1] - default 0, use gamepad instead of VR controllers
+
+vr_knockbackScale - default 1.0, scales movement from damage (default 1.0)
+
+r_selfShadow [0 or 1] - default 1, For stencil shadows enables characters casting shadows on themselves
+
+r_selfShadowAdjust [0 or 1] - default 1, For self shadowing, an adjustment that reduces artifacts
+
+r_forceAmbient - default 0.01, increases overall ambient light
 
 r_antiAliasing - Different Anti-Aliasing modes
 
@@ -336,7 +321,7 @@ r_useFilmicPostProcessEffects [0 or 1] - Apply several post process effects to m
 
 ___________________________________________________
 
-10) KNOWN ISSUES
+9) KNOWN ISSUES
 __________________________________________
 
 - HDR does not work with old-school stencil shadows
@@ -349,7 +334,7 @@ __________________________________________
 
 ___________________________________________________
 
-11) BUG REPORTS
+10) BUG REPORTS
 __________________________________________
 
 RBDOOM-3-BFG is not perfect, it is not bug free as every other software.
@@ -358,7 +343,7 @@ We cannot fix anything if we do not know about the problems.
 
 The best way for telling us about a bug is by submitting a bug report at our GitHub bug tracker page:
 
-	https://github.com/RobertBeckebans/RBDOOM-3-BFG/issues?state=open
+	https://github.com/Codes4Fun/RBDOOM-3-BFG/issues?state=open
 
 The most important fact about this tracker is that we cannot simply forget to fix the bugs which are posted there. 
 It is also a great way to keep track of fixed stuff.
@@ -379,7 +364,7 @@ NOTE: We cannot help you with OS-specific issues like configuring OpenGL correct
 
 ___________________________________________________
 
-12) GAME MODIFCATIONS
+11) GAME MODIFCATIONS
 __________________________________________
 	
 The Doom 3 BFG Edition GPL Source Code release allows mod editing, in order for it to accept any change in your
@@ -395,7 +380,7 @@ You can fork RBDOOM-3-BFG and create a new renamed binary that includes all requ
 	
 ____________________________________________________________________________________
 
-13) CODE LICENSE EXCEPTIONS - The parts that are not covered by the GPL:
+12) CODE LICENSE EXCEPTIONS - The parts that are not covered by the GPL:
 _______________________________________________________________________
 
 
@@ -593,4 +578,34 @@ hereby extending the TiMidity license agreement: you can now
 select the most convenient license for your needs from (1) the
 GNU GPL, (2) the GNU LGPL, or (3) the Perl Artistic License.  
 
+OpenVR
+---------------------------------------------------------------------------
+neo/libs/openvr/*
 
+Copyright (c) 2015, Valve Corporation
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
