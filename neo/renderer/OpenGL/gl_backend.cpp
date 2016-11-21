@@ -929,7 +929,38 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 			}
 			//VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 ); // flashlight
 			//VR_JoyEventQue( J_ACTION7, pressed ); // run
-			VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
+			//VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
+			static keyNum_t uiLastKey;
+			if (pressed)
+			{
+				if( g_vrLeftControllerState.rAxis[0].x < g_vrLeftControllerState.rAxis[0].y )
+				{
+					if( g_vrLeftControllerState.rAxis[0].x > -g_vrLeftControllerState.rAxis[0].y )
+					{
+						uiLastKey = K_JOY_STICK1_UP;
+					}
+					else
+					{
+						uiLastKey = K_JOY_STICK1_LEFT;
+					}
+				}
+				else
+				{
+					if( g_vrLeftControllerState.rAxis[0].x > -g_vrLeftControllerState.rAxis[0].y )
+					{
+						uiLastKey = K_JOY_STICK1_RIGHT;
+					}
+					else
+					{
+						uiLastKey = K_JOY_STICK1_DOWN;
+					}
+				}
+				VR_SysEventQue( SE_KEY, uiLastKey, 1 );
+			}
+			else
+			{
+				VR_SysEventQue( SE_KEY, uiLastKey, 0 );
+			}
 		}
 		else
 		{
@@ -970,204 +1001,15 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 
 static void VR_GenJoyAxisEvents()
 {
-	static short sOldThumbLX = 0;
-	static short sOldThumbLY = 0;
-	static bool bOldThumbLL = false;
-	static bool bOldThumbLR = false;
-	static bool bOldThumbLU = false;
-	static bool bOldThumbLD = false;
 	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid)
 	{
 		vr::VRControllerState_t &state = g_vrLeftControllerState;
 		hmd->GetControllerState(g_openVRLeftController, &state);
-#if 0
-		static bool wasTouched;
-		static float startX, startY;
-		uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
-		if( mask & state.ulButtonTouched )
-		{
-			if (!wasTouched)
-			{
-				wasTouched = true;
-				startX = state.rAxis[0].x;
-				startY = state.rAxis[0].y;
-			}
-			int sThumbLX = idMath::ClampShort((int)((state.rAxis[0].x - startX) * 32767));
-			int sThumbLY = idMath::ClampShort((int)((state.rAxis[0].y - startY) * -32767));
-			if (sThumbLX != sOldThumbLX)
-			{
-				sOldThumbLX = sThumbLX;
-
-				VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
-
-				bool bThumbLL = ( sThumbLX < -16384 );
-				if (bThumbLL != bOldThumbLL)
-				{
-					bOldThumbLL = bThumbLL;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, bThumbLL );
-				}
-
-				bool bThumbLR = ( sThumbLX > 16384 );
-				if (bThumbLR != bOldThumbLR)
-				{
-					bOldThumbLR = bThumbLR;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, bThumbLR );
-				}
-			}
-			if (sThumbLY != sOldThumbLY)
-			{
-				sOldThumbLY = sThumbLY;
-
-				VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
-
-				bool bThumbLU = ( sThumbLY < -16384 );
-				if (bThumbLU != bOldThumbLU)
-				{
-					bOldThumbLU = bThumbLU;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, bThumbLU );
-				}
-
-				bool bThumbLD = ( sThumbLY > 16384 );
-				if (bThumbLD != bOldThumbLD)
-				{
-					bOldThumbLD = bThumbLD;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, bThumbLD );
-				}
-			}
-		}
-		else
-		{
-			if( wasTouched )
-			{
-				wasTouched = false;
-				VR_JoyEventQue( J_AXIS_LEFT_X, 0 );
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, 0 );
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, 0 );
-				VR_JoyEventQue( J_AXIS_LEFT_Y, 0 );
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, 0 );
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, 0 );
-			}
-		}
-#else
-#if 0
-		static int logFrameCount = 0;
-		logFrameCount++;
-		if (logFrameCount == 90)
-		{
-			uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
-			common->Printf( "rAxis %f %f %d\n", state.rAxis[0].x, state.rAxis[0].y, (mask & state.ulButtonTouched)? 1 : 0 );
-			logFrameCount = 0;
-		}
-#endif
-
-		short sThumbLX = (short)(state.rAxis[0].x * 32767);
-		short sThumbLY = (short)(state.rAxis[0].y * -32767);
-		if (sThumbLX != sOldThumbLX)
-		{
-			sOldThumbLX = sThumbLX;
-
-#if 0
-			VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
-#endif
-
-			bool bThumbLL = ( sThumbLX < -16384 );
-			if (bThumbLL != bOldThumbLL)
-			{
-				bOldThumbLL = bThumbLL;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_LEFT, bThumbLL );
-			}
-
-			bool bThumbLR = ( sThumbLX > 16384 );
-			if (bThumbLR != bOldThumbLR)
-			{
-				bOldThumbLR = bThumbLR;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_RIGHT, bThumbLR );
-			}
-		}
-		if (sThumbLY != sOldThumbLY)
-		{
-			sOldThumbLY = sThumbLY;
-
-#if 0
-			VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
-#endif
-
-			bool bThumbLU = ( sThumbLY < -16384 );
-			if (bThumbLU != bOldThumbLU)
-			{
-				bOldThumbLU = bThumbLU;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_UP, bThumbLU );
-			}
-
-			bool bThumbLD = ( sThumbLY > 16384 );
-			if (bThumbLD != bOldThumbLD)
-			{
-				bOldThumbLD = bThumbLD;
-				VR_SysEventQue( SE_KEY, K_JOY_STICK1_DOWN, bThumbLD );
-			}
-		}
-#endif
 	}
-#if 0
-	static short sOldThumbRX = 0;
-	static short sOldThumbRY = 0;
-	static bool bOldThumbRL = false;
-	static bool bOldThumbRR = false;
-	static bool bOldThumbRU = false;
-	static bool bOldThumbRD = false;
-#endif
 	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
 	{
 		vr::VRControllerState_t &state = g_vrRightControllerState;
 		hmd->GetControllerState(g_openVRRightController, &state);
-#if 0
-		int axisType = hmd->GetInt32TrackedDeviceProperty( g_openVRRightController, vr::Prop_Axis0Type_Int32 );
-		if( axisType == vr::k_eControllerAxis_Joystick )
-		{
-			short sThumbRX = (short)(state.rAxis[0].x * 32767);
-			short sThumbRY = (short)(state.rAxis[0].y * -32767);
-			if (sThumbRX != sOldThumbRX)
-			{
-				sOldThumbRX = sThumbRX;
-
-				VR_JoyEventQue( J_AXIS_RIGHT_X, sThumbRX );
-
-				bool bThumbRL = ( sThumbRX < -16384 );
-				if (bThumbRL != bOldThumbRL)
-				{
-					bOldThumbRL = bThumbRL;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK2_LEFT, bThumbRL );
-				}
-
-				bool bThumbRR = ( sThumbRX > 16384 );
-				if (bThumbRR != bOldThumbRR)
-				{
-					bOldThumbRR = bThumbRR;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK2_RIGHT, bThumbRR );
-				}
-			}
-			if (sThumbRY != sOldThumbRY)
-			{
-				sOldThumbRY = sThumbRY;
-
-				VR_JoyEventQue( J_AXIS_RIGHT_Y, sThumbRY );
-
-				bool bThumbRU = ( sThumbRY < -16384 );
-				if (bThumbRU != bOldThumbRU)
-				{
-					bOldThumbRU = bThumbRU;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK2_UP, bThumbRU );
-				}
-
-				bool bThumbRD = ( sThumbRY > 16384 );
-				if (bThumbRD != bOldThumbRD)
-				{
-					bOldThumbRD = bThumbRD;
-					VR_SysEventQue( SE_KEY, K_JOY_STICK2_DOWN, bThumbRD );
-				}
-			}
-		}
-#endif
 	}
 }
 
