@@ -1029,13 +1029,26 @@ static void VR_GenJoyAxisEvents()
 			}
 		}
 #else
+#if 0
+		static int logFrameCount = 0;
+		logFrameCount++;
+		if (logFrameCount == 90)
+		{
+			uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
+			common->Printf( "rAxis %f %f %d\n", state.rAxis[0].x, state.rAxis[0].y, (mask & state.ulButtonTouched)? 1 : 0 );
+			logFrameCount = 0;
+		}
+#endif
+
 		short sThumbLX = (short)(state.rAxis[0].x * 32767);
 		short sThumbLY = (short)(state.rAxis[0].y * -32767);
 		if (sThumbLX != sOldThumbLX)
 		{
 			sOldThumbLX = sThumbLX;
 
+#if 0
 			VR_JoyEventQue( J_AXIS_LEFT_X, sThumbLX );
+#endif
 
 			bool bThumbLL = ( sThumbLX < -16384 );
 			if (bThumbLL != bOldThumbLL)
@@ -1055,7 +1068,9 @@ static void VR_GenJoyAxisEvents()
 		{
 			sOldThumbLY = sThumbLY;
 
+#if 0
 			VR_JoyEventQue( J_AXIS_LEFT_Y, sThumbLY );
+#endif
 
 			bool bThumbLU = ( sThumbLY < -16384 );
 			if (bThumbLU != bOldThumbLU)
@@ -1073,12 +1088,14 @@ static void VR_GenJoyAxisEvents()
 		}
 #endif
 	}
+#if 0
 	static short sOldThumbRX = 0;
 	static short sOldThumbRY = 0;
 	static bool bOldThumbRL = false;
 	static bool bOldThumbRR = false;
 	static bool bOldThumbRU = false;
 	static bool bOldThumbRD = false;
+#endif
 	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
 	{
 		vr::VRControllerState_t &state = g_vrRightControllerState;
@@ -1468,6 +1485,38 @@ void VR_MoveDelta(idVec3 &delta, float &height)
 	delta.z = 0.f;
 
 	g_vrHeadMoveDelta.Zero();
+}
+
+bool VR_GetLeftControllerAxis(idVec2 &axis)
+{
+	if( g_openVRLeftController == vr::k_unTrackedDeviceIndexInvalid )
+	{
+		return false;
+	}
+	uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
+	if( !( g_vrLeftControllerState.ulButtonTouched & mask ) )
+	{
+		return false;
+	}
+	axis.x = g_vrLeftControllerState.rAxis[0].x;
+	axis.y = g_vrLeftControllerState.rAxis[0].y;
+	return true;
+}
+
+bool VR_GetRightControllerAxis(idVec2 &axis)
+{
+	if( g_openVRRightController == vr::k_unTrackedDeviceIndexInvalid )
+	{
+		return false;
+	}
+	uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
+	if( !( g_vrRightControllerState.ulButtonTouched & mask ) )
+	{
+		return false;
+	}
+	axis.x = g_vrRightControllerState.rAxis[0].x;
+	axis.y = g_vrRightControllerState.rAxis[0].y;
+	return true;
 }
 
 const idVec3 &VR_GetSeatedOrigin()

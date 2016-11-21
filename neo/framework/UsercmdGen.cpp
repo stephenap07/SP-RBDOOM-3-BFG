@@ -264,7 +264,8 @@ private:
 	void			HandleJoystickAxis( int keyNum, float unclampedValue, float threshold, bool positive );
 	void			JoystickMove();
 	void			JoystickMove2();
-	void			VRMove();
+	void			VRControlMove();
+	void			VRTrackedMove();
 	void			MouseMove();
 	void			CmdButtons();
 	
@@ -1052,13 +1053,27 @@ void idUsercmdGenLocal::JoystickMove2()
 	HandleJoystickAxis( K_JOY_TRIGGER2, joystickAxis[ AXIS_RIGHT_TRIG ], triggerThreshold, true );
 }
 
+/*
+=================
+idUsercmdGenLocal::VRControlMove
+=================
+*/
+void idUsercmdGenLocal::VRControlMove()
+{
+	idVec2 axis;
+	if( VR_GetLeftControllerAxis(axis) )
+	{
+		cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y );
+		cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x );
+	}
+}
 
 /*
 =================
-idUsercmdGenLocal::VRMove
+idUsercmdGenLocal::VRTrackedMove
 =================
 */
-void idUsercmdGenLocal::VRMove()
+void idUsercmdGenLocal::VRTrackedMove()
 {
 	cmd.vrHasHead = VR_GetHead(cmd.vrHeadOrigin, cmd.vrHeadAxis);
 	if (!cmd.vrHasHead)
@@ -1176,6 +1191,9 @@ void idUsercmdGenLocal::MakeCurrent()
 		{
 			JoystickMove();
 		}
+
+		// VR joystick movement
+		VRControlMove();
 		
 		// keyboard angle adjustment
 		AdjustAngles();
@@ -1207,7 +1225,7 @@ void idUsercmdGenLocal::MakeCurrent()
 
 	if (glConfig.openVREnabled)
 	{
-		VRMove();
+		VRTrackedMove();
 	}
 	
 	for( int i = 0; i < 3; i++ )
