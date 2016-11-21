@@ -898,6 +898,7 @@ static void VR_Init()
 #endif
 
 	glConfig.openVRUnscaledHalfIPD = mat.m[0][3];
+	glConfig.openVRUnscaledEyeForward = -mat.m[2][3];
 	VR_UpdateScaling();
 
 	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);

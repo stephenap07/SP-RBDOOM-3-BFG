@@ -10678,12 +10678,15 @@ void idPlayer::GetViewPos( idVec3& origin, idMat3& axis ) const
 		
 		axis = angles.ToMat3() * physicsObj.GetGravityAxis();
 		
-		// Move pivot point down so looking straight ahead is a no-op on the Z
-		const idVec3& gravityVector = physicsObj.GetGravityNormal();
-		origin += gravityVector * g_viewNodalZ.GetFloat();
+		if( !glConfig.openVREnabled )
+		{
+			// Move pivot point down so looking straight ahead is a no-op on the Z
+			const idVec3& gravityVector = physicsObj.GetGravityNormal();
+			origin += gravityVector * g_viewNodalZ.GetFloat();
 		
-		// adjust the origin based on the camera nodal distance (eye distance from neck)
-		origin += axis[0] * g_viewNodalX.GetFloat() + axis[2] * g_viewNodalZ.GetFloat();
+			// adjust the origin based on the camera nodal distance (eye distance from neck)
+			origin += axis[0] * g_viewNodalX.GetFloat() + axis[2] * g_viewNodalZ.GetFloat();
+		}
 	}
 }
 
@@ -10722,9 +10725,7 @@ void idPlayer::CalculateFirstPersonView()
 	if (glConfig.openVREnabled)
 	{
 		hmdAxis = firstPersonViewAxis;
-		hmdOrigin = firstPersonViewOrigin
-			- firstPersonViewAxis[0] * g_viewNodalX.GetFloat()
-			- firstPersonViewAxis[2] * g_viewNodalZ.GetFloat();
+		hmdOrigin = firstPersonViewOrigin;
 
 		if (vr_seated.GetBool())
 		{
@@ -10914,7 +10915,6 @@ void idPlayer::CalculateRenderView()
 			hasCameraFirstFrame = false;
 			if (overridePitch)
 			{
-				renderView->vieworg -= renderView->viewaxis[0] * g_viewNodalX.GetFloat() + renderView->viewaxis[2] * g_viewNodalZ.GetFloat();
 				if (vr_seated.GetBool())
 				{
 					renderView->vieworg.z += 11.f;

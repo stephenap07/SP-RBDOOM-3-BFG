@@ -1256,6 +1256,7 @@ void VR_UpdateScaling()
 	float ratio = 76.5f / (vr_playerHeightCM.GetFloat() * cm2i); // converts player height to character height
 	glConfig.openVRScale = m2i * ratio;
 	glConfig.openVRHalfIPD = glConfig.openVRUnscaledHalfIPD * glConfig.openVRScale;
+	glConfig.openVREyeForward = glConfig.openVRUnscaledEyeForward * glConfig.openVRScale;
 	g_vrScaleX = -glConfig.openVRScale;
 	g_vrScaleY = -glConfig.openVRScale;
 	g_vrScaleZ = glConfig.openVRScale;
@@ -1313,6 +1314,7 @@ void VR_PostSwap()
 	if (hmdPose.bPoseIsValid)
 	{
 		VR_ConvertPose( hmdPose, g_vrHeadOrigin, g_vrHeadAxis );
+		g_vrHeadOrigin += glConfig.openVREyeForward * g_vrHeadAxis[2];
 
 		if (g_vrHadHead)
 		{

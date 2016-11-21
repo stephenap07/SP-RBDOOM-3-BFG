@@ -207,7 +207,9 @@ struct glconfig_t
 	float				openVRfovEye[2][4];
 	float				openVRScreenSeparation;
 	float				openVRScale;
+	float				openVRUnscaledEyeForward;
 	float				openVRUnscaledHalfIPD;
+	float				openVREyeForward;
 	float				openVRHalfIPD;
 	
 	// RB begin
