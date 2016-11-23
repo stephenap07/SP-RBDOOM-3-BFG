@@ -179,6 +179,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	float		d, time_left, into, totalMass;
 	idVec3		dir, planes[MAX_CLIP_PLANES];
 	idVec3		end, stepEnd, primal_velocity, endVelocity, endClipVelocity, clipVelocity;
+	idVec3		vrVelocity, vrClipVelocity;
 	trace_t		trace, stepTrace, downTrace;
 	bool		nearGround, stepped, pushed;
 	
@@ -220,16 +221,13 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	planes[numplanes].Normalize();
 	numplanes++;
 	
+	vrVelocity = vrDelta / time_left;
+
 	for( bumpcount = 0; bumpcount < numbumps; bumpcount++ )
 	{
 	
 		// calculate position we are trying to move to
-		end = current.origin + time_left * current.velocity;
-		
-		if (bumpcount == 0)
-		{
-			end += vrDelta;
-		}
+		end = current.origin + time_left * (current.velocity + vrVelocity);
 		
 		// see if we can make it there
 		gameLocal.clip.Translation( trace, current.origin, end, clipModel, clipModel->GetAxis(), clipMask, self );
@@ -269,7 +267,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 				gameLocal.clip.Translation( downTrace, current.origin, stepEnd, clipModel, clipModel->GetAxis(), clipMask, self );
 				
 				// trace along velocity
-				stepEnd = downTrace.endpos + time_left * current.velocity;
+				stepEnd = downTrace.endpos + time_left * (current.velocity + vrVelocity);
 				gameLocal.clip.Translation( stepTrace, downTrace.endpos, stepEnd, clipModel, clipModel->GetAxis(), clipMask, self );
 				
 				// step down
@@ -376,7 +374,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 		// find a plane that it enters
 		for( i = 0; i < numplanes; i++ )
 		{
-			into = current.velocity * planes[i];
+			into = (current.velocity + vrVelocity) * planes[i];
 			if( into >= 0.1f )
 			{
 				continue;		// move doesn't interact with the plane
@@ -385,6 +383,10 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 			// slide along the plane
 			clipVelocity = current.velocity;
 			clipVelocity.ProjectOntoPlane( planes[i], OVERCLIP );
+			
+			// slide along the plane
+			vrClipVelocity = vrVelocity;
+			vrClipVelocity.ProjectOntoPlane( planes[i], OVERCLIP );
 			
 			// slide along the plane
 			endClipVelocity = endVelocity;
@@ -397,17 +399,18 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 				{
 					continue;
 				}
-				if( ( clipVelocity * planes[j] ) >= 0.1f )
+				if( ( (clipVelocity + vrClipVelocity) * planes[j] ) >= 0.1f )
 				{
 					continue;		// move doesn't interact with the plane
 				}
 				
 				// try clipping the move to the plane
 				clipVelocity.ProjectOntoPlane( planes[j], OVERCLIP );
+				vrClipVelocity.ProjectOntoPlane( planes[j], OVERCLIP );
 				endClipVelocity.ProjectOntoPlane( planes[j], OVERCLIP );
 				
 				// see if it goes back into the first clip plane
-				if( ( clipVelocity * planes[i] ) >= 0 )
+				if( ( (clipVelocity + vrClipVelocity) * planes[i] ) >= 0 )
 				{
 					continue;
 				}
@@ -415,11 +418,13 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 				// slide the original velocity along the crease
 				dir = planes[i].Cross( planes[j] );
 				dir.Normalize();
+				
 				d = dir * current.velocity;
 				clipVelocity = d * dir;
 				
-				dir = planes[i].Cross( planes[j] );
-				dir.Normalize();
+				d = dir * vrVelocity;
+				vrClipVelocity = d * dir;
+
 				d = dir * endVelocity;
 				endClipVelocity = d * dir;
 				
@@ -430,7 +435,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 					{
 						continue;
 					}
-					if( ( clipVelocity * planes[k] ) >= 0.1f )
+					if( ( (clipVelocity + vrClipVelocity) * planes[k] ) >= 0.1f )
 					{
 						continue;		// move doesn't interact with the plane
 					}
@@ -443,6 +448,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 			
 			// if we have fixed all interactions, try another move
 			current.velocity = clipVelocity;
+			vrVelocity = vrClipVelocity;
 			endVelocity = endClipVelocity;
 			break;
 		}
