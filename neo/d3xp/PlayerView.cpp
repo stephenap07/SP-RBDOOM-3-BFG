@@ -465,7 +465,10 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	
 	// hack the shake in at the very last moment, so it can't cause any consistency problems
 	renderView_t hackedView = *view;
-	hackedView.viewaxis = hackedView.viewaxis * ShakeAxis();
+	if( !glConfig.openVREnabled )
+	{
+		hackedView.viewaxis = hackedView.viewaxis * ShakeAxis();
+	}
 	
 	if( gameLocal.portalSkyEnt.GetEntity() && gameLocal.IsPortalSkyAcive() && g_enablePortalSky.GetBool() )
 	{
