@@ -2811,7 +2811,7 @@ void idGameLocal::BuildReturnValue( gameReturn_t& ret )
 	
 	if( GetLocalPlayer() != NULL )
 	{
-		GetLocalPlayer()->GetControllerShake( ret.vibrationLow, ret.vibrationHigh );
+		GetLocalPlayer()->GetControllerShake( ret.vibrationHigh, ret.vibrationLow );
 	}
 	else
 	{

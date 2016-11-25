@@ -3196,7 +3196,16 @@ void idWeapon::PresentWeapon( bool showViewModel )
 	
 	if( owner->IsLocallyControlled() )
 	{
-		owner->SetControllerShake( highMagnitude, highDuration, lowMagnitude, lowDuration );
+		if( owner->usercmd.vrHasRightController )
+		{
+			float mag = ( highMagnitude > lowMagnitude )? highMagnitude : lowMagnitude;
+			int dur = ( highDuration > lowDuration )? highDuration : lowDuration;
+			owner->SetControllerShake( mag, dur, 0, 0 );
+		}
+		else
+		{
+			owner->SetControllerShake( highMagnitude, highDuration, lowMagnitude, lowDuration );
+		}
 	}
 
 	if (glConfig.openVREnabled && !isPlayerFlashlight)

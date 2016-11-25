@@ -784,6 +784,8 @@ extern idMat3 g_SeatedAxisInverse;
 bool g_vrLeftControllerWasPressed;
 vr::VRControllerState_t g_vrLeftControllerState;
 vr::VRControllerState_t g_vrRightControllerState;
+int g_openVRLeftControllerPulseDur;
+int g_openVRRightControllerPulseDur;
 
 bool g_vrHasHeadPose;
 idVec3 g_vrHeadOrigin;
@@ -1120,8 +1122,20 @@ void VR_PostSwap()
 	vr::TrackedDevicePose_t rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
 	vr::VRCompositor()->WaitGetPoses(rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
 
+	bool hadLeft = g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid;
+	bool hadRight = g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid;
+
 	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
 	g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
+
+	if( hadLeft && g_openVRLeftController == vr::k_unTrackedDeviceIndexInvalid )
+	{
+		common->Printf("left controller lost\n");
+	}
+	if( hadRight && g_openVRRightController == vr::k_unTrackedDeviceIndexInvalid )
+	{
+		common->Printf("right controller lost\n");
+	}
 
 	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid
 		|| g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
@@ -1174,28 +1188,56 @@ void VR_PostSwap()
 		g_vrHadHead = false;
 	}
 
-	g_vrHasLeftControllerPose = false;
-	g_vrHasRightControllerPose = false;
-
-	if( !vr_forceGamepad.GetBool() )
+	if( vr_forceGamepad.GetBool() )
+	{
+		g_vrHasLeftControllerPose = false;
+		g_vrHasRightControllerPose = false;
+	}
+	else
 	{
 		if( g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid )
 		{
+			if(g_openVRLeftControllerPulseDur > 500)
+			{
+				hmd->TriggerHapticPulse(g_openVRLeftController, 0, g_openVRLeftControllerPulseDur);
+			}
+			g_openVRLeftControllerPulseDur = 0;
+
+			static bool hadLeftPose;
 			vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRLeftController];
 			if( handPose.bPoseIsValid )
 			{
 				g_vrHasLeftControllerPose = true;
 				VR_ConvertPose( handPose, g_vrLeftControllerOrigin, g_vrLeftControllerAxis );
+				hadLeftPose = true;
+			}
+			else if (hadLeftPose)
+			{
+				hadLeftPose = false;
+				common->Printf("left controller had no pose\n");
 			}
 		}
 
 		if( g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid )
 		{
+			if(g_openVRRightControllerPulseDur > 500)
+			{
+				hmd->TriggerHapticPulse(g_openVRRightController, 0, g_openVRRightControllerPulseDur);
+			}
+			g_openVRRightControllerPulseDur = 0;
+
+			static bool hadRightPose;
 			vr::TrackedDevicePose_t &handPose = rTrackedDevicePose[g_openVRRightController];
 			if( handPose.bPoseIsValid )
 			{
 				g_vrHasRightControllerPose = true;
 				VR_ConvertPose( handPose, g_vrRightControllerOrigin, g_vrRightControllerAxis );
+				hadRightPose = true;
+			}
+			else if (hadRightPose)
+			{
+				hadRightPose = false;
+				common->Printf("right controller had no pose\n");
 			}
 		}
 	}
@@ -1351,19 +1393,15 @@ void VR_MoveDelta(idVec3 &delta, float &height)
 	g_vrHeadMoveDelta.Zero();
 }
 
-void VR_ShakeLeftController()
+void VR_HapticPulse(int leftDuration, int rightDuration)
 {
-	if( g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid )
+	if( leftDuration > g_openVRLeftControllerPulseDur )
 	{
-		hmd->TriggerHapticPulse(g_openVRLeftController, 0, 3999);
+		g_openVRLeftControllerPulseDur = leftDuration;
 	}
-}
-
-void VR_ShakeRightController()
-{
-	if( g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid )
+	if( rightDuration > g_openVRRightControllerPulseDur )
 	{
-		hmd->TriggerHapticPulse(g_openVRRightController, 0, 3999);
+		g_openVRRightControllerPulseDur = rightDuration;
 	}
 }
 

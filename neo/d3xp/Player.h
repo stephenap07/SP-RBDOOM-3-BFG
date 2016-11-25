@@ -484,6 +484,7 @@ public:
 	
 	// Controller Shake
 	void					ControllerShakeFromDamage( int damage );
+	void					ControllerShakeFromDamage( int damage, const idVec3 &dir );
 	void					SetControllerShake( float highMagnitude, int highDuration, float lowMagnitude, int lowDuration );
 	void					ResetControllerShake();
 	void					GetControllerShake( int& highMagnitude, int& lowMagnitude ) const;

@@ -1002,6 +1002,7 @@ void idProjectile::Event_GetProjectileState()
 idProjectile::Explode
 ================
 */
+idCVar vr_hapticDistMin("vr_hapticDistMin", "160", CVAR_FLOAT, "distance when falloff occurs");
 void idProjectile::Explode( const trace_t& collision, idEntity* ignore )
 {
 	const char* fxname, *light_shader, *sndExplode;
@@ -1038,21 +1039,46 @@ void idProjectile::Explode( const trace_t& collision, idEntity* ignore )
 		{
 			damage = 200;
 		}
-		float damageScale = idMath::ClampFloat( 0.25f, 1.0f, ( float )damage * ( 1.0f / 200.0f ) );	// 50...200 -> min...max rumble
-		
+		float damageScale = ( float )damage * ( 1.0f / 200.0f );
+
+		idVec3 dir = GetPhysics()->GetOrigin() - player->GetPhysics()->GetOrigin();
+
 		// distance
-		float dist = ( GetPhysics()->GetOrigin() - player->GetPhysics()->GetOrigin() ).LengthFast();
-		float distScale = 1.0f - idMath::ClampFloat( 0.0f, 1.0f, ( dist * ( 1.0f / 4000.0f ) ) + 0.25f );		// 0...4000 -> max...min rumble
-		
-		distScale *= damageScale;	// apply damage scale here, weaker damage produces less rumble
-		
+		float dist = dir.LengthSqr();
+		float minDist = vr_hapticDistMin.GetFloat();
+		minDist *= minDist;
+		if (dist < 1) dist = 1;
+		float distScale = minDist / dist;
+
+		// apply damage scale here, weaker damage produces less rumble
+		float rumbleScale = idMath::ClampFloat( 0.0f, 0.75f, distScale * damageScale );
+
 		// determine rumble
-		float highMag = distScale;
-		int highDuration = idMath::Ftoi( 300.0f * distScale );
-		float lowMag = distScale * 0.75f;
-		int lowDuration = idMath::Ftoi( 500.0f * distScale );
+		float highMag = rumbleScale;
+		int highDuration = idMath::Ftoi( 300.0f * rumbleScale );
+		float lowMag = rumbleScale * 0.75f;
+		int lowDuration = idMath::Ftoi( 500.0f * rumbleScale );
 		
-		player->SetControllerShake( highMag, highDuration, lowMag, lowDuration );
+		if( player->usercmd.vrHasRightController )
+		{
+			float mag = highMag;
+			int dur = lowDuration;
+
+			dir.Normalize();
+			const idVec3 &playerLeft = player->flashlightAxis[1];
+			float side = playerLeft * dir * 0.5 + 0.5;
+			float invSide = 1.0 - side;
+			float rightSide = 1.0 - side*side;
+			float leftSide = 1.0 - invSide*invSide;
+			float leftMag = mag * leftSide;
+			float rightMag = mag * rightSide;
+
+			player->SetControllerShake( rightMag, dur, leftMag, dur );
+		}
+		else
+		{
+			player->SetControllerShake( highMag, highDuration, lowMag, lowDuration );
+		}
 	}
 	
 	// stop sound
