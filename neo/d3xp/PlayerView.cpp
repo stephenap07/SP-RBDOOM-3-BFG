@@ -867,6 +867,7 @@ int EyeForHalfRateFrame( const int frameCount )
 idPlayerView::RenderPlayerView
 ===================
 */
+idCVar vr_cinematicMode("vr_cinematicMode", "1", CVAR_BOOL | CVAR_ARCHIVE, "Adds a black frame around cinematics.");
 void idPlayerView::RenderPlayerView( idMenuHandler_HUD* hudManager )
 {
 	const renderView_t* view = player->GetRenderView();
@@ -881,6 +882,53 @@ void idPlayerView::RenderPlayerView( idMenuHandler_HUD* hudManager )
 	else
 	{
 		SingleView( view, hudManager );
+	}
+	if( gameLocal.inCinematic && vr_cinematicMode.GetBool() )
+	{
+		tr.guiModel->SetMode(GUIMODE_SHELL);
+		renderSystem->SetColor4( 0, 0, 0, 255 );
+
+		int width = renderSystem->GetVirtualWidth();
+		int height = renderSystem->GetVirtualHeight();
+		int blockwidth = width * 4;
+		int blockheight = height * 4;
+
+		renderSystem->DrawStretchPic(
+			-blockwidth, -blockheight,
+			blockwidth, blockheight,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+		renderSystem->DrawStretchPic(
+			0, -blockheight,
+			width, blockheight,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+		renderSystem->DrawStretchPic(
+			width, -blockheight,
+			blockwidth, blockheight,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+
+		renderSystem->DrawStretchPic(
+			-blockwidth, 0,
+			blockwidth, height,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+		renderSystem->DrawStretchPic(
+			width, 0,
+			blockwidth, height,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+
+		renderSystem->DrawStretchPic(
+			-blockwidth, height,
+			blockwidth, blockheight,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+		renderSystem->DrawStretchPic(
+			0, height,
+			width, blockheight,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+		renderSystem->DrawStretchPic(
+			width, height,
+			blockwidth, blockheight,
+			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
+
+		renderSystem->SetGLState(0);
 	}
 	tr.guiModel->SetMode(GUIMODE_FULLSCREEN);
 	ScreenFade();

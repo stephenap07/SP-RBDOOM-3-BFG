@@ -188,6 +188,18 @@ bool idGuiModel::GetVRShell( idVec3 &origin, idMat3 &axis )
 
 /*
 ================
+idGuiModel::SetVRShell
+================
+*/
+void idGuiModel::SetVRShell( const idVec3 &origin, const idMat3 &axis )
+{
+	vrShellOrigin = origin;
+	vrShellAxis = axis;
+	vrShellNeedsUpdate = false;
+}
+
+/*
+================
 idGuiModel::BeginFrame
 ================
 */

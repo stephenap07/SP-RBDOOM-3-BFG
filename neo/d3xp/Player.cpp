@@ -10953,12 +10953,14 @@ void idPlayer::CalculateRenderView()
 				{
 					lastHeadOrigin = VR_GetSeatedOrigin();
 					lastHeadAxisInv = VR_GetSeatedAxisInverse();
+					tr.guiModel->SetVRShell(lastHeadOrigin, VR_GetSeatedAxis());
 				}
 				else
 				{
 					lastHeadOrigin = usercmd.vrHeadOrigin;
 					float yaw = usercmd.vrHeadAxis.ToAngles().yaw;
 					lastHeadAxisInv = idAngles(0,-yaw,0).ToMat3();
+					tr.guiModel->SetVRShell(lastHeadOrigin, idAngles(0,yaw,0).ToMat3());
 				}
 			}
 			renderView->vrMoveAxis = lastHeadAxisInv * renderView->viewaxis;

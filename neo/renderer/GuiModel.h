@@ -56,6 +56,7 @@ public:
 	bool	UpdateVRShell();
 	void	ActivateVRShell( bool b );
 	bool	GetVRShell( idVec3 &origin, idMat3 &axis );
+	void	SetVRShell( const idVec3 &origin, const idMat3 &axis );
 	
 	// allocates memory for verts and indexes in frame-temporary buffer memory
 	void	BeginFrame();
