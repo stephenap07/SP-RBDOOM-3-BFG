@@ -221,7 +221,14 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	planes[numplanes].Normalize();
 	numplanes++;
 	
-	vrVelocity = vrDelta / time_left;
+	if( time_left > 0 )
+	{
+		vrVelocity = vrDelta / time_left;
+	}
+	else
+	{
+		vrVelocity.Zero();
+	}
 
 	for( bumpcount = 0; bumpcount < numbumps; bumpcount++ )
 	{
