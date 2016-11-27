@@ -12791,6 +12791,7 @@ void idPlayer::SetControllerShake( float highMagnitude, int highDuration, float 
 {
 	if( !highDuration && !lowDuration )
 	{
+		controllerShakeTimeGroup = gameLocal.selectedGroup;
 		return;
 	}
 
