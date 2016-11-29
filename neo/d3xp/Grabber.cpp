@@ -333,7 +333,10 @@ void idGrabber::StartDrag( idEntity* grabEnt, int id )
 	drag.SetPhysics( phys, clipModelId, muzzleOrigin + localPlayerPoint * muzzleAxis );
 	
 	// start the screen warp
-	warpId = thePlayer->playerView.AddWarp( phys->GetOrigin(), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 160, 2000 );
+	if( !glConfig.openVREnabled )
+	{
+		warpId = thePlayer->playerView.AddWarp( phys->GetOrigin(), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 160, 2000 );
+	}
 }
 
 /*
