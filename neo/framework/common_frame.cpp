@@ -398,21 +398,18 @@ idCVar vr_hapticMax( "vr_hapticMax", "3999", CVAR_INTEGER, "0 - 3999, for debug 
 void idCommonLocal::ProcessGameReturn( const gameReturn_t& ret )
 {
 	// set joystick rumble
-	if( in_useJoystick.GetBool() && in_joystickRumble.GetBool() && !game->Shell_IsActive() && session->GetSignInManager().GetMasterInputDevice() >= 0 )
+	if( glConfig.openVREnabled && !glConfig.openVRSeated && !game->Shell_IsActive() )
 	{
-		if( glConfig.openVREnabled && !glConfig.openVRSeated )
-		{
-			int leftDur = vr_hapticScale.GetFloat() * ret.vibrationLow;
-			if( leftDur > vr_hapticMax.GetInteger() ) leftDur = vr_hapticMax.GetInteger();
-			int rightDur = vr_hapticScale.GetFloat() * ret.vibrationHigh;
-			if( rightDur > vr_hapticMax.GetInteger() ) rightDur = vr_hapticMax.GetInteger();
+		int leftDur = vr_hapticScale.GetFloat() * ret.vibrationLow;
+		if( leftDur > vr_hapticMax.GetInteger() ) leftDur = vr_hapticMax.GetInteger();
+		int rightDur = vr_hapticScale.GetFloat() * ret.vibrationHigh;
+		if( rightDur > vr_hapticMax.GetInteger() ) rightDur = vr_hapticMax.GetInteger();
 
-			VR_HapticPulse( leftDur, rightDur );
-		}
-		else
-		{
-			Sys_SetRumble( session->GetSignInManager().GetMasterInputDevice(), ret.vibrationLow, ret.vibrationHigh );		// Only set the rumble on the active controller
-		}
+		VR_HapticPulse( leftDur, rightDur );
+	}
+	else if( in_useJoystick.GetBool() && in_joystickRumble.GetBool() && !game->Shell_IsActive() && session->GetSignInManager().GetMasterInputDevice() >= 0 )
+	{
+		Sys_SetRumble( session->GetSignInManager().GetMasterInputDevice(), ret.vibrationLow, ret.vibrationHigh );		// Only set the rumble on the active controller
 	}
 	else
 	{
