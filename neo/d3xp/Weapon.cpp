@@ -1530,7 +1530,7 @@ void idWeapon::UpdateFlashPosition()
 	// the flash has an explicit joint for locating it
 	GetGlobalJointTransform( true, flashJointView, muzzleFlash.origin, muzzleFlash.axis );
 	
-	if( isPlayerFlashlight )
+	if( isPlayerFlashlight && (!glConfig.openVREnabled || glConfig.openVRSeated) )
 	{
 		static float pscale = 2.0f;
 		static float yscale = 0.25f;
