@@ -1257,7 +1257,7 @@ void VR_PostSwap()
 	if (hmdPose.bPoseIsValid)
 	{
 		VR_ConvertPose( hmdPose, g_vrHeadOrigin, g_vrHeadAxis );
-		g_vrHeadOrigin += glConfig.openVREyeForward * g_vrHeadAxis[2];
+		g_vrHeadOrigin += glConfig.openVREyeForward * g_vrHeadAxis[0];
 
 		if (g_vrHadHead)
 		{
