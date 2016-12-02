@@ -45,6 +45,10 @@ idCVar stereoRender_warpParmZ( "stereoRender_warpParmZ", "0", CVAR_RENDERER | CV
 idCVar stereoRender_warpParmW( "stereoRender_warpParmW", "0", CVAR_RENDERER | CVAR_FLOAT | CVAR_ARCHIVE, "development parm" );
 idCVar stereoRender_warpTargetFraction( "stereoRender_warpTargetFraction", "1.0", CVAR_RENDERER | CVAR_FLOAT | CVAR_ARCHIVE, "fraction of half-width the through-lens view covers" );
 
+idCVar vr_outputMode("vr_outputMode", "3", CVAR_INTEGER | CVAR_ARCHIVE, "0 - cover, 1 - left, 2 - right, 3 - side by side");
+idCVar vr_outputScale("vr_outputScale", "1", CVAR_FLOAT | CVAR_ARCHIVE, "scales output for modes 1-3");
+int vr_outputUpdates;
+
 idCVar r_showSwapBuffers( "r_showSwapBuffers", "0", CVAR_BOOL, "Show timings from GL_BlockingSwapBuffers" );
 idCVar r_syncEveryFrame( "r_syncEveryFrame", "1", CVAR_BOOL, "Don't let the GPU buffer execution past swapbuffers" );
 
@@ -149,11 +153,20 @@ const void GL_BlockingSwapBuffers()
 		common->Printf( "%i msec to glFinish\n", beforeSwap - beforeFinish );
 	}
 	
-	GLimp_SwapBuffers();
-	
-	if (glConfig.openVREnabled)
+	if( glConfig.openVREnabled )
 	{
+		if( vr_outputMode.GetBool() || vr_outputUpdates < 4 )
+		{
+			GLimp_SwapBuffers();
+
+			vr_outputUpdates++;
+		}
+
 		VR_PostSwap();
+	}
+	else
+	{
+		GLimp_SwapBuffers();
 	}
 
 	const int beforeFence = Sys_Milliseconds();
@@ -604,19 +617,93 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 				VR_PreSwap(stereoRenderImages[0]->GetTexNum(), stereoRenderImages[1]->GetTexNum());
 			}
 
-			GL_SelectTexture( 0 );
-			stereoRenderImages[0]->Bind();
-			GL_SelectTexture( 1 );
-			stereoRenderImages[1]->Bind();
-			GL_ViewportAndScissor( 0, 0, glConfig.nativeScreenWidth/2, glConfig.nativeScreenHeight );
-			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
+			if( vr_outputMode.IsModified() || vr_outputScale.IsModified() )
+			{
+				vr_outputMode.ClearModified();
+				vr_outputScale.ClearModified();
+				vr_outputUpdates = 0;
+			}
+
+			if( vr_outputUpdates < 4 )
+			{
+				GL_ViewportAndScissor( 0, 0, glConfig.nativeScreenWidth, glConfig.nativeScreenHeight );
+				glClear( GL_COLOR_BUFFER_BIT );
+			}
+
+			switch( vr_outputMode.GetInteger() )
+			{
+			case 1: // left image
+				{
+					GL_SelectTexture( 0 );
+					stereoRenderImages[0]->Bind();
+					float scale = vr_outputScale.GetFloat();
+					int x = -(renderSystemWidth*scale - glConfig.nativeScreenWidth) / 2;
+					int y = -(renderSystemHeight*scale - glConfig.nativeScreenHeight) / 2;
+					GL_ViewportAndScissor( x, y, renderSystemWidth*scale, renderSystemHeight*scale );
+					RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
+				}
+				break;
+			case 2: // right image
+				{
+					GL_SelectTexture( 0 );
+					stereoRenderImages[1]->Bind();
+					float scale = vr_outputScale.GetFloat();
+					int x = -(renderSystemWidth*scale - glConfig.nativeScreenWidth) / 2;
+					int y = -(renderSystemHeight*scale - glConfig.nativeScreenHeight) / 2;
+					GL_ViewportAndScissor( x, y, renderSystemWidth*scale, renderSystemHeight*scale );
+					RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
+				}
+				break;
+			case 0: // cover
+				if( vr_outputUpdates < 4 )
+				{
+					static idImage *vrOutputCover;
+					if( !vrOutputCover )
+					{
+						vrOutputCover = globalImages->ImageFromFile( "guis/assets/mainmenu/doom3_cover", TF_DEFAULT, TR_CLAMP, TD_DEFAULT, CF_2D );
+					}
+
+					if( vrOutputCover )
+					{
+						GL_SelectTexture( 0 );
+						vrOutputCover->Bind();
+
+						static float crop = 0.792f;
+						const float texS[4] = { crop, 0.0f, 0.0f, 0.5f - 0.5f*crop };
+						const float texT[4] = { 0.0f, crop, 0.0f, 0.5f - 0.5f*crop };
+						renderProgManager.SetRenderParm( RENDERPARM_TEXTUREMATRIX_S, texS );
+						renderProgManager.SetRenderParm( RENDERPARM_TEXTUREMATRIX_T, texT );
+
+						float screenAspect = glConfig.nativeScreenHeight / (float)glConfig.nativeScreenWidth;
+						float width = vr_outputScale.GetFloat() * screenAspect
+							* vrOutputCover->GetOpts().width / (float)vrOutputCover->GetOpts().height;
+						float height = vr_outputScale.GetFloat();
+						const float mvpx[4] = { width, 0.0f, 0.0f, 0.0f };
+						const float mvpy[4] = { 0.0f, -height, 0.0f, -height + 1.0f };
+						const float mvpz[4] = { 0.0f, 0.0f, 1.0f, 0.0f };
+						const float mvpw[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+						renderProgManager.SetRenderParm( RENDERPARM_MVPMATRIX_X, mvpx );
+						renderProgManager.SetRenderParm( RENDERPARM_MVPMATRIX_Y, mvpy );
+						renderProgManager.SetRenderParm( RENDERPARM_MVPMATRIX_Z, mvpz );
+						renderProgManager.SetRenderParm( RENDERPARM_MVPMATRIX_W, mvpw );
+
+						RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
+					}
+				}
+				break;
+			case 3: // side by side
+			default:
+				GL_SelectTexture( 0 );
+				stereoRenderImages[0]->Bind();
+				GL_ViewportAndScissor( 0, 0, glConfig.nativeScreenWidth/2, glConfig.nativeScreenHeight );
+				RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
 			
-			GL_SelectTexture( 0 );
-			stereoRenderImages[1]->Bind();
-			GL_SelectTexture( 1 );
-			stereoRenderImages[0]->Bind();
-			GL_ViewportAndScissor( glConfig.nativeScreenWidth/2, 0, glConfig.nativeScreenWidth/2, glConfig.nativeScreenHeight );
-			RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
+				GL_SelectTexture( 0 );
+				stereoRenderImages[1]->Bind();
+				GL_ViewportAndScissor( glConfig.nativeScreenWidth/2, 0, glConfig.nativeScreenWidth/2, glConfig.nativeScreenHeight );
+				RB_DrawElementsWithCounters( &backEnd.unitSquareSurface );
+				break;
+			}
 			break;
 
 		case STEREO3D_TOP_AND_BOTTOM_COMPRESSED:
