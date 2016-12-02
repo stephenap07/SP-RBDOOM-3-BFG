@@ -46,7 +46,7 @@ idCVar stereoRender_warpParmW( "stereoRender_warpParmW", "0", CVAR_RENDERER | CV
 idCVar stereoRender_warpTargetFraction( "stereoRender_warpTargetFraction", "1.0", CVAR_RENDERER | CVAR_FLOAT | CVAR_ARCHIVE, "fraction of half-width the through-lens view covers" );
 
 idCVar vr_outputMode("vr_outputMode", "3", CVAR_INTEGER | CVAR_ARCHIVE, "0 - cover, 1 - left, 2 - right, 3 - side by side");
-idCVar vr_outputScale("vr_outputScale", "1", CVAR_FLOAT | CVAR_ARCHIVE, "scales output for modes 1-3");
+idCVar vr_outputScale("vr_outputScale", "1", CVAR_FLOAT | CVAR_ARCHIVE, "scales output for modes 0-2");
 int vr_outputUpdates;
 
 idCVar r_showSwapBuffers( "r_showSwapBuffers", "0", CVAR_BOOL, "Show timings from GL_BlockingSwapBuffers" );
