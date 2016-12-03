@@ -6986,7 +6986,10 @@ void idPlayer::BobCycle( const idVec3& pushVelocity )
 	{
 		bob = 6;
 	}
-	viewBob[2] += bob;
+	if( !glConfig.openVREnabled )
+	{
+		viewBob[2] += bob;
+	}
 	
 	// add fall height
 	delta = gameLocal.time - landTime;
