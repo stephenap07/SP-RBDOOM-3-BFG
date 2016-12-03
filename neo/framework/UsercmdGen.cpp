@@ -1136,6 +1136,7 @@ void idUsercmdGenLocal::VRControlMove()
 
 		if ( move )
 		{
+			const float moveSpeed = vr_moveSpeed.GetFloat();
 			if( vr_forwardOnly.GetBool() )
 			{
 				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED );
@@ -1152,10 +1153,10 @@ void idUsercmdGenLocal::VRControlMove()
 					len += dif * response;
 					axis *= len;
 				}
-				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y );
+				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y * moveSpeed );
 				if( vr_strafing.GetBool() )
 				{
-					cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x );
+					cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x * moveSpeed );
 				}
 			}
 		}

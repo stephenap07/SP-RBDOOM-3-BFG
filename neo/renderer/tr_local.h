@@ -1146,6 +1146,7 @@ extern idCVar vr_forwardOnly;
 extern idCVar vr_turning;
 extern idCVar vr_responseCurve;
 extern idCVar vr_moveMode;
+extern idCVar vr_moveSpeed;
 
 /*
 ====================================================================
