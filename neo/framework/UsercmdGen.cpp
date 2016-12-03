@@ -282,8 +282,7 @@ private:
 	int				impulseSequence;
 	int				impulse;
 	
-	bool			vrWasClicked;
-	bool			vrWasDoubleClicked;
+	int				vrClickCount;
 
 	buttonState_t	toggled_crouch;
 	buttonState_t	toggled_run;
@@ -355,8 +354,7 @@ idUsercmdGenLocal::idUsercmdGenLocal()
 	impulseSequence = 0;
 	impulse = 0;
 
-	vrWasClicked = false;
-	vrWasDoubleClicked = false;
+	vrClickCount = 0;
 	
 	toggled_crouch.Clear();
 	toggled_run.Clear();
@@ -1069,24 +1067,29 @@ void idUsercmdGenLocal::VRControlMove()
 	idVec2 axis;
 	if( VR_GetLeftControllerAxis(axis) )
 	{
-		if( !vrWasClicked )
+		if( VR_LeftControllerWasPressed() )
 		{
-			vrWasClicked = VR_LeftControllerWasPressed();
-		}
-		else if ( !vrWasDoubleClicked )
-		{
-			vrWasDoubleClicked = VR_LeftControllerWasPressed();
+			vrClickCount++;
 		}
 
 		const int moveMode = vr_moveMode.GetInteger();
+		float moveSpeed = 1.f;
+		bool standing = !( cmd.buttons & BUTTON_CROUCH );
+
+		if( moveMode >= 10 && moveMode <= 16 )
+		{
+			moveSpeed = vr_moveSpeed.GetFloat();
+		}
 
 		bool move = false;
 		switch( moveMode )
 		{
 		case 0:
+		case 10:
 			move = true;
 			break;
 		case 1:
+		case 11:
 			move = true;
 			if( VR_LeftControllerIsPressed() )
 			{
@@ -1094,20 +1097,23 @@ void idUsercmdGenLocal::VRControlMove()
 			}
 			break;
 		case 2:
-			if (vrWasClicked)
+		case 12:
+			if( vrClickCount > 0 )
 			{
 				cmd.buttons |= BUTTON_RUN;
 			}
 			move = true;
 			break;
 		case 3:
-			if( vrWasClicked )
+		case 13:
+			if( vrClickCount > 0 )
 			{
 				move = true;
 			}
 			break;
 		case 4:
-			if( vrWasClicked )
+		case 14:
+			if( vrClickCount > 0 )
 			{
 				move = true;
 			}
@@ -1117,29 +1123,71 @@ void idUsercmdGenLocal::VRControlMove()
 			}
 			break;
 		case 5:
-			if( vrWasClicked )
+		case 15:
+			if( vrClickCount > 0 )
 			{
 				move = true;
 			}
-			if( vrWasDoubleClicked )
+			if( vrClickCount > 1 )
 			{
 				cmd.buttons |= BUTTON_RUN;
 			}
 			break;
 		case 6:
+		case 16:
 			if( VR_LeftControllerIsPressed() )
 			{
 				move = true;
 			}
 			break;
+		case 7:
+			if( vrClickCount > 0 )
+			{
+				move = true;
+			}
+			if( vrClickCount < 2 )
+			{
+				moveSpeed = vr_moveSpeed.GetFloat();
+			}
+			if( VR_LeftControllerIsPressed() )
+			{
+				cmd.buttons |= BUTTON_RUN;
+			}
+			break;
+		case 8:
+			move = true;
+			if( vrClickCount < 1 )
+			{
+				moveSpeed = vr_moveSpeed.GetFloat();
+			}
+			if( VR_LeftControllerIsPressed() )
+			{
+				cmd.buttons |= BUTTON_RUN;
+			}
+			break;
+		case 9:
+			move = true;
+			if( vrClickCount < 1 )
+			{
+				moveSpeed = vr_moveSpeed.GetFloat();
+			}
+			else if( vrClickCount > 1 )
+			{
+				cmd.buttons |= BUTTON_RUN;
+			}
+			break;
+		}
+
+		if( !standing )
+		{
+			moveSpeed = 0.6f + 0.4f * moveSpeed;
 		}
 
 		if ( move )
 		{
-			const float moveSpeed = vr_moveSpeed.GetFloat();
 			if( vr_forwardOnly.GetBool() )
 			{
-				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED );
+				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * moveSpeed );
 			}
 			else
 			{
@@ -1163,8 +1211,7 @@ void idUsercmdGenLocal::VRControlMove()
 	}
 	else
 	{
-		vrWasClicked = false;
-		vrWasDoubleClicked = false;
+		vrClickCount = 0;
 	}
 	if( vr_turning.GetInteger() && VR_GetRightControllerAxis(axis) && fabs(axis.y) < 0.5 )
 	{
@@ -1309,8 +1356,13 @@ void idUsercmdGenLocal::MakeCurrent()
 		// aim assist
 		AimAssist();
 		
-		// VR joystick movement
-		VRControlMove();
+		if (glConfig.openVREnabled)
+		{
+			VRTrackedMove();
+
+			// VR joystick movement
+			VRControlMove();
+		}
 
 		// check to make sure the angles haven't wrapped
 		if( viewangles[PITCH] - oldAngles[PITCH] > 90 )
@@ -1326,11 +1378,11 @@ void idUsercmdGenLocal::MakeCurrent()
 	{
 		mouseDx = 0;
 		mouseDy = 0;
-	}
 
-	if (glConfig.openVREnabled)
-	{
-		VRTrackedMove();
+		if (glConfig.openVREnabled)
+		{
+			VRTrackedMove();
+		}
 	}
 	
 	for( int i = 0; i < 3; i++ )
