@@ -1191,16 +1191,24 @@ void idUsercmdGenLocal::VRControlMove()
 			}
 			else
 			{
-				CircleToSquare( axis.x, axis.y );
-				const float response = vr_responseCurve.GetFloat();
+				float response = vr_responseCurve.GetFloat();
+				if( moveSpeed < 1.0f )
+				{
+					response -= (1.0f - moveSpeed) * 2.0f;
+					if( response < -1.0f )
+					{
+						response = -1.0f;
+					}
+				}
 				if( response != 0 )
 				{
 					float lenSq = axis.LengthSqr();
 					float len = sqrtf(lenSq);
 					float dif = lenSq - len;
-					len += dif * response;
-					axis *= len;
+					float newLen = len + dif * response;
+					axis *= newLen / len;
 				}
+				CircleToSquare( axis.x, axis.y );
 				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y * moveSpeed );
 				if( vr_strafing.GetBool() )
 				{
