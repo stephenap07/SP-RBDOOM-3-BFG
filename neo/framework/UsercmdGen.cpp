@@ -1203,10 +1203,13 @@ void idUsercmdGenLocal::VRControlMove()
 				if( response != 0 )
 				{
 					float lenSq = axis.LengthSqr();
-					float len = sqrtf(lenSq);
-					float dif = lenSq - len;
-					float newLen = len + dif * response;
-					axis *= newLen / len;
+					if( lenSq > 0.0f )
+					{
+						float len = sqrtf(lenSq);
+						float dif = lenSq - len;
+						float newLen = len + dif * response;
+						axis *= newLen / len;
+					}
 				}
 				CircleToSquare( axis.x, axis.y );
 				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * axis.y * moveSpeed );
