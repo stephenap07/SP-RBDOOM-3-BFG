@@ -456,12 +456,14 @@ void RB_StereoRenderExecuteBackEndCommands( const emptyCommand_t* const allCmds 
 
 		if( stereoMultisample )
 		{
+			glDisable( GL_SCISSOR_TEST );
 			glBindFramebuffer( GL_READ_FRAMEBUFFER, stereoMSAARenderFBO->GetFramebuffer() );
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, stereoRenderFBO[ targetEye ]->GetFramebuffer() );
 			glBlitFramebuffer( 0, 0, renderSystemWidth, renderSystemHeight,
 							   0, 0, renderSystemWidth, renderSystemHeight,
 							   GL_COLOR_BUFFER_BIT,
 							   GL_LINEAR );
+			glEnable( GL_SCISSOR_TEST );
 		}
 	}
 	

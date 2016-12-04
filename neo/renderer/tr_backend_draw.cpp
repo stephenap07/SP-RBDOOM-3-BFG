@@ -5432,6 +5432,7 @@ void RB_DrawViewInternal( const viewDef_t* viewDef, const int stereoEye )
 				viewDef->viewport.y2 + 1 - viewDef->viewport.y1 );
 		*/
 		
+		glDisable( GL_SCISSOR_TEST );
 		/*
 		glBindFramebuffer( GL_READ_FRAMEBUFFER, globalFramebuffers.hdrFBO->GetFramebuffer() );
 		glBindFramebuffer( GL_DRAW_FRAMEBUFFER, globalFramebuffers.hdrQuarterFBO->GetFramebuffer() );
@@ -5467,6 +5468,7 @@ void RB_DrawViewInternal( const viewDef_t* viewDef, const int stereoEye )
 							   GL_COLOR_BUFFER_BIT,
 							   GL_LINEAR );
 		}
+		glEnable( GL_SCISSOR_TEST );
 		
 		RB_CalculateAdaptation();
 		

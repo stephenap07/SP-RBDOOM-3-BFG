@@ -761,12 +761,14 @@ void idImage::CopyFramebuffer( int x, int y, int imageWidth, int imageHeight )
 	
 		if( globalFramebuffers.hdrFBO->IsMultiSampled() )
 		{
+			glDisable( GL_SCISSOR_TEST );
 			glBindFramebuffer( GL_READ_FRAMEBUFFER, globalFramebuffers.hdrFBO->GetFramebuffer() );
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, globalFramebuffers.hdrNonMSAAFBO->GetFramebuffer() );
 			glBlitFramebuffer( 0, 0, imageWidth, imageHeight,
 							   0, 0, imageWidth, imageHeight,
 							   GL_COLOR_BUFFER_BIT,
 							   GL_LINEAR );
+			glEnable( GL_SCISSOR_TEST );
 	
 			globalFramebuffers.hdrNonMSAAFBO->Bind();
 	
@@ -781,12 +783,14 @@ void idImage::CopyFramebuffer( int x, int y, int imageWidth, int imageHeight )
 	}
 	else if( globalFramebuffers.currentStereoRenderFBO && globalFramebuffers.currentStereoRenderFBO->IsMultiSampled() )
 	{
+		glDisable( GL_SCISSOR_TEST );
 		glBindFramebuffer( GL_READ_FRAMEBUFFER, globalFramebuffers.currentStereoRenderFBO->GetFramebuffer() );
 		glBindFramebuffer( GL_DRAW_FRAMEBUFFER, globalFramebuffers.currentStereoRenderNonMSAAFBO->GetFramebuffer() );
 		glBlitFramebuffer( 0, 0, imageWidth, imageHeight,
 						   0, 0, imageWidth, imageHeight,
 						   GL_COLOR_BUFFER_BIT,
 						   GL_LINEAR );
+		glEnable( GL_SCISSOR_TEST );
 
 		globalFramebuffers.currentStereoRenderNonMSAAFBO->Bind();
 	
