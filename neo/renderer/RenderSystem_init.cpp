@@ -293,6 +293,7 @@ idCVar vr_forceGamepad( "vr_forceGamepad", "0", CVAR_RENDERER | CVAR_ARCHIVE | C
 idCVar vr_knockbackScale( "vr_knockbackScale", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "how much knockback affects you" );
 idCVar vr_strafing( "vr_strafing", "1", CVAR_ARCHIVE | CVAR_BOOL, "enable/disable left control strafing" );
 idCVar vr_forwardOnly( "vr_forwardOnly", "0", CVAR_ARCHIVE | CVAR_BOOL, "left touchpad only moves forward" );
+idCVar vr_relativeAxis( "vr_relativeAxis", "0", CVAR_ARCHIVE | CVAR_BOOL, "movement relative to initial touch" );
 idCVar vr_maxRadius( "vr_maxRadius", "0.9", CVAR_ARCHIVE | CVAR_FLOAT, "smaller values make it easier to hit max movement speed" );
 idCVar vr_turning( "vr_turning", "0", CVAR_ARCHIVE | CVAR_BOOL, "0 no turning | 1 touch turning" );
 idCVar vr_responseCurve( "vr_responseCurve", "0", CVAR_ARCHIVE | CVAR_FLOAT, "interpoloate between linear and square curves, -1 for inverse square" );

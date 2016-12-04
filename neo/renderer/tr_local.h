@@ -1143,6 +1143,7 @@ extern idCVar vr_forceGamepad;
 extern idCVar vr_knockbackScale;
 extern idCVar vr_strafing;
 extern idCVar vr_forwardOnly;
+extern idCVar vr_relativeAxis;
 extern idCVar vr_turning;
 extern idCVar vr_responseCurve;
 extern idCVar vr_moveMode;

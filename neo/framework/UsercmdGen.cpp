@@ -283,6 +283,8 @@ private:
 	int				impulse;
 	
 	int				vrClickCount;
+	bool			vrTouched;
+	idVec2			vrTouchedAxis;
 
 	buttonState_t	toggled_crouch;
 	buttonState_t	toggled_run;
@@ -1067,6 +1069,19 @@ void idUsercmdGenLocal::VRControlMove()
 	idVec2 axis;
 	if( VR_GetLeftControllerAxis(axis) )
 	{
+		if( vr_relativeAxis.GetBool() )
+		{
+			if( !vrTouched )
+			{
+				vrTouched = true;
+				vrTouchedAxis = axis;
+				axis.Zero();
+			}
+			else
+			{
+				axis -= vrTouchedAxis;
+			}
+		}
 		if( VR_LeftControllerWasPressed() )
 		{
 			vrClickCount++;
@@ -1223,6 +1238,7 @@ void idUsercmdGenLocal::VRControlMove()
 	else
 	{
 		vrClickCount = 0;
+		vrTouched = false;
 	}
 	if( vr_turning.GetInteger() && VR_GetRightControllerAxis(axis) && fabs(axis.y) < 0.5 )
 	{
