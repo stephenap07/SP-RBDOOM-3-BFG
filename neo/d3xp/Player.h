@@ -259,6 +259,22 @@ typedef struct
 	idVec3	pos;
 } aasLocation_t;
 
+enum slotIndex_t
+{
+	SLOT_NONE = -1,
+	SLOT_LEFT_HIP,
+	//SLOT_RIGHT_HIP,
+	SLOT_RIGHT_BACK_BOTTOM,
+	SLOT_RIGHT_BACK_TOP,
+	SLOT_COUNT
+};
+
+struct slot_t
+{
+	idVec3 origin;
+	float radiusSq;
+};
+
 class idPlayer : public idActor
 {
 public:
@@ -288,6 +304,9 @@ public:
 	renderEntity_t			laserSightRenderEntity;	// replace crosshair for 3DTV
 	qhandle_t				laserSightHandle;
 	
+	renderEntity_t			pdaRenderEntity;					// used to present a model to the renderer
+	qhandle_t				pdaModelDefHandle;					// handle to static renderer model
+
 	bool					noclip;
 	bool					godmode;
 	
@@ -427,6 +446,17 @@ public:
 	idVec3					hmdOrigin;
 	idMat3					hmdAxis;
 	
+	idVec3					leftHandOrigin;
+	idMat3					leftHandAxis;
+	slotIndex_t				leftHandSlot;
+
+	idVec3					rightHandOrigin;
+	idMat3					rightHandAxis;
+	slotIndex_t				rightHandSlot;
+
+	idVec3					waistOrigin;
+	idMat3					waistAxis;
+
 	idDragEntity			dragEntity;
 	
 	idFuncMountedObject*		mountedObject;
@@ -451,6 +481,8 @@ public:
 	void					Spawn();
 	void					Think();
 	
+	void					SetupPDASlot();
+	void					UpdatePDASlot();
 	void					UpdateLaserSight();
 	
 	// save games
@@ -485,6 +517,7 @@ public:
 	// Controller Shake
 	void					ControllerShakeFromDamage( int damage );
 	void					ControllerShakeFromDamage( int damage, const idVec3 &dir );
+	void					SetControllerShake( float magnitude, int duration, const idVec3 &direction );
 	void					SetControllerShake( float highMagnitude, int highDuration, float lowMagnitude, int lowDuration );
 	void					ResetControllerShake();
 	void					GetControllerShake( int& highMagnitude, int& lowMagnitude ) const;
@@ -520,6 +553,9 @@ public:
 	renderView_t* 			GetRenderView();
 	void					CalculateRenderView();	// called every tic by player code
 	void					CalculateFirstPersonView();
+	void					CalculateWaist();
+	void					CalculateLeftHand();
+	void					CalculateRightHand();
 	
 	void					AddChatMessage( int index, int alpha, const idStr& message );
 	void					UpdateSpectatingText();
@@ -585,6 +621,9 @@ public:
 	void					ClearPowerUps();
 	bool					PowerUpActive( int powerup ) const;
 	float					PowerUpModifier( int type );
+	
+	bool					LeftImpulseSlot();
+	bool					RightImpulseSlot();
 	
 	int						SlotForWeapon( const char* weaponName );
 	void					Reload();

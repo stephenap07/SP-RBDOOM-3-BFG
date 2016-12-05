@@ -1061,19 +1061,7 @@ void idProjectile::Explode( const trace_t& collision, idEntity* ignore )
 		
 		if( player->usercmd.vrHasRightController )
 		{
-			float mag = highMag;
-			int dur = lowDuration;
-
-			dir.Normalize();
-			const idVec3 &playerLeft = player->flashlightAxis[1];
-			float side = playerLeft * dir * 0.5 + 0.5;
-			float invSide = 1.0 - side;
-			float rightSide = 1.0 - side*side;
-			float leftSide = 1.0 - invSide*invSide;
-			float leftMag = mag * leftSide;
-			float rightMag = mag * rightSide;
-
-			player->SetControllerShake( rightMag, dur, leftMag, dur );
+			player->SetControllerShake( highMag, lowDuration, dir );
 		}
 		else
 		{
