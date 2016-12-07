@@ -10995,7 +10995,7 @@ idVec3 idPlayer::GetEyePosition() const
 	{
 		org = GetPhysics()->GetOrigin();
 	}
-	return org + ( GetPhysics()->GetGravityNormal() * -eyeOffset.z );
+	return org + ( GetPhysics()->GetGravityNormal() * -eyeOffset.z ) + physicsObj.GetHeadOffset();
 }
 
 /*

@@ -155,6 +155,8 @@ public:	// common physics interface
 		previous = current;
 	}
 	
+	const idVec3 &			GetHeadOffset() const { return headOrigin; }
+
 private:
 	// player physics state
 	playerPState_t			current;
@@ -164,9 +166,10 @@ private:
 	playerPState_t			previous;
 	playerPState_t			next;
 
-	bool					hasCurrentHeadOrigin;
-	idVec3					currentHeadOrigin;
+	bool					vrHadHeadOrigin;
+	idVec3					vrLastHeadOrigin;
 	idVec3					vrDelta;
+	idVec3					headOrigin;
 	
 	// properties
 	float					walkSpeed;
