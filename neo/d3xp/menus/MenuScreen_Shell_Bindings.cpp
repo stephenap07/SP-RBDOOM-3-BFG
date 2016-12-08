@@ -275,7 +275,7 @@ void idMenuScreen_Shell_Bindings::UpdateBindingDisplay()
 			
 			idStr bindings;
 			
-			if( !bind.gamepad.IsEmpty() && in_useJoystick.GetBool() )
+			if( !bind.gamepad.IsEmpty() && (in_useJoystick.GetBool() || glConfig.openVREnabled) )
 			{
 				idStrList joyBinds;
 				int start = 0;

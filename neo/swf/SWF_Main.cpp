@@ -28,7 +28,7 @@ If you have questions concerning this license or the applicable additional terms
 */
 #pragma hdrstop
 #include "precompiled.h"
-#include "../renderer/Image.h"
+#include "../renderer/tr_local.h"
 #include "../renderer/DXT//DXTCodec.h"
 
 #pragma warning(disable: 4355) // 'this' : used in base member initializer list
@@ -677,7 +677,7 @@ int	idSWF::GetPlatform()
 {
 
 
-	if( in_useJoystick.GetBool() || forceNonPCPlatform )
+	if( in_useJoystick.GetBool() || glConfig.openVREnabled || forceNonPCPlatform )
 	{
 		forceNonPCPlatform = false;
 		return 0;
