@@ -1093,17 +1093,7 @@ void idPhysics_Player::WalkMove()
 
 	if (vrHadHeadOrigin && command.vrHasHead)
 	{
-		float yaw;
-		if( command.vrHasLeftController )
-		{
-			yaw = command.vrLeftControllerAxis.ToAngles().yaw;
-		}
-		else
-		{
-			yaw = command.vrHeadAxis.ToAngles().yaw;
-		}
-		idMat3 invRotation = idAngles(0, -yaw, 0).ToMat3();
-		vrDelta = (command.vrHeadOrigin - vrLastHeadOrigin) * invRotation;
+		vrDelta = (command.vrHeadOrigin - vrLastHeadOrigin) * vrFaceForward;
 		vrDelta.z = 0;
 		vrDelta = viewForward * vrDelta.x - viewRight * vrDelta.y;
 	}
@@ -2129,10 +2119,11 @@ void idPhysics_Player::Restore( idRestoreGame* savefile )
 idPhysics_Player::SetPlayerInput
 ================
 */
-void idPhysics_Player::SetPlayerInput( const usercmd_t& cmd, const idVec3& forwardVector )
+void idPhysics_Player::SetPlayerInput( const usercmd_t& cmd, const idVec3& forwardVector, const idMat3 &faceForward )
 {
 	command = cmd;
 	commandForward = forwardVector;		// can't use cmd.angles cause of the delta_angles
+	vrFaceForward = faceForward;
 }
 
 /*

@@ -101,7 +101,7 @@ public:
 	float					GetMaxStepHeight() const;
 	void					SetMaxJumpHeight( const float newMaxJumpHeight );
 	void					SetMovementType( const pmtype_t type );
-	void					SetPlayerInput( const usercmd_t& cmd, const idVec3& forwardVector );
+	void					SetPlayerInput( const usercmd_t& cmd, const idVec3& forwardVector, const idMat3 &faceForward );
 	void					SetKnockBack( const int knockBackTime );
 	void					SetDebugLevel( bool set );
 	// feed back from last physics frame
@@ -166,6 +166,7 @@ private:
 	playerPState_t			previous;
 	playerPState_t			next;
 
+	idMat3					vrFaceForward;
 	bool					vrHadHeadOrigin;
 	idVec3					vrLastHeadOrigin;
 	idVec3					vrDelta;

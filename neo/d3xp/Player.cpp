@@ -7127,8 +7127,7 @@ void idPlayer::SetViewAngles( const idAngles& angles )
 idPlayer::UpdateViewAngles
 ================
 */
-idCVar vr_moveLook("vr_moveLook", "0", CVAR_ARCHIVE | CVAR_BOOL, "Makes movement based on head direction instead of controller");
-
+idCVar vr_moveDirection("vr_moveDirection", "1", CVAR_ARCHIVE | CVAR_INTEGER, "Selects forward move direction from: 0 - head, 1 - left hand (default), 2 - right hand");
 void idPlayer::UpdateViewAngles()
 {
 	int i;
@@ -7240,21 +7239,21 @@ void idPlayer::UpdateViewAngles()
 			vrFaceForward = VR_GetSeatedAxisInverse();
 			hadBodyYaw = false;
 		}
-		//this is where forward is based on left controller or head while standing
-		else if (usercmd.vrHasLeftController && !vr_moveLook.GetBool())
+		else if( usercmd.vrHasHead )
 		{
-			float yaw = usercmd.vrLeftControllerAxis.ToAngles().yaw;
-			vrFaceForward = idAngles(0, -yaw, 0).ToMat3();
-			if (hadBodyYaw)
+			float yaw;
+			if( vr_moveDirection.GetInteger() == 1 && usercmd.vrHasLeftController )
 			{
-				viewAngles[YAW] += yaw - oldBodyYaw;
+				yaw = usercmd.vrLeftControllerAxis.ToAngles().yaw;
 			}
-			hadBodyYaw = true;
-			oldBodyYaw = yaw;
-		}
-		else if (usercmd.vrHasHead)
-		{
-			float yaw = usercmd.vrHeadAxis.ToAngles().yaw;
+			else if( vr_moveDirection.GetInteger() == 2 && usercmd.vrHasRightController )
+			{
+				yaw = usercmd.vrRightControllerAxis.ToAngles().yaw;
+			}
+			else
+			{
+				yaw = usercmd.vrHeadAxis.ToAngles().yaw;
+			}
 			vrFaceForward = idAngles(0, -yaw, 0).ToMat3();
 			if (hadBodyYaw)
 			{
@@ -8291,7 +8290,7 @@ void idPlayer::Move_Interpolated( float fraction )
 		idMat3	axis;
 		GetViewPos( org, axis );
 		
-		physicsObj.SetPlayerInput( usercmd, axis[0] );
+		physicsObj.SetPlayerInput( usercmd, axis[0], vrFaceForward );
 	}
 	
 	// FIXME: physics gets disabled somehow
@@ -8433,7 +8432,7 @@ void idPlayer::Move()
 		idMat3	axis;
 		GetViewPos( org, axis );
 		
-		physicsObj.SetPlayerInput( usercmd, axis[0] );
+		physicsObj.SetPlayerInput( usercmd, axis[0], vrFaceForward );
 	}
 	
 	// FIXME: physics gets disabled somehow
