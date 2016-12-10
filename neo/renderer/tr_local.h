@@ -1551,6 +1551,7 @@ VR
 const sysEvent_t &VR_SysEventNext();
 
 void VR_ResetPose();
+void VR_LogDevices();
 
 void VR_UpdateResolution();
 void VR_UpdateScaling();

@@ -899,6 +899,45 @@ void VR_ResetPose()
 	hmd->ResetSeatedZeroPose();
 }
 
+void VR_LogDevices()
+{
+	char modelNumberString[ vr::k_unTrackingStringSize ];
+	int axisType;
+	const char * axisTypeString;
+
+	hmd->GetStringTrackedDeviceProperty(
+		vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_ModelNumber_String,
+		modelNumberString, vr::k_unTrackingStringSize );
+	common->Printf("\nhead  model \"%s\"\n", modelNumberString );
+
+	if( g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid )
+	{
+		hmd->GetStringTrackedDeviceProperty(
+			g_openVRLeftController, vr::Prop_ModelNumber_String,
+			modelNumberString, vr::k_unTrackingStringSize );
+		axisType = hmd->GetInt32TrackedDeviceProperty( g_openVRLeftController, vr::Prop_Axis0Type_Int32 );
+		axisTypeString = hmd->GetControllerAxisTypeNameFromEnum( (vr::EVRControllerAxisType)axisType );
+		common->Printf("left  model \"%s\" axis %s\n", modelNumberString, axisTypeString );
+	}
+	else
+	{
+		common->Printf("left  not detected\n" );
+	}
+
+	if( g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid )
+	{
+		hmd->GetStringTrackedDeviceProperty(
+			g_openVRRightController, vr::Prop_ModelNumber_String,
+			modelNumberString, vr::k_unTrackingStringSize );
+		axisType = hmd->GetInt32TrackedDeviceProperty( g_openVRRightController, vr::Prop_Axis0Type_Int32 );
+		axisTypeString = hmd->GetControllerAxisTypeNameFromEnum( (vr::EVRControllerAxisType)axisType );
+		common->Printf("right model \"%s\" axis %s\n", modelNumberString, axisTypeString );
+	}
+	else
+	{
+		common->Printf("right not detected\n" );
+	}
+}
 
 #define MAX_VREVENTS 256
 

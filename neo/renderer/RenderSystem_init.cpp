@@ -2605,6 +2605,20 @@ void VR_ResetPose_f( const idCmdArgs& args )
 	}
 }
 
+/*
+=================
+VR_LogDevices_f
+=================
+*/
+
+void VR_LogDevices_f( const idCmdArgs& args )
+{
+	if (glConfig.openVREnabled)
+	{
+		VR_LogDevices();
+	}
+}
+
 
 /*
 =================
@@ -2645,6 +2659,7 @@ void R_InitCommands()
 	cmdSystem->AddCommand( "listModes", R_ListModes_f, CMD_FL_RENDERER, "lists all video modes" );
 	cmdSystem->AddCommand( "reloadSurface", R_ReloadSurface_f, CMD_FL_RENDERER, "reloads the decl and images for selected surface" );
 	cmdSystem->AddCommand( "vr_resetPose", VR_ResetPose_f, CMD_FL_RENDERER, "recenters VR" );
+	cmdSystem->AddCommand( "vr_logDevices", VR_LogDevices_f, CMD_FL_RENDERER, "log device info" );
 }
 
 /*
