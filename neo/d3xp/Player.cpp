@@ -7127,6 +7127,8 @@ void idPlayer::SetViewAngles( const idAngles& angles )
 idPlayer::UpdateViewAngles
 ================
 */
+idCVar vr_moveLook("vr_moveLook", "0", CVAR_ARCHIVE | CVAR_BOOL, "Makes movement based on head direction instead of controller");
+
 void idPlayer::UpdateViewAngles()
 {
 	int i;
@@ -7238,7 +7240,8 @@ void idPlayer::UpdateViewAngles()
 			vrFaceForward = VR_GetSeatedAxisInverse();
 			hadBodyYaw = false;
 		}
-		else if (usercmd.vrHasLeftController)
+		//this is where forward is based on left controller or head while standing
+		else if (usercmd.vrHasLeftController && !vr_moveLook.GetBool())
 		{
 			float yaw = usercmd.vrLeftControllerAxis.ToAngles().yaw;
 			vrFaceForward = idAngles(0, -yaw, 0).ToMat3();
