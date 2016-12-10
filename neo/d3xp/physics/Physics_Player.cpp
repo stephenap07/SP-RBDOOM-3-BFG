@@ -697,6 +697,34 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	static const float headBodyLimitSq = headBodyLimit * headBodyLimit;
 	static const float maxHeadDistSq = maxHeadDist * maxHeadDist;
 
+	idBounds bounds(idVec3(-5,-5,-5), idVec3(5,5,5));
+	idVec3 start;
+	float headHeightDiff;
+
+	// see if we can raise our head high enough
+	start = end = current.origin;
+	start.z += 20.f;
+	end.z += command.vrHeadOrigin.z;
+	gameLocal.clip.TraceBounds( trace, start, end, bounds, clipMask, self );
+	headHeightDiff = trace.endpos.z - end.z;
+
+	if( trace.fraction < 1.f )
+	{
+		if( !headBumped )
+		{
+			blink = true;
+			headBumped = true;
+		}
+	}
+	else
+	{
+		if( headBumped )
+		{
+			blink = true;
+			headBumped = false;
+		}
+	}
+
 	// clamp to a max distance
 	float headDistSq = headOrigin.LengthSqr();
 	if( headDistSq > maxHeadDistSq )
@@ -706,15 +734,13 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 		blink = true;
 	}
 
-	// head collision check if we are outside the body region
+	// head collision check if we are outside the body bounds
 	if( headDistSq > headBodyLimitSq )
 	{
-		idVec3 start = current.origin;
-		start.z += command.vrHeadOrigin.z;
-		idVec3 end = headOrigin + start;
-
 		// see if we can make it there
-		idBounds bounds(idVec3(-5,-5,-5), idVec3(5,5,5));
+		start = current.origin;
+		start.z += command.vrHeadOrigin.z + headHeightDiff;
+		end = headOrigin + start;
 		gameLocal.clip.TraceBounds( trace, start, end, bounds, clipMask, self );
 
 		if( trace.fraction < 1.0f )
@@ -723,8 +749,8 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 		}
 
 		headOrigin = trace.endpos - current.origin;
-		headOrigin.z = 0;
 	}
+	headOrigin.z = headHeightDiff;
 
 	// step down
 	if( stepDown && groundPlane )
@@ -2010,6 +2036,7 @@ idPhysics_Player::idPhysics_Player()
 	vrDelta.Zero();
 	headOrigin = vec3_origin;
 	blink = false;
+	headBumped = false;
 }
 
 /*

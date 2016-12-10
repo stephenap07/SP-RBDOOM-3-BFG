@@ -173,6 +173,7 @@ private:
 	idVec3					vrDelta;
 	idVec3					headOrigin;
 	bool					blink;
+	bool					headBumped;
 	
 	// properties
 	float					walkSpeed;
