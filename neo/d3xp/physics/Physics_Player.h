@@ -155,6 +155,7 @@ public:	// common physics interface
 		previous = current;
 	}
 	
+	bool					ShouldBlink() const { return blink; }
 	const idVec3 &			GetHeadOffset() const { return headOrigin; }
 
 private:
@@ -171,6 +172,7 @@ private:
 	idVec3					vrLastHeadOrigin;
 	idVec3					vrDelta;
 	idVec3					headOrigin;
+	bool					blink;
 	
 	// properties
 	float					walkSpeed;

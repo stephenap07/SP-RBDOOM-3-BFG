@@ -677,6 +677,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 					if( headDistSq > 13.f*13.f )
 					{
 						headOrigin *= 13.f / sqrt(headDistSq);
+						blink = true;
 					}
 					return true;
 				}
@@ -702,6 +703,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	{
 		headOrigin *= maxHeadDist / sqrtf(headDistSq);
 		headDistSq = maxHeadDistSq;
+		blink = true;
 	}
 
 	// head collision check if we are outside the body region
@@ -714,6 +716,11 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 		// see if we can make it there
 		idBounds bounds(idVec3(-5,-5,-5), idVec3(5,5,5));
 		gameLocal.clip.TraceBounds( trace, start, end, bounds, clipMask, self );
+
+		if( trace.fraction < 1.0f )
+		{
+			blink = true;
+		}
 
 		headOrigin = trace.endpos - current.origin;
 		headOrigin.z = 0;
@@ -2002,6 +2009,7 @@ idPhysics_Player::idPhysics_Player()
 	vrHadHeadOrigin = false;
 	vrDelta.Zero();
 	headOrigin = vec3_origin;
+	blink = false;
 }
 
 /*
@@ -2218,6 +2226,8 @@ bool idPhysics_Player::Evaluate( int timeStepMSec, int endTimeMSec )
 	
 	clipModel->Unlink();
 	
+	blink = false;
+
 	// if bound to a master
 	if( masterEntity )
 	{

@@ -11233,6 +11233,18 @@ void idPlayer::CalculateRightHand()
 
 /*
 ==================
+idPlayer::ShouldBlink
+
+Returns true if the view needs to be darkened
+==================
+*/
+bool idPlayer::ShouldBlink()
+{
+	return physicsObj.ShouldBlink();
+}
+
+/*
+==================
 idPlayer::GetRenderView
 
 Returns the renderView that was calculated for this tic

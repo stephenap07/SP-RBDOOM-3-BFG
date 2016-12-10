@@ -868,6 +868,7 @@ idPlayerView::RenderPlayerView
 ===================
 */
 idCVar vr_cinematicMode("vr_cinematicMode", "1", CVAR_BOOL | CVAR_ARCHIVE, "Adds a black frame around cinematics.");
+idCVar vr_blink("vr_blink", "1", CVAR_FLOAT | CVAR_ARCHIVE, "Darkens the screen when head bumps walls and objects.");
 void idPlayerView::RenderPlayerView( idMenuHandler_HUD* hudManager )
 {
 	const renderView_t* view = player->GetRenderView();
@@ -929,6 +930,11 @@ void idPlayerView::RenderPlayerView( idMenuHandler_HUD* hudManager )
 			0.0f, 0.0f, 1.0f, 1.0f, declManager->FindMaterial( "_white" ) );
 
 		renderSystem->SetGLState(0);
+	}
+	if( vr_blink.GetFloat() > 0.f && player->ShouldBlink() )
+	{
+		Fade(idVec4(0,0,0,vr_blink.GetFloat()), 0);
+		Fade(idVec4(0,0,0,0), 33);
 	}
 	tr.guiModel->SetMode(GUIMODE_FULLSCREEN);
 	ScreenFade();
