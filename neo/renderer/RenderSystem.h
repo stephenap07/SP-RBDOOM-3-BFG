@@ -202,6 +202,8 @@ struct glconfig_t
 
 	bool				openVREnabled;
 	bool				openVRSeated;
+	bool				openVRLeftTouchpad;
+	bool				openVRRightTouchpad;
 	int					openVRWidth;
 	int					openVRHeight;
 	float				openVRfovEye[2][4];

@@ -1271,6 +1271,32 @@ void VR_PostSwap()
 		if (glConfig.openVRSeated)
 		{
 			glConfig.openVRSeated = false;
+
+			char modelNumberString[ vr::k_unTrackingStringSize ];
+
+			hmd->GetStringTrackedDeviceProperty(
+				g_openVRLeftController, vr::Prop_ModelNumber_String,
+				modelNumberString, vr::k_unTrackingStringSize );
+			if( strcmp(modelNumberString, "Vive Controller MV") == 0 )
+			{
+				glConfig.openVRLeftTouchpad = 1;
+			}
+			else
+			{
+				glConfig.openVRLeftTouchpad = 0;
+			}
+
+			hmd->GetStringTrackedDeviceProperty(
+				g_openVRRightController, vr::Prop_ModelNumber_String,
+				modelNumberString, vr::k_unTrackingStringSize );
+			if( strcmp(modelNumberString, "Vive Controller MV") == 0 )
+			{
+				glConfig.openVRRightTouchpad = 1;
+			}
+			else
+			{
+				glConfig.openVRRightTouchpad = 0;
+			}
 		}
 	}
 	else
