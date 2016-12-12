@@ -10778,7 +10778,7 @@ void idPlayer::CalculateViewWeaponPos( idVec3& origin, idMat3& axis )
 	// these cvars are just for hand tweaking before moving a value to the weapon def
 	idVec3	gunpos( g_gun_x.GetFloat(), g_gun_y.GetFloat(), g_gun_z.GetFloat() );
 
-	if (glConfig.openVREnabled && !vr_seated.GetBool())
+	if( glConfig.openVREnabled && !glConfig.openVRSeated )
 	{
 		// if we are here, this is a fallback for not being able to hold a weapon
 		origin = hmdOrigin;
@@ -11103,7 +11103,7 @@ void idPlayer::CalculateFirstPersonView()
 
 		if (vr_seated.GetBool())
 		{
-			hmdOrigin.z += 11.f;
+			hmdOrigin.z += 5.f;
 
 			CalculateVRView(hmdOrigin, hmdAxis, true);
 
@@ -11410,7 +11410,7 @@ void idPlayer::CalculateRenderView()
 			{
 				if (vr_seated.GetBool())
 				{
-					renderView->vieworg.z += 11.f;
+					renderView->vieworg.z += 5.f;
 				}
 			}
 			CalculateVRView(renderView->vieworg, renderView->viewaxis, overridePitch);

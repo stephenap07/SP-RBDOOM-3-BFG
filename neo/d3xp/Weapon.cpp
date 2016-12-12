@@ -2520,7 +2520,7 @@ bool idWeapon::GetMuzzlePositionWithHacks( idVec3& origin, idMat3& axis )
 	// workaround hacks...
 	const idStr& weaponIconName = pdaIcon;
 	
-	if (glConfig.openVREnabled && !vr_seated.GetBool())
+	if( glConfig.openVREnabled && !glConfig.openVRSeated )
 	{
 		origin = viewWeaponOrigin;
 		axis = viewWeaponAxis;
@@ -2855,7 +2855,7 @@ void idWeapon::PresentWeapon( bool showViewModel )
 			viewWeaponOrigin = owner->flashlightOrigin;
 			viewWeaponAxis = owner->flashlightAxis;
 
-			if (!vr_seated.GetBool() && owner->usercmd.vrHasLeftController)
+			if( owner->usercmd.vrHasLeftController )
 			{
 				static idAngles flAngle1(0,85,0);
 				static idAngles flAngle2(112,0,0);
@@ -2903,7 +2903,6 @@ void idWeapon::PresentWeapon( bool showViewModel )
 		static idVec3 invOrigin;
 		static idMat3 invAxis;
 		if (glConfig.openVREnabled
-			&& !vr_seated.GetBool()
 			&& owner->usercmd.vrHasLeftController
 			&& owner->usercmd.vrHasRightController
 			&& GetInverseHandle( invOrigin, invAxis ))
@@ -4850,7 +4849,7 @@ void idWeapon::Event_Melee()
 	if( !common->IsClient() )
 	{
 		idVec3 start, end;
-		if (glConfig.openVREnabled && !vr_seated.GetBool())
+		if( glConfig.openVREnabled && !glConfig.openVRSeated )
 		{
 			start = viewWeaponOrigin;
 			end = start + viewWeaponAxis[0] * ( meleeDistance * owner->PowerUpModifier( MELEE_DISTANCE ) );
