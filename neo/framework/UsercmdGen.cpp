@@ -285,6 +285,8 @@ private:
 	int				vrClickCount;
 	bool			vrTouched;
 	idVec2			vrTouchedAxis;
+	bool			vrPressed;
+	int				vrPressedTime;
 
 	buttonState_t	toggled_crouch;
 	buttonState_t	toggled_run;
@@ -357,6 +359,8 @@ idUsercmdGenLocal::idUsercmdGenLocal()
 	impulse = 0;
 
 	vrClickCount = 0;
+	vrTouched = false;
+	vrPressed = false;
 	
 	toggled_crouch.Clear();
 	toggled_run.Clear();
@@ -1086,6 +1090,26 @@ void idUsercmdGenLocal::VRControlMove()
 		{
 			vrClickCount++;
 		}
+		bool held = false;
+		if( VR_LeftControllerIsPressed() )
+		{
+			if( !vrPressed )
+			{
+				vrPressedTime = pollTime;
+				vrPressed = true;
+			}
+			else
+			{
+				if( (pollTime - vrPressedTime) > 500 )
+				{
+					held = true;
+				}
+			}
+		}
+		else
+		{
+			vrPressed = false;
+		}
 
 		const int moveMode = vr_moveMode.GetInteger();
 		float moveSpeed = 1.f;
@@ -1106,7 +1130,7 @@ void idUsercmdGenLocal::VRControlMove()
 		case 1:
 		case 11:
 			move = true;
-			if( VR_LeftControllerIsPressed() )
+			if( vrPressed )
 			{
 				cmd.buttons |= BUTTON_RUN;
 			}
@@ -1132,7 +1156,7 @@ void idUsercmdGenLocal::VRControlMove()
 			{
 				move = true;
 			}
-			if( VR_LeftControllerIsPressed() )
+			if( held )
 			{
 				cmd.buttons |= BUTTON_RUN;
 			}
@@ -1150,7 +1174,7 @@ void idUsercmdGenLocal::VRControlMove()
 			break;
 		case 6:
 		case 16:
-			if( VR_LeftControllerIsPressed() )
+			if( vrPressed )
 			{
 				move = true;
 			}
@@ -1164,7 +1188,7 @@ void idUsercmdGenLocal::VRControlMove()
 			{
 				moveSpeed = vr_moveSpeed.GetFloat();
 			}
-			if( VR_LeftControllerIsPressed() )
+			if( held || (vrPressed && vrClickCount >= 2)  )
 			{
 				cmd.buttons |= BUTTON_RUN;
 			}
@@ -1175,7 +1199,7 @@ void idUsercmdGenLocal::VRControlMove()
 			{
 				moveSpeed = vr_moveSpeed.GetFloat();
 			}
-			if( VR_LeftControllerIsPressed() )
+			if( held || (vrPressed && vrClickCount > 0) )
 			{
 				cmd.buttons |= BUTTON_RUN;
 			}
@@ -1186,7 +1210,7 @@ void idUsercmdGenLocal::VRControlMove()
 			{
 				moveSpeed = vr_moveSpeed.GetFloat();
 			}
-			else if( vrClickCount > 1 )
+			else if( held )
 			{
 				cmd.buttons |= BUTTON_RUN;
 			}
@@ -1239,6 +1263,7 @@ void idUsercmdGenLocal::VRControlMove()
 	{
 		vrClickCount = 0;
 		vrTouched = false;
+		vrPressed = false;
 	}
 	if( vr_turning.GetInteger() && VR_GetRightControllerAxis(axis) && fabs(axis.y) < 0.5 )
 	{
