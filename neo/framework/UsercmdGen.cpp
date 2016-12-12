@@ -1228,7 +1228,7 @@ void idUsercmdGenLocal::VRControlMove()
 			{
 				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * moveSpeed );
 			}
-			else
+			else if( glConfig.openVRLeftTouchpad )
 			{
 				float response = vr_responseCurve.GetFloat();
 				if( moveSpeed < 1.0f )
@@ -1255,6 +1255,21 @@ void idUsercmdGenLocal::VRControlMove()
 				if( vr_strafing.GetBool() )
 				{
 					cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * axis.x * moveSpeed );
+				}
+			}
+			else
+			{
+				const float threshold =			joy_deadZone.GetFloat();
+				const float range =				joy_range.GetFloat();
+				const transferFunction_t shape = ( transferFunction_t )joy_gammaLook.GetInteger();
+				const bool mergedThreshold =	joy_mergedThreshold.GetBool();
+				idVec2 leftMapped = JoypadFunction( axis, 1.0f, threshold, range, shape, mergedThreshold );
+				CircleToSquare( leftMapped.x, leftMapped.y );
+				leftMapped *= moveSpeed;
+				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * leftMapped.y );
+				if( vr_strafing.GetBool() )
+				{
+					cmd.rightmove = idMath::ClampChar( cmd.rightmove + KEY_MOVESPEED * leftMapped.x );
 				}
 			}
 		}
