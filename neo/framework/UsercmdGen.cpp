@@ -1267,8 +1267,16 @@ void idUsercmdGenLocal::VRControlMove()
 	}
 	if( vr_turning.GetInteger() && VR_GetRightControllerAxis(axis) && fabs(axis.y) < 0.5 )
 	{
+		const float threshold =			joy_deadZone.GetFloat();
+		const float range =				joy_range.GetFloat();
+		const transferFunction_t shape = ( transferFunction_t )joy_gammaLook.GetInteger();
+		const bool mergedThreshold =	joy_mergedThreshold.GetBool();
 		const float yawSpeed =			joy_yawSpeed.GetFloat();
-		viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -axis.x * yawSpeed;
+		idGame* game = common->Game();
+		const float aimAssist = game != NULL ? game->GetAimAssistSensitivity() : 1.0f;
+		idVec2 rightMapped = JoypadFunction( axis, aimAssist, threshold, range, shape, mergedThreshold );
+		viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -rightMapped.x * yawSpeed;
+		//viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -axis.x * yawSpeed;
 	}
 }
 
