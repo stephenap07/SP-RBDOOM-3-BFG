@@ -1548,7 +1548,7 @@ VR
 =============================================================
 */
 
-const sysEvent_t &VR_SysEventNext();
+const sysEvent_t &VR_UIEventNext();
 
 void VR_ResetPose();
 void VR_LogDevices();
@@ -1556,8 +1556,8 @@ void VR_LogDevices();
 void VR_UpdateResolution();
 void VR_UpdateScaling();
 
-int VR_PollJoystickInputEvents();
-int VR_ReturnJoystickInputEvent( const int n, int& action, int& value );
+int VR_PollGameInputEvents();
+int VR_ReturnGameInputEvent( const int n, int& action, int& value );
 
 void VR_PreSwap(GLuint left, GLuint right);
 void VR_PostSwap();
@@ -1571,6 +1571,8 @@ bool VR_GetLeftControllerAxis(idVec2 &axis);
 bool VR_GetRightControllerAxis(idVec2 &axis);
 bool VR_LeftControllerWasPressed();
 bool VR_LeftControllerIsPressed();
+bool VR_RightControllerWasPressed();
+bool VR_RightControllerIsPressed();
 
 const idVec3 &VR_GetSeatedOrigin();
 const idMat3 &VR_GetSeatedAxis();

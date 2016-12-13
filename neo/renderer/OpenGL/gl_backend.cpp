@@ -871,6 +871,7 @@ extern idMat3 g_SeatedAxis;
 extern idMat3 g_SeatedAxisInverse;
 
 bool g_vrLeftControllerWasPressed;
+bool g_vrRightControllerWasPressed;
 vr::VRControllerState_t g_vrLeftControllerState;
 vr::VRControllerState_t g_vrRightControllerState;
 int g_openVRLeftControllerPulseDur;
@@ -941,28 +942,29 @@ void VR_LogDevices()
 
 #define MAX_VREVENTS 256
 
-int g_vrSysEventIndex;
-int g_vrSysEventCount;
-sysEvent_t g_vrSysEvents[MAX_VREVENTS];
+int g_vrUIEventIndex;
+int g_vrUIEventCount;
+sysEvent_t g_vrUIEvents[MAX_VREVENTS];
 
-int g_vrJoyEventCount;
+int g_vrGameEventCount;
 struct {
 	int action;
 	int value;
-} g_vrJoyEvents[MAX_VREVENTS];
+} g_vrGameEvents[MAX_VREVENTS];
 
 void VR_ClearEvents()
 {
-	g_vrSysEventIndex = 0;
-	g_vrSysEventCount = 0;
-	g_vrJoyEventCount = 0;
+	g_vrUIEventIndex = 0;
+	g_vrUIEventCount = 0;
+	g_vrGameEventCount = 0;
 	g_vrLeftControllerWasPressed = false;
+	g_vrRightControllerWasPressed = false;
 }
 
-void VR_SysEventQue(sysEventType_t type, int value, int value2)
+void VR_UIEventQue(sysEventType_t type, int value, int value2)
 {
-	assert(g_vrSysEventCount < MAX_VREVENTS);
-	sysEvent_t * ev = &g_vrSysEvents[g_vrSysEventCount++];
+	assert(g_vrUIEventCount < MAX_VREVENTS);
+	sysEvent_t * ev = &g_vrUIEvents[g_vrUIEventCount++];
 
 	ev->evType = type;
 	ev->evValue = value;
@@ -972,40 +974,98 @@ void VR_SysEventQue(sysEventType_t type, int value, int value2)
 	ev->inputDevice = 0;
 }
 
-const sysEvent_t &VR_SysEventNext()
+const sysEvent_t &VR_UIEventNext()
 {
-	assert(g_vrSysEventIndex < MAX_VREVENTS);
-	if (g_vrSysEventIndex >= g_vrSysEventCount)
+	assert(g_vrUIEventIndex < MAX_VREVENTS);
+	if (g_vrUIEventIndex >= g_vrUIEventCount)
 	{
-		sysEvent_t &ev = g_vrSysEvents[g_vrSysEventIndex];
+		sysEvent_t &ev = g_vrUIEvents[g_vrUIEventIndex];
 		ev.evType = SE_NONE;
 		return ev;
 	}
-	return g_vrSysEvents[g_vrSysEventIndex++];
+	return g_vrUIEvents[g_vrUIEventIndex++];
 }
 
-int VR_PollJoystickInputEvents()
+int VR_PollGameInputEvents()
 {
-	return g_vrJoyEventCount;
+	return g_vrGameEventCount;
 }
 
-void VR_JoyEventQue( int action, int value )
+void VR_GameEventQue( int action, int value )
 {
-	assert(g_vrJoyEventCount < MAX_VREVENTS);
-	g_vrJoyEvents[g_vrJoyEventCount].action = action;
-	g_vrJoyEvents[g_vrJoyEventCount].value = value;
-	g_vrJoyEventCount++;
+	assert(g_vrGameEventCount < MAX_VREVENTS);
+	g_vrGameEvents[g_vrGameEventCount].action = action;
+	g_vrGameEvents[g_vrGameEventCount].value = value;
+	g_vrGameEventCount++;
 }
 
-int VR_ReturnJoystickInputEvent( const int n, int& action, int& value )
+int VR_ReturnGameInputEvent( const int n, int& action, int& value )
 {
-	if (n < 0 || n > g_vrJoyEventCount)
+	if (n < 0 || n > g_vrGameEventCount)
 	{
 		return 0;
 	}
-	action = g_vrJoyEvents[n].action;
-	value = g_vrJoyEvents[n].value;
+	action = g_vrGameEvents[n].action;
+	value = g_vrGameEvents[n].value;
 	return 1;
+}
+
+idCVar vr_leftAxis("vr_leftAxis", "0", CVAR_INTEGER | CVAR_ARCHIVE, "left axis mode");
+idCVar vr_rightAxis("vr_rightAxis", "4", CVAR_INTEGER | CVAR_ARCHIVE, "right axis mode");
+
+static int VR_AxisToDPad(int mode, float x, float y)
+{
+	int dir;
+	switch( mode )
+	{
+	case 3:
+		if( y >= 0 )
+		{
+			dir = 1; // up
+		}
+		else
+		{
+			dir = 3; // down
+		}
+		break;
+	case 4:
+		if( x <= 0 )
+		{
+			dir = 0; // left
+		}
+		else
+		{
+			dir = 2; // right
+		}
+		break;
+	case 5:
+		if( x < y )
+		{
+			if( x > -y )
+			{
+				dir = 1; // up
+			}
+			else
+			{
+				dir = 0; // left
+			}
+		}
+		else
+		{
+			if( x > -y )
+			{
+				dir = 2; // right
+			}
+			else
+			{
+				dir = 3; // down
+			}
+		}
+		break;
+	default:
+		dir = -1;
+	}
+	return dir;
 }
 
 static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
@@ -1015,51 +1075,43 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 	case vr::k_EButton_ApplicationMenu:
 		if (left)
 		{
-			VR_JoyEventQue( J_ACTION10, pressed ); // pda
-			VR_SysEventQue( SE_KEY, K_JOY10, pressed ); // pda
+			VR_GameEventQue( K_VR_LEFT_MENU, pressed );
+			VR_UIEventQue( SE_KEY, K_JOY10, pressed ); // pda
 		}
 		else
 		{
-			VR_JoyEventQue( J_ACTION9, pressed ); // pause menu
-			VR_SysEventQue( SE_KEY, K_JOY9, pressed ); // pause menu
+			VR_GameEventQue( K_VR_RIGHT_MENU, pressed );
+			VR_UIEventQue( SE_KEY, K_JOY9, pressed ); // pause menu
 		}
 		break;
 	case vr::k_EButton_Grip:
 		if (left)
 		{
-			//VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
-			VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 ); // flashlight
-			VR_SysEventQue( SE_KEY, K_JOY5, pressed ); // prev pda menu
+			VR_GameEventQue( K_VR_LEFT_GRIP, pressed );
+			VR_UIEventQue( SE_KEY, K_JOY5, pressed ); // prev pda menu
 		}
 		else
 		{
-			//VR_JoyEventQue( J_ACTION6, pressed ); // next weapon
-			VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
-			VR_SysEventQue( SE_KEY, K_JOY6, pressed ); // next pda menu
+			VR_GameEventQue( K_VR_RIGHT_GRIP, pressed );
+			VR_UIEventQue( SE_KEY, K_JOY6, pressed ); // next pda menu
 		}
 		break;
 	case vr::k_EButton_SteamVR_Trigger:
 		if (left)
 		{
-			VR_JoyEventQue( J_ACTION1, pressed ); // jump
-			VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
+			VR_GameEventQue( K_VR_LEFT_TRIGGER, pressed );
+			VR_UIEventQue( SE_KEY, K_JOY2, pressed ); // menu back
 		}
 		else
 		{
-			VR_JoyEventQue( J_AXIS_RIGHT_TRIG, pressed? 255*128 : 0 ); // fire weapon
-			VR_SysEventQue( SE_KEY, K_MOUSE1, pressed ); // cursor click
+			VR_GameEventQue( K_VR_RIGHT_TRIGGER, pressed );
+			VR_UIEventQue( SE_KEY, K_MOUSE1, pressed ); // cursor click
 		}
 		break;
 	case vr::k_EButton_SteamVR_Touchpad:
 		if (left)
 		{
-			if (pressed)
-			{
-				g_vrLeftControllerWasPressed = true;
-			}
-			//VR_JoyEventQue( J_AXIS_LEFT_TRIG, pressed? 255*128 : 0 ); // flashlight
-			//VR_JoyEventQue( J_ACTION7, pressed ); // run
-			//VR_SysEventQue( SE_KEY, K_JOY2, pressed ); // menu back
+			//VR_UIEventQue( SE_KEY, K_JOY2, pressed ); // menu back
 			static keyNum_t uiLastKey;
 			if (pressed)
 			{
@@ -1085,43 +1137,85 @@ static void VR_GenButtonEvent(uint32_t button, bool left, bool pressed)
 						uiLastKey = K_JOY_STICK1_DOWN;
 					}
 				}
-				VR_SysEventQue( SE_KEY, uiLastKey, 1 );
+				VR_UIEventQue( SE_KEY, uiLastKey, 1 );
 			}
 			else
 			{
-				VR_SysEventQue( SE_KEY, uiLastKey, 0 );
+				VR_UIEventQue( SE_KEY, uiLastKey, 0 );
+			}
+
+			VR_GameEventQue( K_VR_LEFT_AXIS, pressed );
+			if (pressed)
+			{
+				g_vrLeftControllerWasPressed = true;
+			}
+			if( !glConfig.openVRLeftTouchpad )
+			{
+				break;
+			}
+			// dpad modes
+			static int gameLeftLastKey;
+			if (pressed)
+			{
+				int dir = VR_AxisToDPad(vr_leftAxis.GetInteger(), g_vrLeftControllerState.rAxis[0].x, g_vrLeftControllerState.rAxis[0].y);
+				if( dir != -1 )
+				{
+					gameLeftLastKey = K_VR_LEFT_DPAD_LEFT + dir;
+					VR_GameEventQue( gameLeftLastKey, 1 );
+				}
+				else
+				{
+					gameLeftLastKey = K_NONE;
+				}
+			}
+			else if( gameLeftLastKey != K_NONE )
+			{
+				VR_GameEventQue( gameLeftLastKey, 0 );
+				gameLeftLastKey = K_NONE;
 			}
 		}
 		else
 		{
-			//VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
-			if( vr_turning.GetInteger() == 0 )
+			VR_UIEventQue( SE_KEY, K_JOY1, pressed ); // menu select
+			VR_GameEventQue( K_VR_RIGHT_AXIS, pressed );
+			if (pressed)
 			{
-				if (g_vrRightControllerState.rAxis[0].x < -0.4f)
+				g_vrRightControllerWasPressed = true;
+			}
+			if( !glConfig.openVRRightTouchpad )
+			{
+				break;
+			}
+			// dpad modes
+			static int gameRightLastKey;
+			if (pressed)
+			{
+				int dir = VR_AxisToDPad(vr_rightAxis.GetInteger(), g_vrRightControllerState.rAxis[0].x, g_vrRightControllerState.rAxis[0].y);
+				if( dir != -1 )
 				{
-					VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
-				}
-				else if (g_vrRightControllerState.rAxis[0].x > 0.4f)
-				{
-					VR_JoyEventQue( J_ACTION6, pressed ); //  next weapon
+					gameRightLastKey = K_VR_RIGHT_DPAD_LEFT + dir;
+					VR_GameEventQue( gameRightLastKey, 1 );
 				}
 				else
 				{
-					VR_JoyEventQue( J_ACTION3, pressed ); // reload weapon
+					gameRightLastKey = K_NONE;
 				}
 			}
-			else
+			else if( gameRightLastKey != K_NONE )
 			{
-				if (g_vrRightControllerState.rAxis[0].y < -0.5f)
-				{
-					VR_JoyEventQue( J_ACTION5, pressed ); //  prev weapon
-				}
-				else if (g_vrRightControllerState.rAxis[0].y > 0.5f)
-				{
-					VR_JoyEventQue( J_ACTION6, pressed ); //  next weapon
-				}
+				VR_GameEventQue( gameRightLastKey, 0 );
+				gameRightLastKey = K_NONE;
 			}
-			VR_SysEventQue( SE_KEY, K_JOY1, pressed ); // menu select
+		}
+		break;
+	case vr::k_EButton_A:
+		if( left )
+		{
+			VR_GameEventQue( K_VR_LEFT_A, pressed );
+		}
+		else
+		{
+			VR_GameEventQue( K_VR_RIGHT_A, pressed );
 		}
 		break;
 	default:
@@ -1135,11 +1229,59 @@ static void VR_GenJoyAxisEvents()
 	{
 		vr::VRControllerState_t &state = g_vrLeftControllerState;
 		hmd->GetControllerState(g_openVRLeftController, &state);
+
+		// dpad modes
+		if( !glConfig.openVRLeftTouchpad )
+		{
+			static int gameLeftLastKey;
+			if( state.rAxis[0].x * state.rAxis[0].x + state.rAxis[0].y * state.rAxis[0].y > 0.25f )
+			{
+				int dir = VR_AxisToDPad(vr_leftAxis.GetInteger(), g_vrLeftControllerState.rAxis[0].x, g_vrLeftControllerState.rAxis[0].y);
+				if( dir != -1 )
+				{
+					gameLeftLastKey = K_VR_LEFT_DPAD_LEFT + dir;
+					VR_GameEventQue( gameLeftLastKey, 1 );
+				}
+				else
+				{
+					gameLeftLastKey = K_NONE;
+				}
+			}
+			else if( gameLeftLastKey != K_NONE )
+			{
+				VR_GameEventQue( gameLeftLastKey, 0 );
+				gameLeftLastKey = K_NONE;
+			}
+		}
 	}
 	if (g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
 	{
 		vr::VRControllerState_t &state = g_vrRightControllerState;
 		hmd->GetControllerState(g_openVRRightController, &state);
+
+		// dpad modes
+		if( !glConfig.openVRRightTouchpad )
+		{
+			static int gameRightLastKey;
+			if( state.rAxis[0].x * state.rAxis[0].x + state.rAxis[0].y * state.rAxis[0].y > 0.25f )
+			{
+				int dir = VR_AxisToDPad(vr_rightAxis.GetInteger(), g_vrRightControllerState.rAxis[0].x, g_vrRightControllerState.rAxis[0].y);
+				if( dir != -1 )
+				{
+					gameRightLastKey = K_VR_RIGHT_DPAD_LEFT + dir;
+					VR_GameEventQue( gameRightLastKey, 1 );
+				}
+				else
+				{
+					gameRightLastKey = K_NONE;
+				}
+			}
+			else if( gameRightLastKey != K_NONE )
+			{
+				VR_GameEventQue( gameRightLastKey, 0 );
+				gameRightLastKey = K_NONE;
+			}
+		}
 	}
 }
 
@@ -1176,7 +1318,7 @@ static void VR_GenMouseEvents()
 			{
 				oldX = x;
 				oldY = y;
-				VR_SysEventQue( SE_MOUSE_ABSOLUTE, x, y );
+				VR_UIEventQue( SE_MOUSE_ABSOLUTE, x, y );
 			}
 		}
 	}
@@ -1598,8 +1740,19 @@ bool VR_LeftControllerWasPressed()
 
 bool VR_LeftControllerIsPressed()
 {
-	uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
+	static uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
 	return ( g_vrLeftControllerState.ulButtonPressed & mask ) != 0;
+}
+
+bool VR_RightControllerWasPressed()
+{
+	return g_vrRightControllerWasPressed;
+}
+
+bool VR_RightControllerIsPressed()
+{
+	static uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
+	return ( g_vrRightControllerState.ulButtonPressed & mask ) != 0;
 }
 
 const idVec3 &VR_GetSeatedOrigin()

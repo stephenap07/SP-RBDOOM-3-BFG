@@ -91,7 +91,7 @@ sysEvent_t	idEventLoop::GetRealEvent()
 	{
 		if (glConfig.openVREnabled)
 		{
-			ev = VR_SysEventNext();
+			ev = VR_UIEventNext();
 			if (ev.evType == SE_NONE)
 			{
 				ev = Sys_GetEvent();

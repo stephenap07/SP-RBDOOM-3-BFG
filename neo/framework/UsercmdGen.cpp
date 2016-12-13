@@ -1068,11 +1068,39 @@ void idUsercmdGenLocal::JoystickMove2()
 idUsercmdGenLocal::VRControlMove
 =================
 */
+extern idCVar vr_leftAxis;
+extern idCVar vr_rightAxis;
 void idUsercmdGenLocal::VRControlMove()
 {
-	idVec2 axis;
-	if( VR_GetLeftControllerAxis(axis) )
+	idVec2 axis, leftAxis, rightAxis;
+
+	// analog moving
+	bool moving = false;
+	bool wasPressed = false;
+	bool isPressed = false;
+	bool touchpad = false;
+	leftAxis.Zero();
+	rightAxis.Zero();
+	if( vr_leftAxis.GetInteger() == 0 )
 	{
+		VR_GetLeftControllerAxis(leftAxis);
+		wasPressed = VR_LeftControllerWasPressed();
+		isPressed = VR_LeftControllerIsPressed();
+		touchpad = glConfig.openVRLeftTouchpad;
+		moving = true;
+	}
+	if( vr_rightAxis.GetInteger() == 0 )
+	{
+		VR_GetRightControllerAxis(rightAxis);
+		wasPressed |= VR_RightControllerWasPressed();
+		isPressed |= VR_RightControllerIsPressed();
+		touchpad |= glConfig.openVRRightTouchpad;
+		moving = true;
+	}
+
+	if( moving )
+	{
+		axis = leftAxis + rightAxis;
 		if( vr_relativeAxis.GetBool() )
 		{
 			if( !vrTouched )
@@ -1086,12 +1114,12 @@ void idUsercmdGenLocal::VRControlMove()
 				axis -= vrTouchedAxis;
 			}
 		}
-		if( VR_LeftControllerWasPressed() )
+		if( wasPressed )
 		{
 			vrClickCount++;
 		}
 		bool held = false;
-		if( VR_LeftControllerIsPressed() )
+		if( isPressed )
 		{
 			if( !vrPressed )
 			{
@@ -1228,7 +1256,7 @@ void idUsercmdGenLocal::VRControlMove()
 			{
 				cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + KEY_MOVESPEED * moveSpeed );
 			}
-			else if( glConfig.openVRLeftTouchpad )
+			else if( touchpad )
 			{
 				float response = vr_responseCurve.GetFloat();
 				if( moveSpeed < 1.0f )
@@ -1280,8 +1308,25 @@ void idUsercmdGenLocal::VRControlMove()
 		vrTouched = false;
 		vrPressed = false;
 	}
-	if( vr_turning.GetInteger() && VR_GetRightControllerAxis(axis) && fabs(axis.y) < 0.5 )
+
+	// analog turning
+	bool turning = false;
+	leftAxis.Zero();
+	rightAxis.Zero();
+	if( vr_leftAxis.GetInteger() == 1 )
 	{
+		VR_GetLeftControllerAxis(leftAxis);
+		turning = true;
+	}
+	if( vr_rightAxis.GetInteger() == 1 )
+	{
+		VR_GetRightControllerAxis(rightAxis);
+		turning = true;
+	}
+	// vr_turning.GetInteger()
+	if( turning )
+	{
+		axis = leftAxis + rightAxis;
 		const float threshold =			joy_deadZone.GetFloat();
 		const float range =				joy_range.GetFloat();
 		const transferFunction_t shape = ( transferFunction_t )joy_gammaLook.GetInteger();
@@ -1773,34 +1818,15 @@ idUsercmdGenLocal::VRControllers
 */
 void idUsercmdGenLocal::VRControllers()
 {
-	int numEvents = VR_PollJoystickInputEvents();
+	int numEvents = VR_PollGameInputEvents();
 
 	for( int i = 0; i < numEvents; i++ )
 	{
 		int action;
 		int value;
-		if( VR_ReturnJoystickInputEvent( i, action, value ) )
+		if( VR_ReturnGameInputEvent( i, action, value ) )
 		{
-//		common->Printf("idUsercmdGenLocal::Joystick: i = %i / action = %i / value = %i\n", i, action, value);
-
-			if( action >= J_ACTION1 && action <= J_ACTION_MAX )
-			{
-				int joyButton = K_JOY1 + ( action - J_ACTION1 );
-				Key( joyButton, ( value != 0 ) );
-			}
-			else if( ( action >= J_AXIS_MIN ) && ( action <= J_AXIS_MAX ) )
-			{
-				joystickAxis[ action - J_AXIS_MIN ] = static_cast<float>( value ) / 32767.0f;
-			}
-			else if( action >= J_DPAD_UP && action <= J_DPAD_RIGHT )
-			{
-				int joyButton = K_JOY_DPAD_UP + ( action - J_DPAD_UP );
-				Key( joyButton, ( value != 0 ) );
-			}
-			else
-			{
-				assert( !"Unknown joystick event" );
-			}
+			Key( action, value != 0 );
 		}
 	}
 }
