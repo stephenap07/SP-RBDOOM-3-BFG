@@ -1333,6 +1333,14 @@ void idUsercmdGenLocal::VRControlMove()
 		const float aimAssist = game != NULL ? game->GetAimAssistSensitivity() : 1.0f;
 		idVec2 rightMapped = JoypadFunction( axis, aimAssist, threshold, range, shape, mergedThreshold );
 		viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -rightMapped.x * yawSpeed;
+		if( rightMapped.y < -0.5f )
+		{
+			cmd.buttons |= BUTTON_CROUCH;
+		}
+		else if( rightMapped.y > 0.5f )
+		{
+			cmd.buttons |= BUTTON_JUMP;
+		}
 	}
 }
 
