@@ -1081,17 +1081,15 @@ void idUsercmdGenLocal::VRControlMove()
 	bool touchpad = false;
 	leftAxis.Zero();
 	rightAxis.Zero();
-	if( vr_leftAxis.GetInteger() == 0 )
+	if( vr_leftAxis.GetInteger() == 0 && VR_GetLeftControllerAxis(leftAxis) )
 	{
-		VR_GetLeftControllerAxis(leftAxis);
 		wasPressed = VR_LeftControllerWasPressed();
 		isPressed = VR_LeftControllerIsPressed();
 		touchpad = glConfig.openVRLeftTouchpad;
 		moving = true;
 	}
-	if( vr_rightAxis.GetInteger() == 0 )
+	if( vr_rightAxis.GetInteger() == 0 && VR_GetRightControllerAxis(rightAxis) )
 	{
-		VR_GetRightControllerAxis(rightAxis);
 		wasPressed |= VR_RightControllerWasPressed();
 		isPressed |= VR_RightControllerIsPressed();
 		touchpad |= glConfig.openVRRightTouchpad;
@@ -1323,7 +1321,6 @@ void idUsercmdGenLocal::VRControlMove()
 		VR_GetRightControllerAxis(rightAxis);
 		turning = true;
 	}
-	// vr_turning.GetInteger()
 	if( turning )
 	{
 		axis = leftAxis + rightAxis;
@@ -1336,7 +1333,6 @@ void idUsercmdGenLocal::VRControlMove()
 		const float aimAssist = game != NULL ? game->GetAimAssistSensitivity() : 1.0f;
 		idVec2 rightMapped = JoypadFunction( axis, aimAssist, threshold, range, shape, mergedThreshold );
 		viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -rightMapped.x * yawSpeed;
-		//viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -axis.x * yawSpeed;
 	}
 }
 

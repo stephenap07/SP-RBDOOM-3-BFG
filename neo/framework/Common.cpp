@@ -1264,29 +1264,6 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		
 		// if any archived cvars are modified after this, we will trigger a writing of the config file
 		cvarSystem->ClearModifiedFlags( CVAR_ARCHIVE );
-
-		// check if we need to set default bindings for vr
-		bool vrHasBinding = false;
-		for( int i = K_VR_FIRST_KEY; i <= K_VR_LAST_KEY; i++ )
-		{
-			const char * binding = idKeyInput::GetBinding(i);
-			if( binding && binding[0] != 0 )
-			{
-				vrHasBinding = true;
-				break;
-			}
-		}
-		if( !vrHasBinding )
-		{
-			idKeyInput::SetBinding( K_VR_LEFT_TRIGGER, "_moveup" );
-			idKeyInput::SetBinding( K_VR_LEFT_GRIP, "_impulse16" );
-			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_LEFT, "_impulse15" );
-			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_UP, "_impulse13" );
-			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_RIGHT, "_impulse14" );
-			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_DOWN, "_impulse13" );
-			idKeyInput::SetBinding( K_VR_RIGHT_TRIGGER, "_attack" );
-			idKeyInput::SetBinding( K_VR_RIGHT_GRIP, "_impulse13" );
-		}
 		
 		// init OpenGL, which will open a window and connect sound and input hardware
 		renderSystem->InitOpenGL();
@@ -1367,6 +1344,29 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		// load the game dll
 		LoadGameDLL();
 		
+		// check if we need to set default bindings for vr
+		bool vrHasBinding = false;
+		for( int i = K_VR_FIRST_KEY; i <= K_VR_LAST_KEY; i++ )
+		{
+			const char * binding = idKeyInput::GetBinding(i);
+			if( binding && binding[0] != 0 )
+			{
+				vrHasBinding = true;
+				break;
+			}
+		}
+		if( !vrHasBinding )
+		{
+			idKeyInput::SetBinding( K_VR_LEFT_TRIGGER, "_moveup" );
+			idKeyInput::SetBinding( K_VR_LEFT_GRIP, "_impulse16" );
+			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_LEFT, "_impulse15" );
+			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_UP, "_impulse13" );
+			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_RIGHT, "_impulse14" );
+			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_DOWN, "_impulse13" );
+			idKeyInput::SetBinding( K_VR_RIGHT_TRIGGER, "_attack" );
+			idKeyInput::SetBinding( K_VR_RIGHT_GRIP, "_impulse13" );
+		}
+
 		// On the PC touch them all so they get included in the resource build
 		if( !fileSystem->UsingResourceFiles() )
 		{

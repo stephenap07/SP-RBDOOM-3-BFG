@@ -295,7 +295,6 @@ idCVar vr_strafing( "vr_strafing", "1", CVAR_ARCHIVE | CVAR_BOOL, "enable/disabl
 idCVar vr_forwardOnly( "vr_forwardOnly", "0", CVAR_ARCHIVE | CVAR_BOOL, "left touchpad only moves forward" );
 idCVar vr_relativeAxis( "vr_relativeAxis", "0", CVAR_ARCHIVE | CVAR_BOOL, "movement relative to initial touch" );
 idCVar vr_maxRadius( "vr_maxRadius", "0.9", CVAR_ARCHIVE | CVAR_FLOAT, "smaller values make it easier to hit max movement speed" );
-idCVar vr_turning( "vr_turning", "0", CVAR_ARCHIVE | CVAR_BOOL, "0 no turning | 1 touch turning" );
 idCVar vr_responseCurve( "vr_responseCurve", "0", CVAR_ARCHIVE | CVAR_FLOAT, "interpoloate between linear and square curves, -1 for inverse square" );
 idCVar vr_moveMode("vr_moveMode", "8", CVAR_ARCHIVE | CVAR_INTEGER, "	0 touch walk | 1 touch walk & hold run | 2 touch walk & click run | 3 click walk | 4 click walk & hold run | 5 click walk & double click run | 6 hold walk");
 idCVar vr_moveSpeed("vr_moveSpeed", "0.5", CVAR_ARCHIVE | CVAR_FLOAT, "Touchpad player movement speed is multiplied by this value. Set to 1 for normal speed, or between 0 and 1 for slower movement.");
