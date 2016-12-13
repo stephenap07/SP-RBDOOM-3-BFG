@@ -11104,9 +11104,16 @@ void idPlayer::CalculateFirstPersonView()
 		if (vr_seated.GetBool())
 		{
 			hmdOrigin.z += 5.f;
+		}
 
-			CalculateVRView(hmdOrigin, hmdAxis, true);
+		CalculateVRView(hmdOrigin, hmdAxis, true);
 
+		CalculateLeftHand();
+		CalculateRightHand();
+		CalculateWaist();
+
+		if( glConfig.openVRSeated )
+		{
 			const idVec3 &seatedOrigin = VR_GetSeatedOrigin();
 
 			flashlightOrigin = hmdOrigin + hmdAxis[2] * -5;
@@ -11133,12 +11140,6 @@ void idPlayer::CalculateFirstPersonView()
 		}
 		else
 		{
-			CalculateVRView(hmdOrigin, hmdAxis, true);
-
-			CalculateLeftHand();
-			CalculateRightHand();
-			CalculateWaist();
-
 			flashlightOrigin = leftHandOrigin;
 			flashlightAxis = leftHandAxis;
 		}
