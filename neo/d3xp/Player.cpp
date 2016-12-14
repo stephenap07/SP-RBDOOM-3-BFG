@@ -9123,6 +9123,8 @@ void idPlayer::UpdateHolsterSlot()
 {
 	if( vr_slotDisable.GetBool() )
 	{
+		FreeHolsterSlot();
+		holsteredWeapon = weapon_fists;
 		return;
 	}
 	if( holsterRenderEntity.hModel )
@@ -11195,10 +11197,6 @@ void idPlayer::CalculateWaist()
 
 void idPlayer::CalculateLeftHand()
 {
-	if( vr_slotDisable.GetBool() )
-	{
-		return;
-	}
 	slotIndex_t oldSlot = leftHandSlot;
 	slotIndex_t slot = SLOT_NONE;
 	if( usercmd.vrHasLeftController )
@@ -11211,13 +11209,16 @@ void idPlayer::CalculateLeftHand()
 		leftHandOrigin = hmdOrigin + (usercmd.vrLeftControllerOrigin - usercmd.vrHeadOrigin) * vrFaceForward * axis;
 		leftHandAxis = usercmd.vrLeftControllerAxis * vrFaceForward * axis;
 
-		for( int i = 0; i < SLOT_COUNT; i++ )
+		if( !vr_slotDisable.GetBool() )
 		{
-			idVec3 origin = waistOrigin + slots[i].origin * waistAxis;
-			if( (leftHandOrigin - origin).LengthSqr() < slots[i].radiusSq )
+			for( int i = 0; i < SLOT_COUNT; i++ )
 			{
-				slot = (slotIndex_t)i;
-				break;
+				idVec3 origin = waistOrigin + slots[i].origin * waistAxis;
+				if( (leftHandOrigin - origin).LengthSqr() < slots[i].radiusSq )
+				{
+					slot = (slotIndex_t)i;
+					break;
+				}
 			}
 		}
 	}
@@ -11235,10 +11236,6 @@ void idPlayer::CalculateLeftHand()
 
 void idPlayer::CalculateRightHand()
 {
-	if( vr_slotDisable.GetBool() )
-	{
-		return;
-	}
 	slotIndex_t oldSlot = rightHandSlot;
 	slotIndex_t slot = SLOT_NONE;
 	if( usercmd.vrHasRightController )
@@ -11251,13 +11248,16 @@ void idPlayer::CalculateRightHand()
 		rightHandOrigin = hmdOrigin + (usercmd.vrRightControllerOrigin - usercmd.vrHeadOrigin) * vrFaceForward * axis;
 		rightHandAxis = usercmd.vrRightControllerAxis * vrFaceForward * axis;
 
-		for( int i = 0; i < SLOT_COUNT; i++ )
+		if( !vr_slotDisable.GetBool() )
 		{
-			idVec3 origin = waistOrigin + slots[i].origin * waistAxis;
-			if( (rightHandOrigin - origin).LengthSqr() < slots[i].radiusSq )
+			for( int i = 0; i < SLOT_COUNT; i++ )
 			{
-				slot = (slotIndex_t)i;
-				break;
+				idVec3 origin = waistOrigin + slots[i].origin * waistAxis;
+				if( (rightHandOrigin - origin).LengthSqr() < slots[i].radiusSq )
+				{
+					slot = (slotIndex_t)i;
+					break;
+				}
 			}
 		}
 	}
