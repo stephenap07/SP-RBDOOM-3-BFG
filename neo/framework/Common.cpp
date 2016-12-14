@@ -1357,6 +1357,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		}
 		if( !vrHasBinding )
 		{
+			idKeyInput::SetBinding( K_VR_LEFT_MENU, "_impulse19" );
 			idKeyInput::SetBinding( K_VR_LEFT_TRIGGER, "_moveup" );
 			idKeyInput::SetBinding( K_VR_LEFT_GRIP, "_impulse16" );
 			idKeyInput::SetBinding( K_VR_RIGHT_DPAD_LEFT, "_impulse15" );
