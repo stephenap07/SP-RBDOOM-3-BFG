@@ -1376,22 +1376,8 @@ void VR_UpdateScaling()
 	g_vrScaleZ = glConfig.openVRScale;
 }
 
-void VR_PreSwap(GLuint left, GLuint right)
+void VR_UpdateControllers()
 {
-	GL_ViewportAndScissor(0, 0, glConfig.openVRWidth, glConfig.openVRHeight);
-	vr::Texture_t leftEyeTexture = {(void*)left, vr::API_OpenGL, vr::ColorSpace_Gamma };
-	vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
-	vr::Texture_t rightEyeTexture = {(void*)right, vr::API_OpenGL, vr::ColorSpace_Gamma };
-	vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture );
-}
-
-void VR_PostSwap()
-{
-	//vr::VRCompositor()->PostPresentHandoff();
-
-	vr::TrackedDevicePose_t rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-	vr::VRCompositor()->WaitGetPoses(rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
-
 	bool hadLeft = g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid;
 	bool hadRight = g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid;
 
@@ -1415,29 +1401,32 @@ void VR_PostSwap()
 			glConfig.openVRSeated = false;
 
 			char modelNumberString[ vr::k_unTrackingStringSize ];
+			int axisType;
 
 			hmd->GetStringTrackedDeviceProperty(
 				g_openVRLeftController, vr::Prop_ModelNumber_String,
 				modelNumberString, vr::k_unTrackingStringSize );
-			if( strcmp(modelNumberString, "Vive Controller MV") == 0 )
+			if( strcmp(modelNumberString, "Hydra") == 0 )
 			{
-				glConfig.openVRLeftTouchpad = 1;
+				glConfig.openVRLeftTouchpad = 0;
 			}
 			else
 			{
-				glConfig.openVRLeftTouchpad = 0;
+				axisType = hmd->GetInt32TrackedDeviceProperty( g_openVRLeftController, vr::Prop_Axis0Type_Int32 );
+				glConfig.openVRLeftTouchpad = ( axisType == vr::k_eControllerAxis_TrackPad )? 1 : 0;
 			}
 
 			hmd->GetStringTrackedDeviceProperty(
 				g_openVRRightController, vr::Prop_ModelNumber_String,
 				modelNumberString, vr::k_unTrackingStringSize );
-			if( strcmp(modelNumberString, "Vive Controller MV") == 0 )
+			if( strcmp(modelNumberString, "Hydra") == 0 )
 			{
-				glConfig.openVRRightTouchpad = 1;
+				glConfig.openVRRightTouchpad = 0;
 			}
 			else
 			{
-				glConfig.openVRRightTouchpad = 0;
+				axisType = hmd->GetInt32TrackedDeviceProperty( g_openVRRightController, vr::Prop_Axis0Type_Int32 );
+				glConfig.openVRRightTouchpad = ( axisType == vr::k_eControllerAxis_TrackPad )? 1 : 0;
 			}
 		}
 	}
@@ -1448,6 +1437,25 @@ void VR_PostSwap()
 			glConfig.openVRSeated = true;
 		}
 	}
+}
+
+void VR_PreSwap(GLuint left, GLuint right)
+{
+	GL_ViewportAndScissor(0, 0, glConfig.openVRWidth, glConfig.openVRHeight);
+	vr::Texture_t leftEyeTexture = {(void*)left, vr::API_OpenGL, vr::ColorSpace_Gamma };
+	vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
+	vr::Texture_t rightEyeTexture = {(void*)right, vr::API_OpenGL, vr::ColorSpace_Gamma };
+	vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture );
+}
+
+void VR_PostSwap()
+{
+	//vr::VRCompositor()->PostPresentHandoff();
+
+	vr::TrackedDevicePose_t rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+	vr::VRCompositor()->WaitGetPoses(rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+	VR_UpdateControllers();
 
 	if (vr_playerHeightCM.IsModified())
 	{

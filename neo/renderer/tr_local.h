@@ -1554,6 +1554,7 @@ void VR_LogDevices();
 
 void VR_UpdateResolution();
 void VR_UpdateScaling();
+void VR_UpdateControllers();
 
 int VR_PollGameInputEvents();
 int VR_ReturnGameInputEvent( const int n, int& action, int& value );

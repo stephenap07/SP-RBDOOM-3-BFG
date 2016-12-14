@@ -902,18 +902,10 @@ static void VR_Init()
 	glConfig.openVRUnscaledEyeForward = -mat.m[2][3];
 	VR_UpdateScaling();
 
-	g_openVRLeftController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
-	g_openVRRightController = hmd->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
-
-	if (g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid
-		|| g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid)
-	{
-		glConfig.openVRSeated = false;
-	}
-	else
-	{
-		glConfig.openVRSeated = true;
-	}
+	glConfig.openVRSeated = true;
+	g_openVRLeftController = vr::k_unTrackedDeviceIndexInvalid;
+	g_openVRRightController = vr::k_unTrackedDeviceIndexInvalid;
+	VR_UpdateControllers();
 
 	vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseStanding);
 	VR_ConvertMatrix(hmd->GetSeatedZeroPoseToStandingAbsoluteTrackingPose(), g_SeatedOrigin, g_SeatedAxis);
