@@ -1072,6 +1072,8 @@ void idUsercmdGenLocal::JoystickMove2()
 idUsercmdGenLocal::VRControlMove
 =================
 */
+idCVar vr_turnCrouch( "vr_turnCrouch", "1", CVAR_BOOL | CVAR_ARCHIVE, "press down to crouch from the turn axis mode." );
+idCVar vr_turnJump( "vr_turnJump", "1", CVAR_BOOL | CVAR_ARCHIVE, "press up to jump from the turn axis mode." );
 extern idCVar vr_leftAxis;
 extern idCVar vr_rightAxis;
 void idUsercmdGenLocal::VRControlMove()
@@ -1337,11 +1339,11 @@ void idUsercmdGenLocal::VRControlMove()
 		const float aimAssist = game != NULL ? game->GetAimAssistSensitivity() : 1.0f;
 		idVec2 rightMapped = JoypadFunction( axis, aimAssist, threshold, range, shape, mergedThreshold );
 		viewangles[YAW] += MS2SEC( pollTime - lastPollTime ) * -rightMapped.x * yawSpeed;
-		if( rightMapped.y < -0.5f )
+		if( vr_turnCrouch.GetBool() && rightMapped.y < -0.5f )
 		{
 			cmd.buttons |= BUTTON_CROUCH;
 		}
-		else if( rightMapped.y > 0.5f )
+		else if( vr_turnJump.GetBool() &&  rightMapped.y > 0.5f )
 		{
 			cmd.buttons |= BUTTON_JUMP;
 		}
