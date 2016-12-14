@@ -287,6 +287,8 @@ private:
 	idVec2			vrTouchedAxis;
 	bool			vrPressed;
 	int				vrPressedTime;
+	bool			vrLeftGrab;
+	bool			vrRightGrab;
 
 	buttonState_t	toggled_crouch;
 	buttonState_t	toggled_run;
@@ -361,6 +363,8 @@ idUsercmdGenLocal::idUsercmdGenLocal()
 	vrClickCount = 0;
 	vrTouched = false;
 	vrPressed = false;
+	vrLeftGrab = false;
+	vrRightGrab = false;
 	
 	toggled_crouch.Clear();
 	toggled_run.Clear();
@@ -1342,6 +1346,15 @@ void idUsercmdGenLocal::VRControlMove()
 			cmd.buttons |= BUTTON_JUMP;
 		}
 	}
+
+	if( vrLeftGrab )
+	{
+		cmd.buttons |= BUTTON_LEFT_GRAB;
+	}
+	if( vrRightGrab )
+	{
+		cmd.buttons |= BUTTON_RIGHT_GRAB;
+	}
 }
 
 /*
@@ -1585,6 +1598,12 @@ void idUsercmdGenLocal::InitForNewMap()
 	impulseSequence = 0;
 	impulse = 0;
 	
+	vrClickCount = 0;
+	vrTouched = false;
+	vrPressed = false;
+	vrLeftGrab = false;
+	vrRightGrab = false;
+	
 	toggled_crouch.Clear();
 	toggled_run.Clear();
 	toggled_zoom.Clear();
@@ -1826,11 +1845,21 @@ void idUsercmdGenLocal::VRControllers()
 
 	for( int i = 0; i < numEvents; i++ )
 	{
-		int action;
+		int button;
 		int value;
-		if( VR_ReturnGameInputEvent( i, action, value ) )
+		if( VR_ReturnGameInputEvent( i, button, value ) )
 		{
-			Key( action, value != 0 );
+			bool down = value != 0;
+			Key( button, down );
+			if( button == K_VR_LEFT_GRIP )
+			{
+				vrLeftGrab = down;
+			}
+			else if( button == K_VR_RIGHT_GRIP )
+			{
+				vrRightGrab = down;
+				cmd.buttons |= BUTTON_RIGHT_GRAB;
+			}
 		}
 	}
 }

@@ -799,6 +799,7 @@ idSaveGame::WriteUsercmd
 */
 void idSaveGame::WriteUsercmd( const usercmd_t& usercmd )
 {
+	// TODO: on save game update, we need to save as uint16
 	WriteByte( usercmd.buttons );
 	WriteSignedChar( usercmd.forwardmove );
 	WriteSignedChar( usercmd.rightmove );
@@ -1700,7 +1701,8 @@ idRestoreGame::ReadUsercmd
 */
 void idRestoreGame::ReadUsercmd( usercmd_t& usercmd )
 {
-	ReadByte( usercmd.buttons );
+	// TODO: on save game update, we need to read as uint16
+	ReadByte( *(byte*)&usercmd.buttons );
 	ReadSignedChar( usercmd.forwardmove );
 	ReadSignedChar( usercmd.rightmove );
 	ReadShort( usercmd.angles[0] );
