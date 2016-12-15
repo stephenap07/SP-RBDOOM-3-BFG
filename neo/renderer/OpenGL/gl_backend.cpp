@@ -1709,6 +1709,8 @@ void VR_HapticPulse(int leftDuration, int rightDuration)
 	}
 }
 
+extern idCVar joy_deadZone;
+
 bool VR_GetLeftControllerAxis(idVec2 &axis)
 {
 	if( g_openVRLeftController == vr::k_unTrackedDeviceIndexInvalid )
@@ -1716,9 +1718,21 @@ bool VR_GetLeftControllerAxis(idVec2 &axis)
 		return false;
 	}
 	uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
-	if( !( g_vrLeftControllerState.ulButtonTouched & mask ) )
+	if( glConfig.openVRLeftTouchpad )
 	{
-		return false;
+		if( !( g_vrLeftControllerState.ulButtonTouched & mask ) )
+		{
+			return false;
+		}
+	}
+	else
+	{
+		const float threshold =			joy_deadZone.GetFloat();
+		if( fabs(g_vrLeftControllerState.rAxis[0].x) < threshold &&
+			fabs(g_vrLeftControllerState.rAxis[0].y) < threshold )
+		{
+			return false;
+		}
 	}
 	axis.x = g_vrLeftControllerState.rAxis[0].x;
 	axis.y = g_vrLeftControllerState.rAxis[0].y;
@@ -1732,9 +1746,21 @@ bool VR_GetRightControllerAxis(idVec2 &axis)
 		return false;
 	}
 	uint64_t mask = vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
-	if( !( g_vrRightControllerState.ulButtonTouched & mask ) )
+	if( glConfig.openVRRightTouchpad )
 	{
-		return false;
+		if( !( g_vrRightControllerState.ulButtonTouched & mask ) )
+		{
+			return false;
+		}
+	}
+	else
+	{
+		const float threshold =			joy_deadZone.GetFloat();
+		if( fabs(g_vrRightControllerState.rAxis[0].x) < threshold &&
+			fabs(g_vrRightControllerState.rAxis[0].y) < threshold )
+		{
+			return false;
+		}
 	}
 	axis.x = g_vrRightControllerState.rAxis[0].x;
 	axis.y = g_vrRightControllerState.rAxis[0].y;
