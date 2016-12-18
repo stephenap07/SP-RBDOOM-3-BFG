@@ -1378,6 +1378,13 @@ void VR_UpdateScaling()
 
 void VR_UpdateControllers()
 {
+	if( vr_forceGamepad.GetBool() )
+	{
+		g_openVRLeftController = vr::k_unTrackedDeviceIndexInvalid;
+		g_openVRRightController = vr::k_unTrackedDeviceIndexInvalid;
+		return;
+	}
+
 	bool hadLeft = g_openVRLeftController != vr::k_unTrackedDeviceIndexInvalid;
 	bool hadRight = g_openVRRightController != vr::k_unTrackedDeviceIndexInvalid;
 

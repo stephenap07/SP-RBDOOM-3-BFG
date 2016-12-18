@@ -7131,6 +7131,7 @@ idPlayer::UpdateViewAngles
 ================
 */
 idCVar vr_moveDirection("vr_moveDirection", "1", CVAR_ARCHIVE | CVAR_INTEGER, "Selects forward move direction from: 0 - head, 1 - left hand (default), 2 - right hand");
+idCVar vr_turnSlack("vr_turnSlack", "0", CVAR_ARCHIVE | CVAR_FLOAT, "How much the weapon yaw turns before head follows, in degrees" );
 void idPlayer::UpdateViewAngles()
 {
 	int i;
@@ -7239,8 +7240,32 @@ void idPlayer::UpdateViewAngles()
 	{
 		if( vr_seated.GetBool() )
 		{
-			vrFaceForward = VR_GetSeatedAxisInverse();
-			hadBodyYaw = false;
+			float delta;
+			if( hadBodyYaw )
+			{
+				delta = oldBodyYaw - viewAngles[YAW];
+				while( delta > 180 ) delta -= 360;
+				while( delta < -180 ) delta += 360;
+				float slack = vr_turnSlack.GetFloat();
+				if( delta > slack )
+				{
+					delta = slack;
+					oldBodyYaw = viewAngles[YAW] + slack;
+				}
+				else if( delta < -slack )
+				{
+					delta = -slack;
+					oldBodyYaw = viewAngles[YAW] - slack;
+				}
+			}
+			else
+			{
+				oldBodyYaw = viewAngles[YAW];
+				delta = 0;
+			}
+			hadBodyYaw = true;
+
+			vrFaceForward = VR_GetSeatedAxisInverse() * idAngles(0,delta,0).ToMat3();
 		}
 		else if( usercmd.vrHasHead )
 		{
@@ -11140,7 +11165,7 @@ void idPlayer::CalculateFirstPersonView()
 			else
 			{
 				idVec3 pelvis(0,0,-27.f);
-				idVec3 neck = usercmd.vrHeadOrigin - seatedOrigin + usercmd.vrHeadAxis[2] * -5;
+				idVec3 neck = (usercmd.vrHeadOrigin - seatedOrigin + usercmd.vrHeadAxis[2] * -5) * vrFaceForward;
 				idMat3 shoulderAxis;
 				shoulderAxis[2] = neck - pelvis;
 				shoulderAxis[2].NormalizeFast();
@@ -11150,7 +11175,7 @@ void idPlayer::CalculateFirstPersonView()
 				shoulderAxis[0] = shoulderAxis[1].Cross(shoulderAxis[2]);
 				shoulderAxis[0].NormalizeFast();
 
-				flashlightAxis = shoulderAxis * vrFaceForward * firstPersonViewAxis;
+				flashlightAxis = shoulderAxis * firstPersonViewAxis;
 			}
 		}
 		else
