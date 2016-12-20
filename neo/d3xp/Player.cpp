@@ -7179,6 +7179,11 @@ void idPlayer::UpdateViewAngles()
 			viewAngles[i] = idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[i] ) + deltaViewAngles[i] );
 		}
 	}
+	if( usercmd.buttons & BUTTON_RECENTER && hadBodyYaw )
+	{
+		viewAngles.yaw = oldBodyYaw;
+		hadBodyYaw = false;
+	}
 	if( !centerView.IsDone( gameLocal.time ) )
 	{
 		viewAngles.pitch = centerView.GetCurrentValue( gameLocal.time );
@@ -7263,7 +7268,7 @@ void idPlayer::UpdateViewAngles()
 				oldBodyYaw = viewAngles[YAW];
 				delta = 0;
 			}
-			hadBodyYaw = true;
+			hadBodyYaw = !( usercmd.buttons & BUTTON_RECENTER );
 
 			vrFaceForward = VR_GetSeatedAxisInverse() * idAngles(0,delta,0).ToMat3();
 		}

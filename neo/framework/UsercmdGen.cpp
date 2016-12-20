@@ -132,6 +132,7 @@ userCmdString_t	userCmdStrings[] =
 	{ "_zoom",			UB_ZOOM },
 	{ "_showScores",	UB_SHOWSCORES },
 	{ "_use",			UB_USE },
+	{ "_recenter",		UB_RECENTER },
 	
 	{ "_impulse0",		UB_IMPULSE0 },
 	{ "_impulse1",		UB_IMPULSE1 },
@@ -1433,6 +1434,10 @@ void idUsercmdGenLocal::CmdButtons()
 	if( toggled_crouch.on )
 	{
 		cmd.buttons |= BUTTON_CROUCH;
+	}
+	if( ButtonState( UB_RECENTER ) )
+	{
+		cmd.buttons |= BUTTON_RECENTER;
 	}
 }
 

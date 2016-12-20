@@ -50,6 +50,7 @@ const int BUTTON_CROUCH			= BIT( 6 );
 const int BUTTON_CHATTING		= BIT( 7 );
 const int BUTTON_LEFT_GRAB		= BIT( 8 );
 const int BUTTON_RIGHT_GRAB		= BIT( 9 );
+const int BUTTON_RECENTER		= BIT( 10 );
 
 // usercmd_t->impulse commands
 const int IMPULSE_0				= 0;			// weap 0
@@ -168,6 +169,7 @@ typedef enum
 	UB_ZOOM,
 	UB_SHOWSCORES,
 	UB_USE,
+	UB_RECENTER,
 	
 	UB_IMPULSE0,
 	UB_IMPULSE1,
