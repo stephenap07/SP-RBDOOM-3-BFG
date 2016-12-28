@@ -118,6 +118,10 @@ __________________________________________________________
 
 7. Extract the FFmpeg DLLs to your current build directory under RBDOOM-3-BFG/build/
 
+8. Copy DOOM-3-BFG\neo\libs\openvr\bin\win32\openvr_api.dll
+	or
+	DOOM-3-BFG\neo\libs\openvr\bin\win64\openvr_api.dll
+	to your current build directory
 
 __________________________________
 
@@ -216,6 +220,7 @@ Anyway:
    Your own Doom 3 BFG directory now should look like:
 	/path/to/Doom3BFG/
 	 ->	RBDoom3BFG (or RBDoom3BFG.exe on Windows)
+	 -> openvr_api.dll
 	 -> avcodec-57.dll
 	 -> avdevice-57.dll
 	 -> avfilter-6.dll
