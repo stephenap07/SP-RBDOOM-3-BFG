@@ -123,6 +123,11 @@ __________________________________________________________
 	DOOM-3-BFG\neo\libs\openvr\bin\win64\openvr_api.dll
 	to your current build directory
 
+Note. For release you may get an ffmpeg avcodec dll error about missing CoUninitialize function.
+	To fix that, in VC, go to the RBDoom3BFG project property page.
+	Configuration Properties > Linker > Optimization
+	And change References to "No (/OPT:NOREF)"
+
 __________________________________
 
 5) COMPILING ON GNU/LINUX
