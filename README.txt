@@ -334,9 +334,6 @@ ___________________________________________________
 9) KNOWN ISSUES
 __________________________________________
 
-- HDR does not work with old-school stencil shadows
-
-- MSAA anti-aliasing modes don't work with HDR: Use SMAA
 
 - Some lights cause shadow acne with shadow mapping
 
