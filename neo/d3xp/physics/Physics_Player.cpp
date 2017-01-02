@@ -2385,7 +2385,7 @@ void idPhysics_Player::ApplyImpulse( const int id, const idVec3& point, const id
 {
 	if( current.movementType != PM_NOCLIP )
 	{
-		current.velocity += impulse * invMass;
+		current.velocity += impulse * invMass * vr_knockbackScale.GetFloat();
 	}
 }
 
