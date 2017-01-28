@@ -298,6 +298,7 @@ idCVar vr_maxRadius( "vr_maxRadius", "0.9", CVAR_ARCHIVE | CVAR_FLOAT, "smaller 
 idCVar vr_responseCurve( "vr_responseCurve", "0", CVAR_ARCHIVE | CVAR_FLOAT, "interpoloate between linear and square curves, -1 for inverse square" );
 idCVar vr_moveMode("vr_moveMode", "8", CVAR_ARCHIVE | CVAR_INTEGER, "	0 touch walk | 1 touch walk & hold run | 2 touch walk & click run | 3 click walk | 4 click walk & hold run | 5 click walk & double click run | 6 hold walk");
 idCVar vr_moveSpeed("vr_moveSpeed", "0.5", CVAR_ARCHIVE | CVAR_FLOAT, "Touchpad player movement speed is multiplied by this value. Set to 1 for normal speed, or between 0 and 1 for slower movement.");
+idCVar vr_comfortMode("vr_comfortMode", "3", CVAR_ARCHIVE | CVAR_INTEGER, "	0 off | 1 tunnel | 2 slow mo | 3 tunnel + slow mo");
 
 const char* fileExten[3] = { "tga", "png", "jpg" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };

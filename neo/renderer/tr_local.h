@@ -1147,6 +1147,8 @@ extern idCVar vr_relativeAxis;
 extern idCVar vr_responseCurve;
 extern idCVar vr_moveMode;
 extern idCVar vr_moveSpeed;
+extern idCVar vr_comfortMode;
+
 
 /*
 ====================================================================

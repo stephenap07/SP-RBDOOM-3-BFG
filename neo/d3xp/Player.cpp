@@ -8579,6 +8579,38 @@ void idPlayer::Move()
 	
 	BobCycle( pushVelocity );
 	CrashLand( oldOrigin, oldVelocity );
+
+	// Handling vr_comfortMode
+	const int comfortMode = vr_comfortMode.GetInteger();
+	//"	0 off | 1 tunnel | 2 slow mo | 3 tunnel + slow mo"
+	if (comfortMode == 0) 
+	{
+		return;
+	}
+
+	float speed = physicsObj.GetLinearVelocity().LengthFast();
+	if ((comfortMode == 1) || (comfortMode == 3)) 
+	{
+		if (speed == 0)
+		{
+			this->playerView.EnableVrComfortVision(false);
+		}
+		else
+		{
+			this->playerView.EnableVrComfortVision(true);
+		}
+	}
+
+	if ((comfortMode == 2) || (comfortMode == 3)) 
+	{
+		extern idCVar timescale;
+		float speedFactor = ((pm_runspeed.GetFloat() - speed) / pm_runspeed.GetFloat());
+		if (speedFactor < 0)
+		{
+			speedFactor = 0;
+		}
+		timescale.SetFloat(0.5 + 0.5*speedFactor);
+	}
 }
 
 /*
