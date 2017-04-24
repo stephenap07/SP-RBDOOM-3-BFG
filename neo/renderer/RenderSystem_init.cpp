@@ -578,6 +578,9 @@ static void R_CheckPortableExtensions()
 		if( r_debugContext.GetInteger() >= 1 )
 		{
 			glDebugMessageCallbackARB( ( GLDEBUGPROCARB ) DebugCallback, NULL );
+			
+			// RB: skip Nvidia memory usage infos
+			glDebugMessageControlARB( GL_DONT_CARE, GL_DEBUG_TYPE_OTHER_ARB, GL_DONT_CARE, 0, NULL, false );
 		}
 		if( r_debugContext.GetInteger() >= 2 )
 		{

@@ -92,7 +92,11 @@ void Framebuffer::Init()
 		
 		globalFramebuffers.shadowFBO[i] = new Framebuffer( va( "_shadowMap%i", i ) , width, height );
 		globalFramebuffers.shadowFBO[i]->Bind();
-		glDrawBuffers( 0, NULL );
+		globalFramebuffers.shadowFBO[i]->AddColorBuffer( GL_R32F, 0 );
+		globalFramebuffers.shadowFBO[i]->AddDepthBuffer( GL_DEPTH24_STENCIL8 );
+		globalFramebuffers.shadowFBO[i]->AttachImage2DLayer( globalImages->shadowImage[i], 0, 0, 0 );
+		globalFramebuffers.shadowFBO[i]->Check();
+		//glDrawBuffers( 0, NULL );
 	}
 	
 	// HDR
@@ -442,6 +446,26 @@ void Framebuffer::AttachImage2D( int target, const idImage* image, int index, in
 	}
 	
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, target, image->texnum, mipmapLod );
+}
+
+void Framebuffer::AttachImage2DLayer( const idImage* image, int index, int mipmapLod, int layer )
+{
+	/*
+	if( ( target != GL_TEXTURE_2D ) && ( target != GL_TEXTURE_2D_MULTISAMPLE ) && ( target < GL_TEXTURE_CUBE_MAP_POSITIVE_X || target > GL_TEXTURE_CUBE_MAP_NEGATIVE_Z ) )
+	{
+		common->Warning( "Framebuffer::AttachImage2D( %s ): invalid target", fboName.c_str() );
+		return;
+	}
+	*/
+	
+	if( index < 0 || index >= glConfig.maxColorAttachments )
+	{
+		common->Warning( "Framebuffer::AttachImage2D( %s ): bad index = %i", fboName.c_str(), index );
+		return;
+	}
+	
+	//glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, target, image->texnum, mipmapLod );
+	glFramebufferTextureLayer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, image->texnum, 0, layer );
 }
 
 void Framebuffer::AttachImageDepth( int target, const idImage* image )

@@ -346,8 +346,10 @@ void idImage::SetTexParameters()
 	if( opts.format == FMT_SHADOW_ARRAY )
 	{
 		//glTexParameteri( target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+#if 0
 		glTexParameteri( target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE );
 		glTexParameteri( target, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL );
+#endif
 	}
 }
 
@@ -456,11 +458,13 @@ void idImage::AllocImage()
 			dataType = GL_UNSIGNED_BYTE;
 			break;
 			
+#if 0
 		case FMT_SHADOW_ARRAY:
-			internalFormat = GL_DEPTH_COMPONENT;
+			internalFormat = GL_DEPTH_COMPONENT32;
 			dataFormat = GL_DEPTH_COMPONENT;
-			dataType = GL_UNSIGNED_BYTE;
+			dataType = GL_FLOAT;
 			break;
+#endif
 			
 		case FMT_RGBA16F:
 			internalFormat = GL_RGBA16F;
@@ -474,6 +478,7 @@ void idImage::AllocImage()
 			dataType = GL_UNSIGNED_BYTE;
 			break;
 			
+		case FMT_SHADOW_ARRAY:
 		case FMT_R32F:
 			internalFormat = GL_R32F;
 			dataFormat = GL_RED;

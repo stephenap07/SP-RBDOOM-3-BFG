@@ -2724,7 +2724,7 @@ static void RB_ShadowMapPass( const drawSurf_t* drawSurfs, const viewLight_t* vL
 	
 	RENDERLOG_PRINTF( "---------- RB_ShadowMapPass( side = %i ) ----------\n", side );
 	
-	renderProgManager.BindShader_Depth();
+	renderProgManager.BindShader_ShadowDepth();
 	
 	GL_SelectTexture( 0 );
 	globalImages->BindNull();
@@ -3054,18 +3054,18 @@ static void RB_ShadowMapPass( const drawSurf_t* drawSurfs, const viewLight_t* vL
 	
 	if( side < 0 )
 	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], 0 );
+		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImage2DLayer( globalImages->shadowImage[vLight->shadowLOD], 0, 0, 0 );
 	}
 	else
 	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], side );
+		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImage2DLayer( globalImages->shadowImage[vLight->shadowLOD], 0, 0, side );
 	}
 	
 	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Check();
 	
 	GL_ViewportAndScissor( 0, 0, shadowMapResolutions[vLight->shadowLOD], shadowMapResolutions[vLight->shadowLOD] );
 	
-	glClear( GL_DEPTH_BUFFER_BIT );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	
 	// process the chain of shadows with the current rendering state
 	backEnd.currentSpace = NULL;
@@ -3206,11 +3206,11 @@ static void RB_ShadowMapPass( const drawSurf_t* drawSurfs, const viewLight_t* vL
 				
 				if( drawSurf->jointCache )
 				{
-					renderProgManager.BindShader_TextureVertexColorSkinned();
+					renderProgManager.BindShader_ShadowDepthSkinned();
 				}
 				else
 				{
-					renderProgManager.BindShader_TextureVertexColor();
+					renderProgManager.BindShader_ShadowDepth();
 				}
 				
 				RB_SetVertexColorParms( SVC_IGNORE );
@@ -3244,11 +3244,11 @@ static void RB_ShadowMapPass( const drawSurf_t* drawSurfs, const viewLight_t* vL
 		{
 			if( drawSurf->jointCache )
 			{
-				renderProgManager.BindShader_DepthSkinned();
+				renderProgManager.BindShader_ShadowDepthSkinned();
 			}
 			else
 			{
-				renderProgManager.BindShader_Depth();
+				renderProgManager.BindShader_ShadowDepth();
 			}
 			
 			RB_DrawElementsWithCounters( drawSurf );

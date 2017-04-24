@@ -231,6 +231,16 @@ public:
 	{
 		BindShader_Builtin( BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED );
 	}
+	
+	void	BindShader_ShadowDepth()
+	{
+		BindShader_Builtin( BUILTIN_SHADOW_DEPTH );
+	}
+	
+	void	BindShader_ShadowDepthSkinned()
+	{
+		BindShader_Builtin( BUILTIN_SHADOW_DEPTH_SKINNED );
+	}
 	// RB end
 	
 	void	BindShader_Texture( )
@@ -579,6 +589,8 @@ protected:
 		BUILTIN_AMBIENT_LIGHTING_SKINNED,
 		BUILTIN_SMALL_GEOMETRY_BUFFER,
 		BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED,
+		BUILTIN_SHADOW_DEPTH,
+		BUILTIN_SHADOW_DEPTH_SKINNED,
 		// RB end
 		BUILTIN_SIMPLESHADE,
 		BUILTIN_TEXTURED,

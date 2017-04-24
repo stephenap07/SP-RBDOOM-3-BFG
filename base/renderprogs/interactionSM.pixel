@@ -35,7 +35,7 @@ uniform sampler2D				samp1 : register(s1); // texture 2 is the light falloff tex
 uniform sampler2D				samp2 : register(s2); // texture 3 is the light projection texture
 uniform sampler2D				samp3 : register(s3); // texture 4 is the per-surface diffuse map
 uniform sampler2D				samp4 : register(s4); // texture 5 is the per-surface specular map
-uniform sampler2DArrayShadow	samp5 : register(s5); // texture 6 is the shadowmap array
+uniform sampler2DArray			samp5 : register(s5); // texture 6 is the shadowmap array
 uniform sampler2D				samp6 : register(s6); // texture 7 is the jitter texture 
 
 
@@ -226,6 +226,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	shadow *= stepSize;
 #else
 	
+#if 0
 	const float2 poissonDisk[12] = float2[](
 	float2(0.6111618, 0.1050905),
 	float2(0.1088336, 0.1127091),
@@ -264,12 +265,33 @@ void main( PS_IN fragment, out PS_OUT result )
         
 		float4 shadowTexcoordJittered = float4( shadowTexcoord.xy + jitterRotated * shadowTexelSize, shadowTexcoord.z, shadowTexcoord.w );
        
-        shadow += texture( samp5, shadowTexcoordJittered.xywz);
+        shadow += texture( samp5, shadowTexcoordJittered.xyw);
     }
 
    shadow *= stepSize;
-
+#else
 	//float shadow = texture( samp5, shadowTexcoord.xywz );
+	
+	float receiver = shadowTexcoord.z;
+	float occluder = texture( samp5, shadowTexcoord.xyw ).r;
+	
+	float shadow = 1.0;
+	if( occluder < receiver )
+	{
+		shadow = 0.0;
+	}
+	
+	//shadow = exp( 1.0 * ( occluder - receiver ) );
+	//float visibility = saturate(occluder * exp(-Light.Exponential * reciever));
+	
+#if 0
+	result.color.xyz = float3( shadow, 0.0, 0.0 );
+	result.color.w = 1.0;
+	return;
+#endif
+	
+#endif
+
 #endif
 
 

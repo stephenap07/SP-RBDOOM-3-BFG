@@ -99,6 +99,8 @@ void idRenderProgManager::Init()
 		{ BUILTIN_AMBIENT_LIGHTING_SKINNED, "ambient_lighting", "_skinned", BIT( USE_GPU_SKINNING ), true },
 		{ BUILTIN_SMALL_GEOMETRY_BUFFER, "gbuffer", "", 0, false },
 		{ BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED, "gbuffer", "_skinned", BIT( USE_GPU_SKINNING ), true },
+		{ BUILTIN_SHADOW_DEPTH, "shadow_depth", "", 0, false },
+		{ BUILTIN_SHADOW_DEPTH_SKINNED, "shadow_depth", "_skinned", BIT( USE_GPU_SKINNING ), true },
 		// RB end
 //		{ BUILTIN_SIMPLESHADE, "simpleshade.vfp", 0, false },
 		{ BUILTIN_TEXTURED, "texture.vfp", "", 0, false },
@@ -254,6 +256,7 @@ void idRenderProgManager::Init()
 		// RB begin
 		vertexShaders[builtinShaders[BUILTIN_AMBIENT_LIGHTING_SKINNED]].usesJoints = true;
 		vertexShaders[builtinShaders[BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED]].usesJoints = true;
+		vertexShaders[builtinShaders[BUILTIN_SHADOW_DEPTH_SKINNED]].usesJoints = true;
 		vertexShaders[builtinShaders[BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED]].usesJoints = true;
 		vertexShaders[builtinShaders[BUILTIN_INTERACTION_SHADOW_MAPPING_POINT_SKINNED]].usesJoints = true;
 		vertexShaders[builtinShaders[BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED]].usesJoints = true;
