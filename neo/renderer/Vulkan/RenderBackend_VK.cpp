@@ -90,17 +90,6 @@ const char* VK_ErrorToString( VkResult result )
 	};
 }
 
-const char* VK_ErrorToString( vk::Result result )
-{
-	switch( result )
-	{
-			ID_VK_ERROR_STRING( vk::Result::eSuccess );
-			ID_VK_ERROR_STRING( vk::Result::eNotReady );
-		default:
-			return "UNKNOWN";
-	};
-}
-
 static const int g_numInstanceExtensions = 2;
 static const char* g_instanceExtensions[ g_numInstanceExtensions ] =
 {
@@ -140,46 +129,29 @@ DEBUGGING AND VALIDATION
 DebugCallback
 =============
 */
-/*
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-	VkDebugReportFlagsEXT flags,
-	VkDebugReportObjectTypeEXT objType,
-	uint64 obj, size_t location, int32 code,
-	const char* layerPrefix, const char* msg, void* userData )
-{
-
-	idLib::Printf( "VK_DEBUG::%s: %s flags=%d, objType=%d, obj=%llu, location=%lld, code=%d\n",
-				   layerPrefix, msg, flags, objType, obj, location, code );
-
-
-
-	return VK_FALSE;
-}
-*/
-
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback( VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
 		size_t location, int32_t msgCode, const char* layerPrefix, const char* msg,
 		void* userData )
 {
 	if( msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT )
 	{
-		idLib::Printf( "Vulkan ERROR: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
+		idLib::Printf( "[Vulkan] ERROR: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
 	}
 	else if( msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT )
 	{
-		idLib::Printf( "Vulkan WARNING: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
+		idLib::Printf( "[Vulkan] WARNING: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
 	}
 	else if( msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT )
 	{
-		idLib::Printf( "Vulkan PERFORMANCE WARNING: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
+		idLib::Printf( "[Vulkan] PERFORMANCE WARNING: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
 	}
 	else if( msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT )
 	{
-		idLib::Printf( "Vulkan INFO: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
+		idLib::Printf( "[Vulkan] INFO: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
 	}
 	else if( msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT )
 	{
-		idLib::Printf( "Vulkan DEBUG: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
+		idLib::Printf( "[Vulkan] DEBUG: [ %s ] Code %d : '%s'\n", layerPrefix, msgCode, msg );
 	}
 	
 	/*
@@ -250,11 +222,11 @@ ValidateValidationLayers
 static void ValidateValidationLayers()
 {
 	uint32 instanceLayerCount = 0;
-	vkEnumerateInstanceLayerProperties( &instanceLayerCount, NULL );
+	vk::enumerateInstanceLayerProperties( &instanceLayerCount, NULL );
 	
-	idList< VkLayerProperties > instanceLayers;
+	idList< vk::LayerProperties > instanceLayers;
 	instanceLayers.SetNum( instanceLayerCount );
-	vkEnumerateInstanceLayerProperties( &instanceLayerCount, instanceLayers.Ptr() );
+	vk::enumerateInstanceLayerProperties( &instanceLayerCount, instanceLayers.Ptr() );
 	
 	bool found = false;
 	for( uint32 i = 0; i < g_numValidationLayers; ++i )

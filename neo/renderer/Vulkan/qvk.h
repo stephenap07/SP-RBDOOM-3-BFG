@@ -55,7 +55,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #define ID_VKPP_CHECK( x ) { \
 	vk::Result ret = x; \
-	if ( ret != vk::Result::eSuccess ) idLib::FatalError( "VK: %s - %s", VK_ErrorToString( ret ), #x ); \
+	if ( ret != vk::Result::eSuccess ) idLib::FatalError( "VK: %s - %s", VK_ErrorToString( VkResult( ret ) ), #x ); \
 }
 
 #define ID_VK_VALIDATE( x, msg ) { \
@@ -63,7 +63,6 @@ If you have questions concerning this license or the applicable additional terms
 }
 
 const char* VK_ErrorToString( VkResult result );
-const char* VK_ErrorToString( vk::Result result );
 
 
 static const int MAX_DESC_SETS				= 16384;
