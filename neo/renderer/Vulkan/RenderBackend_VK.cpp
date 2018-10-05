@@ -48,7 +48,7 @@ idCVar r_vkEnableValidationLayers( "r_vkEnableValidationLayers", "0", CVAR_BOOL,
 
 vulkanContext_t vkcontext;
 
-#define ID_VK_ERROR_STRING( x ) case static_cast< int >( x ): return #x
+#define ID_VK_ERROR_STRING( x ) case x: return #x
 
 /*
 =============
@@ -85,6 +85,17 @@ const char* VK_ErrorToString( VkResult result )
 			ID_VK_ERROR_STRING( VK_ERROR_INVALID_SHADER_NV );
 			ID_VK_ERROR_STRING( VK_RESULT_BEGIN_RANGE );
 			ID_VK_ERROR_STRING( VK_RESULT_RANGE_SIZE );
+		default:
+			return "UNKNOWN";
+	};
+}
+
+const char* VK_ErrorToString( vk::Result result )
+{
+	switch( result )
+	{
+			ID_VK_ERROR_STRING( vk::Result::eSuccess );
+			ID_VK_ERROR_STRING( vk::Result::eNotReady );
 		default:
 			return "UNKNOWN";
 	};
@@ -188,14 +199,29 @@ CreateDebugReportCallback
 */
 static void CreateDebugReportCallback()
 {
+#if 1
+	vk::DebugReportCallbackCreateInfoEXT callbackInfo;
+	
+	callbackInfo.setFlags( vk::DebugReportFlagBitsEXT::eDebug | vk::DebugReportFlagBitsEXT::eWarning | vk::DebugReportFlagBitsEXT::eError ); // VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
+	callbackInfo.setPfnCallback( DebugCallback );
+	
+	PFN_vkCreateDebugReportCallbackEXT func = ( PFN_vkCreateDebugReportCallbackEXT ) vkcontext.instance.getProcAddr( "vkCreateDebugReportCallbackEXT" );
+	ID_VK_VALIDATE( func != NULL, "Could not find vkCreateDebugReportCallbackEXT" );
+	
+	//kDebugReportCallbackEXT callback = (VkDebugReportCallbackEXT)vkcontext.callback;
+	ID_VKPP_CHECK( vkcontext.instance.createDebugReportCallbackEXT( &callbackInfo, NULL, &vkcontext.callback, vkcontext.dispatcher ) );
+#else
 	VkDebugReportCallbackCreateInfoEXT callbackInfo = {};
 	callbackInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-	callbackInfo.flags = VK_DEBUG_REPORT_DEBUG_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT; // VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
+	callbackInfo.flags = VK_DEBUG_REPORT_DEBUG_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
 	callbackInfo.pfnCallback = ( PFN_vkDebugReportCallbackEXT ) DebugCallback;
 	
-	PFN_vkCreateDebugReportCallbackEXT func = ( PFN_vkCreateDebugReportCallbackEXT ) vkGetInstanceProcAddr( vkcontext.instance, "vkCreateDebugReportCallbackEXT" );
+	PFN_vkCreateDebugReportCallbackEXT func = ( PFN_vkCreateDebugReportCallbackEXT ) vkGetInstanceProcAddr( VkInstance( vkcontext.instance ), "vkCreateDebugReportCallbackEXT" );
 	ID_VK_VALIDATE( func != NULL, "Could not find vkCreateDebugReportCallbackEXT" );
-	ID_VK_CHECK( func( vkcontext.instance, &callbackInfo, NULL, &vkcontext.callback ) );
+	
+	VkDebugReportCallbackEXT callback = ( VkDebugReportCallbackEXT )vkcontext.callback;
+	ID_VK_CHECK( func( VkInstance( vkcontext.instance ), &callbackInfo, NULL, &callback ) );
+#endif
 }
 
 /*
@@ -205,9 +231,15 @@ DestroyDebugReportCallback
 */
 static void DestroyDebugReportCallback()
 {
-	PFN_vkDestroyDebugReportCallbackEXT func = ( PFN_vkDestroyDebugReportCallbackEXT ) vkGetInstanceProcAddr( vkcontext.instance, "vkDestroyDebugReportCallbackEXT" );
+#if 1
+	PFN_vkDestroyDebugReportCallbackEXT func = ( PFN_vkDestroyDebugReportCallbackEXT ) vkcontext.instance.getProcAddr( "vkDestroyDebugReportCallbackEXT" );
 	ID_VK_VALIDATE( func != NULL, "Could not find vkDestroyDebugReportCallbackEXT" );
-	func( vkcontext.instance, vkcontext.callback, NULL );
+	vkcontext.instance.destroyDebugReportCallbackEXT( vkcontext.callback, NULL, vkcontext.dispatcher );
+#else
+	PFN_vkDestroyDebugReportCallbackEXT func = ( PFN_vkDestroyDebugReportCallbackEXT ) vkGetInstanceProcAddr( VkInstance( vkcontext.instance ), "vkDestroyDebugReportCallbackEXT" );
+	ID_VK_VALIDATE( func != NULL, "Could not find vkDestroyDebugReportCallbackEXT" );
+	func( VkInstance( vkcontext.instance ), VkDebugReportCallbackEXT( vkcontext.callback ), NULL );
+#endif
 }
 
 /*
@@ -254,16 +286,14 @@ CreateVulkanInstance
 */
 static void CreateVulkanInstance()
 {
-	VkApplicationInfo appInfo = {};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	vk::ApplicationInfo appInfo;
 	appInfo.pApplicationName = GAME_NAME;
 	appInfo.applicationVersion = 1;
 	appInfo.pEngineName = "idTech 4.5x";
 	appInfo.engineVersion = 1;
 	appInfo.apiVersion = VK_MAKE_VERSION( 1, 0, VK_HEADER_VERSION );
 	
-	VkInstanceCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	vk::InstanceCreateInfo createInfo;
 	createInfo.pApplicationInfo = &appInfo;
 	
 	const bool enableLayers = r_vkEnableValidationLayers.GetBool();
@@ -302,7 +332,10 @@ static void CreateVulkanInstance()
 	createInfo.enabledLayerCount = vkcontext.validationLayers.Num();
 	createInfo.ppEnabledLayerNames = vkcontext.validationLayers.Ptr();
 	
-	ID_VK_CHECK( vkCreateInstance( &createInfo, NULL, &vkcontext.instance ) );
+	ID_VKPP_CHECK( vk::createInstance( &createInfo, NULL, &vkcontext.instance ) );
+	
+	// RB: fetch all function pointers through the passed instance
+	vkcontext.dispatcher.init( vkcontext.instance );
 	
 	if( enableLayers )
 	{
@@ -322,12 +355,11 @@ CreateSurface
 static void CreateSurface()
 {
 #ifdef _WIN32
-	VkWin32SurfaceCreateInfoKHR createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	vk::Win32SurfaceCreateInfoKHR createInfo;
 	createInfo.hinstance = win32.hInstance;
 	createInfo.hwnd = win32.hWnd;
 	
-	ID_VK_CHECK( vkCreateWin32SurfaceKHR( vkcontext.instance, &createInfo, NULL, &vkcontext.surface ) );
+	ID_VKPP_CHECK( vkcontext.instance.createWin32SurfaceKHR( &createInfo, NULL, &vkcontext.surface ) );
 	
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	VkWaylandSurfaceCreateInfoKHR createInfo = {};
@@ -359,13 +391,13 @@ EnumeratePhysicalDevices
 static void EnumeratePhysicalDevices()
 {
 	uint32 numDevices = 0;
-	ID_VK_CHECK( vkEnumeratePhysicalDevices( vkcontext.instance, &numDevices, NULL ) );
+	ID_VKPP_CHECK( vkcontext.instance.enumeratePhysicalDevices( &numDevices, NULL ) );
 	ID_VK_VALIDATE( numDevices > 0, "vkEnumeratePhysicalDevices returned zero devices." );
 	
-	idList< VkPhysicalDevice > devices;
+	idList< vk::PhysicalDevice > devices;
 	devices.SetNum( numDevices );
 	
-	ID_VK_CHECK( vkEnumeratePhysicalDevices( vkcontext.instance, &numDevices, devices.Ptr() ) );
+	ID_VKPP_CHECK( vkcontext.instance.enumeratePhysicalDevices( &numDevices, devices.Ptr() ) );
 	ID_VK_VALIDATE( numDevices > 0, "vkEnumeratePhysicalDevices returned zero devices." );
 	
 	vkcontext.gpus.SetNum( numDevices );
@@ -375,23 +407,25 @@ static void EnumeratePhysicalDevices()
 		gpuInfo_t& gpu = vkcontext.gpus[ i ];
 		gpu.device = devices[ i ];
 		
+		// get Queue family properties
 		{
 			uint32 numQueues = 0;
-			vkGetPhysicalDeviceQueueFamilyProperties( gpu.device, &numQueues, NULL );
+			gpu.device.getQueueFamilyProperties( &numQueues, NULL );
 			ID_VK_VALIDATE( numQueues > 0, "vkGetPhysicalDeviceQueueFamilyProperties returned zero queues." );
 			
 			gpu.queueFamilyProps.SetNum( numQueues );
-			vkGetPhysicalDeviceQueueFamilyProperties( gpu.device, &numQueues, gpu.queueFamilyProps.Ptr() );
+			gpu.device.getQueueFamilyProperties( &numQueues, gpu.queueFamilyProps.Ptr() );
 			ID_VK_VALIDATE( numQueues > 0, "vkGetPhysicalDeviceQueueFamilyProperties returned zero queues." );
 		}
 		
+		// grab available Vulkan extensions
 		{
 			uint32 numExtension;
-			ID_VK_CHECK( vkEnumerateDeviceExtensionProperties( gpu.device, NULL, &numExtension, NULL ) );
+			ID_VKPP_CHECK( gpu.device.enumerateDeviceExtensionProperties( NULL, &numExtension, NULL ) );
 			ID_VK_VALIDATE( numExtension > 0, "vkEnumerateDeviceExtensionProperties returned zero extensions." );
 			
 			gpu.extensionProps.SetNum( numExtension );
-			ID_VK_CHECK( vkEnumerateDeviceExtensionProperties( gpu.device, NULL, &numExtension, gpu.extensionProps.Ptr() ) );
+			ID_VKPP_CHECK( gpu.device.enumerateDeviceExtensionProperties( NULL, &numExtension, gpu.extensionProps.Ptr() ) );
 			ID_VK_VALIDATE( numExtension > 0, "vkEnumerateDeviceExtensionProperties returned zero extensions." );
 			
 #if 0
@@ -402,30 +436,31 @@ static void EnumeratePhysicalDevices()
 #endif
 		}
 		
-		ID_VK_CHECK( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( gpu.device, vkcontext.surface, &gpu.surfaceCaps ) );
+		// grap surface specific information
+		ID_VKPP_CHECK( gpu.device.getSurfaceCapabilitiesKHR( vkcontext.surface, &gpu.surfaceCaps ) );
 		
 		{
 			uint32 numFormats;
-			ID_VK_CHECK( vkGetPhysicalDeviceSurfaceFormatsKHR( gpu.device, vkcontext.surface, &numFormats, NULL ) );
+			ID_VKPP_CHECK( gpu.device.getSurfaceFormatsKHR( vkcontext.surface, &numFormats, NULL ) );
 			ID_VK_VALIDATE( numFormats > 0, "vkGetPhysicalDeviceSurfaceFormatsKHR returned zero surface formats." );
 			
 			gpu.surfaceFormats.SetNum( numFormats );
-			ID_VK_CHECK( vkGetPhysicalDeviceSurfaceFormatsKHR( gpu.device, vkcontext.surface, &numFormats, gpu.surfaceFormats.Ptr() ) );
+			ID_VKPP_CHECK( gpu.device.getSurfaceFormatsKHR( vkcontext.surface, &numFormats, gpu.surfaceFormats.Ptr() ) );
 			ID_VK_VALIDATE( numFormats > 0, "vkGetPhysicalDeviceSurfaceFormatsKHR returned zero surface formats." );
 		}
 		
 		{
 			uint32 numPresentModes;
-			ID_VK_CHECK( vkGetPhysicalDeviceSurfacePresentModesKHR( gpu.device, vkcontext.surface, &numPresentModes, NULL ) );
+			ID_VKPP_CHECK( gpu.device.getSurfacePresentModesKHR( vkcontext.surface, &numPresentModes, NULL ) );
 			ID_VK_VALIDATE( numPresentModes > 0, "vkGetPhysicalDeviceSurfacePresentModesKHR returned zero present modes." );
 			
 			gpu.presentModes.SetNum( numPresentModes );
-			ID_VK_CHECK( vkGetPhysicalDeviceSurfacePresentModesKHR( gpu.device, vkcontext.surface, &numPresentModes, gpu.presentModes.Ptr() ) );
+			ID_VKPP_CHECK( gpu.device.getSurfacePresentModesKHR( vkcontext.surface, &numPresentModes, gpu.presentModes.Ptr() ) );
 			ID_VK_VALIDATE( numPresentModes > 0, "vkGetPhysicalDeviceSurfacePresentModesKHR returned zero present modes." );
 		}
 		
-		vkGetPhysicalDeviceMemoryProperties( gpu.device, &gpu.memProps );
-		vkGetPhysicalDeviceProperties( gpu.device, &gpu.props );
+		gpu.device.getMemoryProperties( &gpu.memProps );
+		gpu.device.getProperties( &gpu.props );
 	}
 }
 
@@ -558,7 +593,7 @@ void idRenderBackend::Shutdown()
 	}
 	
 	// destroy the Instance
-	vkDestroyInstance( vkcontext.instance, NULL );
+	vkcontext.instance.destroy( NULL );
 	
 	// destroy main window
 	GLimp_Shutdown();

@@ -35,9 +35,16 @@ If you have questions concerning this license or the applicable additional terms
 #define VK_USE_PLATFORM_WIN32_KHR
 //#define ID_USE_AMD_ALLOCATOR
 
-#include <vulkan/vulkan.h>
+//#include <vulkan/vulkan.h>
 
-#if defined( ID_USE_AMD_ALLOCATOR )
+// RB: use Vulkan C++ API without the STL containers like std::vector
+
+#define VULKAN_HPP_DISABLE_ENHANCED_MODE 1
+#define VULKAN_HPP_NO_EXCEPTIONS 1
+#include <vulkan/vulkan.hpp>
+
+
+#if defined( USE_AMD_ALLOCATOR )
 #include "vma.h"
 #endif
 
@@ -46,11 +53,17 @@ If you have questions concerning this license or the applicable additional terms
 	if ( ret != VK_SUCCESS ) idLib::FatalError( "VK: %s - %s", VK_ErrorToString( ret ), #x ); \
 }
 
+#define ID_VKPP_CHECK( x ) { \
+	vk::Result ret = x; \
+	if ( ret != vk::Result::eSuccess ) idLib::FatalError( "VK: %s - %s", VK_ErrorToString( ret ), #x ); \
+}
+
 #define ID_VK_VALIDATE( x, msg ) { \
 	if ( !( x ) ) idLib::FatalError( "VK: %s - %s", msg, #x ); \
 }
 
 const char* VK_ErrorToString( VkResult result );
+const char* VK_ErrorToString( vk::Result result );
 
 
 static const int MAX_DESC_SETS				= 16384;

@@ -135,14 +135,14 @@ void RB_BakeTextureMatrixIntoTexgen( idPlane lightProject[3], const float* textu
 
 struct gpuInfo_t
 {
-	VkPhysicalDevice					device;
-	VkPhysicalDeviceProperties			props;
-	VkPhysicalDeviceMemoryProperties	memProps;
-	VkSurfaceCapabilitiesKHR			surfaceCaps;
-	idList< VkSurfaceFormatKHR >		surfaceFormats;
-	idList< VkPresentModeKHR >			presentModes;
-	idList< VkQueueFamilyProperties >	queueFamilyProps;
-	idList< VkExtensionProperties >		extensionProps;
+	vk::PhysicalDevice					device;
+	vk::PhysicalDeviceProperties		props;
+	vk::PhysicalDeviceMemoryProperties	memProps;
+	vk::SurfaceCapabilitiesKHR			surfaceCaps;
+	idList< vk::SurfaceFormatKHR >		surfaceFormats;
+	idList< vk::PresentModeKHR >		presentModes;
+	idList< vk::QueueFamilyProperties >	queueFamilyProps;
+	idList< vk::ExtensionProperties >	extensionProps;
 };
 
 struct vulkanContext_t
@@ -153,7 +153,11 @@ struct vulkanContext_t
 	vertCacheHandle_t				jointCacheHandle;
 	uint64							stencilOperations[ STENCIL_FACE_NUM ];
 	
-	VkInstance						instance;
+	vk::Instance					instance;
+	
+	// helper for accessing functionality not available in the statically linked Vulkan library
+	vk::DispatchLoaderDynamic		dispatcher;
+	
 	VkPhysicalDevice				physicalDevice;
 	VkPhysicalDeviceFeatures		physicalDeviceFeatures;
 	VkDevice						device;
@@ -161,7 +165,7 @@ struct vulkanContext_t
 	VkQueue							presentQueue;
 	int								graphicsFamilyIdx;
 	int								presentFamilyIdx;
-	VkDebugReportCallbackEXT		callback;
+	vk::DebugReportCallbackEXT		callback;
 	
 	idList< const char* >			instanceExtensions;
 	idList< const char* >			deviceExtensions;
@@ -175,7 +179,7 @@ struct vulkanContext_t
 	idArray< VkFence, NUM_FRAME_DATA >			commandBufferFences;
 	idArray< bool, NUM_FRAME_DATA >				commandBufferRecorded;
 	
-	VkSurfaceKHR					surface;
+	vk::SurfaceKHR					surface;
 	VkPresentModeKHR				presentMode;
 	VkFormat						depthFormat;
 	VkRenderPass					renderPass;

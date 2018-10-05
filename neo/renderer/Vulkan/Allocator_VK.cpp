@@ -43,27 +43,31 @@ FindMemoryTypeIndex
 */
 uint32 FindMemoryTypeIndex( const uint32 memoryTypeBits, const vulkanMemoryUsage_t usage )
 {
-	VkPhysicalDeviceMemoryProperties& physicalMemoryProperties = vkcontext.gpu->memProps;
+	vk::PhysicalDeviceMemoryProperties& physicalMemoryProperties = vkcontext.gpu->memProps;
 	
-	VkMemoryPropertyFlags required = 0;
-	VkMemoryPropertyFlags preferred = 0;
+	vk::MemoryPropertyFlags required;
+	vk::MemoryPropertyFlags preferred;
 	
 	switch( usage )
 	{
 		case VULKAN_MEMORY_USAGE_GPU_ONLY:
-			preferred |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			preferred |= vk::MemoryPropertyFlagBits::eDeviceLocal; // VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			break;
+			
 		case VULKAN_MEMORY_USAGE_CPU_ONLY:
-			required |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			required |=  vk::MemoryPropertyFlagBits::eHostVisible |  vk::MemoryPropertyFlagBits::eHostCoherent; //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 			break;
+			
 		case VULKAN_MEMORY_USAGE_CPU_TO_GPU:
-			required |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-			preferred |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			required |=  vk::MemoryPropertyFlagBits::eHostVisible; //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+			preferred |=  vk::MemoryPropertyFlagBits::eDeviceLocal; //VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			break;
+			
 		case VULKAN_MEMORY_USAGE_GPU_TO_CPU:
-			required |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-			preferred |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+			required |=  vk::MemoryPropertyFlagBits::eHostVisible; //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+			preferred |=  vk::MemoryPropertyFlagBits::eHostCoherent |  vk::MemoryPropertyFlagBits::eHostCached; //VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 			break;
+			
 		default:
 			idLib::FatalError( "idVulkanAllocator::AllocateFromPools: Unknown memory usage." );
 	}
@@ -75,7 +79,7 @@ uint32 FindMemoryTypeIndex( const uint32 memoryTypeBits, const vulkanMemoryUsage
 			continue;
 		}
 		
-		const VkMemoryPropertyFlags properties = physicalMemoryProperties.memoryTypes[ i ].propertyFlags;
+		const vk::MemoryPropertyFlags properties = physicalMemoryProperties.memoryTypes[ i ].propertyFlags;
 		if( ( properties & required ) != required )
 		{
 			continue;
@@ -96,7 +100,7 @@ uint32 FindMemoryTypeIndex( const uint32 memoryTypeBits, const vulkanMemoryUsage
 			continue;
 		}
 		
-		const VkMemoryPropertyFlags properties = physicalMemoryProperties.memoryTypes[ i ].propertyFlags;
+		const vk::MemoryPropertyFlags properties = physicalMemoryProperties.memoryTypes[ i ].propertyFlags;
 		if( ( properties & required ) != required )
 		{
 			continue;
@@ -608,7 +612,7 @@ void idVulkanAllocator::EmptyGarbage()
 
 CONSOLE_COMMAND( Vulkan_PrintHeapInfo, "Print out the heap information for this hardware.", 0 )
 {
-	VkPhysicalDeviceMemoryProperties& props = vkcontext.gpu->memProps;
+	vk::PhysicalDeviceMemoryProperties& props = vkcontext.gpu->memProps;
 	
 	idLib::Printf( "Heaps %lu\n------------------------\n", props.memoryHeapCount );
 	for( uint32 i = 0; i < props.memoryHeapCount; ++i )
