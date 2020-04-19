@@ -464,6 +464,7 @@ public:
 	const idMaterial* 	irGogglesMaterial;	// ir effect
 	const idMaterial* 	bloodSprayMaterial; // blood spray
 	const idMaterial* 	bfgMaterial;		// when targeted with BFG
+	const idMaterial*   fontMaterial;
 	float				lastDamageTime;		// accentuate the tunnel effect for a while
 	
 	idVec4				fadeColor;			// fade color
@@ -476,6 +477,8 @@ public:
 	
 	idPlayer* 			player;
 	renderView_t		view;
+
+	FontHandle          testFont;
 	
 	FullscreenFXManager*	fxManager;
 	

@@ -351,6 +351,10 @@ void NewFrame()
 		int	time = Sys_Milliseconds();
 		double current_time = time * 0.001;
 		io.DeltaTime = g_Time > 0.0 ? ( float )( current_time - g_Time ) : ( float )( 1.0f / 60.0f );
+		if (io.DeltaTime <= 0.0)
+		{
+			io.DeltaTime = 1.0f / 60.0f;
+		}
 		g_Time = current_time;
 		
 		// Setup inputs
@@ -401,7 +405,7 @@ void Render()
 			ImGui::ShowDemoWindow();
 		}
 		
-		ImGui::End();
+		//ImGui::End();
 		
 		ImGui::Render();
 		g_haveNewFrame = false;

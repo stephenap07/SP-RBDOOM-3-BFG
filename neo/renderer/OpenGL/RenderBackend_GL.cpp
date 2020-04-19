@@ -438,6 +438,7 @@ static void R_CheckPortableExtensions()
 }
 // RB end
 
+
 idStr extensions_string;
 
 /*
@@ -464,11 +465,11 @@ void idRenderBackend::Init()
 	{
 		common->FatalError( "R_InitOpenGL called while active" );
 	}
-	
+
 	// DG: make sure SDL has setup video so getting supported modes in R_SetNewMode() works
 	GLimp_PreInit();
 	// DG end
-	
+
 	R_SetNewMode( true );
 	
 	// input and sound systems need to be tied to the new window
@@ -545,7 +546,7 @@ void idRenderBackend::Init()
 void idRenderBackend::Shutdown()
 {
 	ImGui_Shutdown();
-	
+
 	GLimp_Shutdown();
 }
 
@@ -2225,6 +2226,12 @@ void idRenderBackend::ImGui_Shutdown()
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void idRenderBackend::ImGui_RenderDrawLists( ImDrawData* draw_data )
 {
+	if (draw_data->CmdListsCount == 0)
+	{
+		// Nothing to do.
+		return;
+	}
+
 	// Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
 	GLint last_program, last_texture, polygon_mode[2];
 	glGetIntegerv( GL_CURRENT_PROGRAM, &last_program );
@@ -2309,7 +2316,7 @@ void idRenderBackend::ImGui_RenderDrawLists( ImDrawData* draw_data )
 	}
 	
 	// Restore modified state
-	//glPolygonMode( polygon_mode[0], polygon_mode[1] );
+	glPolygonMode( polygon_mode[0], polygon_mode[1] );
 	glBindVertexArray( glConfig.global_vao );
 	
 	glBindBuffer( GL_ARRAY_BUFFER, 0 );

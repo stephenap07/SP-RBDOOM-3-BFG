@@ -487,18 +487,19 @@ bool idEditEntities::SelectEntity( const idVec3& origin, const idVec3& dir, cons
 	}
 	nextSelectTime = gameLocal.time + 300;
 	
+	const idVec3 start = origin + dir * 10.0f;
 	end = origin + dir * 4096.0f;
 	
 	ent = NULL;
 	for( int i = 0; i < selectableEntityClasses.Num(); i++ )
 	{
-		ent = gameLocal.FindTraceEntity( origin, end, *selectableEntityClasses[i].typeInfo, skip );
+		ent = gameLocal.FindTraceEntity( start, end, *selectableEntityClasses[i].typeInfo, skip );
 		if( ent )
 		{
 			break;
 		}
 	}
-	if( ent )
+	if (ent)
 	{
 		ClearSelectedEntities();
 		if( EntityIsSelectable( ent ) )

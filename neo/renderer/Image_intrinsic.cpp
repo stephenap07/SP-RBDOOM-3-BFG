@@ -904,6 +904,7 @@ void idImageManager::CreateIntrinsicImages()
 	hierarchicalZbufferImage = ImageFromFunction( "_cszBuffer", R_HierarchicalZBufferImage_ResNative );
 	
 	imguiFontImage = ImageFromFunction( "_imguiFont", R_CreateImGuiFontImage );
+
 	// RB end
 	
 	// scratchImage is used for screen wipes/doublevision etc..

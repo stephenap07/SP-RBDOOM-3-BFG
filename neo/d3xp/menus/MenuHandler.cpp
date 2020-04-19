@@ -38,6 +38,7 @@ idMenuHandler::~idMenuHandler
 ================================================
 */
 idMenuHandler::idMenuHandler()
+	: isInitialized(false)
 {
 	scrollingMenu = false;
 	scrollCounter = 0;
@@ -54,7 +55,6 @@ idMenuHandler::idMenuHandler()
 	}
 	
 	sounds.SetNum( NUM_GUI_SOUNDS );
-	
 }
 
 /*
@@ -78,7 +78,7 @@ void idMenuHandler::Initialize( const char* swfFile, idSoundWorld* sw )
 	gui = new idSWF( swfFile, sw );
 	
 	platform = 2;
-	
+	isInitialized = true;
 }
 
 /*

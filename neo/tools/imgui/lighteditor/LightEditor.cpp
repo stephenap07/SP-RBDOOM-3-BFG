@@ -279,7 +279,7 @@ LightInfo::LightInfo()
 LightEditor LightEditor::TheLightEditor;
 
 // static
-bool LightEditor::showIt = false;
+bool LightEditor::showIt = true;
 
 // static
 void LightEditor::ReInit( const idDict* dict, idEntity* light )
@@ -606,8 +606,9 @@ void LightEditor::DrawWindow()
 		{
 			TempApplyChanges();
 		}
+
+		ImGui::End();
 	}
-	ImGui::End();
 	
 	if( showIt && !showWindow )
 	{

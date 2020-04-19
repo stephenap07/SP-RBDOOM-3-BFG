@@ -3820,8 +3820,15 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 						{
 							if( viewDef->is2Dgui )
 							{
-								// RB: 2D fullscreen drawing like warp or damage blend effects
-								renderProgManager.BindShader_TextureVertexColor_sRGB();
+								if (pStage->texture.isCubeMap)
+								{
+									renderProgManager.BindShader_TextureCubeVertexColor_sRGB();
+								}
+								else
+								{
+									// RB: 2D fullscreen drawing like warp or damage blend effects
+									renderProgManager.BindShader_TextureVertexColor_sRGB();
+								}
 							}
 							else
 							{
@@ -5277,12 +5284,12 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	uint64 backEndFinishTime = Sys_Microseconds();
 	pc.totalMicroSec = backEndFinishTime - backEndStartTime;
 	
-	if( r_debugRenderToTexture.GetInteger() == 1 )
+	if (r_debugRenderToTexture.GetInteger() == 1)
 	{
-		common->Printf( "3d: %i, 2d: %i, SetBuf: %i, CpyRenders: %i, CpyFrameBuf: %i\n", c_draw3d, c_draw2d, c_setBuffers, c_copyRenders, pc.c_copyFrameBuffer );
+		common->Printf("3d: %i, 2d: %i, SetBuf: %i, CpyRenders: %i, CpyFrameBuf: %i\n", c_draw3d, c_draw2d, c_setBuffers, c_copyRenders, pc.c_copyFrameBuffer);
 		pc.c_copyFrameBuffer = 0;
 	}
-	
+
 	renderLog.EndFrame();
 }
 

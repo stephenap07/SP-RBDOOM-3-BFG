@@ -49,8 +49,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "../../renderer/RenderCommon.h"
 
 
-
-
 idCVar r_useOpenGL45( "r_useOpenGL45", "2", CVAR_INTEGER, "0 = OpenGL 4.0, 1 = OpenGL 4.5 compatibility profile, 2 = OpenGL 4.5 core profile", 0, 2 );
 
 
@@ -1056,7 +1054,6 @@ static bool GLW_GetWindowDimensions( const glimpParms_t parms, int& x, int& y, i
 	return true;
 }
 
-
 /*
 =======================
 GLW_CreateWindow
@@ -1368,7 +1365,7 @@ bool GLimp_Init( glimpParms_t parms )
 		common->Printf( "Using GLEW %s\n", glewGetString( GLEW_VERSION ) );
 	}
 #endif
-	
+
 	return true;
 }
 

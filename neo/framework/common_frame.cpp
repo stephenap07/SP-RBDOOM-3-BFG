@@ -131,6 +131,7 @@ int idGameThread::Run()
 			{
 				game->RunFrame( *userCmdMgr, ret );
 			}
+
 			if( ret.syncNextGameFrame || ret.sessionCommand[0] != 0 )
 			{
 				break;
@@ -170,6 +171,16 @@ int idGameThread::Run()
 	SetThreadTotalTime( ( commonLocal.frameTiming.finishDrawTime - commonLocal.frameTiming.startGameTime ) / 1000 );
 	
 	return 0;
+}
+
+/*
+===============
+idGameThread::Shutdown
+
+===============
+*/
+void idGameThread::Shutdown()
+{
 }
 
 /*
@@ -249,9 +260,16 @@ void idCommonLocal::Draw()
 		Sys_Sleep( com_sleepDraw.GetInteger() );
 	}
 	
-	if( loadGUI != NULL )
+	if (insideExecuteMapChange)
 	{
-		loadGUI->Render( renderSystem, Sys_Milliseconds() );
+		if (guiLoading)
+		{
+			guiLoading->Redraw(Sys_Milliseconds());
+		}
+	}
+	else if (guiActive)
+	{
+		guiActive->Redraw(Sys_Milliseconds());
 	}
 	// RB begin
 #if defined(USE_DOOMCLASSIC)
@@ -785,7 +803,7 @@ void idCommonLocal::Frame()
 		
 		// start the game / draw command generation thread going in the background
 		gameReturn_t ret = gameThread.RunGameAndDraw( numGameFrames, userCmdMgr, IsClient(), gameFrame - numGameFrames );
-		
+
 		if( com_smp.GetInteger() < 0 )
 		{
 			// RB: this is the same as Doom 3 renderSystem->EndFrame()
@@ -797,7 +815,7 @@ void idCommonLocal::Frame()
 			// frame-delayed ones from a background thread
 			renderCommands = renderSystem->SwapCommandBuffers_FinishCommandBuffers();
 		}
-		
+
 		//----------------------------------------
 		// Run the render back end, getting the GPU busy with new commands
 		// ASAP to minimize the pipeline bubble.

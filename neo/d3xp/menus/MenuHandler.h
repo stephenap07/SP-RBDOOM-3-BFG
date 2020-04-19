@@ -294,7 +294,7 @@ public:
 	}
 	
 protected:
-
+	bool						isInitialized;
 	bool						scrollingMenu;
 	int							scrollCounter;
 	int							activeScreen;

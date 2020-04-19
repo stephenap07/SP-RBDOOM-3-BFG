@@ -329,6 +329,8 @@ public:
 protected:
 	// The routine that performs the work.
 	virtual int		Run();
+
+	virtual void    Shutdown();
 	
 private:
 	idStr			name;

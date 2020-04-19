@@ -38,7 +38,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "Image.h"
 #include "Font.h"
 #include "Framebuffer.h"
-
+#include "FontManager.h"
 
 
 // maximum texture units
@@ -734,6 +734,7 @@ public:
 	virtual bool			AreAutomaticBackgroundSwapsRunning( autoRenderIconType_t* usingAlternateIcon = NULL ) const;
 	
 	virtual idFont* 		RegisterFont( const char* fontName );
+	virtual FontHandle      RegisterFont2(const char* aFontName);
 	virtual void			ResetFonts();
 	virtual void			PrintMemInfo( MemInfo_t* mi );
 	
@@ -741,8 +742,8 @@ public:
 	virtual uint32			GetColor();
 	virtual void			SetGLState( const uint64 glState ) ;
 	virtual void			DrawFilled( const idVec4& color, float x, float y, float w, float h );
-	virtual void			DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, const idMaterial* material );
-	virtual void			DrawStretchPic( const idVec4& topLeft, const idVec4& topRight, const idVec4& bottomRight, const idVec4& bottomLeft, const idMaterial* material );
+	virtual void			DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, const idMaterial* material, float z = 0.0f );
+	virtual void			DrawStretchPic( const idVec4& topLeft, const idVec4& topRight, const idVec4& bottomRight, const idVec4& bottomLeft, const idMaterial* material, float z = 0.0f );
 	virtual void			DrawStretchTri( const idVec2& p1, const idVec2& p2, const idVec2& p3, const idVec2& t1, const idVec2& t2, const idVec2& t3, const idMaterial* material );
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE );
 	virtual void			DrawSmallChar( int x, int y, int ch );
@@ -816,6 +817,8 @@ public:
 	const idMaterial* 		defaultPointLight;
 	const idMaterial* 		defaultProjectedLight;
 	const idMaterial* 		defaultMaterial;
+	const idMaterial*       fontAtlasMaterial;
+	FontManager*            fontManager;
 	idImage* 				testImage;
 	idCinematic* 			testVideo;
 	int						testVideoStartTime;

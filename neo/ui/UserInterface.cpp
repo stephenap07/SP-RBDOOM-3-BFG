@@ -133,7 +133,10 @@ void idUserInterfaceManagerLocal::BeginLevelLoad()
 {
 	for( int i = 0; i < guis.Num(); i++ )
 	{
-		guis[ i ]->ClearRefs();
+		if ((guis[i]->GetDesktop()->GetFlags() & WIN_MENUGUI) == 0)
+		{
+			guis[i]->ClearRefs();
+		}
 	}
 }
 

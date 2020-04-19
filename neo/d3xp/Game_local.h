@@ -643,7 +643,7 @@ private:
 	
 	idList<idAAS*>			aasList;				// area system
 	
-	idMenuHandler_Shell* 	shellHandler;
+	//idMenuHandler_Shell* 	shellHandler;
 	
 	idStrList				aasNames;
 	
@@ -694,7 +694,7 @@ private:
 	idArray< int, MAX_PLAYERS >	usercmdLastClientMilliseconds;	// The latest client time the server has run.
 	idArray< int, MAX_PLAYERS >	lastCmdRunTimeOnClient;
 	idArray< int, MAX_PLAYERS >	lastCmdRunTimeOnServer;
-	
+
 	void					Clear();
 	// returns true if the entity shouldn't be spawned at all in this game type or difficulty level
 	bool					InhibitEntitySpawn( idDict& spawnArgs );

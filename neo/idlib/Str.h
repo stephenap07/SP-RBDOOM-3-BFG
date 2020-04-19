@@ -221,7 +221,7 @@ public:
 	void				Fill( const char ch, int newlen );
 	
 	ID_INLINE int			UTF8Length();
-	ID_INLINE uint32		UTF8Char( int& idx );
+	ID_INLINE uint32		UTF8Char( int& idx ) const;
 	static int				UTF8Length( const byte* s );
 	static ID_INLINE uint32 UTF8Char( const char* s, int& idx );
 	static uint32			UTF8Char( const byte* s, int& idx );
@@ -1142,7 +1142,7 @@ ID_INLINE int idStr::UTF8Length()
 idStr::UTF8Char
 ========================
 */
-ID_INLINE uint32 idStr::UTF8Char( int& idx )
+ID_INLINE uint32 idStr::UTF8Char( int& idx ) const
 {
 	return UTF8Char( ( byte* )data, idx );
 }

@@ -2874,6 +2874,8 @@ int idFileSystemLocal::AddResourceFile( const char* resourceFileName )
 		common->Printf( "Loaded resource file %s\n", resourceFile.c_str() );
 		return resourceFiles.Num() - 1;
 	}
+
+	delete rc;
 	return -1;
 }
 

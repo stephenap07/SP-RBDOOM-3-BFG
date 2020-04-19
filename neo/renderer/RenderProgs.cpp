@@ -115,6 +115,7 @@ void idRenderProgManager::Init()
 		{ BUILTIN_TEXTURED, "texture.vfp", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT },
 		{ BUILTIN_TEXTURE_VERTEXCOLOR, "texture_color.vfp", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT },
 		{ BUILTIN_TEXTURE_VERTEXCOLOR_SRGB, "texture_color.vfp", "", BIT( USE_SRGB ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT },
+	    { BUILTIN_CUBETEXTURE_VERTEXCOLOR_SRGB, "texturecube_color.vfp", "", BIT( USE_SRGB ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT },
 		{ BUILTIN_TEXTURE_VERTEXCOLOR_SKINNED, "texture_color_skinned.vfp", "", 0, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT },
 		{ BUILTIN_TEXTURE_TEXGEN_VERTEXCOLOR, "texture_color_texgen.vfp", "",  0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT },
 		// RB begin

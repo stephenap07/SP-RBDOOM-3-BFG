@@ -47,6 +47,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "../framework/Common_local.h"
 #endif
 
+#include "idlib/HandleManager.h"
+
 // DeviceContext bypasses RenderSystem to work directly with this
 idGuiModel* tr_guiModel;
 
@@ -284,7 +286,6 @@ idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOA
 const char* fileExten[3] = { "tga", "png", "jpg" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
 const char* skyDirection[6] = { "_forward", "_back", "_left", "_right", "_up", "_down" };
-
 
 
 
@@ -1848,6 +1849,7 @@ void R_InitMaterials()
 	tr.defaultProjectedLight = declManager->FindMaterial( "lights/defaultProjectedLight" );
 	tr.whiteMaterial = declManager->FindMaterial( "_white" );
 	tr.charSetMaterial = declManager->FindMaterial( "textures/bigchars" );
+	tr.fontAtlasMaterial = declManager->FindMaterial("_fontAtlas");
 }
 
 
@@ -2232,6 +2234,8 @@ void idRenderSystemLocal::Init()
 	// RB end
 	
 	idCinematic::InitCinematic();
+
+	fontManager = new FontManager(512);
 	
 	// build brightness translation tables
 	R_SetColorMappings();
@@ -2267,7 +2271,7 @@ void idRenderSystemLocal::Init()
 	
 	// make sure the command buffers are ready to accept the first screen update
 	SwapCommandBuffers( NULL, NULL, NULL, NULL );
-	
+
 	common->Printf( "renderSystem initialized.\n" );
 	common->Printf( "--------------------------------------\n" );
 }
@@ -2282,6 +2286,8 @@ void idRenderSystemLocal::Shutdown()
 	common->Printf( "idRenderSystem::Shutdown()\n" );
 	
 	fonts.DeleteContents();
+
+	delete fontManager;
 	
 	if( IsInitialized() )
 	{
@@ -2429,6 +2435,36 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 	idFont* newFont = new( TAG_FONT ) idFont( baseFontName );
 	fonts.Append( newFont );
 	return newFont;
+}
+
+FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName)
+{
+	idFile* fd = fileSystem->OpenFileRead(fontName);
+	if (fd == nullptr)
+	{
+		return FontHandle();
+	}
+
+	const int len = fd->Length();
+
+	idTempArray<byte> buffer(len);
+
+	if ((int)fd->Read(buffer.Ptr(), len) != len)
+	{
+		delete fd;
+		return FontHandle();
+	}
+	
+	delete fd;
+	auto ttHandle = fontManager->createTtf(buffer.Ptr(), len);
+
+	auto handle = fontManager->createFontByPixelSize(ttHandle, 0, 32);
+
+	fontManager->preloadGlyph(handle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
+
+	fontManager->destroyTtf(ttHandle);
+
+	return handle;
 }
 
 /*

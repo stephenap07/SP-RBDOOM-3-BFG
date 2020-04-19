@@ -234,6 +234,7 @@ int idSysThread::ThreadProc( idSysThread* thread )
 				
 				if( thread->isTerminating )
 				{
+					thread->Shutdown();
 					break;
 				}
 				
@@ -270,6 +271,15 @@ int idSysThread::Run()
 	// the virtual function pointer will be set to NULL before the idSysThread
 	// destructor actually stops the thread.
 	return 0;
+}
+
+/*
+========================
+idSysThread::Shutdown
+========================
+*/
+void idSysThread::Shutdown()
+{
 }
 
 /*

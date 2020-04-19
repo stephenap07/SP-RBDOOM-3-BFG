@@ -1949,6 +1949,12 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 		common->Warning( "material '%s' had stage with no image", GetName() );
 		ts->image = globalImages->defaultImage;
 	}
+
+	if (ts->image &&
+		ts->image->GetOpts().textureType == TT_CUBIC)
+	{
+		ts->isCubeMap = true;
+	}
 }
 
 /*

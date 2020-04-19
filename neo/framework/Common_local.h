@@ -88,6 +88,8 @@ public:
 	
 private:
 	virtual int	Run();
+
+	virtual void Shutdown();
 	
 	int				gameTime;
 	int				drawTime;
@@ -142,6 +144,8 @@ class idCommonLocal : public idCommon
 {
 public:
 	idCommonLocal();
+
+	virtual                    ~idCommonLocal();
 	
 	virtual void				Init( int argc, const char* const* argv, const char* cmdline );
 	virtual void				Shutdown();
@@ -333,7 +337,7 @@ public:
 	// for images in particular we can measure more accurately this way (to deal with mipmaps)
 	void LoadPacifierBinarizeProgressTotal( int total );
 	void LoadPacifierBinarizeProgressIncrement( int step );
-	
+
 	frameTiming_t		frameTiming;
 	frameTiming_t		mainFrameTiming;
 	
@@ -634,8 +638,6 @@ private:
 	
 	void	MoveToNewMap( const char* mapName, bool devmap );
 	
-	void	PlayIntroGui();
-	
 	void	ScrubSaveGameFileName( idStr& saveFileName ) const;
 	
 	// RB begin
@@ -650,6 +652,14 @@ private:
 	void	PerformGameSwitch();
 #endif
 	// RB end
+
+	void SetGui(idUserInterface* gui);
+
+	void HandleMainMenuCommands(const char* menuCommand);
+
+	idUserInterface* guiLoading = nullptr;
+	idUserInterface* guiActive = nullptr;
+	idUserInterface* guiMainMenu = nullptr;
 };
 
 extern idCommonLocal commonLocal;

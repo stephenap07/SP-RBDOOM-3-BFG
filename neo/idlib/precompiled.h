@@ -104,6 +104,7 @@ const uint32 NUM_FRAME_DATA	= 2;
 #include "../renderer/ModelManager.h"
 #include "../renderer/RenderSystem.h"
 #include "../renderer/RenderWorld.h"
+#include "../renderer/FontManager.h"
 
 // sound engine
 #include "../sound/sound.h"

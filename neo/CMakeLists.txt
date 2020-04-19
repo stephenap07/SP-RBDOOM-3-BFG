@@ -404,6 +404,8 @@ file(GLOB IRRXML_SOURCES libs/irrxml/src/*.cpp)
 file(GLOB IMGUI_INCLUDES libs/imgui/*.h)
 file(GLOB IMGUI_SOURCES libs/imgui/*.cpp)
 
+file(GLOB STB_INCLUDES libs/stb/*.h)
+
 if (NOT JPEG_FOUND)
     set(JPEG_INCLUDES
         libs/jpeg-6/jchuff.h
@@ -498,7 +500,7 @@ endif()
 file(GLOB MINIZIP_INCLUDES libs/zlib/minizip/*.h)
 file(GLOB MINIZIP_SOURCES libs/zlib/minizip/*.c libs/zlib/minizip/*.cpp)
 	
-
+file(GLOB FREETYPE_AMALGAMATION_INCLUDE libs/freetype/*.h)
 	
 set(FREETYPE_SOURCES
 	libs/freetype/src/autofit/autofit.c
@@ -953,6 +955,7 @@ file(GLOB COMMON_SOURCES sys/common/*.cpp)
 file(GLOB SDL_INCLUDES sys/sdl/*.h)
 file(GLOB SDL_SOURCES sys/sdl/*.cpp)
 
+file(GLOB SDF_INCLUDE libs/sdf/*.h)
 
 source_group("aas" FILES ${AAS_INCLUDES})
 source_group("aas" FILES ${AAS_SOURCES})
@@ -1003,6 +1006,8 @@ source_group("libs\\irrxml" FILES ${IRRXML_SOURCES})
 source_group("libs\\imgui" FILES ${IMGUI_INCLUDES})
 source_group("libs\\imgui" FILES ${IMGUI_SOURCES})
 
+source_group("libs\\stb" FILES ${STB_INCLUDES})
+
 source_group("libs\\jpeg-6" FILES ${JPEG_INCLUDES})
 source_group("libs\\jpeg-6" FILES ${JPEG_SOURCES})
 
@@ -1024,6 +1029,10 @@ source_group("libs\\glew" FILES ${GLEW_SOURCES})
 source_group("libs\\rapidjson" FILES ${RAPIDJSON_INCLUDES})
 
 source_group("libs\\freetype" FILES ${FREETYPE_SOURCES})
+
+source_group("libs\\freetype" FILES ${FREETYPE_AMALGAMATION_INCLUDE})
+
+source_group("libs\\sdf" FILES ${SDF_INCLUDE})
 
 source_group("sound" FILES ${SOUND_INCLUDES})
 source_group("sound" FILES ${SOUND_SOURCES})
@@ -1178,6 +1187,7 @@ set(RBDOOM3_INCLUDES
 			${IRRXML_INCLUDES}
 			${FRAMEWORK_IMGUI_INCLUDES}
 			${IMGUI_INCLUDES}
+			${STB_INCLUDES}
 			${JPEG_INCLUDES}
 			${PNG_INCLUDES}
 			${ZLIB_INCLUDES}
@@ -1186,6 +1196,7 @@ set(RBDOOM3_INCLUDES
 			${GLEW_INCLUDES}
 			${RAPIDJSON_INCLUDES}
 			#${FREETYPE_SOURCES}
+			${FREETYPE_AMALGAMATION_INCLUDE}
 			${SOUND_INCLUDES}
 			#${OGGVORBIS_INCLUDES}
 			${UI_INCLUDES}
@@ -1193,6 +1204,7 @@ set(RBDOOM3_INCLUDES
 			${COMMON_INCLUDES}
 			${DOOMCLASSIC_INCLUDES}
 			${TIMIDITY_INCLUDES}
+			${SDF_INCLUDE}
 			
 			${COMPILER_INCLUDES}
 			${COMPILER_AAS_INCLUDES} ${COMPILER_AAS_SOURCES}
@@ -1396,7 +1408,7 @@ if(MSVC)
 				swscale)
 		
 	endif()
-	
+
 	if(USE_MFC_TOOLS)
 		
 		include_directories(libs/atlmfc/include)

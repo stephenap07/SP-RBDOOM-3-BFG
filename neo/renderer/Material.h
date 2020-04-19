@@ -171,6 +171,7 @@ typedef struct
 	texgen_t			texgen;
 	bool				hasMatrix;
 	int					matrix[2][3];	// we only allow a subset of the full projection matrix
+	bool                isCubeMap = false;
 	
 	// dynamic image variables
 	dynamicidImage_t	dynamic;

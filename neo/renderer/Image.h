@@ -498,7 +498,7 @@ public:
 	// The callback will be issued immediately, and later if images are reloaded or vid_restart
 	// The callback function should call one of the idImage::Generate* functions to fill in the data
 	idImage* 			ImageFromFunction( const char* name, void ( *generatorFunction )( idImage* image ) );
-	
+
 	// scratch images are for internal renderer use.  ScratchImage names should always begin with an underscore
 	idImage* 			ScratchImage( const char* name, idImageOpts* imgOpts, textureFilter_t filter, textureRepeat_t repeat, textureUsage_t usage );
 	

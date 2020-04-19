@@ -48,7 +48,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "../sys/sys_savegame.h"
 
 
-
 #if defined( _DEBUG )
 #define BUILD_DEBUG "-debug"
 #else
@@ -210,6 +209,16 @@ idCommonLocal::idCommonLocal() :
 	stringsFile = NULL;
 	
 	ClearWipe();
+}
+
+/*
+==================
+idCommonLocal::~idCommonLocal
+==================
+*/
+idCommonLocal::~idCommonLocal()
+{
+	printf("Called common local destructor!");
 }
 
 /*
@@ -1326,13 +1335,14 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		
 		const int legalMinTime = 4000;
 		const bool showVideo = ( !com_skipIntroVideos.GetBool() && fileSystem->UsingResourceFiles() );
+		const bool showSplash = false;
 		if( showVideo )
 		{
 			RenderBink( "video\\loadvideo.bik" );
 			RenderSplash();
 			RenderSplash();
 		}
-		else
+		else if (showSplash)
 		{
 			idLib::Printf( "Skipping Intro Videos!\n" );
 			// display the legal splash screen
@@ -1373,20 +1383,20 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		LoadGameDLL();
 		
 		// On the PC touch them all so they get included in the resource build
-		if( !fileSystem->UsingResourceFiles() )
+		if (!fileSystem->UsingResourceFiles())
 		{
-			declManager->FindMaterial( "guis/assets/splash/legal_english" );
-			declManager->FindMaterial( "guis/assets/splash/legal_french" );
-			declManager->FindMaterial( "guis/assets/splash/legal_figs" );
+			declManager->FindMaterial("guis/assets/splash/legal_english");
+			declManager->FindMaterial("guis/assets/splash/legal_french");
+			declManager->FindMaterial("guis/assets/splash/legal_figs");
 			// register the japanese font so it gets included
-			renderSystem->RegisterFont( "DFPHeiseiGothicW7" );
+			renderSystem->RegisterFont("DFPHeiseiGothicW7");
 			// Make sure all videos get touched because you can bring videos from one map to another, they need to be included in all maps
-			for( int i = 0; i < declManager->GetNumDecls( DECL_VIDEO ); i++ )
+			for (int i = 0; i < declManager->GetNumDecls(DECL_VIDEO); i++)
 			{
-				declManager->DeclByIndex( DECL_VIDEO, i );
+				declManager->DeclByIndex(DECL_VIDEO, i);
 			}
 		}
-		
+
 		fileSystem->UnloadResourceContainer( "_ordered" );
 		
 		// the same idRenderWorld will be used for all games
@@ -1418,16 +1428,18 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		consoleHistory.LoadHistoryFile();
 		
 		AddStartupCommands();
-		
-		StartMenu( true );
-		
-		while( Sys_Milliseconds() - legalStartTime < legalMinTime )
+
+		guiMainMenu = uiManager->FindGui("guis/mainmenu.gui", true, false, true);
+		guiLoading = uiManager->FindGui("guis/map/loading.gui", true, false, true);
+		SetGui(guiMainMenu);
+
+		while( showSplash && (Sys_Milliseconds() - legalStartTime < legalMinTime) )
 		{
 			RenderSplash();
 			Sys_GenerateEvents();
 			Sys_Sleep( 10 );
 		};
-		
+
 		// print all warnings queued during initialization
 		PrintWarnings();
 		
@@ -1491,6 +1503,22 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 	}
 }
 
+void idCommonLocal::SetGui(idUserInterface* aGui)
+{
+	if (!aGui)
+	{
+		guiActive = aGui;
+		return;
+	}
+
+	guiActive = aGui;
+	sysEvent_t ev;
+	memset(&ev, 0, sizeof(ev));
+	ev.evType = SE_NONE;
+	guiActive->HandleEvent(&ev, Sys_Milliseconds());
+	guiActive->Activate(true, Sys_Milliseconds());
+}
+
 /*
 =================
 idCommonLocal::Shutdown
@@ -1525,6 +1553,9 @@ void idCommonLocal::Shutdown()
 	
 	printf( "Stop();\n" );
 	Stop();
+
+	gameThread.StopThread();
+	gameThread.RunGameAndDraw(0, userCmdMgr, IsClient(), gameFrame);
 	
 	printf( "CleanupShell();\n" );
 	CleanupShell();
@@ -1632,6 +1663,8 @@ void idCommonLocal::Shutdown()
 	warningCaption.Clear();
 	printf( "errorList.Clear();\n" );
 	errorList.Clear();
+
+	gameThread.WaitForThread();
 	
 	// shutdown idLib
 	printf( "idLib::ShutDown();\n" );
@@ -1652,12 +1685,18 @@ void idCommonLocal::CreateMainMenu()
 		renderSystem->BeginLevelLoad();
 		soundSystem->BeginLevelLoad();
 		uiManager->BeginLevelLoad();
+
+		guiActive = nullptr;
 		
 		// create main inside an "empty" game level load - so assets get
 		// purged automagically when we transition to a "real" map
+
+		// TODO(STEPHEN): Add old GUI stuff here.
+		/*
 		game->Shell_CreateMenu( false );
 		game->Shell_Show( true );
 		game->Shell_SyncWithSession();
+		*/
 		
 		// load
 		renderSystem->EndLevelLoad();
@@ -1767,20 +1806,17 @@ idCommonLocal::LeaveGame
 */
 void idCommonLocal::LeaveGame()
 {
-
 	const bool captureToImage = false;
+	
 	UpdateScreen( captureToImage );
 	
 	ResetNetworkingState();
-	
 	
 	Stop( false );
 	
 	CreateMainMenu();
 	
 	StartMenu();
-	
-	
 }
 
 /*
@@ -1801,9 +1837,8 @@ bool idCommonLocal::ProcessEvent( const sysEvent_t* event )
 			}
 			else
 			{
-				if( !game->Shell_IsActive() )
+				if( !guiActive )
 				{
-				
 					// menus / etc
 					if( MenuEvent( event ) )
 					{
@@ -2006,6 +2041,52 @@ void idCommonLocal::PerformGameSwitch()
 	}
 	
 	currentGame = idealCurrentGame;
+}
+
+void idCommonLocal::HandleMainMenuCommands(const char* menuCommand)
+{
+	// execute the command from the menu
+	int icmd;
+	idCmdArgs args;
+
+	args.TokenizeString(menuCommand, false);
+
+	for (icmd = 0; icmd < args.Argc(); ) {
+		const char* cmd = args.Argv(icmd++);
+
+		if (!idStr::Icmp(cmd, "startGame")) {
+			//cvarSystem->SetCVarInteger("g_skill", guiMainMenu->State().GetInt("skill"));
+			if (icmd < args.Argc()) {
+				StartNewGame(args.Argv(icmd++), false, GAME_MODE_SINGLEPLAYER);
+			}
+			else {
+				StartNewGame("level1", false, GAME_MODE_SINGLEPLAYER);
+			}
+
+			SetGui(nullptr);
+
+			// stop playing the game sounds
+			soundSystem->SetPlayingSoundWorld(menuSoundWorld);
+
+			continue;
+		}
+
+		if (!idStr::Icmp(cmd, "close"))
+		{
+			if (mapSpawned)
+			{
+				ExitMenu();
+			}
+
+			continue;
+		}
+
+		if (!idStr::Icmp(cmd, "quit")) {
+			ExitMenu();
+			common->Quit();
+			return;
+		}
+	}
 }
 
 #endif // #if defined(USE_DOOMCLASSIC)

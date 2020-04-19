@@ -50,6 +50,7 @@ idPlayerView::idPlayerView()
 	irGogglesMaterial = declManager->FindMaterial( "textures/decals/irblend" );
 	bloodSprayMaterial = declManager->FindMaterial( "textures/decals/bloodspray" );
 	bfgMaterial = declManager->FindMaterial( "textures/decals/bfgvision" );
+	fontMaterial = declManager->FindMaterial("_fontAtlas");
 	bfgVision = false;
 	dvFinishTime = 0;
 	kickFinishTime = 0;
@@ -70,6 +71,8 @@ idPlayerView::idPlayerView()
 	}
 	
 	ClearEffects();
+
+	testFont = renderSystem->RegisterFont2("fonts/TooMuchInk.ttf");
 }
 
 /*
@@ -79,6 +82,7 @@ idPlayerView::~idPlayerView
 */
 idPlayerView::~idPlayerView()
 {
+	// TODO(Stephen): Free testFont
 	delete fxManager;
 }
 /*
@@ -570,6 +574,14 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 			renderSystem->DrawStretchPic( 0.0f, 0.0f, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0.0f, 0.0f, 1.0f, 1.0f, mtr );
 		}
 	}
+
+	renderSystem->SetColor4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	renderSystem->DrawStretchPic(
+		renderSystem->GetVirtualWidth() / 4.0f, renderSystem->GetVirtualHeight() / 4.0f, renderSystem->GetVirtualWidth() / 2.0f, renderSystem->GetVirtualHeight() / 2.0f,
+		0.0f, 1.0f, 1.0f, 0.0f,
+		fontMaterial,
+		0.0f);
 }
 
 

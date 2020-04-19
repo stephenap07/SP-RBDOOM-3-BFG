@@ -31,6 +31,9 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __RENDERER_H__
 #define __RENDERER_H__
 
+
+#include "FontManager.h"
+
 /*
 ===============================================================================
 
@@ -280,6 +283,7 @@ public:
 	
 	// font support
 	virtual class idFont* 	RegisterFont( const char* fontName ) = 0;
+	virtual FontHandle      RegisterFont2(const char* aFontName) = 0;
 	virtual void			ResetFonts() = 0;
 	
 	virtual void			SetColor( const idVec4& rgba ) = 0;
@@ -293,12 +297,12 @@ public:
 	virtual void			SetGLState( const uint64 glState ) = 0;
 	
 	virtual void			DrawFilled( const idVec4& color, float x, float y, float w, float h ) = 0;
-	virtual void			DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, const idMaterial* material ) = 0;
-	void			DrawStretchPic( const idVec4& rect, const idVec4& st, const idMaterial* material )
+	virtual void			DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, const idMaterial* material, float z = 0.0f ) = 0;
+	void			DrawStretchPic( const idVec4& rect, const idVec4& st, const idMaterial* material, float z = 0.0f )
 	{
-		DrawStretchPic( rect.x, rect.y, rect.z, rect.w, st.x, st.y, st.z, st.w, material );
+		DrawStretchPic( rect.x, rect.y, rect.z, rect.w, st.x, st.y, st.z, st.w, material, z );
 	}
-	virtual void			DrawStretchPic( const idVec4& topLeft, const idVec4& topRight, const idVec4& bottomRight, const idVec4& bottomLeft, const idMaterial* material ) = 0;
+	virtual void			DrawStretchPic( const idVec4& topLeft, const idVec4& topRight, const idVec4& bottomRight, const idVec4& bottomLeft, const idMaterial* material, float z = 0.0f ) = 0;
 	virtual void			DrawStretchTri( const idVec2& p1, const idVec2& p2, const idVec2& p3, const idVec2& t1, const idVec2& t2, const idVec2& t3, const idMaterial* material ) = 0;
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE ) = 0;
 	

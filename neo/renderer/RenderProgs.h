@@ -314,17 +314,22 @@ public:
 	void	BindShader_TextureVertexColor_sRGB()
 	{
 		BindShader_Builtin( BUILTIN_TEXTURE_VERTEXCOLOR_SRGB );
-	};
+	}
+
+	void    BindShader_TextureCubeVertexColor_sRGB()
+	{
+		BindShader_Builtin( BUILTIN_CUBETEXTURE_VERTEXCOLOR_SRGB );
+	}
 	
 	void	BindShader_TextureVertexColorSkinned()
 	{
 		BindShader_Builtin( BUILTIN_TEXTURE_VERTEXCOLOR_SKINNED );
-	};
+	}
 	
 	void	BindShader_TextureTexGenVertexColor()
 	{
 		BindShader_Builtin( BUILTIN_TEXTURE_TEXGEN_VERTEXCOLOR );
-	};
+	}
 	
 	void	BindShader_Interaction()
 	{
@@ -653,6 +658,7 @@ private:
 		BUILTIN_TEXTURED,
 		BUILTIN_TEXTURE_VERTEXCOLOR,
 		BUILTIN_TEXTURE_VERTEXCOLOR_SRGB,
+		BUILTIN_CUBETEXTURE_VERTEXCOLOR_SRGB, // SP: Added for font atlas
 		BUILTIN_TEXTURE_VERTEXCOLOR_SKINNED,
 		BUILTIN_TEXTURE_TEXGEN_VERTEXCOLOR,
 		BUILTIN_INTERACTION,
