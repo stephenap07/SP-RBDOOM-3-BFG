@@ -2043,6 +2043,9 @@ void idCommonLocal::PerformGameSwitch()
 	currentGame = idealCurrentGame;
 }
 
+#endif // #if defined(USE_DOOMCLASSIC)
+// RB end
+
 void idCommonLocal::HandleMainMenuCommands(const char* menuCommand)
 {
 	// execute the command from the menu
@@ -2088,9 +2091,6 @@ void idCommonLocal::HandleMainMenuCommands(const char* menuCommand)
 		}
 	}
 }
-
-#endif // #if defined(USE_DOOMCLASSIC)
-// RB end
 
 /*
 ==================

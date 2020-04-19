@@ -475,7 +475,7 @@ struct viewDef_t
 	int					numDrawSurfs;			// it is allocated in frame temporary memory
 	int					maxDrawSurfs;			// may be resized
 	
-	viewLight_t*			viewLights;			// chain of all viewLights effecting view
+	viewLight_t*		viewLights;			// chain of all viewLights effecting view
 	viewEntity_t* 		viewEntitys;			// chain of all viewEntities effecting view, including off screen ones casting shadows
 	// we use viewEntities as a check to see if a given view consists solely
 	// of 2D rendering, which we can optimize in certain ways.  A 2D view will

@@ -1,0 +1,21 @@
+model monster_mannequin
+{
+    mesh models/md5/characters/mannequin/mannequin.md5mesh
+    anim push_ups models/md5/characters/mannequin/push_ups.md5anim
+    anim idle models/md5/characters/mannequin/push_ups.md5anim
+
+    channel torso ( "DEF-SPINE" "DEF-NECK" "DEF-HEAD" "DEF-CHEST" "DEF-SHOULDER.L" "DEF-SHOULDER.R" "DEF-ARM.L" "DEF-ARM.R" "DEF-FORARM.L" "DEF-FORARM.R" "DEF-HAND.R" "DEF-HAND.L" "DEF-PALM-A.L" "DEF-PALM-A.R" "DEF-PALM-B.L" "DEF-PALM-B.R" "DEF-PALM-C.L" "DEF-PALM-C.R" "DEF-PALM-D.L" "DEF-PALM-D.R" "DEF-FINGER-B-01.R" "DEF-FINGER-B-02.R" "DEF-FINGER-B-03.R" "DEF-FINGER-B-01.R" "DEF-FINGER-B-02.R" "DEF-FINGER-B-03.R" "DEF-FINGER-B-01.R" "DEF-FINGER-B-02.R" "DEF-FINGER-B-03.R" "DEF-FINGER-B-01.R" "DEF-FINGER-B-02.R" "DEF-FINGER-B-03.R")
+
+
+    channel legs  ( "DEF-HIPS" "DEF-FOOT.L" "DEF-FOOT.R" "DEF-LEG.L" "DEF-LEG.R" "DEF-SHIN.L" "DEF-SHIN.R" "DEF-TOE.L" "DEF-TOE.R")    
+}
+
+entityDef item_mannequin
+{
+    "inherit"       "monster_default"
+    "scriptobject"  "monster_mannequin" 
+    "model"         "monster_mannequin"
+    "health"        "30"
+    "anim"          "push_ups"
+    "gravity"       "1"
+}

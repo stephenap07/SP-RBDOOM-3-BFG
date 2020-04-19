@@ -252,6 +252,7 @@ void M_ClearMenus (void);
 //
 void M_ReadSaveStrings(void)
 {
+#ifdef USE_DOOMCLASSIC
 	idFile*         handle;
 	int             count;
 	int             i;
@@ -259,6 +260,7 @@ void M_ReadSaveStrings(void)
 
 	for (i = 0;i < load_end;i++)
 	{
+
 		if( common->GetCurrentGame() == DOOM_CLASSIC ) {
 			sprintf(name,"DOOM\\%s%d.dsg",  SAVEGAMENAME,i );
 		} else {
@@ -282,6 +284,7 @@ void M_ReadSaveStrings(void)
 		strcpy( ::g->savegamepaths[i], name );
 		::g->LoadMenu[i].status = 1;
 	}
+#endif
 }
 
 
@@ -922,7 +925,9 @@ void M_CancelExit(int choice) {
 
 void M_GameSelection(int choice)
 {
+#ifdef USE_DOOMCLASSIC
 	common->SwitchToGame( DOOM3_BFG );
+#endif
 }
 
 void M_ChangeSensitivity(int choice)

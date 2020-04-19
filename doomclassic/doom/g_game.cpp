@@ -1498,6 +1498,7 @@ qboolean G_DoSaveGame (void)
 
 	description = ::g->savedescription; 
 
+#ifdef USE_DOOMCLASSIC
 	if( common->GetCurrentGame() == DOOM_CLASSIC ) {
 		sprintf(name,"DOOM\\%s%d.dsg", SAVEGAMENAME,::g->savegameslot );
 	} else {
@@ -1508,6 +1509,7 @@ qboolean G_DoSaveGame (void)
 		}
 
 	}
+#endif
 
 	::g->save_p = ::g->savebuffer = ::g->screens[1];
 

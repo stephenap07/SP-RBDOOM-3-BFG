@@ -1,0 +1,53 @@
+entityDef worldspawn
+{
+  "editor_color" "0 .5 .8"
+  "editor_mins"  "?"
+  "editor_maxs"  "?"
+  "no_stamina"   "1"
+  "spawnclass"   "idWorldspawn"
+}
+
+entityDef light
+{
+    "editor_color"              "0 1 0"
+    "editor_mins"               "-8 -8 -8"
+    "editor_maxs"               "8 8 8"
+    "editor_rotateable"         "1"
+
+    "editor_usage"              "Light source. If health is set, becomes breakable"
+
+    "editor_material texture"   "light shader to use"
+    "editor_color color"        "light color"
+    "editor_model model"        "model to use"
+    "editor_var shaderParm3"    "shaderParm 3"
+    "editor_var shaderParm4"    "shaderParm 4"
+    "editor_var shaderParm5"    "shaderParm 5"
+    "editor_var shaderParm6"    "shaderParm 6"
+    "editor_var shaderParm7"    "shaderParm 7"
+    "editor_var count"          "how many times light must be triggered to toggle."
+
+    "spawnclass"                "idLight"
+    "health"                    "0"
+    "level"                     "1"
+    "start_off"                 "0"
+    "count"                     "1"
+    "break"                     "0"
+}
+
+entityDef info_player_start
+{
+  "editor_color"     "1 0 0"
+  "editor_mins"      "-16 -16 0"
+  "editor_maxs"      "16 16 64"
+  "editor_showangle" "1"
+  "spawnclass"       "idPlayerStart"
+}
+
+entityDef info_player_deathmatch
+{ 
+  "editor_color"     "1 0 0"
+  "editor_mins"      "-16 -16 0"
+  "editor_maxs"      "16 16 64"
+  "editor_showangle" "1"
+  "spawnclass"       "idPlayerStart"
+}

@@ -579,7 +579,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 
 	renderSystem->DrawStretchPic(
 		renderSystem->GetVirtualWidth() / 4.0f, renderSystem->GetVirtualHeight() / 4.0f, renderSystem->GetVirtualWidth() / 2.0f, renderSystem->GetVirtualHeight() / 2.0f,
-		0.0f, 1.0f, 1.0f, 0.0f,
+		-1.0f, 1.0f, 1.0f, -1.0f,
 		fontMaterial,
 		0.0f);
 }

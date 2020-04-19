@@ -1252,7 +1252,7 @@ set(RBDOOM3_SOURCES
 			${IMGUI_EDITOR_LIGHT_SOURCES}
 			)
 
-add_definitions(-DUSE_DOOMCLASSIC)
+#add_definitions(-DUSE_DOOMCLASSIC)
 
 add_definitions(-D__DOOM__
 				#-DBUILD_FREETYPE

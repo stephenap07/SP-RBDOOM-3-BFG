@@ -257,9 +257,10 @@ void localCalculateAchievements(bool epComplete)
 
 			player_t  *player = &::g->players[::g->consoleplayer];
 
+#ifdef USE_DOOMCLASSIC
 			// Calculate Any Achievements earned from stat cumulation.
 			idAchievementManager::CheckDoomClassicsAchievements( player->killcount, player->itemcount, player->secretcount, ::g->gameskill, ::g->gamemission, ::g->gamemap, ::g->gameepisode, ::g->totalkills, ::g->totalitems, ::g->totalsecret );
-
+#endif
 
 	}
 }

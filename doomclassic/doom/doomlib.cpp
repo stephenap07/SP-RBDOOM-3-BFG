@@ -186,11 +186,13 @@ namespace DoomLib
 	*/
 	gameSKU_t GetGameSKU() {
 	
+#ifdef USE_DOOMCLASSIC
 		if ( common->GetCurrentGame() == DOOM_CLASSIC ) {
 			return GAME_SKU_DOOM1_BFG;
 		} else if ( common->GetCurrentGame() == DOOM2_CLASSIC ) {
 			return GAME_SKU_DOOM2_BFG;
 		}
+#endif
 
 		assert( false && "Invalid basepath" );
 		return GAME_SKU_DCC;
