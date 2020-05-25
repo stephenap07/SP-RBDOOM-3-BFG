@@ -1698,6 +1698,79 @@ void idRenderBackend::DBG_ShowLights()
 }
 
 // RB begin
+/*
+==============
+RB_ShowViewEnvprobes
+
+Visualize all environemnt probes used in the current scene
+==============
+*/
+void idRenderBackend::DBG_ShowViewEnvprobes()
+{
+	if( !r_showViewEnvprobes.GetInteger() )
+	{
+		return;
+	}
+
+	GL_State( GLS_DEFAULT | GLS_CULL_TWOSIDED );
+
+	renderProgManager.BindShader_Environment();
+
+	int count = 0;
+	for( viewEnvprobe_t* vProbe = viewDef->viewEnvprobes; vProbe != NULL; vProbe = vProbe->next )
+	{
+		count++;
+
+		GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_DEPTHMASK );
+		GL_Color( 1.0f, 1.0f, 1.0f );
+
+		float modelMatrix[16];
+
+		idMat3 axis;
+		axis.Identity();
+
+		R_AxisToModelMatrix( axis, vProbe->globalOrigin, modelMatrix );
+
+		idRenderMatrix modelRenderMatrix;
+		idRenderMatrix::CreateFromOriginAxis( vProbe->globalOrigin, axis, modelRenderMatrix );
+
+		// calculate the matrix that transforms the unit cube to exactly cover the model in world space
+		const float size = 16.0f;
+		idBounds debugBounds( idVec3( -size ), idVec3( size ) );
+
+		idRenderMatrix inverseBaseModelProject;
+		idRenderMatrix::OffsetScaleForBounds( modelRenderMatrix, debugBounds, inverseBaseModelProject );
+
+		idRenderMatrix invProjectMVPMatrix;
+		idRenderMatrix::Multiply( viewDef->worldSpace.mvp, inverseBaseModelProject, invProjectMVPMatrix );
+		RB_SetMVP( invProjectMVPMatrix );
+
+		idVec4 localViewOrigin( 1.0f );
+		idVec4 globalViewOrigin;
+		globalViewOrigin.x = viewDef->renderView.vieworg.x;
+		globalViewOrigin.y = viewDef->renderView.vieworg.y;
+		globalViewOrigin.z = viewDef->renderView.vieworg.z;
+		globalViewOrigin.w = 1.0f;
+
+		//inverseBaseModelProject.TransformPoint( globalViewOrigin, localViewOrigin );
+		R_GlobalPointToLocal( modelMatrix, viewDef->renderView.vieworg, localViewOrigin.ToVec3() );
+
+		renderProgManager.SetUniformValue( RENDERPARM_LOCALVIEWORIGIN, localViewOrigin.ToFloatPtr() ); // rpLocalViewOrigin
+
+		GL_SelectTexture( 0 );
+		if( r_showViewEnvprobes.GetInteger() >= 2 )
+		{
+			vProbe->irradianceImage->Bind();
+		}
+		else
+		{
+			vProbe->radianceImage->Bind();
+		}
+
+		DrawElementsWithCounters( &zeroOneSphereSurface );
+	}
+}
+
 void idRenderBackend::DBG_ShowShadowMapLODs()
 {
 	if( !r_showShadowMapLODs.GetInteger() )
@@ -2697,7 +2770,7 @@ void idRenderBackend::DBG_TestImage()
 	}
 
 	// Set State
-	GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO );
+	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
 	// Set Parms
 	float texS[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
@@ -2708,6 +2781,7 @@ void idRenderBackend::DBG_TestImage()
 	float texGenEnabled[4] = { 0, 0, 0, 0 };
 	renderProgManager.SetRenderParm( RENDERPARM_TEXGEN_0_ENABLED, texGenEnabled );
 
+#if 1
 	// not really necessary but just for clarity
 	const float screenWidth = 1.0f;
 	const float screenHeight = 1.0f;
@@ -2716,7 +2790,7 @@ void idRenderBackend::DBG_TestImage()
 
 	float scale[16] = { 0 };
 	scale[0] = w; // scale
-	scale[5] = h; // scale
+	scale[5] = -h; // scale
 	scale[12] = halfScreenWidth - ( halfScreenWidth * w ); // translate
 	scale[13] = halfScreenHeight - ( halfScreenHeight * h ); // translate
 	scale[10] = 1.0f;
@@ -2737,11 +2811,10 @@ void idRenderBackend::DBG_TestImage()
 	float projMatrixTranspose[16];
 	R_MatrixTranspose( finalOrtho, projMatrixTranspose );
 	renderProgManager.SetRenderParms( RENDERPARM_MVPMATRIX_X, projMatrixTranspose, 4 );
-
-//	glMatrixMode( GL_PROJECTION );
-//	glLoadMatrixf( finalOrtho );
-//	glMatrixMode( GL_MODELVIEW );
-//	glLoadIdentity();
+#else
+	// draw texture over entire screen
+	RB_SetMVP( renderMatrix_identity );
+#endif
 
 	// Set Color
 	GL_Color( 1, 1, 1, 1 );
@@ -2767,6 +2840,7 @@ void idRenderBackend::DBG_TestImage()
 
 	// Draw!
 	DrawElementsWithCounters( &testImageSurface );
+	//DrawElementsWithCounters( &unitSquareSurface );
 }
 
 // RB begin
@@ -3067,6 +3141,7 @@ void idRenderBackend::DBG_RenderDebugTools( drawSurf_t** drawSurfs, int numDrawS
 	DBG_ShowViewEntitys( viewDef->viewEntitys );
 	DBG_ShowLights();
 	// RB begin
+	DBG_ShowViewEnvprobes();
 	DBG_ShowShadowMapLODs();
 	DBG_ShowShadowMaps();
 	// RB end

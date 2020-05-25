@@ -766,6 +766,7 @@ remove them if not needed.
 #include <cassert> // for assert
 #include <algorithm> // for min, max
 #include <mutex> // for std::mutex
+#include <string.h>
 
 #if !defined(_WIN32)
 	#include <malloc.h> // for aligned_alloc()
@@ -1321,7 +1322,7 @@ public:
 	{
 		if( &rhs != this )
 		{
-			Resize( rhs.m_Count );
+			resize( rhs.m_Count );
 			if( m_Count != 0 )
 			{
 				memcpy( m_pArray, rhs.m_pArray, m_Count * sizeof( T ) );
@@ -1955,6 +1956,7 @@ template<typename T, typename AllocatorT>
 class VmaList
 {
 public:
+	class const_iterator;
 	class iterator
 	{
 	public:
@@ -2030,7 +2032,7 @@ public:
 		}
 
 		friend class VmaList<T, AllocatorT>;
-		friend class VmaList<T, AllocatorT>:: const_iterator;
+		friend class VmaList<T, AllocatorT>::const_iterator;
 	};
 
 	class const_iterator

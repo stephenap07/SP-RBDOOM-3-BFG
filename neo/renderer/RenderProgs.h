@@ -255,7 +255,7 @@ public:
 	void	SetRenderParm( renderParm_t rp, const float* value );
 	void	SetRenderParms( renderParm_t rp, const float* values, int numValues );
 
-	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin );
+	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 
 	void	BindProgram( int progIndex );
 
@@ -288,6 +288,26 @@ public:
 	void	BindShader_AmbientLightingSkinned()
 	{
 		BindShader_Builtin( BUILTIN_AMBIENT_LIGHTING_SKINNED );
+	}
+
+	void	BindShader_ImageBasedLighting()
+	{
+		BindShader_Builtin( BUILTIN_AMBIENT_LIGHTING_IBL );
+	}
+
+	void	BindShader_ImageBasedLightingSkinned()
+	{
+		BindShader_Builtin( BUILTIN_AMBIENT_LIGHTING_IBL_SKINNED );
+	}
+
+	void	BindShader_ImageBasedLighting_PBR()
+	{
+		BindShader_Builtin( BUILTIN_AMBIENT_LIGHTING_IBL_PBR );
+	}
+
+	void	BindShader_ImageBasedLightingSkinned_PBR()
+	{
+		BindShader_Builtin( BUILTIN_AMBIENT_LIGHTING_IBL_PBR_SKINNED );
 	}
 
 	void	BindShader_SmallGeometryBuffer()
@@ -375,6 +395,59 @@ public:
 	void	BindShader_Interaction_ShadowMapping_Parallel_Skinned()
 	{
 		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED );
+	}
+
+	// PBR variantes
+
+	void	BindShader_PBR_Interaction()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION );
+	}
+
+	void	BindShader_PBR_InteractionSkinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SKINNED );
+	}
+
+	void	BindShader_PBR_InteractionAmbient()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_AMBIENT );
+	}
+
+	void	BindShader_PBR_InteractionAmbientSkinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_AMBIENT_SKINNED );
+	}
+
+	// RB begin
+	void	BindShader_PBR_Interaction_ShadowMapping_Spot()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowMapping_Spot_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowMapping_Point()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowMapping_Point_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT_SKINNED );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowMapping_Parallel()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowMapping_Parallel_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED );
 	}
 	// RB end
 
@@ -636,7 +709,7 @@ private:
 	void		LoadShader( int index, rpStage_t stage );
 
 	idStr		StripDeadCode( const idStr& in, const char* name, const idStrList& compileMacros, bool builtin );
-	idStr		ConvertCG2GLSL( const idStr& in, const char* name, rpStage_t stage, idStr& layout, bool vkGLSL, bool hasGPUSkinning );
+	idStr		ConvertCG2GLSL( const idStr& in, const char* name, rpStage_t stage, idStr& outLayout, bool vkGLSL, bool hasGPUSkinning, vertexLayoutType_t vertexLayout );
 
 	enum
 	{
@@ -647,6 +720,10 @@ private:
 		BUILTIN_VERTEX_COLOR,
 		BUILTIN_AMBIENT_LIGHTING,
 		BUILTIN_AMBIENT_LIGHTING_SKINNED,
+		BUILTIN_AMBIENT_LIGHTING_IBL,
+		BUILTIN_AMBIENT_LIGHTING_IBL_SKINNED,
+		BUILTIN_AMBIENT_LIGHTING_IBL_PBR,
+		BUILTIN_AMBIENT_LIGHTING_IBL_PBR_SKINNED,
 		BUILTIN_SMALL_GEOMETRY_BUFFER,
 		BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED,
 		// RB end
@@ -666,6 +743,18 @@ private:
 		BUILTIN_INTERACTION_SHADOW_MAPPING_POINT_SKINNED,
 		BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL,
 		BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED,
+
+		BUILTIN_PBR_INTERACTION,
+		BUILTIN_PBR_INTERACTION_SKINNED,
+		BUILTIN_PBR_INTERACTION_AMBIENT,
+		BUILTIN_PBR_INTERACTION_AMBIENT_SKINNED,
+
+		BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT,
+		BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED,
+		BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT,
+		BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT_SKINNED,
+		BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL,
+		BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED,
 		// RB end
 		BUILTIN_ENVIRONMENT,
 		BUILTIN_ENVIRONMENT_SKINNED,
@@ -732,6 +821,7 @@ private:
 		BRIGHTPASS,
 		HDR_DEBUG,
 		USE_SRGB,
+		USE_PBR,
 
 		MAX_SHADER_MACRO_NAMES,
 	};
@@ -750,12 +840,14 @@ private:
 		shader_t() :
 			shaderFeatures( 0 ),
 			builtin( false ),
+			vertexLayout( LAYOUT_DRAW_VERT ),
 			module( VK_NULL_HANDLE ) {}
 		idStr				name;
 		idStr				nameOutSuffix;
 		uint32				shaderFeatures;		// RB: Cg compile macros
 		bool				builtin;			// RB: part of the core shaders built into the executable
 		rpStage_t			stage;
+		vertexLayoutType_t	vertexLayout;
 		VkShaderModule		module;
 		idList<rpBinding_t>	bindings;
 		idList<int>			parmIndices;
@@ -780,12 +872,10 @@ private:
 				stateBits( 0 ),
 				pipeline( VK_NULL_HANDLE )
 			{
-				memset( stencilOperations, 0xFF, sizeof( stencilOperations ) );
 			}
 
 			uint64		stateBits;
 			VkPipeline	pipeline;
-			uint64		stencilOperations[ 2 ];
 		};
 
 		VkPipeline GetPipeline( uint64 stateBits, VkShaderModule vertexShader, VkShaderModule fragmentShader );
@@ -814,11 +904,13 @@ private:
 			progId( INVALID_PROGID ),
 			shaderFeatures( 0 ),
 			builtin( false ),
+			vertexLayout( LAYOUT_DRAW_VERT ),
 			uniformArray( -1 ) {}
 		idStr			name;
 		idStr			nameOutSuffix;
 		uint32			shaderFeatures;		// RB: Cg compile macros
 		bool			builtin;			// RB: part of the core shaders built into the executable
+		vertexLayoutType_t	vertexLayout;
 		rpStage_t		stage;
 		uint			progId;
 		int				uniformArray;

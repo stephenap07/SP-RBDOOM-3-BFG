@@ -852,8 +852,11 @@ void Sys_GrabMouseCursor( bool grabIt )
 	{
 		flags = GRAB_SETSTATE;
 	}
-
+#if defined(__linux__) && defined(USE_VULKAN)
+	VKimp_GrabInput( flags );
+#else
 	GLimp_GrabInput( flags );
+#endif
 }
 
 /*

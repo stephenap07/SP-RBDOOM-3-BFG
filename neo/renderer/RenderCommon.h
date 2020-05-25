@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2012-2016 Robert Beckebans
+Copyright (C) 2012-2020 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -39,7 +39,9 @@ If you have questions concerning this license or the applicable additional terms
 #include "Font.h"
 #include "Framebuffer.h"
 
-
+// RB: define this to use the id Tech 4.5 UI interface for ImGui instead of OpenGL or Vulkan
+// this allows to have the com_showFPS stats in screenshots
+#define IMGUI_BFGUI 1
 
 // maximum texture units
 const int MAX_PROG_TEXTURE_PARMS	= 16;
@@ -70,6 +72,8 @@ enum demoCommand_t
 	DC_SET_PORTAL_STATE,
 	DC_UPDATE_SOUNDOCCLUSION,
 	DC_GUI_MODEL,
+	DC_UPDATE_ENVPROBEDEF,
+	DC_DELETE_ENVPROBEDEF,
 	DC_UPDATE_DECAL,
 	DC_DELETE_DECAL,
 	DC_UPDATE_OVERLAY,
@@ -94,6 +98,7 @@ SURFACES
 class idRenderWorldLocal;
 struct viewEntity_t;
 struct viewLight_t;
+struct viewEnvprobe_t;
 
 // drawSurf_t structures command the back end to render surfaces
 // a given srfTriangles_t may be used with multiple viewEntity_t,
@@ -129,9 +134,12 @@ struct areaReference_t
 	areaReference_t* 		areaNext;				// chain in the area
 	areaReference_t* 		areaPrev;
 	areaReference_t* 		ownerNext;				// chain on either the entityDef or lightDef
-	idRenderEntityLocal* 	entity;					// only one of entity / light will be non-NULL
-	idRenderLightLocal* 	light;					// only one of entity / light will be non-NULL
-	struct portalArea_s*		area;					// so owners can find all the areas they are in
+
+	idRenderEntityLocal* 	entity;					// only one of entity / light / envprobe will be non-NULL
+	idRenderLightLocal* 	light;					// only one of entity / light / envprobe will be non-NULL
+	RenderEnvprobeLocal*	envprobe;				// only one of entity / light / envprobe will be non-NULL
+
+	struct portalArea_s*		area;				// so owners can find all the areas they are in
 };
 
 
@@ -148,6 +156,19 @@ public:
 	virtual int				GetIndex() = 0;
 };
 
+// RB : RennderEnvprobe should become the new public interface replacing the qhandle_t to envprobe defs in the idRenderWorld interface
+class RenderEnvprobe
+{
+public:
+	virtual					~RenderEnvprobe() {}
+
+	virtual void			FreeRenderEnvprobe() = 0;
+	virtual void			UpdateRenderEnvprobe( const renderEnvironmentProbe_t* ep, bool forceUpdate = false ) = 0;
+	virtual void			GetRenderEnvprobe( renderEnvironmentProbe_t* ep ) = 0;
+	virtual void			ForceUpdate() = 0;
+	virtual int				GetIndex() = 0;
+};
+// RB end
 
 // idRenderEntity should become the new public interface replacing the qhandle_t to entity defs in the idRenderWorld interface
 class idRenderEntity
@@ -220,6 +241,53 @@ public:
 	struct doublePortal_s* 	foggedPortals;
 };
 
+
+// RB begin
+class RenderEnvprobeLocal : public RenderEnvprobe
+{
+public:
+	RenderEnvprobeLocal();
+
+	virtual void			FreeRenderEnvprobe() override;
+	virtual void			UpdateRenderEnvprobe( const renderEnvironmentProbe_t* ep, bool forceUpdate = false ) override;
+	virtual void			GetRenderEnvprobe( renderEnvironmentProbe_t* ep ) override;
+	virtual void			ForceUpdate() override;
+	virtual int				GetIndex() override;
+
+	renderEnvironmentProbe_t	parms;					// specification
+
+	bool						envprobeHasMoved;		// the light has changed its position since it was
+	// first added, so the prelight model is not valid
+	idRenderWorldLocal* 		world;
+	int							index;					// in world envprobeDefs
+
+	int							areaNum;				// if not -1, we may be able to cull all the envprobe's
+	// interactions if !viewDef->connectedAreas[areaNum]
+
+	int							lastModifiedFrameNum;	// to determine if it is constantly changing,
+	// and should go in the dynamic frame memory, or kept
+	// in the cached memory
+	bool						archived;				// for demo writing
+
+	// derived information
+	//idPlane						lightProject[4];		// old style light projection where Z and W are flipped and projected lights lightProject[3] is divided by ( zNear + zFar )
+	idRenderMatrix				baseLightProject;		// global xyz1 to projected light strq
+	idRenderMatrix				inverseBaseLightProject;// transforms the zero-to-one cube to exactly cover the light in world space
+
+	idBounds					globalProbeBounds;
+
+	areaReference_t* 			references;				// each area the light is present in will have a lightRef
+	//idInteraction* 			firstInteraction;		// doubly linked list
+	//idInteraction* 			lastInteraction;
+
+	idImage* 					irradianceImage;		// cubemap image used for diffuse IBL by backend
+	idImage* 					radianceImage;			// cubemap image used for specular IBL by backend
+
+	// temporary helpers
+	int							viewCount;				// if == tr.viewCount, the envprobe is on the viewDef->viewEnvprobes list
+	viewEnvprobe_t* 			viewEnvprobe;
+};
+// RB end
 
 class idRenderEntityLocal : public idRenderEntity
 {
@@ -387,6 +455,34 @@ struct viewEntity_t
 	dynamicShadowVolumeParms_t* 	dynamicShadowVolumes;
 };
 
+// RB: viewEnvprobes are allocated on the frame temporary stack memory
+// a viewEnvprobe contains everything that the back end needs out of an RenderEnvprobeLocal,
+// which the front end may be modifying simultaniously if running in SMP mode.
+
+// this structure will be especially helpful when we switch RBDOOM-3-BFG to forward cluster shading
+// because then we can evaluate all viewEnvprobes properly in each pixel shader along with all other lighting information
+struct viewEnvprobe_t
+{
+	viewEnvprobe_t* 		next;
+
+	// back end should NOT reference the lightDef, because it can change when running SMP
+	RenderEnvprobeLocal* 	envprobeDef;
+
+	// for scissor clipping, local inside renderView viewport
+	// scissorRect.Empty() is true if the viewEntity_t was never actually
+	// seen through any portals
+	idScreenRect			scissorRect;
+
+	// R_AddSingleEnvprobe() determined that the light isn't actually needed
+	bool					removeFromList;
+
+	idVec3					globalOrigin;				// global envprobe origin used by backend
+
+	idRenderMatrix			inverseBaseLightProject;	// the matrix for deforming the 'zeroOneCubeModel' to exactly cover the light volume in world space
+	idImage* 				irradianceImage;			// cubemap image used for diffuse IBL by backend
+	idImage* 				radianceImage;				// cubemap image used for specular IBL by backend
+};
+// RB end
 
 const int	MAX_CLIP_PLANES	= 1;				// we may expand this to six for some subview issues
 
@@ -475,7 +571,7 @@ struct viewDef_t
 	int					numDrawSurfs;			// it is allocated in frame temporary memory
 	int					maxDrawSurfs;			// may be resized
 
-	viewLight_t*			viewLights;			// chain of all viewLights effecting view
+	viewLight_t*		viewLights;				// chain of all viewLights effecting view
 	viewEntity_t* 		viewEntitys;			// chain of all viewEntities effecting view, including off screen ones casting shadows
 	// we use viewEntities as a check to see if a given view consists solely
 	// of 2D rendering, which we can optimize in certain ways.  A 2D view will
@@ -493,6 +589,15 @@ struct viewDef_t
 	// crossing a closed door.  This is used to avoid drawing interactions
 	// when the light is behind a closed door.
 	bool* 				connectedAreas;
+
+	// RB: collect environment probes like lights
+	viewEnvprobe_t*		viewEnvprobes;
+
+	// RB: nearest probe for now
+	idRenderMatrix		inverseBaseEnvProbeProject;	// the matrix for deforming the 'zeroOneCubeModel' to exactly cover the environent probe volume in world space
+	idImage* 			irradianceImage;			// cubemap image used for diffuse IBL by backend
+	idImage* 			radianceImage;				// cubemap image used for specular IBL by backend
+	// RB end
 };
 
 
@@ -500,6 +605,8 @@ struct viewDef_t
 // simple interaction shader
 struct drawInteraction_t
 {
+	const viewLight_t*	vLight;
+
 	const drawSurf_t* 	surf;
 
 	idImage* 			bumpImage;
@@ -509,8 +616,6 @@ struct drawInteraction_t
 	idVec4				diffuseColor;	// may have a light color baked into it
 	idVec4				specularColor;	// may have a light color baked into it
 	stageVertexColor_t	vertexColor;	// applies to both diffuse and specular
-
-	int					ambientLight;	// use tr.ambientNormalMap instead of normalization cube map
 
 	// these are loaded into the vertex program
 	idVec4				bumpMatrix[2];
@@ -643,34 +748,7 @@ const idMaterial* R_RemapShaderBySkin( const idMaterial* shader, const idDeclSki
 //====================================================
 
 
-/*
-** performanceCounters_t
-*/
-struct performanceCounters_t
-{
-	int		c_box_cull_in;
-	int		c_box_cull_out;
-	int		c_createInteractions;	// number of calls to idInteraction::CreateInteraction
-	int		c_createShadowVolumes;
-	int		c_generateMd5;
-	int		c_entityDefCallbacks;
-	int		c_alloc;			// counts for R_StaticAllc/R_StaticFree
-	int		c_free;
-	int		c_visibleViewEntities;
-	int		c_shadowViewEntities;
-	int		c_viewLights;
-	int		c_numViews;			// number of total views rendered
-	int		c_deformedSurfaces;	// idMD5Mesh::GenerateSurface
-	int		c_deformedVerts;	// idMD5Mesh::GenerateSurface
-	int		c_deformedIndexes;	// idMD5Mesh::GenerateSurface
-	int		c_tangentIndexes;	// R_DeriveTangents()
-	int		c_entityUpdates;
-	int		c_lightUpdates;
-	int		c_entityReferences;
-	int		c_lightReferences;
-	int		c_guiSurfs;
-	int		frontEndMicroSec;	// sum of time in all RE_RenderScene's in a frame
-};
+
 
 enum vertexLayoutType_t
 {
@@ -753,9 +831,9 @@ public:
 	virtual void			WriteDemoPics();
 	virtual void			WriteEndFrame();
 	virtual void			DrawDemoPics();
-	virtual const emptyCommand_t* 	SwapCommandBuffers( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec );
+	virtual const emptyCommand_t* 	SwapCommandBuffers( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc );
 
-	virtual void			SwapCommandBuffers_FinishRendering( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec );
+	virtual void			SwapCommandBuffers_FinishRendering( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc );
 	virtual const emptyCommand_t* 	SwapCommandBuffers_FinishCommandBuffers();
 
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
@@ -813,6 +891,7 @@ public:
 
 	const idMaterial* 		whiteMaterial;
 	const idMaterial* 		charSetMaterial;
+	const idMaterial*		imgGuiMaterial; // RB
 	const idMaterial* 		defaultPointLight;
 	const idMaterial* 		defaultProjectedLight;
 	const idMaterial* 		defaultMaterial;
@@ -843,6 +922,7 @@ public:
 
 	srfTriangles_t* 		unitSquareTriangles;
 	srfTriangles_t* 		zeroOneCubeTriangles;
+	srfTriangles_t* 		zeroOneSphereTriangles;
 	srfTriangles_t* 		testImageTriangles;
 
 	// these are allocated at buffer swap time, but
@@ -850,13 +930,12 @@ public:
 	// which are copied over from the frame that was just swapped.
 	drawSurf_t				unitSquareSurface_;
 	drawSurf_t				zeroOneCubeSurface_;
+	drawSurf_t				zeroOneSphereSurface_;
 	drawSurf_t				testImageSurface_;
 
 	idParallelJobList* 		frontEndJobList;
 
 	idRenderBackend			backend;
-
-	unsigned				timerQueryId;		// for GL_TIME_ELAPSED_EXT queries
 
 private:
 	bool					bInitialized;
@@ -1000,6 +1079,7 @@ extern idCVar r_testGammaBias;				// draw a grid pattern to test gamma levels
 
 extern idCVar r_singleLight;				// suppress all but one light
 extern idCVar r_singleEntity;				// suppress all but one entity
+extern idCVar r_singleEnvprobe;				// suppress all but one envprobe
 extern idCVar r_singleArea;					// only draw the portal area the view is actually in
 extern idCVar r_singleSurface;				// suppress all but one surface on each entity
 extern idCVar r_shadowPolygonOffset;		// bias value added to depth test for stencil shadow drawing
@@ -1064,6 +1144,10 @@ extern idCVar r_useSSAO;
 extern idCVar r_ssaoDebug;
 extern idCVar r_ssaoFiltering;
 extern idCVar r_useHierarchicalDepthBuffer;
+
+extern idCVar r_usePBR;
+extern idCVar r_pbrDebug;
+extern idCVar r_showViewEnvprobes;
 
 extern idCVar r_exposure;
 // RB end
@@ -1132,6 +1216,42 @@ struct glimpParms_t
 	int			multiSamples;
 };
 
+// Eric: If on Linux using Vulkan use the sdl_vkimp.cpp methods
+#if defined(__linux__) && defined(USE_VULKAN)
+#include <vector>
+
+#define CLAMP(x, lo, hi)    ((x) < (lo) ? (lo) : (x) > (hi) ? (hi) : (x))
+// Helper function for using SDL2 and Vulkan on Linux.
+std::vector<const char*> get_required_extensions( const std::vector<const char*>& instanceExtensions, bool enableValidationLayers );
+
+const std::vector<const char*> sdlInstanceExtensions = {};
+
+extern vulkanContext_t vkcontext;
+
+// DG: R_GetModeListForDisplay is called before GLimp_Init(), but SDL needs SDL_Init() first.
+// So add PreInit for platforms that need it, others can just stub it.
+void		VKimp_PreInit();
+
+// If the desired mode can't be set satisfactorily, false will be returned.
+// If succesful, sets glConfig.nativeScreenWidth, glConfig.nativeScreenHeight, and glConfig.pixelAspect
+// The renderer will then reset the glimpParms to "safe mode" of 640x480
+// fullscreen and try again.  If that also fails, the error will be fatal.
+bool		VKimp_Init( glimpParms_t parms );
+
+// will set up gl up with the new parms
+bool		VKimp_SetScreenParms( glimpParms_t parms );
+
+// Destroys the rendering context, closes the window, resets the resolution,
+// and resets the gamma ramps.
+void		VKimp_Shutdown();
+
+// Sets the hardware gamma ramps for gamma and brightness adjustment.
+// These are now taken as 16 bit values, so we can take full advantage
+// of dacs with >8 bits of precision
+void		VKimp_SetGamma( unsigned short red[256],
+							unsigned short green[256],
+							unsigned short blue[256] );
+#else
 // DG: R_GetModeListForDisplay is called before GLimp_Init(), but SDL needs SDL_Init() first.
 // So add PreInit for platforms that need it, others can just stub it.
 void		GLimp_PreInit();
@@ -1156,7 +1276,7 @@ void		GLimp_SetGamma( unsigned short red[256],
 							unsigned short green[256],
 							unsigned short blue[256] );
 
-
+#endif
 
 /*
 ============================================================
@@ -1181,6 +1301,10 @@ void R_DeriveLightData( idRenderLightLocal* light );
 void R_RenderLightFrustum( const renderLight_t& renderLight, idPlane lightFrustum[6] );
 
 srfTriangles_t* R_PolytopeSurface( int numPlanes, const idPlane* planes, idWinding** windings );
+
+void R_CreateEnvprobeRefs( RenderEnvprobeLocal* probe );
+void R_FreeEnvprobeDefDerivedData( RenderEnvprobeLocal* probe );
+
 // RB end
 void R_CreateLightRefs( idRenderLightLocal* light );
 void R_FreeLightDefDerivedData( idRenderLightLocal* light );

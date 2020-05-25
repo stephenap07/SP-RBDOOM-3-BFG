@@ -3,8 +3,8 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2018 Robert Beckebans
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2018-2020 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -31,6 +31,22 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 #include "precompiled.h"
 
+// VK_EXT_debug_marker
+PFN_vkDebugMarkerSetObjectTagEXT	qvkDebugMarkerSetObjectTagEXT = VK_NULL_HANDLE;
+PFN_vkDebugMarkerSetObjectNameEXT	qvkDebugMarkerSetObjectNameEXT = VK_NULL_HANDLE;
+PFN_vkCmdDebugMarkerBeginEXT		qvkCmdDebugMarkerBeginEXT = VK_NULL_HANDLE;
+PFN_vkCmdDebugMarkerEndEXT			qvkCmdDebugMarkerEndEXT = VK_NULL_HANDLE;
+PFN_vkCmdDebugMarkerInsertEXT		qvkCmdDebugMarkerInsertEXT = VK_NULL_HANDLE;
+
+// VK_EXT_debug_utils
+PFN_vkQueueBeginDebugUtilsLabelEXT	qvkQueueBeginDebugUtilsLabelEXT = VK_NULL_HANDLE;
+PFN_vkQueueEndDebugUtilsLabelEXT	qvkQueueEndDebugUtilsLabelEXT = VK_NULL_HANDLE;
+PFN_vkCmdBeginDebugUtilsLabelEXT	qvkCmdBeginDebugUtilsLabelEXT = VK_NULL_HANDLE;
+PFN_vkCmdEndDebugUtilsLabelEXT		qvkCmdEndDebugUtilsLabelEXT = VK_NULL_HANDLE;
+PFN_vkCmdInsertDebugUtilsLabelEXT	qvkCmdInsertDebugUtilsLabelEXT = VK_NULL_HANDLE;
+
+
+
 #include "../RenderCommon.h"
 #include "../RenderBackend.h"
 #include "Staging_VK.h"
@@ -45,27 +61,23 @@ idCVar r_syncEveryFrame( "r_syncEveryFrame", "1", CVAR_BOOL, "Don't let the GPU 
 
 // NEW VULKAN STUFF
 
-idCVar r_vkEnableValidationLayers( "r_vkEnableValidationLayers", "0", CVAR_BOOL, "" );
+idCVar r_vkEnableValidationLayers( "r_vkEnableValidationLayers", "0", CVAR_BOOL | CVAR_INIT, "" );
 
 vulkanContext_t vkcontext;
 
+#if defined(_WIN32)
 static const int g_numInstanceExtensions = 2;
 static const char* g_instanceExtensions[ g_numInstanceExtensions ] =
 {
 	VK_KHR_SURFACE_EXTENSION_NAME,
 	VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 };
+#endif
 
 static const int g_numDebugInstanceExtensions = 1;
 static const char* g_debugInstanceExtensions[ g_numDebugInstanceExtensions ] =
 {
 	VK_EXT_DEBUG_REPORT_EXTENSION_NAME
-};
-
-static const int g_numDeviceExtensions = 1;
-static const char* g_deviceExtensions[ g_numDeviceExtensions ] =
-{
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 static const int g_numValidationLayers = 1;
@@ -116,9 +128,6 @@ const char* VK_ErrorToString( VkResult result )
 	};
 }
 
-
-
-
 /*
 =========================================================================================================
 
@@ -127,6 +136,11 @@ DEBUGGING AND VALIDATION
 =========================================================================================================
 */
 
+/*
+=============
+DebugCallback
+=============
+*/
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback( VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
 		size_t location, int32_t msgCode, const char* layerPrefix, const char* msg,
 		void* userData )
@@ -228,6 +242,7 @@ static void ValidateValidationLayers()
 		}
 	}
 }
+
 /*
 =============
 CreateVulkanInstance
@@ -252,16 +267,12 @@ static void CreateVulkanInstance()
 	vkcontext.instanceExtensions.Clear();
 	vkcontext.deviceExtensions.Clear();
 	vkcontext.validationLayers.Clear();
-
+#if defined(_WIN32)
 	for( int i = 0; i < g_numInstanceExtensions; ++i )
 	{
 		vkcontext.instanceExtensions.Append( g_instanceExtensions[ i ] );
 	}
-
-	for( int i = 0; i < g_numDeviceExtensions; ++i )
-	{
-		vkcontext.deviceExtensions.Append( g_deviceExtensions[ i ] );
-	}
+#endif
 
 	if( enableLayers )
 	{
@@ -277,9 +288,15 @@ static void CreateVulkanInstance()
 
 		ValidateValidationLayers();
 	}
-
+#if defined(__linux__)
+	auto extensions = get_required_extensions( sdlInstanceExtensions, enableLayers );
+	createInfo.enabledExtensionCount = static_cast<uint32_t>( extensions.size() );
+	createInfo.ppEnabledExtensionNames = extensions.data();
+#else
 	createInfo.enabledExtensionCount = vkcontext.instanceExtensions.Num();
 	createInfo.ppEnabledExtensionNames = vkcontext.instanceExtensions.Ptr();
+#endif
+
 	createInfo.enabledLayerCount = vkcontext.validationLayers.Num();
 	createInfo.ppEnabledLayerNames = vkcontext.validationLayers.Ptr();
 
@@ -302,6 +319,8 @@ static void EnumeratePhysicalDevices()
 	ID_VK_CHECK( vkEnumeratePhysicalDevices( vkcontext.instance, &numDevices, NULL ) );
 	ID_VK_VALIDATE( numDevices > 0, "vkEnumeratePhysicalDevices returned zero devices." );
 
+	idLib::Printf( "found %u devices\n", numDevices );
+
 	idList< VkPhysicalDevice > devices;
 	devices.SetNum( numDevices );
 
@@ -312,11 +331,15 @@ static void EnumeratePhysicalDevices()
 
 	for( uint32 i = 0; i < numDevices; ++i )
 	{
+		idLib::Printf( "Iterating over gpu %u\n", i );
 		gpuInfo_t& gpu = vkcontext.gpus[ i ];
+		idLib::Printf( "have gpuInfo_t ref at %p\n", &vkcontext.gpus[i] );
 		gpu.device = devices[ i ];
+		idLib::Printf( "set gpu.device\n" );
 
 		// get Queue family properties
 		{
+			idLib::Printf( "Getting queue family props...\n" );
 			uint32 numQueues = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties( gpu.device, &numQueues, NULL );
 			ID_VK_VALIDATE( numQueues > 0, "vkGetPhysicalDeviceQueueFamilyProperties returned zero queues." );
@@ -328,6 +351,7 @@ static void EnumeratePhysicalDevices()
 
 		// grab available Vulkan extensions
 		{
+			idLib::Printf( "Getting available vulkan extensions...\n" );
 			uint32 numExtension;
 			ID_VK_CHECK( vkEnumerateDeviceExtensionProperties( gpu.device, NULL, &numExtension, NULL ) );
 			ID_VK_VALIDATE( numExtension > 0, "vkEnumerateDeviceExtensionProperties returned zero extensions." );
@@ -335,13 +359,12 @@ static void EnumeratePhysicalDevices()
 			gpu.extensionProps.SetNum( numExtension );
 			ID_VK_CHECK( vkEnumerateDeviceExtensionProperties( gpu.device, NULL, &numExtension, gpu.extensionProps.Ptr() ) );
 			ID_VK_VALIDATE( numExtension > 0, "vkEnumerateDeviceExtensionProperties returned zero extensions." );
-
 #if 0
 			for( uint32 j = 0; j < numExtension; j++ )
 			{
 				idLib::Printf( "Found Vulkan Extension '%s' on device %d\n", gpu.extensionProps[j].extensionName, i );
 			}
-#endif
+#endif // 0
 		}
 
 		// grab surface specific information
@@ -419,24 +442,32 @@ static void CreateSurface()
 	ID_VK_CHECK( vkCreateWaylandSurfaceKHR( info.inst, &createInfo, NULL, &info.surface ) );
 
 #else
+#if defined(__linux__)
+	if( !SDL_Vulkan_CreateSurface( vkcontext.sdlWindow, vkcontext.instance, &vkcontext.surface ) )
+	{
+		idLib::FatalError( "Error while creating Vulkan surface: %s", SDL_GetError() );
+	}
+#else
 	VkXcbSurfaceCreateInfoKHR createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
 	createInfo.pNext = NULL;
+	createInfo.flags = 0;
 	createInfo.connection = info.connection;
 	createInfo.window = info.window;
 
-	ID_VK_CHECK( vkCreateXcbSurfaceKHR( info.inst, &createInfo, NULL, &info.surface ) );
+	ID_VK_CHECK( vkCreateXcbSurfaceKHR( vkcontext.instance, &createInfo, NULL, &vkcontext.surface ) );
+#endif // __linux__
+
 #endif  // _WIN32
 
-
 }
-
 
 /*
 =============
 CheckPhysicalDeviceExtensionSupport
 =============
 */
+/*
 static bool CheckPhysicalDeviceExtensionSupport( gpuInfo_t& gpu, idList< const char* >& requiredExt )
 {
 	int required = requiredExt.Num();
@@ -456,6 +487,89 @@ static bool CheckPhysicalDeviceExtensionSupport( gpuInfo_t& gpu, idList< const c
 
 	return available == required;
 }
+*/
+
+/*
+=============
+PopulateDeviceExtensions
+=============
+*/
+static void PopulateDeviceExtensions( const idList< VkExtensionProperties >& extensionProps, idList< const char* >& extensions )
+{
+	extensions.Clear();
+	extensions.Append( VK_KHR_SWAPCHAIN_EXTENSION_NAME );
+
+	const int numExtensions = extensionProps.Num();
+	const bool enableLayers = r_vkEnableValidationLayers.GetBool();
+
+	for( int i = 0; i < numExtensions; ++i )
+	{
+		//idLib::Printf( "Checking Vulkan device extension [%s]\n", extensionProps[ i ].extensionName );
+
+		if( idStr::Icmp( extensionProps[ i ].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME ) == 0 && enableLayers )
+		{
+			extensions.AddUnique( VK_EXT_DEBUG_MARKER_EXTENSION_NAME );
+			continue;
+		}
+
+		if( idStr::Icmp( extensionProps[ i ].extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) == 0 && enableLayers )
+		{
+			extensions.AddUnique( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+			continue;
+		}
+	}
+}
+
+/*
+=============
+CheckDeviceExtensionSupport
+=============
+*/
+static bool CheckDeviceExtensionSupport( const idList< VkExtensionProperties >& extensionProps, const idList< const char* >& requiredExt )
+{
+	int required = requiredExt.Num();
+	int available = 0;
+
+	for( int i = 0; i < requiredExt.Num(); ++i )
+	{
+		for( int j = 0; j < extensionProps.Num(); ++j )
+		{
+			if( idStr::Icmp( requiredExt[ i ], extensionProps[ j ].extensionName ) == 0 )
+			{
+				available++;
+				break;
+			}
+		}
+	}
+
+	return available == required;
+}
+
+/*
+=============
+EnableDeviceExtensionFeatures
+=============
+*/
+static void EnableDeviceExtensionFeatures( const idList< const char* >& extensions )
+{
+	vkcontext.debugMarkerSupportAvailable = false;
+	vkcontext.debugUtilsSupportAvailable = false;
+
+	for( int i = 0; i < extensions.Num(); ++i )
+	{
+		if( idStr::Icmp( extensions[ i ], VK_EXT_DEBUG_MARKER_EXTENSION_NAME ) == 0 )
+		{
+			idLib::Printf( "Using Vulkan device extension [%s]\n", VK_EXT_DEBUG_MARKER_EXTENSION_NAME );
+			vkcontext.debugMarkerSupportAvailable = true;
+		}
+
+		if( idStr::Icmp( extensions[ i ], VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) == 0 )
+		{
+			idLib::Printf( "Using Vulkan device extension [%s]\n", VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+			vkcontext.debugUtilsSupportAvailable = true;
+		}
+	}
+}
 
 /*
 =============
@@ -470,10 +584,10 @@ static void SelectPhysicalDevice()
 	{
 		gpuInfo_t& gpu = vkcontext.gpus[ i ];
 
-		int graphicsIdx = -1;
-		int presentIdx = -1;
+		idList< const char* > extensions;
+		PopulateDeviceExtensions( gpu.extensionProps, extensions );
 
-		if( !CheckPhysicalDeviceExtensionSupport( gpu, vkcontext.deviceExtensions ) )
+		if( !CheckDeviceExtensionSupport( gpu.extensionProps, extensions ) )
 		{
 			continue;
 		}
@@ -487,6 +601,9 @@ static void SelectPhysicalDevice()
 		{
 			continue;
 		}
+
+		int graphicsIdx = -1;
+		int presentIdx = -1;
 
 		// Find graphics queue family
 		for( int j = 0; j < gpu.queueFamilyProps.Num(); ++j )
@@ -531,6 +648,9 @@ static void SelectPhysicalDevice()
 			vkcontext.presentFamilyIdx = presentIdx;
 			vkcontext.physicalDevice = gpu.device;
 			vkcontext.gpu = &gpu;
+			vkcontext.deviceExtensions = extensions;
+
+			EnableDeviceExtensionFeatures( vkcontext.deviceExtensions );
 
 			vkGetPhysicalDeviceFeatures( vkcontext.physicalDevice, &vkcontext.physicalDeviceFeatures );
 
@@ -540,22 +660,22 @@ static void SelectPhysicalDevice()
 			switch( gpu.props.vendorID )
 			{
 				case 0x8086:
-					idLib::Printf( "Vendor: Intel\n", i );
+					idLib::Printf( "Device[%i] : Vendor: Intel \n", i );
 					glConfig.vendor = VENDOR_INTEL;
 					break;
 
 				case 0x10DE:
-					idLib::Printf( "Vendor: NVIDIA\n", i );
+					idLib::Printf( "Device[%i] : Vendor: NVIDIA\n", i );
 					glConfig.vendor = VENDOR_NVIDIA;
 					break;
 
 				case 0x1002:
-					idLib::Printf( "Vendor: AMD\n", i );
+					idLib::Printf( "Device[%i] : Vendor: AMD\n", i );
 					glConfig.vendor = VENDOR_AMD;
 					break;
 
 				default:
-					idLib::Printf( "Vendor: Unknown (0x%x)\n", i, gpu.props.vendorID );
+					idLib::Printf( "Device[%i] : Vendor: Unknown (0x%x)\n", i, gpu.props.vendorID );
 			}
 
 			return;
@@ -598,7 +718,7 @@ static void CreateLogicalDeviceAndQueues()
 	deviceFeatures.depthBiasClamp = VK_TRUE;
 	deviceFeatures.depthBounds = VK_TRUE;
 	deviceFeatures.fillModeNonSolid = VK_TRUE;
-	//deviceFeatures.samplerAnisotropy = vkcontext.physicalDeviceFeatures.samplerAnisotropy; // RB
+	deviceFeatures.samplerAnisotropy = vkcontext.physicalDeviceFeatures.samplerAnisotropy; // RB
 
 	VkDeviceCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -622,6 +742,30 @@ static void CreateLogicalDeviceAndQueues()
 
 	vkGetDeviceQueue( vkcontext.device, vkcontext.graphicsFamilyIdx, 0, &vkcontext.graphicsQueue );
 	vkGetDeviceQueue( vkcontext.device, vkcontext.presentFamilyIdx, 0, &vkcontext.presentQueue );
+
+	if( vkcontext.debugMarkerSupportAvailable )
+	{
+		qvkDebugMarkerSetObjectTagEXT = ( PFN_vkDebugMarkerSetObjectTagEXT ) vkGetDeviceProcAddr( vkcontext.device, "vkDebugMarkerSetObjectTagEXT" );
+		qvkDebugMarkerSetObjectNameEXT = ( PFN_vkDebugMarkerSetObjectNameEXT ) vkGetDeviceProcAddr( vkcontext.device, "vkDebugMarkerSetObjectNameEXT" );
+
+		qvkCmdDebugMarkerBeginEXT = ( PFN_vkCmdDebugMarkerBeginEXT )vkGetDeviceProcAddr( vkcontext.device, "vkCmdDebugMarkerBeginEXT" );
+		qvkCmdDebugMarkerEndEXT = ( PFN_vkCmdDebugMarkerEndEXT )vkGetDeviceProcAddr( vkcontext.device, "vkCmdDebugMarkerEndEXT" );
+		qvkCmdDebugMarkerInsertEXT = ( PFN_vkCmdDebugMarkerInsertEXT ) vkGetDeviceProcAddr( vkcontext.device, "vkCmdDebugMarkerInsertEXT" );
+
+		// TODO
+
+		//VK_RegisterObjectForDebug( reinterpret_cast< uint64 >( vkcontext.graphicsQueue ), "graphics_queue", VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT );
+		//VK_RegisterObjectForDebug( reinterpret_cast< uint64 >( vkcontext.presentQueue ), "present_queue", VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT );
+	}
+
+	if( vkcontext.debugUtilsSupportAvailable )
+	{
+		qvkQueueBeginDebugUtilsLabelEXT = ( PFN_vkQueueBeginDebugUtilsLabelEXT )vkGetDeviceProcAddr( vkcontext.device, "vkQueueBeginDebugUtilsLabelEXT" );
+		qvkQueueEndDebugUtilsLabelEXT = ( PFN_vkQueueEndDebugUtilsLabelEXT )vkGetDeviceProcAddr( vkcontext.device, "vkQueueEndDebugUtilsLabelEXT" );
+		qvkCmdBeginDebugUtilsLabelEXT = ( PFN_vkCmdBeginDebugUtilsLabelEXT )vkGetDeviceProcAddr( vkcontext.device, "vkCmdBeginDebugUtilsLabelEXT" );
+		qvkCmdEndDebugUtilsLabelEXT = ( PFN_vkCmdEndDebugUtilsLabelEXT )vkGetDeviceProcAddr( vkcontext.device, "vkCmdEndDebugUtilsLabelEXT" );
+		qvkCmdInsertDebugUtilsLabelEXT = ( PFN_vkCmdInsertDebugUtilsLabelEXT )vkGetDeviceProcAddr( vkcontext.device, "vkCmdInsertDebugUtilsLabelEXT" );
+	}
 }
 
 /*
@@ -696,10 +840,20 @@ static VkExtent2D ChooseSurfaceExtent( VkSurfaceCapabilitiesKHR& caps )
 {
 	VkExtent2D extent;
 
+	int width = glConfig.nativeScreenWidth;
+	int height = glConfig.nativeScreenHeight;
+
+#if defined(__linux__)
+	SDL_Vulkan_GetDrawableSize( vkcontext.sdlWindow, &width, &height );
+
+	width = idMath::ClampInt( caps.minImageExtent.width, caps.maxImageExtent.width, width );
+	height = idMath::ClampInt( caps.minImageExtent.height, caps.maxImageExtent.height, height );
+#endif
+
 	if( caps.currentExtent.width == -1 )
 	{
-		extent.width = glConfig.nativeScreenWidth;
-		extent.height = glConfig.nativeScreenHeight;
+		extent.width = width;
+		extent.height = height;
 	}
 	else
 	{
@@ -793,6 +947,7 @@ DestroySwapChain
 */
 static void DestroySwapChain()
 {
+
 	for( uint32 i = 0; i < NUM_FRAME_DATA; ++i )
 	{
 		vkDestroyImageView( vkcontext.device, vkcontext.swapchainViews[ i ], NULL );
@@ -859,7 +1014,23 @@ static void CreateSemaphores()
 	}
 }
 
+/*
+===============
+idRenderBackend::CreateQueryPool
+===============
+*/
+static void CreateQueryPool()
+{
+	VkQueryPoolCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	createInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+	createInfo.queryCount = NUM_TIMESTAMP_QUERIES;
 
+	for( int i = 0; i < NUM_FRAME_DATA; ++i )
+	{
+		ID_VK_CHECK( vkCreateQueryPool( vkcontext.device, &createInfo, NULL, &vkcontext.queryPools[ i ] ) );
+	}
+}
 
 /*
 =============
@@ -952,11 +1123,21 @@ static void CreateRenderTargets()
 									VK_IMAGE_TILING_OPTIMAL,
 									VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT );
 	}
-
 	idImageOpts depthOptions;
 	depthOptions.format = FMT_DEPTH;
+
+	// Eric: See if this fixes resizing
+#if defined(__linux__)
+	gpuInfo_t& gpu = *vkcontext.gpu;
+	VkExtent2D extent = ChooseSurfaceExtent( gpu.surfaceCaps );
+
+	depthOptions.width = extent.width;
+	depthOptions.height = extent.height;
+#else
 	depthOptions.width = renderSystem->GetWidth();
 	depthOptions.height = renderSystem->GetHeight();
+#endif
+
 	depthOptions.numLevels = 1;
 	depthOptions.samples = static_cast< textureSamples_t >( vkcontext.sampleCount );
 
@@ -1190,7 +1371,6 @@ static void ClearContext()
 	vkcontext.frameCounter = 0;
 	vkcontext.frameParity = 0;
 	vkcontext.jointCacheHandle = 0;
-	memset( vkcontext.stencilOperations, 0, sizeof( vkcontext.stencilOperations ) );
 	vkcontext.instance = VK_NULL_HANDLE;
 	vkcontext.physicalDevice = VK_NULL_HANDLE;
 	vkcontext.device = VK_NULL_HANDLE;
@@ -1226,8 +1406,17 @@ static void ClearContext()
 	vkcontext.frameBuffers.Zero();
 	vkcontext.acquireSemaphores.Zero();
 	vkcontext.renderCompleteSemaphores.Zero();
+
 	vkcontext.currentImageParm = 0;
 	vkcontext.imageParms.Zero();
+
+	vkcontext.queryIndex.Zero();
+	for( int i = 0; i < NUM_FRAME_DATA; ++i )
+	{
+		vkcontext.queryAssignedIndex[ i ].Zero();
+		vkcontext.queryResults[ i ].Zero();
+	}
+	vkcontext.queryPools.Zero();
 }
 
 /*
@@ -1262,8 +1451,13 @@ void idRenderBackend::Init()
 		idLib::FatalError( "R_InitVulkan called while active" );
 	}
 
+
 	// DG: make sure SDL has setup video so getting supported modes in R_SetNewMode() works
+#if defined(__linux__) && defined(USE_VULKAN)
+	VKimp_PreInit();
+#else
 	GLimp_PreInit();
+#endif
 	// DG end
 
 	R_SetNewMode( true );
@@ -1277,32 +1471,43 @@ void idRenderBackend::Init()
 	glConfig.gpuSkinningAvailable = true;
 
 	// create the Vulkan instance and enable validation layers
+	idLib::Printf( "Creating Vulkan Instance...\n" );
 	CreateVulkanInstance();
 
 	// create the windowing interface
-#ifdef _WIN32
+//#ifdef _WIN32
 	CreateSurface();
-#endif
+//#endif
 
 	// Enumerate physical devices and get their properties
+	idLib::Printf( "Enumerating physical devices and their properties...\n" );
 	EnumeratePhysicalDevices();
 
 	// Find queue family/families supporting graphics and present.
+	idLib::Printf( "Selecting physical device...\n" );
 	SelectPhysicalDevice();
 
 	// Create logical device and queues
+	idLib::Printf( "Creating logical device and queues...\n" );
 	CreateLogicalDeviceAndQueues();
 
 	// Create semaphores for image acquisition and rendering completion
+	idLib::Printf( "Creating semaphores...\n" );
 	CreateSemaphores();
 
+	// Create Query Pool
+	idLib::Printf( "Creating query pool...\n" );
+	CreateQueryPool();
+
 	// Create Command Pool
+	idLib::Printf( "Creating command pool...\n" );
 	CreateCommandPool();
 
 	// Create Command Buffer
+	idLib::Printf( "Creating command buffer...\n" );
 	CreateCommandBuffer();
 
-	// setup the allocator
+	// Setup the allocator
 #if defined( USE_AMD_ALLOCATOR )
 	extern idCVar r_vkHostVisibleMemoryMB;
 	extern idCVar r_vkDeviceLocalMemoryMB;
@@ -1319,27 +1524,33 @@ void idRenderBackend::Init()
 #endif
 
 	// Start the Staging Manager
+	idLib::Printf( "Creating staging manager...\n" );
 	stagingManager.Init();
 
 	// Create Swap Chain
+	idLib::Printf( "Creating swapchain...\n" );
 	CreateSwapChain();
 
 	// Create Render Targets
+	idLib::Printf( "Creating render targets...\n" );
 	CreateRenderTargets();
 
 	// Create Render Pass
+	idLib::Printf( "Creating render pass...\n" );
 	CreateRenderPass();
 
 	// Create Pipeline Cache
+	idLib::Printf( "Creating pipeline cache...\n" );
 	CreatePipelineCache();
 
 	// Create Frame Buffers
+	idLib::Printf( "Creating frame buffers...\n" );
 	CreateFrameBuffers();
 
-	// init RenderProg Manager
+	// Init RenderProg Manager
 	renderProgManager.Init();
 
-	// init Vertex Cache
+	// Init Vertex Cache
 	vertexCache.Init( vkcontext.gpu->props.limits.minUniformBufferOffsetAlignment );
 }
 
@@ -1389,6 +1600,12 @@ void idRenderBackend::Shutdown()
 	// Destroy Command Pool
 	vkDestroyCommandPool( vkcontext.device, vkcontext.commandPool, NULL );
 
+	// Destroy Query Pools
+	for( int i = 0; i < NUM_FRAME_DATA; ++i )
+	{
+		vkDestroyQueryPool( vkcontext.device, vkcontext.queryPools[ i ], NULL );
+	}
+
 	// Destroy Semaphores
 	for( int i = 0; i < NUM_FRAME_DATA; ++i )
 	{
@@ -1402,7 +1619,7 @@ void idRenderBackend::Shutdown()
 		DestroyDebugReportCallback();
 	}
 
-	// dump all our memory
+	// Dump all our memory
 #if defined( USE_AMD_ALLOCATOR )
 	vmaDestroyAllocator( vmaAllocator );
 #else
@@ -1421,7 +1638,11 @@ void idRenderBackend::Shutdown()
 	ClearContext();
 
 	// destroy main window
+#if defined(__linux__) && defined(USE_VULKAN)
+	VKimp_Shutdown();
+#else
 	GLimp_Shutdown();
+#endif
 }
 
 
@@ -1431,6 +1652,76 @@ bool GL_CheckErrors_( const char* filename, int line )
 {
 	return false;
 }
+
+/*
+====================
+idRenderBackend::ResizeImages
+====================
+*/
+void idRenderBackend::ResizeImages()
+{
+	if( vkcontext.swapchainExtent.width == glConfig.nativeScreenWidth &&
+			vkcontext.swapchainExtent.height == glConfig.nativeScreenHeight &&
+			vkcontext.fullscreen == glConfig.isFullscreen )
+	{
+		return;
+	}
+
+	stagingManager.Flush();
+
+	vkDeviceWaitIdle( vkcontext.device );
+
+	idImage::EmptyGarbage();
+
+	// Destroy Frame Buffers
+	DestroyFrameBuffers();
+
+	// Destroy Render Targets
+	DestroyRenderTargets();
+
+	// Destroy Current Swap Chain
+	DestroySwapChain();
+
+	// Destroy Current Surface
+	vkDestroySurfaceKHR( vkcontext.instance, vkcontext.surface, NULL );
+
+#if !defined( USE_AMD_ALLOCATOR )
+	vulkanAllocator.EmptyGarbage();
+#endif
+
+	// Create New Surface
+	CreateSurface();
+
+	// Refresh Surface Capabilities
+	ID_VK_CHECK( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( vkcontext.physicalDevice, vkcontext.surface, &vkcontext.gpu->surfaceCaps ) );
+
+	// Recheck presentation support
+	VkBool32 supportsPresent = VK_FALSE;
+	ID_VK_CHECK( vkGetPhysicalDeviceSurfaceSupportKHR( vkcontext.physicalDevice, vkcontext.presentFamilyIdx, vkcontext.surface, &supportsPresent ) );
+	if( supportsPresent == VK_FALSE )
+	{
+		idLib::FatalError( "idRenderBackend::ResizeImages: New surface does not support present?" );
+	}
+
+	// Create New Swap Chain
+	CreateSwapChain();
+
+	// Create New Render Targets
+	CreateRenderTargets();
+
+	// Create New Frame Buffers
+	CreateFrameBuffers();
+}
+
+
+/*
+=========================================================================================================
+
+BACKEND COMMANDS
+
+=========================================================================================================
+*/
+
 
 /*
 =============
@@ -1568,68 +1859,6 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	pc.c_drawIndexes += surf->numIndexes;
 }
 
-
-/*
-====================
-idRenderBackend::ResizeImages
-====================
-*/
-void idRenderBackend::ResizeImages()
-{
-	if( vkcontext.swapchainExtent.width == glConfig.nativeScreenWidth &&
-			vkcontext.swapchainExtent.height == glConfig.nativeScreenHeight &&
-			vkcontext.fullscreen == glConfig.isFullscreen )
-	{
-		return;
-	}
-
-	stagingManager.Flush();
-
-	vkDeviceWaitIdle( vkcontext.device );
-
-	idImage::EmptyGarbage();
-
-	// Destroy Frame Buffers
-	DestroyFrameBuffers();
-
-	// Destroy Render Targets
-	DestroyRenderTargets();
-
-	// Destroy Current Swap Chain
-	DestroySwapChain();
-
-	// Destroy Current Surface
-	vkDestroySurfaceKHR( vkcontext.instance, vkcontext.surface, NULL );
-
-#if !defined( USE_AMD_ALLOCATOR )
-	vulkanAllocator.EmptyGarbage();
-#endif
-
-	// Create New Surface
-	CreateSurface();
-
-	// Refresh Surface Capabilities
-	ID_VK_CHECK( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( vkcontext.physicalDevice, vkcontext.surface, &vkcontext.gpu->surfaceCaps ) );
-
-	// Recheck presentation support
-	VkBool32 supportsPresent = VK_FALSE;
-	ID_VK_CHECK( vkGetPhysicalDeviceSurfaceSupportKHR( vkcontext.physicalDevice, vkcontext.presentFamilyIdx, vkcontext.surface, &supportsPresent ) );
-	if( supportsPresent == VK_FALSE )
-	{
-		idLib::FatalError( "idRenderBackend::ResizeImages: New surface does not support present?" );
-	}
-
-	// Create New Swap Chain
-	CreateSwapChain();
-
-	// Create New Render Targets
-	CreateRenderTargets();
-
-	// Create New Frame Buffers
-	CreateFrameBuffers();
-}
-
-
 /*
 =========================================================================================================
 
@@ -1654,7 +1883,7 @@ GL COMMANDS
                   |--------------------------|   |-------------------------|
                                     |                  ^
                                     |                  |
-                                   `´                  |
+                                   `\B4                  |
          |---------------------------------|    |---------------------------------|
          |                                 |    |                                 |
          |      Backbuffer Semaphore       |    |   Render Complete Semaphore     |
@@ -1662,7 +1891,7 @@ GL COMMANDS
          |:--------------------------------|    |---------------------------------|
                                     |                  ^
                                     |                  |
-                                    `´                 |
+                                    `\B4                 |
                                 |-------------------------|
 								|      vkQueueSubmit      |
                                 |-------------------------|
@@ -1675,7 +1904,25 @@ idRenderBackend::GL_StartFrame
 */
 void idRenderBackend::GL_StartFrame()
 {
-	ID_VK_CHECK( vkAcquireNextImageKHR( vkcontext.device, vkcontext.swapchain, UINT64_MAX, vkcontext.acquireSemaphores[ vkcontext.frameParity ], VK_NULL_HANDLE, &vkcontext.currentSwapIndex ) );
+	// Eric: Since VK_SUBOPTIMAL_KHR is not a hard fault and VK_ERROR_OUT_OF_DATE_KHR means the window is being resized (or other stuff) handle them instead of killing the app.
+	VkResult result = vkAcquireNextImageKHR( vkcontext.device, vkcontext.swapchain, UINT64_MAX, vkcontext.acquireSemaphores[ vkcontext.frameParity ], VK_NULL_HANDLE, &vkcontext.currentSwapIndex );
+	switch( result )
+	{
+		case VK_SUCCESS:
+		case VK_SUBOPTIMAL_KHR:
+			break;
+		case VK_ERROR_OUT_OF_DATE_KHR:
+			DestroySwapChain();
+			CreateSwapChain();
+			return;
+			// return on_window_size_changed();
+			break;
+		default:
+			idLib::FatalError( "VK: %s - %s", VK_ErrorToString( result ),
+							   "vkAcquireNextImageKHR( vkcontext.device, vkcontext.swapchain, UINT64_MAX, vkcontext.acquireSemaphores[ vkcontext.frameParity ], VK_NULL_HANDLE, &vkcontext.currentSwapIndex )" );
+			return;
+	}
+	// ID_VK_CHECK( vkAcquireNextImageKHR( vkcontext.device, vkcontext.swapchain, UINT64_MAX, vkcontext.acquireSemaphores[ vkcontext.frameParity ], VK_NULL_HANDLE, &vkcontext.currentSwapIndex ) );
 
 	idImage::EmptyGarbage();
 
@@ -1684,20 +1931,108 @@ void idRenderBackend::GL_StartFrame()
 #endif
 	stagingManager.Flush();
 
+	// reset descriptor pool
 	renderProgManager.StartFrame();
 
+	// fetch GPU timer queries of last frame
+	VkQueryPool queryPool = vkcontext.queryPools[ vkcontext.frameParity ];
+	idArray< uint64, NUM_TIMESTAMP_QUERIES >& results = vkcontext.queryResults[ vkcontext.frameParity ];
+	idArray< uint32, MRB_TOTAL_QUERIES >& assignedIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ];
 
+	if( assignedIndex[ MRB_GPU_TIME + 1 ] > 0 )
+	{
+		int lastValidQuery = assignedIndex[ MRB_GPU_TIME + 1 ];
+		int numQueries = lastValidQuery + 1;
+
+		if( numQueries <= NUM_TIMESTAMP_QUERIES )
+		{
+			vkGetQueryPoolResults( vkcontext.device, queryPool, MRB_GPU_TIME, numQueries,
+								   results.ByteSize(), results.Ptr(), sizeof( uint64 ), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT );
+
+			const uint64 gpuStart = results[ assignedIndex[ MRB_GPU_TIME * 2 + 0 ] ];
+			const uint64 gpuEnd = results[ assignedIndex[ MRB_GPU_TIME * 2 + 1 ]  ];
+			const uint64 tick = ( 1000 * 1000 * 1000 ) / vkcontext.gpu->props.limits.timestampPeriod;
+			pc.gpuMicroSec = ( ( gpuEnd - gpuStart ) * 1000 * 1000 ) / tick;
+
+			if( assignedIndex[ MRB_FILL_DEPTH_BUFFER * 2 + 1 ] > 0 )
+			{
+				const uint64 gpuStart = results[ assignedIndex[ MRB_FILL_DEPTH_BUFFER * 2 + 0 ] ];
+				const uint64 gpuEnd = results[ assignedIndex[ MRB_FILL_DEPTH_BUFFER * 2 + 1 ]  ];
+				const uint64 tick = ( 1000 * 1000 * 1000 ) / vkcontext.gpu->props.limits.timestampPeriod;
+				pc.gpuDepthMicroSec = ( ( gpuEnd - gpuStart ) * 1000 * 1000 ) / tick;
+			}
+
+			if( assignedIndex[ MRB_SSAO_PASS * 2 + 1 ] > 0 )
+			{
+				const uint64 gpuStart = results[ assignedIndex[ MRB_SSAO_PASS * 2 + 0 ] ];
+				const uint64 gpuEnd = results[ assignedIndex[ MRB_SSAO_PASS * 2 + 1 ]  ];
+				const uint64 tick = ( 1000 * 1000 * 1000 ) / vkcontext.gpu->props.limits.timestampPeriod;
+				pc.gpuScreenSpaceAmbientOcclusionMicroSec = ( ( gpuEnd - gpuStart ) * 1000 * 1000 ) / tick;
+			}
+
+			if( assignedIndex[ MRB_AMBIENT_PASS * 2 + 1 ] > 0 )
+			{
+				const uint64 gpuStart = results[ assignedIndex[ MRB_AMBIENT_PASS * 2 + 0 ] ];
+				const uint64 gpuEnd = results[ assignedIndex[ MRB_AMBIENT_PASS * 2 + 1 ]  ];
+				const uint64 tick = ( 1000 * 1000 * 1000 ) / vkcontext.gpu->props.limits.timestampPeriod;
+				pc.gpuAmbientPassMicroSec = ( ( gpuEnd - gpuStart ) * 1000 * 1000 ) / tick;
+			}
+
+			if( assignedIndex[ MRB_DRAW_INTERACTIONS * 2 + 1 ] > 0 )
+			{
+				const uint64 gpuStart = results[ assignedIndex[ MRB_DRAW_INTERACTIONS * 2 + 0 ] ];
+				const uint64 gpuEnd = results[ assignedIndex[ MRB_DRAW_INTERACTIONS * 2 + 1 ]  ];
+				const uint64 tick = ( 1000 * 1000 * 1000 ) / vkcontext.gpu->props.limits.timestampPeriod;
+				pc.gpuInteractionsMicroSec = ( ( gpuEnd - gpuStart ) * 1000 * 1000 ) / tick;
+			}
+
+			if( assignedIndex[ MRB_DRAW_SHADER_PASSES * 2 + 1 ] > 0 )
+			{
+				const uint64 gpuStart = results[ assignedIndex[ MRB_DRAW_SHADER_PASSES * 2 + 0 ] ];
+				const uint64 gpuEnd = results[ assignedIndex[ MRB_DRAW_SHADER_PASSES * 2 + 1 ]  ];
+				const uint64 tick = ( 1000 * 1000 * 1000 ) / vkcontext.gpu->props.limits.timestampPeriod;
+				pc.gpuShaderPassMicroSec = ( ( gpuEnd - gpuStart ) * 1000 * 1000 ) / tick;
+			}
+
+			if( assignedIndex[ MRB_POSTPROCESS * 2 + 1 ] > 0 )
+			{
+				const uint64 gpuStart = results[ assignedIndex[ MRB_POSTPROCESS * 2 + 0 ] ];
+				const uint64 gpuEnd = results[ assignedIndex[ MRB_POSTPROCESS * 2 + 1 ]  ];
+				const uint64 tick = ( 1000 * 1000 * 1000 ) / vkcontext.gpu->props.limits.timestampPeriod;
+				pc.gpuPostProcessingMicroSec = ( ( gpuEnd - gpuStart ) * 1000 * 1000 ) / tick;
+			}
+		}
+	}
+
+	// reset query indices for current frame
+	vkcontext.queryIndex[ vkcontext.frameParity ] = 0;
+
+	for( int i = 0; i < MRB_TOTAL_QUERIES; i++ )
+	{
+		vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ i ] = 0;
+	}
+
+	VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
+
+	// begin command buffer
 	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
 	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	ID_VK_CHECK( vkBeginCommandBuffer( vkcontext.commandBuffer[ vkcontext.frameParity ], &commandBufferBeginInfo ) );
+	ID_VK_CHECK( vkBeginCommandBuffer( commandBuffer, &commandBufferBeginInfo ) );
 
+	// reset timer queries
+	vkCmdResetQueryPool( commandBuffer, queryPool, 0, NUM_TIMESTAMP_QUERIES );
+
+	uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ MRB_GPU_TIME * 2 + 0 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
+	vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, queryIndex );
+
+	// begin initial render pass
 	VkRenderPassBeginInfo renderPassBeginInfo = {};
 	renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassBeginInfo.renderPass = vkcontext.renderPass;
 	renderPassBeginInfo.framebuffer = vkcontext.frameBuffers[ vkcontext.currentSwapIndex ];
 	renderPassBeginInfo.renderArea.extent = vkcontext.swapchainExtent;
 
-	vkCmdBeginRenderPass( vkcontext.commandBuffer[ vkcontext.frameParity ], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+	vkCmdBeginRenderPass( commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 }
 
 /*
@@ -1708,6 +2043,9 @@ idRenderBackend::GL_EndFrame
 void idRenderBackend::GL_EndFrame()
 {
 	VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
+
+	uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ MRB_GPU_TIME * 2 + 1 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
+	vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vkcontext.queryPools[ vkcontext.frameParity ], queryIndex );
 
 	vkCmdEndRenderPass( commandBuffer );
 
@@ -1796,7 +2134,27 @@ void idRenderBackend::GL_BlockingSwapBuffers()
 	presentInfo.pSwapchains = &vkcontext.swapchain;
 	presentInfo.pImageIndices = &vkcontext.currentSwapIndex;
 
-	ID_VK_CHECK( vkQueuePresentKHR( vkcontext.presentQueue, &presentInfo ) );
+	// Eric: // Eric: Since VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR here means
+	// the window is being resized (or other stuff) handle them instead of killing the app.
+	VkResult result = vkQueuePresentKHR( vkcontext.presentQueue, &presentInfo );
+	switch( result )
+	{
+		case VK_SUCCESS:
+			break;
+		case VK_ERROR_OUT_OF_DATE_KHR:
+		case VK_SUBOPTIMAL_KHR:
+			// return on_window_size_changed(); Eric: Handle resizing the window.
+			DestroySwapChain();
+			CreateSwapChain();
+			return;
+			break;
+		default:
+			idLib::FatalError( "VK: %s - %s", VK_ErrorToString( result ),
+							   "vkQueuePresentKHR( vkcontext.presentQueue, &presentInfo )" );
+			return;
+	}
+
+	// ID_VK_CHECK( vkQueuePresentKHR( vkcontext.presentQueue, &presentInfo ) );
 
 	// RB: at this time the image is presented on the screen
 
@@ -2072,6 +2430,10 @@ See if some cvars that we watch have changed
 void idRenderBackend::CheckCVars()
 {
 	// TODO
+	if( r_useShadowMapping.GetBool() )
+	{
+		r_useShadowMapping.SetBool( false );
+	}
 
 	/*
 	// gamma stuff
@@ -2215,19 +2577,6 @@ void idRenderBackend::DrawFlickerBox()
 	clearRect.rect.extent = extent;
 
 	vkCmdClearAttachments( vkcontext.commandBuffer[ vkcontext.frameParity ], 1, &attachment, 1, &clearRect );
-
-	/*
-	if( tr.frameCount & 1 )
-	{
-		glClearColor( 1, 0, 0, 1 );
-	}
-	else
-	{
-		glClearColor( 0, 1, 0, 1 );
-	}
-	glScissor( 0, 0, 256, 256 );
-	glClear( GL_COLOR_BUFFER_BIT );
-	*/
 }
 
 /*
@@ -2286,9 +2635,6 @@ void idRenderBackend::StereoRenderExecuteBackEndCommands( const emptyCommand_t* 
 	// RB: TODO ?
 }
 
-
-
-
 /*
 ==============================================================================================
 
@@ -2302,8 +2648,110 @@ STENCIL SHADOW RENDERING
 idRenderBackend::DrawStencilShadowPass
 =====================
 */
+extern idCVar r_useStencilShadowPreload;
+
 void idRenderBackend::DrawStencilShadowPass( const drawSurf_t* drawSurf, const bool renderZPass )
 {
+	if( renderZPass )
+	{
+		// Z-pass
+		uint64 stencil = GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_KEEP | GLS_STENCIL_OP_PASS_INCR
+						 | GLS_BACK_STENCIL_OP_FAIL_KEEP | GLS_BACK_STENCIL_OP_ZFAIL_KEEP | GLS_BACK_STENCIL_OP_PASS_DECR;
+
+		GL_State( ( glStateBits & ~GLS_STENCIL_OP_BITS ) | stencil );
+	}
+	else if( r_useStencilShadowPreload.GetBool() )
+	{
+		// preload + Z-pass
+		uint64 stencil = GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_DECR | GLS_STENCIL_OP_PASS_DECR
+						 | GLS_BACK_STENCIL_OP_FAIL_KEEP | GLS_BACK_STENCIL_OP_ZFAIL_INCR | GLS_BACK_STENCIL_OP_PASS_INCR;
+
+		GL_State( ( glStateBits & ~GLS_STENCIL_OP_BITS ) | stencil );
+	}
+	else
+	{
+		// Z-fail (Carmack's Reverse)
+		uint64 stencil = GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_DECR | GLS_STENCIL_OP_PASS_KEEP
+						 | GLS_BACK_STENCIL_OP_FAIL_KEEP | GLS_BACK_STENCIL_OP_ZFAIL_INCR | GLS_BACK_STENCIL_OP_PASS_KEEP;
+
+		GL_State( ( glStateBits & ~GLS_STENCIL_OP_BITS ) | stencil );
+	}
+
+	// get vertex buffer
+	const vertCacheHandle_t vbHandle = drawSurf->shadowCache;
+	idVertexBuffer* vertexBuffer;
+	if( vertexCache.CacheIsStatic( vbHandle ) )
+	{
+		vertexBuffer = &vertexCache.staticData.vertexBuffer;
+	}
+	else
+	{
+		const uint64 frameNum = ( int )( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
+		{
+			idLib::Warning( "DrawStencilShadowPass, vertexBuffer == NULL" );
+			return;
+		}
+		vertexBuffer = &vertexCache.frameData[ vertexCache.drawListNum ].vertexBuffer;
+	}
+	const int vertOffset = ( int )( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+
+	// get index buffer
+	const vertCacheHandle_t ibHandle = drawSurf->indexCache;
+	idIndexBuffer* indexBuffer;
+	if( vertexCache.CacheIsStatic( ibHandle ) )
+	{
+		indexBuffer = &vertexCache.staticData.indexBuffer;
+	}
+	else
+	{
+		const uint64 frameNum = ( int )( ibHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
+		{
+			idLib::Warning( "DrawStencilShadowPass, indexBuffer == NULL" );
+			return;
+		}
+		indexBuffer = &vertexCache.frameData[ vertexCache.drawListNum ].indexBuffer;
+	}
+	const uint64 indexOffset = ( int )( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+
+	RENDERLOG_PRINTF( "Binding Buffers(%d): %p:%i %p:%i\n", drawSurf->numIndexes, vertexBuffer, vertOffset, indexBuffer, indexOffset );
+
+	vkcontext.jointCacheHandle = drawSurf->jointCache;
+
+	VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
+
+	//PrintState( glStateBits, vkcontext.stencilOperations );
+	renderProgManager.CommitUniforms( glStateBits );
+
+	{
+		const VkBuffer buffer = indexBuffer->GetAPIObject();
+		const VkDeviceSize offset = indexBuffer->GetOffset();
+		vkCmdBindIndexBuffer( commandBuffer, buffer, offset, VK_INDEX_TYPE_UINT16 );
+	}
+	{
+		const VkBuffer buffer = vertexBuffer->GetAPIObject();
+		const VkDeviceSize offset = vertexBuffer->GetOffset();
+		vkCmdBindVertexBuffers( commandBuffer, 0, 1, &buffer, &offset );
+	}
+
+	const int baseVertex = vertOffset / ( drawSurf->jointCache ? sizeof( idShadowVertSkinned ) : sizeof( idShadowVert ) );
+
+	vkCmdDrawIndexed( commandBuffer, drawSurf->numIndexes, 1, ( indexOffset >> 1 ), baseVertex, 0 );
+
+	if( !renderZPass && r_useStencilShadowPreload.GetBool() )
+	{
+		// render again with Z-pass
+		uint64 stencil = GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_KEEP | GLS_STENCIL_OP_PASS_INCR
+						 | GLS_BACK_STENCIL_OP_FAIL_KEEP | GLS_BACK_STENCIL_OP_ZFAIL_KEEP | GLS_BACK_STENCIL_OP_PASS_DECR;
+
+		GL_State( ( glStateBits & ~GLS_STENCIL_OP_BITS ) | stencil );
+
+		//PrintState( glStateBits, vkcontext.stencilOperations );
+		renderProgManager.CommitUniforms( glStateBits );
+
+		vkCmdDrawIndexed( commandBuffer, drawSurf->numIndexes, 1, ( indexOffset >> 1 ), baseVertex, 0 );
+	}
 }
 
 
@@ -2355,4 +2803,27 @@ void Framebuffer::Check()
 void Framebuffer::CheckFramebuffers()
 {
 	// TODO
+}
+
+/*
+==============================================================================================
+
+IMGUI RENDERING
+
+==============================================================================================
+*/
+void idRenderBackend::ImGui_Init()
+{
+	// not needed
+}
+
+void idRenderBackend::ImGui_Shutdown()
+{
+	// not needed
+}
+
+// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
+void idRenderBackend::ImGui_RenderDrawLists( ImDrawData* draw_data )
+{
+	tr.guiModel->EmitImGui( draw_data );
 }

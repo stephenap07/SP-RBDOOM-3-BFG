@@ -314,7 +314,8 @@ const char* idRenderProgManager::GLSLMacroNames[MAX_SHADER_MACRO_NAMES] =
 	"LIGHT_PARALLEL",
 	"BRIGHTPASS",
 	"HDR_DEBUG",
-	"USE_SRGB"
+	"USE_SRGB",
+	"USE_PBR"
 };
 // RB end
 
@@ -508,6 +509,11 @@ idStr idRenderProgManager::StripDeadCode( const idStr& in, const char* name, con
 	if( r_useHDR.GetBool() )
 	{
 		src.AddDefine( "USE_LINEAR_RGB" );
+	}
+
+	if( r_pbrDebug.GetBool() )
+	{
+		src.AddDefine( "DEBUG_PBR" );
 	}
 
 	// SMAA configuration
@@ -910,7 +916,7 @@ struct inOutVariable_t
 ParseInOutStruct
 ========================
 */
-void ParseInOutStruct( idLexer& src, int attribType, int attribIgnoreType, idList< inOutVariable_t >& inOutVars )
+void ParseInOutStruct( idLexer& src, int attribType, int attribIgnoreType, idList< inOutVariable_t >& inOutVars, bool in_Position4 )
 {
 	src.ExpectTokenString( "{" );
 
@@ -996,7 +1002,7 @@ void ParseInOutStruct( idLexer& src, int attribType, int attribIgnoreType, idLis
 		if( glConfig.driverType == GLDRV_VULKAN )
 		{
 			// RB: HACK change vec4 in_Position to vec3
-			if( var.nameGLSL == "in_Position" && var.type == "vec4" )
+			if( !in_Position4 && var.nameGLSL == "in_Position" && var.type == "vec4" )
 			{
 				var.type = "vec3";
 			}
@@ -1013,7 +1019,7 @@ void ParseInOutStruct( idLexer& src, int attribType, int attribIgnoreType, idLis
 ConvertCG2GLSL
 ========================
 */
-idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rpStage_t stage, idStr& layout, bool vkGLSL, bool hasGPUSkinning )
+idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rpStage_t stage, idStr& outLayout, bool vkGLSL, bool hasGPUSkinning, vertexLayoutType_t vertexLayout )
 {
 	idStr program;
 	program.ReAllocate( in.Length() * 2, false );
@@ -1025,6 +1031,8 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 
 	idLexer src( LEXFL_NOFATALERRORS );
 	src.LoadMemory( in.c_str(), in.Length(), name );
+
+	bool in_Position4 = ( vertexLayout == LAYOUT_DRAW_SHADOW_VERT ) || ( vertexLayout == LAYOUT_DRAW_SHADOW_VERT_SKINNED );
 
 	bool inMain = false;
 	bool justEnteredMain = false;
@@ -1134,7 +1142,7 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 		{
 			if( src.CheckTokenString( "VS_IN" ) )
 			{
-				ParseInOutStruct( src, AT_VS_IN, 0, varsIn );
+				ParseInOutStruct( src, AT_VS_IN, 0, varsIn, in_Position4 );
 
 				program += "\n\n";
 				for( int i = 0; i < varsIn.Num(); i++ )
@@ -1157,7 +1165,7 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 			else if( src.CheckTokenString( "VS_OUT" ) )
 			{
 				// RB
-				ParseInOutStruct( src, AT_VS_OUT, AT_VS_OUT_RESERVED, varsOut );
+				ParseInOutStruct( src, AT_VS_OUT, AT_VS_OUT_RESERVED, varsOut, in_Position4 );
 
 				program += "\n";
 				int numDeclareOut = 0;
@@ -1182,7 +1190,7 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 			}
 			else if( src.CheckTokenString( "PS_IN" ) )
 			{
-				ParseInOutStruct( src, AT_PS_IN, AT_PS_IN_RESERVED, varsIn );
+				ParseInOutStruct( src, AT_PS_IN, AT_PS_IN_RESERVED, varsIn, in_Position4 );
 
 				program += "\n\n";
 				int numDeclareOut = 0;
@@ -1213,7 +1221,7 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 			else if( src.CheckTokenString( "PS_OUT" ) )
 			{
 				// RB begin
-				ParseInOutStruct( src, AT_PS_OUT, AT_PS_OUT_RESERVED, varsOut );
+				ParseInOutStruct( src, AT_PS_OUT, AT_PS_OUT_RESERVED, varsOut, in_Position4 );
 
 				program += "\n";
 				for( int i = 0; i < varsOut.Num(); i++ )
@@ -1290,7 +1298,7 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 			newline[len - 0] = '\0';
 
 			// RB: add this to every vertex shader
-			if( inMain && !justEnteredMain && ( stage == SHADER_STAGE_VERTEX ) && vkGLSL )
+			if( inMain && !justEnteredMain && ( stage == SHADER_STAGE_VERTEX ) && vkGLSL && !in_Position4 )
 			{
 				program += "\n\tvec4 position4 = vec4( in_Position, 1.0 );\n";
 				justEnteredMain = true;
@@ -1407,7 +1415,7 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 						RB: HACK use position4 instead of in_Position directly
 						because I can't figure out how to do strides with Vulkan
 						*/
-						if( vkGLSL && ( varsIn[i].nameGLSL == "in_Position" ) )
+						if( !in_Position4 && vkGLSL && ( varsIn[i].nameGLSL == "in_Position" ) )
 						{
 							program += "position4";
 						}
@@ -1510,8 +1518,6 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 				break;
 			}
 		}
-
-
 	}
 	else
 	{
@@ -1611,32 +1617,32 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 
 	out += program;
 
-	layout += "uniforms [\n";
+	outLayout += "uniforms [\n";
 	for( int i = 0; i < uniformList.Num(); i++ )
 	{
-		layout += "\t";
-		layout += uniformList[i];
-		layout += "\n";
+		outLayout += "\t";
+		outLayout += uniformList[i];
+		outLayout += "\n";
 	}
-	layout += "]\n";
+	outLayout += "]\n";
 
-	layout += "bindings [\n";
+	outLayout += "bindings [\n";
 
 	if( uniformList.Num() > 0 )
 	{
-		layout += "\tubo\n";
+		outLayout += "\tubo\n";
 	}
 
 	if( hasGPUSkinning && ( stage == SHADER_STAGE_VERTEX ) )
 	{
-		layout += "\tubo\n";
+		outLayout += "\tubo\n";
 	}
 
 	for( int i = 0; i < samplerList.Num(); i++ )
 	{
-		layout += "\tsampler\n";
+		outLayout += "\tsampler\n";
 	}
-	layout += "]\n";
+	outLayout += "]\n";
 
 	return out;
 }

@@ -108,6 +108,63 @@ enum antiAliasingMode_t
 	ANTI_ALIASING_MSAA_4X,
 	ANTI_ALIASING_MSAA_8X
 };
+
+// CPU counters and timers
+struct performanceCounters_t
+{
+	int		c_box_cull_in;
+	int		c_box_cull_out;
+	int		c_createInteractions;	// number of calls to idInteraction::CreateInteraction
+	int		c_createShadowVolumes;
+	int		c_generateMd5;
+	int		c_entityDefCallbacks;
+	int		c_alloc;			// counts for R_StaticAllc/R_StaticFree
+	int		c_free;
+	int		c_visibleViewEntities;
+	int		c_shadowViewEntities;
+	int		c_viewLights;
+	int		c_numViews;			// number of total views rendered
+	int		c_deformedSurfaces;	// idMD5Mesh::GenerateSurface
+	int		c_deformedVerts;	// idMD5Mesh::GenerateSurface
+	int		c_deformedIndexes;	// idMD5Mesh::GenerateSurface
+	int		c_tangentIndexes;	// R_DeriveTangents()
+	int		c_entityUpdates;
+	int		c_lightUpdates;
+	int		c_envprobeUpdates;
+	int		c_entityReferences;
+	int		c_lightReferences;
+	int		c_guiSurfs;
+
+	uint64	frontEndMicroSec;	// sum of time in all RE_RenderScene's in a frame
+};
+
+// CPU & GPU counters and timers
+struct backEndCounters_t
+{
+	int		c_surfaces;
+	int		c_shaders;
+
+	int		c_drawElements;
+	int		c_drawIndexes;
+
+	int		c_shadowElements;
+	int		c_shadowIndexes;
+
+	int		c_copyFrameBuffer;
+
+	float	c_overDraw;
+
+	uint64	cpuTotalMicroSec;		// total microseconds for backend run
+	uint64	cpuShadowMicroSec;
+	uint64	gpuDepthMicroSec;
+	uint64	gpuScreenSpaceAmbientOcclusionMicroSec;
+	uint64	gpuScreenSpaceReflectionsMicroSec;
+	uint64	gpuAmbientPassMicroSec;
+	uint64	gpuInteractionsMicroSec;
+	uint64	gpuShaderPassMicroSec;
+	uint64	gpuPostProcessingMicroSec;
+	uint64	gpuMicroSec;
+};
 // RB end
 
 // Contains variables specific to the OpenGL configuration being run right now.
@@ -160,6 +217,7 @@ struct glconfig_t
 
 	// RB begin
 	bool				gremedyStringMarkerAvailable;
+	bool				khronosDebugAvailable;
 	bool				vertexHalfFloatAvailable;
 
 	bool				framebufferObjectAvailable;
@@ -326,11 +384,11 @@ public:
 	//
 	// After this is called, new command buffers can be built up in parallel
 	// with the rendering of the closed off command buffers by RenderCommandBuffers()
-	virtual const emptyCommand_t* 	SwapCommandBuffers( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec ) = 0;
+	virtual const emptyCommand_t* 	SwapCommandBuffers( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc ) = 0;
 
 	// SwapCommandBuffers operation can be split in two parts for non-smp rendering
 	// where the GPU is idled intentionally for minimal latency.
-	virtual void			SwapCommandBuffers_FinishRendering( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec ) = 0;
+	virtual void			SwapCommandBuffers_FinishRendering( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc ) = 0;
 	virtual const emptyCommand_t* 	SwapCommandBuffers_FinishCommandBuffers() = 0;
 
 	// issues GPU commands to render a built up list of command buffers returned

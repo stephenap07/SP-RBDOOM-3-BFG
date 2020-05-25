@@ -31,6 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "ConsoleHistory.h"
 #include "../renderer/ResolutionScale.h"
 #include "Common_local.h"
+#include "../imgui/BFGimgui.h"
 
 #define	CON_TEXTSIZE			0x30000
 #define	NUM_CON_TIMES			4
@@ -209,11 +210,16 @@ idConsoleLocal::DrawFPS
 ==================
 */
 #define	FPS_FRAMES	6
+#define FPS_FRAMES_HISTORY 90
 float idConsoleLocal::DrawFPS( float y )
 {
-	static int previousTimes[FPS_FRAMES];
+	static float previousTimes[FPS_FRAMES];
+	static float previousTimesNormalized[FPS_FRAMES_HISTORY];
 	static int index;
 	static int previous;
+	static int valuesOffset = 0;
+
+	bool renderImGuiPerfWindow = ImGuiHook::IsReadyToRender() && ( com_showFPS.GetInteger() > 1 );
 
 	// don't use serverTime, because that will be drifting to
 	// correct for internet lag changes, timescales, timedemos, etc
@@ -221,7 +227,13 @@ float idConsoleLocal::DrawFPS( float y )
 	int frameTime = t - previous;
 	previous = t;
 
+	int fps = 0;
+
+	const float milliSecondsPerFrame = 1000.0f / com_engineHz_latched;
+
 	previousTimes[index % FPS_FRAMES] = frameTime;
+	previousTimesNormalized[index % FPS_FRAMES_HISTORY] = frameTime / milliSecondsPerFrame;
+	valuesOffset = ( valuesOffset + 1 ) % FPS_FRAMES_HISTORY;
 	index++;
 	if( index > FPS_FRAMES )
 	{
@@ -235,38 +247,192 @@ float idConsoleLocal::DrawFPS( float y )
 		{
 			total = 1;
 		}
-		int fps = 1000000 * FPS_FRAMES / total;
+		fps = 1000000 * FPS_FRAMES / total;
 		fps = ( fps + 500 ) / 1000;
 
 		const char* s = va( "%ifps", fps );
 		int w = strlen( s ) * BIGCHAR_WIDTH;
 
-		renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
+		if( com_showFPS.GetInteger() == 1 )
+		{
+			renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
+		}
 	}
 
 	y += BIGCHAR_HEIGHT + 4;
 
-	// DG: "com_showFPS 2" means: show FPS only, like in classic doom3
-	if( com_showFPS.GetInteger() == 2 )
+	// DG: "com_showFPS 1" means: show FPS only, like in classic doom3
+	if( com_showFPS.GetInteger() == 1 )
 	{
 		return y;
 	}
 	// DG end
+
+	//const uint64 gameThreadTotalTime = commonLocal.GetGameThreadTotalTime();
+	//const uint64 gameThreadGameTime = commonLocal.GetGameThreadGameTime();
+	//const uint64 gameThreadRenderTime = commonLocal.GetGameThreadRenderTime();
+
+	const uint64 gameThreadTotalTime	= commonLocal.mainFrameTiming.finishDrawTime - commonLocal.mainFrameTiming.startGameTime;
+	const uint64 gameThreadGameTime		= commonLocal.mainFrameTiming.finishGameTime - commonLocal.mainFrameTiming.startGameTime;
+	const uint64 gameThreadRenderTime	= commonLocal.mainFrameTiming.finishDrawTime - commonLocal.mainFrameTiming.finishGameTime;
+
+	const uint64 rendererBackEndTime = commonLocal.GetRendererBackEndMicroseconds();
+	const uint64 rendererShadowsTime = commonLocal.GetRendererShadowsMicroseconds();
+	const uint64 rendererGPUIdleTime = commonLocal.GetRendererIdleMicroseconds();
+	const uint64 rendererGPUTime = commonLocal.GetRendererGPUMicroseconds();
+	const uint64 rendererGPUEarlyZTime = commonLocal.GetRendererGpuEarlyZMicroseconds();
+	const uint64 rendererGPU_SSAOTime = commonLocal.GetRendererGpuSSAOMicroseconds();
+	const uint64 rendererGPU_SSRTime = commonLocal.GetRendererGpuSSRMicroseconds();
+	const uint64 rendererGPUAmbientPassTime = commonLocal.GetRendererGpuAmbientPassMicroseconds();
+	const uint64 rendererGPUInteractionsTime = commonLocal.GetRendererGpuInteractionsMicroseconds();
+	const uint64 rendererGPUShaderPassesTime = commonLocal.GetRendererGpuShaderPassMicroseconds();
+	const uint64 rendererGPUPostProcessingTime = commonLocal.GetRendererGpuPostProcessingMicroseconds();
+	const int maxTime = 16 * 1000;
+
+#if 1
+
+	// RB: use ImGui to show more detailed stats about the scene loads
+	if( ImGuiHook::IsReadyToRender() )
+	{
+		// start smaller
+		int32 statsWindowWidth = 320;
+		int32 statsWindowHeight = 260;
+
+		if( com_showFPS.GetInteger() > 2 )
+		{
+			statsWindowWidth = 550;
+			statsWindowHeight = 370;
+		}
+
+		ImVec2 pos;
+		pos.x = renderSystem->GetWidth() - statsWindowWidth;
+		pos.y = 0;
+
+		ImGui::SetNextWindowPos( pos );
+		ImGui::SetNextWindowSize( ImVec2( statsWindowWidth, statsWindowHeight ) );
+
+		static ImVec4 colorBlack	= ImVec4( 0.00f, 0.00f, 0.00f, 1.00f );
+		static ImVec4 colorWhite	= ImVec4( 1.00f, 1.00f, 1.00f, 1.00f );
+		static ImVec4 colorRed		= ImVec4( 1.00f, 0.00f, 0.00f, 1.00f );
+		static ImVec4 colorGreen	= ImVec4( 0.00f, 1.00f, 0.00f, 1.00f );
+		static ImVec4 colorBlue		= ImVec4( 0.00f, 0.00f, 1.00f, 1.00f );
+		static ImVec4 colorYellow	= ImVec4( 1.00f, 1.00f, 0.00f, 1.00f );
+		static ImVec4 colorMagenta	= ImVec4( 1.00f, 0.00f, 1.00f, 1.00f );
+		static ImVec4 colorCyan		= ImVec4( 0.00f, 1.00f, 1.00f, 1.00f );
+		static ImVec4 colorOrange	= ImVec4( 1.00f, 0.50f, 0.00f, 1.00f );
+		static ImVec4 colorPurple	= ImVec4( 0.60f, 0.00f, 0.60f, 1.00f );
+		static ImVec4 colorPink		= ImVec4( 0.73f, 0.40f, 0.48f, 1.00f );
+		static ImVec4 colorBrown	= ImVec4( 0.40f, 0.35f, 0.08f, 1.00f );
+		static ImVec4 colorLtGrey	= ImVec4( 0.75f, 0.75f, 0.75f, 1.00f );
+		static ImVec4 colorMdGrey	= ImVec4( 0.50f, 0.50f, 0.50f, 1.00f );
+		static ImVec4 colorDkGrey	= ImVec4( 0.25f, 0.25f, 0.25f, 1.00f );
+
+		ImGui::Begin( "Performance Stats" );
+
+#if defined( USE_VULKAN )
+		const char* API = "Vulkan";
+#else
+		const char* API = "OpenGL";
+#endif
+
+		extern idCVar r_antiAliasing;
+		static const int aaNumValues = 5;
+		static const char* aaValues[aaNumValues] =
+		{
+			"None",
+			"SMAA 1X",
+			"MSAA 2X",
+			"MSAA 4X",
+			"MSAA 8X"
+		};
+
+		compile_time_assert( aaNumValues == ( ANTI_ALIASING_MSAA_8X + 1 ) );
+
+		const char* aaMode = aaValues[ r_antiAliasing.GetInteger() ];
+
+		idStr resolutionText;
+		resolutionScale.GetConsoleText( resolutionText );
+
+		int width = renderSystem->GetWidth();
+		int height = renderSystem->GetHeight();
+
+		ImGui::TextColored( colorCyan, "API: %s, AA[%i, %i]: %s, %s", API, width, height, aaMode, resolutionText.c_str() );
+
+		ImGui::TextColored( colorLtGrey, "GENERAL: views:%i draws:%i tris:%i (shdw:%i)",
+							commonLocal.stats_frontend.c_numViews,
+							commonLocal.stats_backend.c_drawElements + commonLocal.stats_backend.c_shadowElements,
+							( commonLocal.stats_backend.c_drawIndexes + commonLocal.stats_backend.c_shadowIndexes ) / 3,
+							commonLocal.stats_backend.c_shadowIndexes / 3 );
+
+		if( com_showFPS.GetInteger() > 2 )
+		{
+			ImGui::TextColored( colorLtGrey, "DYNAMIC: callback:%i md5:%i dfrmVerts:%i dfrmTris:%i tangTris:%i guis:%i",
+								commonLocal.stats_frontend.c_entityDefCallbacks,
+								commonLocal.stats_frontend.c_generateMd5,
+								commonLocal.stats_frontend.c_deformedVerts,
+								commonLocal.stats_frontend.c_deformedIndexes / 3,
+								commonLocal.stats_frontend.c_tangentIndexes / 3,
+								commonLocal.stats_frontend.c_guiSurfs
+							  );
+
+			//ImGui::Text( "Cull: %i box in %i box out\n",
+			//					commonLocal.stats_frontend.c_box_cull_in, commonLocal.stats_frontend.c_box_cull_out );
+
+			ImGui::TextColored( colorLtGrey, "ADDMODEL: callback:%i createInteractions:%i createShadowVolumes:%i",
+								commonLocal.stats_frontend.c_entityDefCallbacks,
+								commonLocal.stats_frontend.c_createInteractions,
+								commonLocal.stats_frontend.c_createShadowVolumes );
+
+			ImGui::TextColored( colorLtGrey, "viewEntities:%i  shadowEntities:%i  viewLights:%i\n",	commonLocal.stats_frontend.c_visibleViewEntities,
+								commonLocal.stats_frontend.c_shadowViewEntities,
+								commonLocal.stats_frontend.c_viewLights );
+
+			ImGui::TextColored( colorLtGrey, "UPDATES: entityUpdates:%i  entityRefs:%i  lightUpdates:%i  lightRefs:%i\n",
+								commonLocal.stats_frontend.c_entityUpdates, commonLocal.stats_frontend.c_entityReferences,
+								commonLocal.stats_frontend.c_lightUpdates, commonLocal.stats_frontend.c_lightReferences );
+		}
+
+		//ImGui::Text( "frameData: %i (%i)\n", frameData->frameMemoryAllocated.GetValue(), frameData->highWaterAllocated );
+
+		//ImGui::Spacing();
+		//ImGui::Spacing();
+		ImGui::Spacing();
+
+		if( com_showFPS.GetInteger() > 2 )
+		{
+			const char* overlay = va( "Average FPS %i", fps );
+
+			ImGui::PlotLines( "Relative\nFrametime ms", previousTimesNormalized, FPS_FRAMES_HISTORY, valuesOffset, overlay, -10.0f, 10.0f, ImVec2( 0, 50 ) );
+		}
+		else
+		{
+			ImGui::TextColored( colorYellow, "Average FPS %i", fps );
+		}
+
+		ImGui::Spacing();
+
+		ImGui::TextColored( colorMdGrey,													"CPU                 GPU" );
+		ImGui::TextColored( gameThreadTotalTime > maxTime ? colorRed : colorWhite,			"Game+RF: %5llu us   EarlyZ:       %5llu us", gameThreadTotalTime, rendererGPUEarlyZTime );
+		ImGui::TextColored( gameThreadGameTime > maxTime ? colorRed : colorWhite,			"Game:    %5llu us   SSAO:         %5llu us", gameThreadGameTime, rendererGPU_SSAOTime );
+		ImGui::TextColored( gameThreadRenderTime > maxTime ? colorRed : colorWhite,			"RF:      %5llu us   SSR:          %5llu us", gameThreadRenderTime, rendererGPU_SSRTime );
+		ImGui::TextColored( rendererBackEndTime > maxTime ? colorRed : colorWhite,			"RB:      %5llu us   AmbientPass:  %5llu us", rendererBackEndTime, rendererGPUAmbientPassTime );
+		ImGui::TextColored( rendererShadowsTime > maxTime ? colorRed : colorWhite,			"Shadows: %5llu us   Interactions: %5llu us", rendererShadowsTime, rendererGPUInteractionsTime );
+		ImGui::TextColored( rendererGPUShaderPassesTime > maxTime ? colorRed : colorWhite,	"                    ShaderPass:   %5llu us", rendererGPUShaderPassesTime );
+		ImGui::TextColored( rendererGPUPostProcessingTime > maxTime ? colorRed : colorWhite, "                    PostFX:       %5llu us", rendererGPUPostProcessingTime );
+		ImGui::TextColored( rendererGPUIdleTime > maxTime ? colorRed : colorWhite,			"                    Idle:         %5llu us", rendererGPUIdleTime );
+		ImGui::TextColored( rendererGPUTime > maxTime ? colorRed : colorWhite,				"                    Total:        %5llu us", rendererGPUTime );
+
+		ImGui::End();
+	}
+
+	return y;
+#else
 
 	// print the resolution scale so we can tell when we are at reduced resolution
 	idStr resolutionText;
 	resolutionScale.GetConsoleText( resolutionText );
 	int w = resolutionText.Length() * BIGCHAR_WIDTH;
 	renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, resolutionText.c_str(), colorWhite, true );
-
-	const int gameThreadTotalTime = commonLocal.GetGameThreadTotalTime();
-	const int gameThreadGameTime = commonLocal.GetGameThreadGameTime();
-	const int gameThreadRenderTime = commonLocal.GetGameThreadRenderTime();
-	const int rendererBackEndTime = commonLocal.GetRendererBackEndMicroseconds();
-	const int rendererShadowsTime = commonLocal.GetRendererShadowsMicroseconds();
-	const int rendererGPUIdleTime = commonLocal.GetRendererIdleMicroseconds();
-	const int rendererGPUTime = commonLocal.GetRendererGPUMicroseconds();
-	const int maxTime = 16;
 
 	y += SMALLCHAR_HEIGHT + 4;
 	idStr timeStr;
@@ -305,6 +471,7 @@ float idConsoleLocal::DrawFPS( float y )
 	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 
 	return y + BIGCHAR_HEIGHT + 4;
+#endif
 }
 
 /*
@@ -1322,6 +1489,7 @@ void idConsoleLocal::Draw( bool forceFullScreen )
 	float lefty = LOCALSAFE_TOP;
 	float righty = LOCALSAFE_TOP;
 	float centery = LOCALSAFE_TOP;
+
 	if( com_showFPS.GetBool() )
 	{
 		righty = DrawFPS( righty );
@@ -1330,6 +1498,7 @@ void idConsoleLocal::Draw( bool forceFullScreen )
 	{
 		righty = DrawMemoryUsage( righty );
 	}
+
 	DrawOverlayText( lefty, righty, centery );
 	DrawDebugGraphs();
 }

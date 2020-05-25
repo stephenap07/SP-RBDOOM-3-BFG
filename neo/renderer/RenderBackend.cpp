@@ -3,8 +3,9 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2015 Robert Beckebans
 Copyright (C) 2014 Carl Kenner
+Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2013-2020 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -41,7 +42,7 @@ If you have questions concerning this license or the applicable additional terms
 idCVar r_drawEyeColor( "r_drawEyeColor", "0", CVAR_RENDERER | CVAR_BOOL, "Draw a colored box, red = left eye, blue = right eye, grey = non-stereo" );
 idCVar r_motionBlur( "r_motionBlur", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_ARCHIVE, "1 - 5, log2 of the number of motion blur samples" );
 idCVar r_forceZPassStencilShadows( "r_forceZPassStencilShadows", "0", CVAR_RENDERER | CVAR_BOOL, "force Z-pass rendering for performance testing" );
-idCVar r_useStencilShadowPreload( "r_useStencilShadowPreload", "1", CVAR_RENDERER | CVAR_BOOL, "use stencil shadow preload algorithm instead of Z-fail" );
+idCVar r_useStencilShadowPreload( "r_useStencilShadowPreload", "0", CVAR_RENDERER | CVAR_BOOL, "use stencil shadow preload algorithm instead of Z-fail" );
 idCVar r_skipShaderPasses( "r_skipShaderPasses", "0", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_skipInteractionFastPath( "r_skipInteractionFastPath", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_useLightStencilSelect( "r_useLightStencilSelect", "0", CVAR_RENDERER | CVAR_BOOL, "use stencil select pass" );
@@ -562,12 +563,6 @@ void idRenderBackend::BindVariableStageImage( const textureStage_t* texture, con
 {
 	if( texture->cinematic )
 	{
-#if defined(USE_VULKAN)
-
-		// FIXME upload of video image sub resources
-		GL_SelectTexture( 0 );
-		globalImages->defaultImage->Bind();
-#else
 		cinData_t cin;
 
 		if( r_skipDynamicTextures.GetBool() )
@@ -626,7 +621,6 @@ void idRenderBackend::BindVariableStageImage( const textureStage_t* texture, con
 			// SWF GUI case is handled better, too
 			renderProgManager.BindShader_TextureVertexColor();
 		}
-#endif
 	}
 	else
 	{
@@ -661,6 +655,7 @@ void idRenderBackend::PrepareStageTexturing( const shaderStage_t* pStage,  const
 			// per-pixel reflection mapping with bump mapping
 			GL_SelectTexture( 1 );
 			bumpStage->texture.image->Bind();
+
 			GL_SelectTexture( 0 );
 
 			RENDERLOG_PRINTF( "TexGen: TG_REFLECT_CUBE: Bumpy Environment\n" );
@@ -689,9 +684,7 @@ void idRenderBackend::PrepareStageTexturing( const shaderStage_t* pStage,  const
 	}
 	else if( pStage->texture.texgen == TG_SKYBOX_CUBE )
 	{
-
 		renderProgManager.BindShader_SkyBox();
-
 	}
 	else if( pStage->texture.texgen == TG_WOBBLESKY_CUBE )
 	{
@@ -938,7 +931,7 @@ void idRenderBackend::FillDepthBufferGeneric( const drawSurf_t* const* drawSurfs
 			color[3] = 1.0f;
 		}
 
-		renderLog.OpenBlock( shader->GetName() );
+		renderLog.OpenBlock( shader->GetName(), colorMdGrey );
 
 		bool drawSolid = false;
 		if( shader->Coverage() == MC_OPAQUE )
@@ -1103,7 +1096,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 	}
 
 	renderLog.OpenMainBlock( MRB_FILL_DEPTH_BUFFER );
-	renderLog.OpenBlock( "RB_FillDepthBufferFast" );
+	renderLog.OpenBlock( "Render_FillDepthBufferFast", colorBlue );
 
 	// force MVP change on first surface
 	currentSpace = NULL;
@@ -1158,7 +1151,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 			currentSpace = surf->space;
 		}
 
-		renderLog.OpenBlock( shader->GetName() );
+		renderLog.OpenBlock( shader->GetName(), colorMdGrey );
 
 		if( surf->jointCache )
 		{
@@ -1199,10 +1192,18 @@ GENERAL INTERACTION RENDERING
 const int INTERACTION_TEXUNIT_BUMP			= 0;
 const int INTERACTION_TEXUNIT_SPECULARMIX	= 1;
 const int INTERACTION_TEXUNIT_BASECOLOR		= 2;
-const int INTERACTION_TEXUNIT_FALLOFF		= 3;
-const int INTERACTION_TEXUNIT_PROJECTION	= 4;
+const int INTERACTION_TEXUNIT_FALLOFF		= 3;	// RB: also _brdfLut
+const int INTERACTION_TEXUNIT_PROJECTION	= 4;	// RB: also SSAO render target
 const int INTERACTION_TEXUNIT_SHADOWMAPS	= 5;
 const int INTERACTION_TEXUNIT_JITTER		= 6;
+
+#if defined( USE_VULKAN )
+	const int INTERACTION_TEXUNIT_AMBIENT_CUBE1 = 5;
+	const int INTERACTION_TEXUNIT_SPECULAR_CUBE1 = 6;
+#else
+	const int INTERACTION_TEXUNIT_AMBIENT_CUBE1 = 7;
+	const int INTERACTION_TEXUNIT_SPECULAR_CUBE1 = 8;
+#endif
 
 /*
 ==================
@@ -1266,55 +1267,264 @@ void idRenderBackend::SetupInteractionStage( const shaderStage_t* surfaceStage, 
 idRenderBackend::DrawSingleInteraction
 =================
 */
-void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din )
+void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFastPath, bool useIBL, bool setInteractionShader )
 {
-	if( din->bumpImage == NULL )
+	if( !useFastPath )
 	{
-		// stage wasn't actually an interaction
-		return;
+		if( din->bumpImage == NULL )
+		{
+			// stage wasn't actually an interaction
+			return;
+		}
+
+		if( din->diffuseImage == NULL || r_skipDiffuse.GetBool() )
+		{
+			// this isn't a YCoCg black, but it doesn't matter, because
+			// the diffuseColor will also be 0
+			din->diffuseImage = globalImages->blackImage;
+		}
+		if( din->specularImage == NULL || r_skipSpecular.GetBool() || ( din->vLight && din->vLight->lightShader->IsAmbientLight() ) )
+		{
+			din->specularImage = globalImages->blackImage;
+		}
+		if( r_skipBump.GetBool() )
+		{
+			din->bumpImage = globalImages->flatNormalMap;
+		}
+
+		// if we wouldn't draw anything, don't call the Draw function
+		const bool diffuseIsBlack = ( din->diffuseImage == globalImages->blackImage )
+									|| ( ( din->diffuseColor[0] <= 0 ) && ( din->diffuseColor[1] <= 0 ) && ( din->diffuseColor[2] <= 0 ) );
+		const bool specularIsBlack = ( din->specularImage == globalImages->blackImage )
+									 || ( ( din->specularColor[0] <= 0 ) && ( din->specularColor[1] <= 0 ) && ( din->specularColor[2] <= 0 ) );
+		if( diffuseIsBlack && specularIsBlack )
+		{
+			return;
+		}
+
+		// bump matrix
+		SetVertexParm( RENDERPARM_BUMPMATRIX_S, din->bumpMatrix[0].ToFloatPtr() );
+		SetVertexParm( RENDERPARM_BUMPMATRIX_T, din->bumpMatrix[1].ToFloatPtr() );
+
+		// diffuse matrix
+		SetVertexParm( RENDERPARM_DIFFUSEMATRIX_S, din->diffuseMatrix[0].ToFloatPtr() );
+		SetVertexParm( RENDERPARM_DIFFUSEMATRIX_T, din->diffuseMatrix[1].ToFloatPtr() );
+
+		// specular matrix
+		SetVertexParm( RENDERPARM_SPECULARMATRIX_S, din->specularMatrix[0].ToFloatPtr() );
+		SetVertexParm( RENDERPARM_SPECULARMATRIX_T, din->specularMatrix[1].ToFloatPtr() );
+
+		RB_SetVertexColorParms( din->vertexColor );
+
+		SetFragmentParm( RENDERPARM_DIFFUSEMODIFIER, din->diffuseColor.ToFloatPtr() );
+		SetFragmentParm( RENDERPARM_SPECULARMODIFIER, din->specularColor.ToFloatPtr() );
 	}
 
-	if( din->diffuseImage == NULL || r_skipDiffuse.GetBool() )
+	const textureUsage_t specUsage = din->specularImage->GetUsage();
+
+	// RB begin
+	if( useIBL )
 	{
-		// this isn't a YCoCg black, but it doesn't matter, because
-		// the diffuseColor will also be 0
-		din->diffuseImage = globalImages->blackImage;
+		if( specUsage == TD_SPECULAR_PBR_RMAO || specUsage == TD_SPECULAR_PBR_RMAOD )
+		{
+			// PBR path with roughness, metal and AO
+			if( din->surf->jointCache )
+			{
+				renderProgManager.BindShader_ImageBasedLightingSkinned_PBR();
+			}
+			else
+			{
+				renderProgManager.BindShader_ImageBasedLighting_PBR();
+			}
+		}
+		else
+		{
+			if( din->surf->jointCache )
+			{
+				renderProgManager.BindShader_ImageBasedLightingSkinned();
+			}
+			else
+			{
+				renderProgManager.BindShader_ImageBasedLighting();
+			}
+		}
+
+		GL_SelectTexture( INTERACTION_TEXUNIT_FALLOFF );
+		globalImages->brdfLutImage->Bind();
+
+		GL_SelectTexture( INTERACTION_TEXUNIT_PROJECTION );
+		if( !r_useSSAO.GetBool() )
+		{
+			globalImages->whiteImage->Bind();
+			//globalImages->brdfLutImage->Bind();
+		}
+		else
+		{
+			globalImages->ambientOcclusionImage[0]->Bind();
+		}
+
+		// TODO bind the 3 closest probes
+		GL_SelectTexture( INTERACTION_TEXUNIT_AMBIENT_CUBE1 );
+		if( viewDef->irradianceImage )
+		{
+			viewDef->irradianceImage->Bind();
+		}
+		else
+		{
+			globalImages->defaultUACIrradianceCube->Bind();
+		}
+
+		GL_SelectTexture( INTERACTION_TEXUNIT_SPECULAR_CUBE1 );
+		if( viewDef->radianceImage )
+		{
+			viewDef->radianceImage->Bind();
+		}
+		else
+		{
+			globalImages->defaultUACRadianceCube->Bind();
+		}
 	}
-	if( din->specularImage == NULL || r_skipSpecular.GetBool() || din->ambientLight )
+	else if( setInteractionShader )
 	{
-		din->specularImage = globalImages->blackImage;
+		if( specUsage == TD_SPECULAR_PBR_RMAO || specUsage == TD_SPECULAR_PBR_RMAOD )
+		{
+			// PBR path with roughness, metal and AO
+			// select the render prog
+
+			if( din->vLight->lightShader->IsAmbientLight() )
+			{
+				if( din->surf->jointCache )
+				{
+					renderProgManager.BindShader_PBR_InteractionAmbientSkinned();
+				}
+				else
+				{
+					renderProgManager.BindShader_PBR_InteractionAmbient();
+				}
+			}
+			else
+			{
+				if( r_useShadowMapping.GetBool() && din->vLight->globalShadows )
+				{
+					// RB: we have shadow mapping enabled and shadow maps so do a shadow compare
+
+					if( din->vLight->parallel )
+					{
+						if( din->surf->jointCache )
+						{
+							renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Parallel_Skinned();
+						}
+						else
+						{
+							renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Parallel();
+						}
+					}
+					else if( din->vLight->pointLight )
+					{
+						if( din->surf->jointCache )
+						{
+							renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Point_Skinned();
+						}
+						else
+						{
+							renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Point();
+						}
+					}
+					else
+					{
+						if( din->surf->jointCache )
+						{
+							renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Spot_Skinned();
+						}
+						else
+						{
+							renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Spot();
+						}
+					}
+				}
+				else
+				{
+					if( din->surf->jointCache )
+					{
+						renderProgManager.BindShader_PBR_InteractionSkinned();
+					}
+					else
+					{
+						renderProgManager.BindShader_PBR_Interaction();
+					}
+				}
+			}
+		}
+		else
+		{
+			// only oldschool D3 gloss maps provided
+
+			if( din->vLight->lightShader->IsAmbientLight() )
+			{
+				if( din->surf->jointCache )
+				{
+					renderProgManager.BindShader_InteractionAmbientSkinned();
+				}
+				else
+				{
+					renderProgManager.BindShader_InteractionAmbient();
+				}
+			}
+			else
+			{
+				if( r_useShadowMapping.GetBool() && din->vLight->globalShadows )
+				{
+					// RB: we have shadow mapping enabled and shadow maps so do a shadow compare
+
+					if( din->vLight->parallel )
+					{
+						if( din->surf->jointCache )
+						{
+							renderProgManager.BindShader_Interaction_ShadowMapping_Parallel_Skinned();
+						}
+						else
+						{
+							renderProgManager.BindShader_Interaction_ShadowMapping_Parallel();
+						}
+					}
+					else if( din->vLight->pointLight )
+					{
+						if( din->surf->jointCache )
+						{
+							renderProgManager.BindShader_Interaction_ShadowMapping_Point_Skinned();
+						}
+						else
+						{
+							renderProgManager.BindShader_Interaction_ShadowMapping_Point();
+						}
+					}
+					else
+					{
+						if( din->surf->jointCache )
+						{
+							renderProgManager.BindShader_Interaction_ShadowMapping_Spot_Skinned();
+						}
+						else
+						{
+							renderProgManager.BindShader_Interaction_ShadowMapping_Spot();
+						}
+					}
+				}
+				else
+				{
+					if( din->surf->jointCache )
+					{
+						renderProgManager.BindShader_InteractionSkinned();
+					}
+					else
+					{
+						renderProgManager.BindShader_Interaction();
+					}
+				}
+			}
+		}
 	}
-	if( r_skipBump.GetBool() )
-	{
-		din->bumpImage = globalImages->flatNormalMap;
-	}
-
-	// if we wouldn't draw anything, don't call the Draw function
-	const bool diffuseIsBlack = ( din->diffuseImage == globalImages->blackImage )
-								|| ( ( din->diffuseColor[0] <= 0 ) && ( din->diffuseColor[1] <= 0 ) && ( din->diffuseColor[2] <= 0 ) );
-	const bool specularIsBlack = ( din->specularImage == globalImages->blackImage )
-								 || ( ( din->specularColor[0] <= 0 ) && ( din->specularColor[1] <= 0 ) && ( din->specularColor[2] <= 0 ) );
-	if( diffuseIsBlack && specularIsBlack )
-	{
-		return;
-	}
-
-	// bump matrix
-	SetVertexParm( RENDERPARM_BUMPMATRIX_S, din->bumpMatrix[0].ToFloatPtr() );
-	SetVertexParm( RENDERPARM_BUMPMATRIX_T, din->bumpMatrix[1].ToFloatPtr() );
-
-	// diffuse matrix
-	SetVertexParm( RENDERPARM_DIFFUSEMATRIX_S, din->diffuseMatrix[0].ToFloatPtr() );
-	SetVertexParm( RENDERPARM_DIFFUSEMATRIX_T, din->diffuseMatrix[1].ToFloatPtr() );
-
-	// specular matrix
-	SetVertexParm( RENDERPARM_SPECULARMATRIX_S, din->specularMatrix[0].ToFloatPtr() );
-	SetVertexParm( RENDERPARM_SPECULARMATRIX_T, din->specularMatrix[1].ToFloatPtr() );
-
-	RB_SetVertexColorParms( din->vertexColor );
-
-	SetFragmentParm( RENDERPARM_DIFFUSEMODIFIER, din->diffuseColor.ToFloatPtr() );
-	SetFragmentParm( RENDERPARM_SPECULARMODIFIER, din->specularColor.ToFloatPtr() );
+	// RB end
 
 	// texture 0 will be the per-surface bump map
 	GL_SelectTexture( INTERACTION_TEXUNIT_BUMP );
@@ -1389,12 +1599,24 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	// perform setup here that will be constant for all interactions
 	if( performStencilTest )
 	{
-		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | depthFunc | GLS_STENCIL_FUNC_EQUAL | GLS_STENCIL_MAKE_REF( STENCIL_SHADOW_TEST_VALUE ) | GLS_STENCIL_MAKE_MASK( STENCIL_SHADOW_MASK_VALUE ) );
+		GL_State(
+			GLS_SRCBLEND_ONE |
+			GLS_DSTBLEND_ONE |
+			GLS_DEPTHMASK |
+			depthFunc |
+			GLS_STENCIL_FUNC_EQUAL |
+			GLS_STENCIL_MAKE_REF( STENCIL_SHADOW_TEST_VALUE ) |
+			GLS_STENCIL_MAKE_MASK( STENCIL_SHADOW_MASK_VALUE ) );
 
 	}
 	else
 	{
-		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | depthFunc | GLS_STENCIL_FUNC_ALWAYS );
+		GL_State(
+			GLS_SRCBLEND_ONE |
+			GLS_DSTBLEND_ONE |
+			GLS_DEPTHMASK |
+			depthFunc |
+			GLS_STENCIL_FUNC_ALWAYS );
 	}
 
 	// some rare lights have multiple animating stages, loop over them outside the surface list
@@ -1402,7 +1624,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	const float* lightRegs = vLight->shaderRegisters;
 
 	drawInteraction_t inter = {};
-	inter.ambientLight = lightShader->IsAmbientLight();
+	inter.vLight = vLight;
 
 	//---------------------------------
 	// Split out the complex surfaces from the fast-path surfaces
@@ -1430,7 +1652,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			}
 			uint64 end = Sys_Microseconds();
 
-			pc.shadowMicroSec += end - start;
+			pc.cpuShadowMicroSec += end - start;
 		}
 
 		const idMaterial* surfaceShader = walk->material;
@@ -1471,22 +1693,23 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 		jitterTexScale[0] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;	// TODO shadow buffer size fraction shadowMapSize / maxShadowMapSize
 		jitterTexScale[1] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;
 		jitterTexScale[2] = -r_shadowMapBiasScale.GetFloat();
-		jitterTexScale[3] = 0.0f;
+		jitterTexScale[3] = shadowMapSamples;
 		SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
 
 		float jitterTexOffset[4];
+		jitterTexOffset[0] = 1.0f / globalImages->blueNoiseImage256->GetUploadWidth();
+		jitterTexOffset[1] = 1.0f / globalImages->blueNoiseImage256->GetUploadWidth();
+
 		if( r_shadowMapRandomizeJitter.GetBool() )
 		{
-			jitterTexOffset[0] = ( rand() & 255 ) / 255.0;
-			jitterTexOffset[1] = ( rand() & 255 ) / 255.0;
+			jitterTexOffset[2] = Sys_Milliseconds() / 1000.0f;
+			jitterTexOffset[3] = tr.frameCount % 64;
 		}
 		else
 		{
-			jitterTexOffset[0] = 0;
-			jitterTexOffset[1] = 0;
+			jitterTexOffset[2] = 0.0f;
+			jitterTexOffset[3] = 0.0f;
 		}
-		jitterTexOffset[2] = 0.0f;
-		jitterTexOffset[3] = 0.0f;
 		SetFragmentParm( RENDERPARM_JITTERTEXOFFSET, jitterTexOffset ); // rpJitterTexOffset
 
 		if( vLight->parallel )
@@ -1502,7 +1725,8 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	}
 	// RB end
 
-	float lightScale = r_useHDR.GetBool() ? 3.0f : r_lightScale.GetFloat();
+	//const float lightScale = r_useHDR.GetBool() ? r_lightScale.GetFloat() * 0.666f : r_lightScale.GetFloat();
+	const float lightScale = r_lightScale.GetFloat();
 
 	for( int lightStageNum = 0; lightStageNum < lightShader->GetNumStages(); lightStageNum++ )
 	{
@@ -1519,6 +1743,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			lightScale * lightRegs[ lightStage->color.registers[1] ],
 			lightScale * lightRegs[ lightStage->color.registers[2] ],
 			lightRegs[ lightStage->color.registers[3] ] );
+
 		// apply the world-global overbright and the 2x factor for specular
 		const idVec4 diffuseColor = lightColor;
 		const idVec4 specularColor = lightColor * 2.0f;
@@ -1545,6 +1770,8 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 
 			// texture 6 will be the jitter texture for soft shadowing
 			GL_SelectTexture( INTERACTION_TEXUNIT_JITTER );
+			globalImages->blueNoiseImage256->Bind();
+			/*
 			if( r_shadowMapSamples.GetInteger() == 16 )
 			{
 				globalImages->jitterImage16->Bind();
@@ -1557,6 +1784,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			{
 				globalImages->jitterImage1->Bind();
 			}
+			*/
 		}
 
 		// force the light textures to not use anisotropic filtering, which is wasted on them
@@ -1576,71 +1804,6 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 		for( int sortedSurfNum = 0; sortedSurfNum < allSurfaces.Num(); sortedSurfNum++ )
 		{
 			const drawSurf_t* const surf = allSurfaces[ sortedSurfNum ];
-
-			// select the render prog
-			if( lightShader->IsAmbientLight() )
-			{
-				if( surf->jointCache )
-				{
-					renderProgManager.BindShader_InteractionAmbientSkinned();
-				}
-				else
-				{
-					renderProgManager.BindShader_InteractionAmbient();
-				}
-			}
-			else
-			{
-				if( r_useShadowMapping.GetBool() && vLight->globalShadows )
-				{
-					// RB: we have shadow mapping enabled and shadow maps so do a shadow compare
-
-					if( vLight->parallel )
-					{
-						if( surf->jointCache )
-						{
-							renderProgManager.BindShader_Interaction_ShadowMapping_Parallel_Skinned();
-						}
-						else
-						{
-							renderProgManager.BindShader_Interaction_ShadowMapping_Parallel();
-						}
-					}
-					else if( vLight->pointLight )
-					{
-						if( surf->jointCache )
-						{
-							renderProgManager.BindShader_Interaction_ShadowMapping_Point_Skinned();
-						}
-						else
-						{
-							renderProgManager.BindShader_Interaction_ShadowMapping_Point();
-						}
-					}
-					else
-					{
-						if( surf->jointCache )
-						{
-							renderProgManager.BindShader_Interaction_ShadowMapping_Spot_Skinned();
-						}
-						else
-						{
-							renderProgManager.BindShader_Interaction_ShadowMapping_Spot();
-						}
-					}
-				}
-				else
-				{
-					if( surf->jointCache )
-					{
-						renderProgManager.BindShader_InteractionSkinned();
-					}
-					else
-					{
-						renderProgManager.BindShader_Interaction();
-					}
-				}
-			}
 
 			const idMaterial* surfaceShader = surf->material;
 			const float* surfaceRegs = surf->shaderRegisters;
@@ -1775,27 +1938,19 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			// check for the fast path
 			if( surfaceShader->GetFastPathBumpImage() && !r_skipInteractionFastPath.GetBool() )
 			{
-				renderLog.OpenBlock( surf->material->GetName() );
+				renderLog.OpenBlock( surf->material->GetName(), colorMdGrey );
 
-				// texture 0 will be the per-surface bump map
-				GL_SelectTexture( INTERACTION_TEXUNIT_BUMP );
-				surfaceShader->GetFastPathBumpImage()->Bind();
+				inter.bumpImage = surfaceShader->GetFastPathBumpImage();
+				inter.specularImage = surfaceShader->GetFastPathSpecularImage();
+				inter.diffuseImage = surfaceShader->GetFastPathDiffuseImage();
 
-				// texture 1 is the per-surface specular map
-				GL_SelectTexture( INTERACTION_TEXUNIT_SPECULARMIX );
-				surfaceShader->GetFastPathSpecularImage()->Bind();
-
-				// texture 2 is the per-surface diffuse map
-				GL_SelectTexture( INTERACTION_TEXUNIT_BASECOLOR );
-				surfaceShader->GetFastPathDiffuseImage()->Bind();
-
-				DrawElementsWithCounters( surf );
+				DrawSingleInteraction( &inter, true, false, true );
 
 				renderLog.CloseBlock();
 				continue;
 			}
 
-			renderLog.OpenBlock( surf->material->GetName() );
+			renderLog.OpenBlock( surf->material->GetName(), colorMdGrey );
 
 			inter.bumpImage = NULL;
 			inter.specularImage = NULL;
@@ -1837,7 +1992,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 						// draw any previous interaction
 						if( inter.bumpImage != NULL )
 						{
-							DrawSingleInteraction( &inter );
+							DrawSingleInteraction( &inter, false, false, true );
 						}
 						inter.bumpImage = surfaceStage->texture.image;
 						inter.diffuseImage = NULL;
@@ -1855,7 +2010,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 						// draw any previous interaction
 						if( inter.diffuseImage != NULL )
 						{
-							DrawSingleInteraction( &inter );
+							DrawSingleInteraction( &inter, false, false, true );
 						}
 						inter.diffuseImage = surfaceStage->texture.image;
 						inter.vertexColor = surfaceStage->vertexColor;
@@ -1873,7 +2028,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 						// draw any previous interaction
 						if( inter.specularImage != NULL )
 						{
-							DrawSingleInteraction( &inter );
+							DrawSingleInteraction( &inter, false, false, true );
 						}
 						inter.specularImage = surfaceStage->texture.image;
 						inter.vertexColor = surfaceStage->vertexColor;
@@ -1885,7 +2040,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			}
 
 			// draw the final interaction
-			DrawSingleInteraction( &inter );
+			DrawSingleInteraction( &inter, false, false, true );
 
 			renderLog.CloseBlock();
 		}
@@ -1916,20 +2071,7 @@ idRenderBackend::AmbientPass
 */
 void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDrawSurfs, bool fillGbuffer )
 {
-	if( fillGbuffer )
-	{
-		if( !r_useSSGI.GetBool() && !r_useSSAO.GetBool() )
-		{
-			return;
-		}
-	}
-	else
-	{
-		if( r_forceAmbient.GetFloat() <= 0 || r_skipAmbient.GetBool() )
-		{
-			return;
-		}
-	}
+	const bool hdrIsActive = ( r_useHDR.GetBool() && globalFramebuffers.hdrFBO != NULL && globalFramebuffers.hdrFBO->IsBound() );
 
 	if( numDrawSurfs == 0 )
 	{
@@ -1942,20 +2084,58 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		return;
 	}
 
-	const bool hdrIsActive = ( r_useHDR.GetBool() && globalFramebuffers.hdrFBO != NULL && globalFramebuffers.hdrFBO->IsBound() );
-
 	/*
+	if( !fillGbuffer )
+	{
+		// clear gbuffer
+		GL_Clear( true, false, false, 0, 0.0f, 0.0f, 0.0f, 1.0f, false );
+	}
+	*/
+
+	if( !fillGbuffer && r_useSSAO.GetBool() && r_ssaoDebug.GetBool() )
+	{
+		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
+
+		// We just want to do a quad pass - so make sure we disable any texgen and
+		// set the texture matrix to the identity so we don't get anomalies from
+		// any stale uniform data being present from a previous draw call
+		const float texS[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+		const float texT[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
+		renderProgManager.SetRenderParm( RENDERPARM_TEXTUREMATRIX_S, texS );
+		renderProgManager.SetRenderParm( RENDERPARM_TEXTUREMATRIX_T, texT );
+
+		// disable any texgen
+		const float texGenEnabled[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		renderProgManager.SetRenderParm( RENDERPARM_TEXGEN_0_ENABLED, texGenEnabled );
+
+		currentSpace = NULL;
+		RB_SetMVP( renderMatrix_identity );
+
+		renderProgManager.BindShader_Texture();
+		GL_Color( 1, 1, 1, 1 );
+
+		GL_SelectTexture( 0 );
+		globalImages->ambientOcclusionImage[0]->Bind();
+
+		DrawElementsWithCounters( &unitSquareSurface );
+
+		renderProgManager.Unbind();
+		GL_State( GLS_DEFAULT );
+
+		SetFragmentParm( RENDERPARM_ALPHA_TEST, vec4_zero.ToFloatPtr() );
+
+		return;
+	}
+
+	renderLog.OpenMainBlock( MRB_AMBIENT_PASS );
+	renderLog.OpenBlock( "Render_AmbientPass", colorBlue );
+
 	if( fillGbuffer )
 	{
 		globalFramebuffers.geometryBufferFBO->Bind();
 
-		glClearColor( 0, 0, 0, 0 );
-		glClear( GL_COLOR_BUFFER_BIT );
+		GL_Clear( true, false, false, 0, 0.0f, 0.0f, 0.0f, 1.0f, false );
 	}
-	*/
-
-	renderLog.OpenMainBlock( MRB_AMBIENT_PASS );
-	renderLog.OpenBlock( "RB_AmbientPass" );
 
 	// RB: not needed
 	// GL_StartDepthPass( backEnd.viewDef->scissor );
@@ -1965,29 +2145,36 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 	// draw all the subview surfaces, which will already be at the start of the sorted list,
 	// with the general purpose path
-	//GL_State( GLS_DEFAULT );
+	GL_State( GLS_DEFAULT );
 
-	//if( fillGbuffer )
-	{
-		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-	}
-	//else
-	//{
-	//	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-	//}
+#define BLEND_NORMALS 1
+
+	// RB: even use additive blending to blend the normals
+	//GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+
+	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
 
 	GL_Color( colorWhite );
 
-	const float lightScale = 1.0f; //r_lightScale.GetFloat();
+	//const float lightScale = r_useHDR.GetBool() ? r_lightScale.GetFloat() * 0.666f : r_lightScale.GetFloat();
+	const float lightScale = r_lightScale.GetFloat();
 	const idVec4 lightColor = colorWhite * lightScale;
+
 	// apply the world-global overbright and the 2x factor for specular
 	const idVec4 diffuseColor = lightColor;
 	const idVec4 specularColor = lightColor * 2.0f;
 
 	idVec4 ambientColor;
 	float ambientBoost = 1.0f;
-	ambientBoost += r_useSSAO.GetBool() ? 0.2f : 0.0f;
-	ambientBoost *= r_useHDR.GetBool() ? 1.1f : 1.0f;
+
+	if( !r_usePBR.GetBool() )
+	{
+		ambientBoost += r_useSSAO.GetBool() ? 0.2f : 0.0f;
+		ambientBoost *= r_useHDR.GetBool() ? 1.1f : 1.0f;
+	}
+
+	bool useIBL = r_usePBR.GetBool() && !fillGbuffer;
+
 	ambientColor.x = r_forceAmbient.GetFloat() * ambientBoost;
 	ambientColor.y = r_forceAmbient.GetFloat() * ambientBoost;
 	ambientColor.z = r_forceAmbient.GetFloat() * ambientBoost;
@@ -2037,9 +2224,10 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		//}
 		//else
 		{
-#if 1
 			if( fillGbuffer )
 			{
+				// TODO support PBR textures and store roughness in the alpha channel
+
 				// fill geometry buffer with normal/roughness information
 				if( drawSurf->jointCache )
 				{
@@ -2051,8 +2239,10 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 				}
 			}
 			else
-#endif
 			{
+
+				// TODO support PBR textures
+
 				// draw Quake 4 style ambient
 				if( drawSurf->jointCache )
 				{
@@ -2117,6 +2307,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 			renderProgManager.SetRenderParm( RENDERPARM_COLOR, directedColor.ToFloatPtr() );
 			renderProgManager.SetRenderParm( RENDERPARM_AMBIENT_COLOR, ambientColor.ToFloatPtr() );
 		}
+		float ambientBoost = r_useHDR.GetBool() ? 1.5 : 1.0;
 #endif
 
 		/*
@@ -2153,47 +2344,39 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		}
 		*/
 
+		drawInteraction_t inter = {};
+		inter.surf = drawSurf;
+
+		inter.diffuseColor[0] = inter.diffuseColor[1] = inter.diffuseColor[2] = inter.diffuseColor[3] = 1;
+		inter.specularColor[0] = inter.specularColor[1] = inter.specularColor[2] = inter.specularColor[3] = 0;
+
 		// check for the fast path
 		if( surfaceMaterial->GetFastPathBumpImage() && !r_skipInteractionFastPath.GetBool() )
 		{
-			renderLog.OpenBlock( surfaceMaterial->GetName() );
+			renderLog.OpenBlock( surfaceMaterial->GetName(), colorMdGrey );
 
-			// texture 0 will be the per-surface bump map
-			GL_SelectTexture( INTERACTION_TEXUNIT_BUMP );
-			surfaceMaterial->GetFastPathBumpImage()->Bind();
+			inter.bumpImage = surfaceMaterial->GetFastPathBumpImage();
+			inter.specularImage = surfaceMaterial->GetFastPathSpecularImage();
+			inter.diffuseImage = surfaceMaterial->GetFastPathDiffuseImage();
 
-			// texture 1 is the per-surface specular map
-			GL_SelectTexture( INTERACTION_TEXUNIT_SPECULARMIX );
-			surfaceMaterial->GetFastPathSpecularImage()->Bind();
-
-			// texture 2 is the per-surface diffuse map
-			GL_SelectTexture( INTERACTION_TEXUNIT_BASECOLOR );
-			surfaceMaterial->GetFastPathDiffuseImage()->Bind();
-
-			DrawElementsWithCounters( drawSurf );
+			DrawSingleInteraction( &inter, true, useIBL, false );
 
 			renderLog.CloseBlock();
 			continue;
 		}
 
-		renderLog.OpenBlock( surfaceMaterial->GetName() );
+		renderLog.OpenBlock( surfaceMaterial->GetName(), colorMdGrey );
 
 		//bool drawSolid = false;
 
+		inter.bumpImage = NULL;
+		inter.specularImage = NULL;
+		inter.diffuseImage = NULL;
 
 		// we may have multiple alpha tested stages
 		// if the only alpha tested stages are condition register omitted,
 		// draw a normal opaque surface
 		bool didDraw = false;
-
-		drawInteraction_t inter = {};
-		inter.surf = drawSurf;
-		inter.bumpImage = NULL;
-		inter.specularImage = NULL;
-		inter.diffuseImage = NULL;
-
-		inter.diffuseColor[0] = inter.diffuseColor[1] = inter.diffuseColor[2] = inter.diffuseColor[3] = 1;
-		inter.specularColor[0] = inter.specularColor[1] = inter.specularColor[2] = inter.specularColor[3] = 0;
 
 		// perforated surfaces may have multiple alpha tested stages
 		for( stage = 0; stage < surfaceMaterial->GetNumStages(); stage++ )
@@ -2225,7 +2408,19 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 					// draw any previous interaction
 					if( inter.bumpImage != NULL )
 					{
-						DrawSingleInteraction( &inter );
+#if BLEND_NORMALS
+						if( inter.vertexColor == SVC_IGNORE )
+						{
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+						else
+						{
+							// RB: this is a bit hacky: use additive blending to blend the normals
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+#endif
+
+						DrawSingleInteraction( &inter, false, useIBL, false );
 					}
 					inter.bumpImage = surfaceStage->texture.image;
 					inter.diffuseImage = NULL;
@@ -2246,7 +2441,19 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 					// draw any previous interaction
 					if( inter.diffuseImage != NULL )
 					{
-						DrawSingleInteraction( &inter );
+#if BLEND_NORMALS
+						if( inter.vertexColor == SVC_IGNORE )
+						{
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+						else
+						{
+							// RB: this is a bit hacky: use additive blending to blend the normals
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+#endif
+
+						DrawSingleInteraction( &inter, false, useIBL, false );
 					}
 
 					inter.diffuseImage = surfaceStage->texture.image;
@@ -2266,7 +2473,19 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 					// draw any previous interaction
 					if( inter.specularImage != NULL )
 					{
-						DrawSingleInteraction( &inter );
+#if BLEND_NORMALS
+						if( inter.vertexColor == SVC_IGNORE )
+						{
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+						else
+						{
+							// RB: this is a bit hacky: use additive blending to blend the normals
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+#endif
+
+						DrawSingleInteraction( &inter, false, useIBL, false );
 					}
 					inter.specularImage = surfaceStage->texture.image;
 					inter.vertexColor = surfaceStage->vertexColor;
@@ -2278,28 +2497,32 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		}
 
 		// draw the final interaction
-		DrawSingleInteraction( &inter );
+#if BLEND_NORMALS
+		if( inter.vertexColor == SVC_IGNORE )
+		{
+			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+		}
+		else
+		{
+			// RB: this is a bit hacky: use additive blending to blend the normals
+			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+		}
+#endif
+
+		DrawSingleInteraction( &inter, false, useIBL, false );
 
 		renderLog.CloseBlock();
 	}
 
+	// disable blending
+	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
 	SetFragmentParm( RENDERPARM_ALPHA_TEST, vec4_zero.ToFloatPtr() );
-
-	renderLog.CloseBlock();
-	renderLog.CloseMainBlock();
 
 	GL_SelectTexture( 0 );
 
 	if( fillGbuffer )
 	{
-		// FIXME: this copies RGBA16F into _currentNormals if HDR is enabled
-		const idScreenRect& viewport = viewDef->viewport;
-		globalImages->currentNormalsImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
-
-		//GL_Clear( true, false, false, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 1.0f, false );
-
-
-		/*
+		// go back to main render target
 		if( hdrIsActive )
 		{
 			globalFramebuffers.hdrFBO->Bind();
@@ -2308,10 +2531,12 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		{
 			Framebuffer::Unbind();
 		}
-		*/
 	}
 
 	renderProgManager.Unbind();
+
+	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
 }
 
 // RB end
@@ -2413,7 +2638,7 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 			}
 			uint64 end = Sys_Microseconds();
 
-			pc.shadowMicroSec += end - start;
+			pc.cpuShadowMicroSec += end - start;
 		}
 
 		if( drawSurf->numIndexes == 0 )
@@ -2489,32 +2714,12 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 
 		const bool renderZPass = ( drawSurf->renderZFail == 0 ) || r_forceZPassStencilShadows.GetBool();
 
-
-#if !defined(USE_VULKAN)
-		if( renderZPass )
-		{
-			// Z-pass
-			glStencilOpSeparate( GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR );
-			glStencilOpSeparate( GL_BACK, GL_KEEP, GL_KEEP, GL_DECR );
-		}
-		else if( r_useStencilShadowPreload.GetBool() )
-		{
-			// preload + Z-pass
-			glStencilOpSeparate( GL_FRONT, GL_KEEP, GL_DECR, GL_DECR );
-			glStencilOpSeparate( GL_BACK, GL_KEEP, GL_INCR, GL_INCR );
-		}
-		else
-		{
-			// Z-fail
-		}
-#endif
-
 		DrawStencilShadowPass( drawSurf, renderZPass );
 	}
 
 	// cleanup the shadow specific rendering state
 
-	GL_State( glStateBits & ~( GLS_CULL_MASK ) | GLS_CULL_FRONTSIDED );
+	GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
 
 	// reset depth bounds
 	if( r_useShadowDepthBounds.GetBool() )
@@ -2541,7 +2746,7 @@ mask to be used by the following stencil shadow and draw interaction passes.
 */
 void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 {
-	renderLog.OpenBlock( "Stencil Select" );
+	renderLog.OpenBlock( "Stencil Select", colorPink );
 
 	// enable the light scissor
 	if( !currentScissor.Equals( vLight->scissorRect ) && r_useScissor.GetBool() )
@@ -2556,12 +2761,16 @@ void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 
 	// clear stencil buffer to 0 (not drawable)
 	uint64 glStateMinusStencil = GL_GetCurrentStateMinusStencil();
-	GL_State( glStateMinusStencil | GLS_STENCIL_FUNC_ALWAYS | GLS_STENCIL_MAKE_REF( STENCIL_SHADOW_TEST_VALUE ) | GLS_STENCIL_MAKE_MASK( STENCIL_SHADOW_MASK_VALUE ) );	// make sure stencil mask passes for the clear
+	GL_State(
+		glStateMinusStencil |
+		GLS_STENCIL_FUNC_ALWAYS |
+		GLS_STENCIL_MAKE_REF( STENCIL_SHADOW_TEST_VALUE ) |
+		GLS_STENCIL_MAKE_MASK( STENCIL_SHADOW_MASK_VALUE ) );	// make sure stencil mask passes for the clear
+
 	GL_Clear( false, false, true, 0, 0.0f, 0.0f, 0.0f, 0.0f, false );	// clear to 0 for stencil select
 
 	// set the depthbounds
 	GL_DepthBoundsTest( vLight->scissorRect.zmin, vLight->scissorRect.zmax );
-
 
 	GL_State(
 		GLS_COLORMASK |
@@ -2570,6 +2779,8 @@ void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 		GLS_DEPTHMASK |
 		GLS_DEPTHFUNC_LESS |
 		GLS_STENCIL_FUNC_ALWAYS |
+		GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_REPLACE | GLS_STENCIL_OP_PASS_ZERO |
+		GLS_BACK_STENCIL_OP_FAIL_KEEP | GLS_BACK_STENCIL_OP_ZFAIL_ZERO | GLS_BACK_STENCIL_OP_PASS_REPLACE |
 		GLS_STENCIL_MAKE_REF( STENCIL_SHADOW_TEST_VALUE ) |
 		GLS_STENCIL_MAKE_MASK( STENCIL_SHADOW_MASK_VALUE ) );
 
@@ -2589,10 +2800,9 @@ void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 	DrawElementsWithCounters( &zeroOneCubeSurface );
 
 	// reset stencil state
-	GL_State( glStateBits & ~( GLS_CULL_MASK ) | GLS_CULL_FRONTSIDED );
+	GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
 
 	renderProgManager.Unbind();
-
 
 	// unset the depthbounds
 	GL_DepthBoundsTest( 0.0f, 0.0f );
@@ -2731,17 +2941,17 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 	switch( r_shadowMapOccluderFacing.GetInteger() )
 	{
 		case 0:
-			GL_State( glStateBits & ~( GLS_CULL_MASK ) | GLS_CULL_FRONTSIDED );
+			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
 			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat(), r_shadowMapPolygonOffset.GetFloat() );
 			break;
 
 		case 1:
-			GL_State( glStateBits & ~( GLS_CULL_MASK ) | GLS_CULL_BACKSIDED );
+			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_BACKSIDED );
 			GL_PolygonOffset( -r_shadowMapPolygonFactor.GetFloat(), -r_shadowMapPolygonOffset.GetFloat() );
 			break;
 
 		default:
-			GL_State( glStateBits & ~( GLS_CULL_MASK ) | GLS_CULL_TWOSIDED );
+			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_TWOSIDED );
 			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat(), r_shadowMapPolygonOffset.GetFloat() );
 			break;
 	}
@@ -3078,7 +3288,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 			}
 			uint64 end = Sys_Microseconds();
 
-			pc.shadowMicroSec += end - start;
+			pc.cpuShadowMicroSec += end - start;
 		}
 #endif
 
@@ -3273,16 +3483,15 @@ idRenderBackend::DrawInteractions
 */
 void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 {
-	if( r_skipInteractions.GetBool() )
+	if( r_skipInteractions.GetBool() || viewDef->viewLights == NULL )
 	{
 		return;
 	}
 
 	renderLog.OpenMainBlock( MRB_DRAW_INTERACTIONS );
-	renderLog.OpenBlock( "RB_DrawInteractions" );
+	renderLog.OpenBlock( "Render_Interactions", colorYellow );
 
 	GL_SelectTexture( 0 );
-
 
 	const bool useLightDepthBounds = r_useLightDepthBounds.GetBool() && !r_useShadowMapping.GetBool();
 
@@ -3307,7 +3516,7 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 		}
 
 		const idMaterial* lightShader = vLight->lightShader;
-		renderLog.OpenBlock( lightShader->GetName() );
+		renderLog.OpenBlock( lightShader->GetName(), colorMdGrey );
 
 		// set the depth bounds for the whole light
 		if( useLightDepthBounds )
@@ -3354,14 +3563,14 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 
 			if( vLight->localInteractions != NULL )
 			{
-				renderLog.OpenBlock( "Local Light Interactions" );
+				renderLog.OpenBlock( "Local Light Interactions", colorPurple );
 				RenderInteractions( vLight->localInteractions, vLight, GLS_DEPTHFUNC_EQUAL, false, useLightDepthBounds );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->globalInteractions != NULL )
 			{
-				renderLog.OpenBlock( "Global Light Interactions" );
+				renderLog.OpenBlock( "Global Light Interactions", colorPurple );
 				RenderInteractions( vLight->globalInteractions, vLight, GLS_DEPTHFUNC_EQUAL, false, useLightDepthBounds );
 				renderLog.CloseBlock();
 			}
@@ -3407,28 +3616,28 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 
 			if( vLight->globalShadows != NULL )
 			{
-				renderLog.OpenBlock( "Global Light Shadows" );
+				renderLog.OpenBlock( "Global Light Shadows", colorBrown );
 				StencilShadowPass( vLight->globalShadows, vLight );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->localInteractions != NULL )
 			{
-				renderLog.OpenBlock( "Local Light Interactions" );
+				renderLog.OpenBlock( "Local Light Interactions", colorPurple );
 				RenderInteractions( vLight->localInteractions, vLight, GLS_DEPTHFUNC_EQUAL, performStencilTest, useLightDepthBounds );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->localShadows != NULL )
 			{
-				renderLog.OpenBlock( "Local Light Shadows" );
+				renderLog.OpenBlock( "Local Light Shadows", colorBrown );
 				StencilShadowPass( vLight->localShadows, vLight );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->globalInteractions != NULL )
 			{
-				renderLog.OpenBlock( "Global Light Interactions" );
+				renderLog.OpenBlock( "Global Light Interactions", colorPurple );
 				RenderInteractions( vLight->globalInteractions, vLight, GLS_DEPTHFUNC_EQUAL, performStencilTest, useLightDepthBounds );
 				renderLog.CloseBlock();
 			}
@@ -3437,7 +3646,7 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 
 		if( vLight->translucentInteractions != NULL && !r_skipTranslucent.GetBool() )
 		{
-			renderLog.OpenBlock( "Translucent Interactions" );
+			renderLog.OpenBlock( "Translucent Interactions", colorCyan );
 
 			// Disable the depth bounds test because translucent surfaces don't work with
 			// the depth bounds tests since they did not write depth during the depth pass.
@@ -3505,7 +3714,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 		return numDrawSurfs;
 	}
 
-	renderLog.OpenBlock( "RB_DrawShaderPasses" );
+	renderLog.OpenBlock( "Render_GenericShaderPasses", colorBlue );
 
 	GL_SelectTexture( 0 );
 
@@ -3563,7 +3772,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			continue;
 		}
 
-		renderLog.OpenBlock( shader->GetName() );
+		renderLog.OpenBlock( shader->GetName(), colorMdGrey );
 
 		// determine the stereoDepth offset
 		// guiStereoScreenOffset will always be zero for 3D views, so the !=
@@ -3648,14 +3857,8 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 
 		if( shader->TestMaterialFlag( MF_POLYGONOFFSET ) )
 		{
-			surfGLState = GLS_POLYGON_OFFSET;
-
-			// RB: make sure the pipeline of the current shader has dynamic polygon offset enabled
-			//renderProgManager.CommitUniforms( surfGLState );
-
-#if !defined( USE_VULKAN )
 			GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * shader->GetPolygonOffset() );
-#endif
+			surfGLState = GLS_POLYGON_OFFSET;
 		}
 
 		for( int stage = 0; stage < shader->GetNumStages(); stage++ )
@@ -3686,7 +3889,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				continue;
 			}
 
-
 			// see if we are a new-style stage
 			newShaderStage_t* newStage = pStage->newStage;
 			if( newStage != NULL )
@@ -3700,7 +3902,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				{
 					continue;
 				}
-				renderLog.OpenBlock( "New Shader Stage" );
+				renderLog.OpenBlock( "Custom Renderproc Shader Stage", colorRed );
 
 				GL_State( stageGLState );
 
@@ -3780,7 +3982,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 
 			stageVertexColor_t svc = pStage->vertexColor;
 
-			renderLog.OpenBlock( "Old Shader Stage" );
+			renderLog.OpenBlock( "Standard Shader Stage", colorGreen );
 			GL_Color( color );
 
 			if( surf->space->isGuiSurface )
@@ -3856,6 +4058,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			// bind the texture
 			BindVariableStageImage( &pStage->texture, regs );
 
+			// set privatePolygonOffset if necessary
 			if( pStage->privatePolygonOffset )
 			{
 				stageGLState |= GLS_POLYGON_OFFSET;
@@ -3863,29 +4066,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 
 			// set the state
 			GL_State( stageGLState );
-
-			// set privatePolygonOffset if necessary
-#if defined( USE_VULKAN )
-			if( shader->TestMaterialFlag( MF_POLYGONOFFSET ) || pStage->privatePolygonOffset )
-			{
-				// RB: make sure the pipeline of the current shader has dynamic polygon offset enabled
-				renderProgManager.CommitUniforms( stageGLState );
-
-				if( shader->TestMaterialFlag( MF_POLYGONOFFSET ) )
-				{
-					GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * shader->GetPolygonOffset() );
-				}
-				else
-				{
-					GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * pStage->privatePolygonOffset );
-				}
-			}
-#else
-			if( pStage->privatePolygonOffset )
-			{
-				GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * pStage->privatePolygonOffset );
-			}
-#endif
 
 			PrepareStageTexturing( pStage, surf );
 
@@ -3899,7 +4079,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			{
 				GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * shader->GetPolygonOffset() );
 			}
-
 			renderLog.CloseBlock();
 		}
 
@@ -3995,7 +4174,7 @@ void idRenderBackend::BlendLight( const drawSurf_t* drawSurfs, const drawSurf_t*
 	{
 		return;
 	}
-	renderLog.OpenBlock( vLight->lightShader->GetName() );
+	renderLog.OpenBlock( vLight->lightShader->GetName(), colorPink );
 
 	const idMaterial* lightShader = vLight->lightShader;
 	const float*	 regs = vLight->shaderRegisters;
@@ -4132,7 +4311,7 @@ idRenderBackend::FogPass
 */
 void idRenderBackend::FogPass( const drawSurf_t* drawSurfs,  const drawSurf_t* drawSurfs2, const viewLight_t* vLight )
 {
-	renderLog.OpenBlock( vLight->lightShader->GetName() );
+	renderLog.OpenBlock( vLight->lightShader->GetName(), colorCyan );
 
 	// find the current color and density of the fog
 	const idMaterial* lightShader = vLight->lightShader;
@@ -4214,7 +4393,7 @@ void idRenderBackend::FogPass( const drawSurf_t* drawSurfs,  const drawSurf_t* d
 	zeroOneCubeSurface.scissorRect = viewDef->scissor;
 	T_BasicFog( &zeroOneCubeSurface, fogPlanes, &vLight->inverseBaseLightProject );
 
-	GL_State( glStateBits & ~( GLS_CULL_MASK ) | GLS_CULL_FRONTSIDED );
+	GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
 
 	GL_SelectTexture( 0 );
 
@@ -4235,8 +4414,9 @@ void idRenderBackend::FogAllLights()
 	{
 		return;
 	}
+
 	renderLog.OpenMainBlock( MRB_FOG_ALL_LIGHTS );
-	renderLog.OpenBlock( "RB_FogAllLights" );
+	renderLog.OpenBlock( "Render_FogAllLights", colorBlue );
 
 	// force fog plane to recalculate
 	currentSpace = NULL;
@@ -4602,7 +4782,7 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 }
 
 
-void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef )
+void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef, bool downModulateScreen )
 {
 #if !defined(USE_VULKAN)
 	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
@@ -4616,88 +4796,14 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		return;
 	}
 
-	// FIXME very expensive to enable this in subviews
+	// skip this in subviews because it is very expensive
 	if( _viewDef->isSubview )
 	{
 		return;
 	}
 
-	RENDERLOG_PRINTF( "---------- RB_SSAO() ----------\n" );
-
-#if 0
-	GL_CheckErrors();
-
-	// clear the alpha buffer and draw only the hands + weapon into it so
-	// we can avoid blurring them
-	glClearColor( 0, 0, 0, 1 );
-	GL_State( GLS_COLORMASK | GLS_DEPTHMASK );
-	glClear( GL_COLOR_BUFFER_BIT );
-	GL_Color( 0, 0, 0, 0 );
-
-
-	GL_SelectTexture( 0 );
-	globalImages->blackImage->Bind();
-	backEnd.currentSpace = NULL;
-
-	drawSurf_t** drawSurfs = ( drawSurf_t** )&backEnd.viewDef->drawSurfs[0];
-	for( int surfNum = 0; surfNum < backEnd.viewDef->numDrawSurfs; surfNum++ )
-	{
-		const drawSurf_t* surf = drawSurfs[ surfNum ];
-
-		if( !surf->space->weaponDepthHack && !surf->space->skipMotionBlur && !surf->material->HasSubview() )
-		{
-			// Apply motion blur to this object
-			continue;
-		}
-
-		const idMaterial* shader = surf->material;
-		if( shader->Coverage() == MC_TRANSLUCENT )
-		{
-			// muzzle flash, etc
-			continue;
-		}
-
-		// set mvp matrix
-		if( surf->space != backEnd.currentSpace )
-		{
-			RB_SetMVP( surf->space->mvp );
-			backEnd.currentSpace = surf->space;
-		}
-
-		// this could just be a color, but we don't have a skinned color-only prog
-		if( surf->jointCache )
-		{
-			renderProgManager.BindShader_TextureVertexColorSkinned();
-		}
-		else
-		{
-			renderProgManager.BindShader_TextureVertexColor();
-		}
-
-		// draw it solid
-		RB_DrawElementsWithCounters( surf );
-	}
-	GL_State( GLS_DEPTHFUNC_ALWAYS );
-
-	// copy off the color buffer and the depth buffer for the motion blur prog
-	// we use the viewport dimensions for copying the buffers in case resolution scaling is enabled.
-	const idScreenRect& viewport = backEnd.viewDef->viewport;
-	globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
-
-	// in stereo rendering, each eye needs to get a separate previous frame mvp
-	int mvpIndex = ( backEnd.viewDef->renderView.viewEyeBuffer == 1 ) ? 1 : 0;
-
-	// derive the matrix to go from current pixels to previous frame pixels
-	idRenderMatrix	inverseMVP;
-	idRenderMatrix::Inverse( backEnd.viewDef->worldSpace.mvp, inverseMVP );
-
-	idRenderMatrix	motionMatrix;
-	idRenderMatrix::Multiply( backEnd.prevMVP[mvpIndex], inverseMVP, motionMatrix );
-
-	backEnd.prevMVP[mvpIndex] = backEnd.viewDef->worldSpace.mvp;
-
-	RB_SetMVP( motionMatrix );
-#endif
+	renderLog.OpenMainBlock( MRB_SSAO_PASS );
+	renderLog.OpenBlock( "Render_SSAO", colorBlue );
 
 	currentSpace = &viewDef->worldSpace;
 	RB_SetMVP( viewDef->worldSpace.mvp );
@@ -4710,9 +4816,11 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	// build hierarchical depth buffer
 	if( r_useHierarchicalDepthBuffer.GetBool() )
 	{
+		renderLog.OpenBlock( "Render_HiZ", colorDkGrey );
+
 		renderProgManager.BindShader_AmbientOcclusionMinify();
 
-		glClearColor( 0, 0, 0, 1 );
+		GL_Color( 0, 0, 0, 1 );
 
 		GL_SelectTexture( 0 );
 		//globalImages->currentDepthImage->Bind();
@@ -4722,10 +4830,12 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 			int width = globalFramebuffers.csDepthFBO[i]->GetWidth();
 			int height = globalFramebuffers.csDepthFBO[i]->GetHeight();
 
+			globalFramebuffers.csDepthFBO[i]->Bind();
+
 			GL_Viewport( 0, 0, width, height );
 			GL_Scissor( 0, 0, width, height );
 
-			globalFramebuffers.csDepthFBO[i]->Bind();
+			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
 			glClear( GL_COLOR_BUFFER_BIT );
 
@@ -4749,59 +4859,92 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 			jitterTexScale[2] = 0;
 			jitterTexScale[3] = 0;
 			SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
-#if 1
+
 			float screenCorrectionParm[4];
 			screenCorrectionParm[0] = 1.0f / width;
 			screenCorrectionParm[1] = 1.0f / height;
 			screenCorrectionParm[2] = width;
 			screenCorrectionParm[3] = height;
 			SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-#endif
 
 			DrawElementsWithCounters( &unitSquareSurface );
 		}
+
+		renderLog.CloseBlock();
 	}
 
 	// set the window clipping
-	GL_Viewport( 0, 0, screenWidth, screenHeight );
-	GL_Scissor( 0, 0, screenWidth, screenHeight );
+	int aoScreenWidth = globalFramebuffers.ambientOcclusionFBO[0]->GetWidth();
+	int aoScreenHeight = globalFramebuffers.ambientOcclusionFBO[0]->GetHeight();
 
-	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
+	GL_Viewport( 0, 0, aoScreenWidth, aoScreenHeight );
+	GL_Scissor( 0, 0, aoScreenWidth, aoScreenHeight );
 
-	if( r_ssaoFiltering.GetBool() )
+
+
+	if( downModulateScreen )
+	{
+		if( r_ssaoFiltering.GetBool() )
+		{
+			globalFramebuffers.ambientOcclusionFBO[0]->Bind();
+
+			glClearColor( 0, 0, 0, 0 );
+			glClear( GL_COLOR_BUFFER_BIT );
+
+			renderProgManager.BindShader_AmbientOcclusion();
+		}
+		else
+		{
+			if( r_ssaoDebug.GetInteger() <= 0 )
+			{
+				GL_State( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO | GLS_ALPHAMASK | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
+			}
+
+			if( hdrIsActive )
+			{
+				globalFramebuffers.hdrFBO->Bind();
+			}
+			else
+			{
+				Framebuffer::Unbind();
+			}
+
+			renderProgManager.BindShader_AmbientOcclusionAndOutput();
+		}
+	}
+	else
 	{
 		globalFramebuffers.ambientOcclusionFBO[0]->Bind();
+
+		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
 		glClearColor( 0, 0, 0, 0 );
 		glClear( GL_COLOR_BUFFER_BIT );
 
-		renderProgManager.BindShader_AmbientOcclusion();
-	}
-	else
-	{
-		if( r_ssaoDebug.GetInteger() <= 0 )
+		if( r_ssaoFiltering.GetBool() )
 		{
-			GL_State( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO | GLS_ALPHAMASK | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
-		}
-
-		if( hdrIsActive )
-		{
-			globalFramebuffers.hdrFBO->Bind();
+			renderProgManager.BindShader_AmbientOcclusion();
 		}
 		else
 		{
-			Framebuffer::Unbind();
+			renderProgManager.BindShader_AmbientOcclusionAndOutput();
 		}
-
-		renderProgManager.BindShader_AmbientOcclusionAndOutput();
 	}
 
 	float screenCorrectionParm[4];
-	screenCorrectionParm[0] = 1.0f / screenWidth;
-	screenCorrectionParm[1] = 1.0f / screenHeight;
-	screenCorrectionParm[2] = screenWidth;
-	screenCorrectionParm[3] = screenHeight;
+	screenCorrectionParm[0] = float( screenWidth ) / aoScreenWidth;
+	screenCorrectionParm[1] = float( screenHeight ) / aoScreenHeight;
+	screenCorrectionParm[2] = 0.0f;
+	screenCorrectionParm[3] = 1.0f;
 	SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
+
+	// window coord to 0.0 to 1.0 conversion
+	float windowCoordParm[4];
+	windowCoordParm[0] = 1.0f / aoScreenWidth;
+	windowCoordParm[1] = 1.0f / aoScreenHeight;
+	windowCoordParm[2] = aoScreenWidth;
+	windowCoordParm[3] = aoScreenHeight;
+	SetFragmentParm( RENDERPARM_WINDOWCOORD, windowCoordParm ); // rpWindowCoord
 
 #if 0
 	// RB: set unprojection matrices so we can convert zbuffer values back to camera and world spaces
@@ -4818,20 +4961,30 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 #endif
 	SetVertexParms( RENDERPARM_MODELMATRIX_X, viewDef->unprojectionToCameraRenderMatrix[0], 4 );
 
+	const float jitterSampleScale = 1.0f;
+
+	float jitterTexScale[4];
+	jitterTexScale[0] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;	// TODO shadow buffer size fraction shadowMapSize / maxShadowMapSize
+	jitterTexScale[1] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;
+	jitterTexScale[2] = -r_shadowMapBiasScale.GetFloat();
+	jitterTexScale[3] = 0.0f;
+	SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
 
 	float jitterTexOffset[4];
+	jitterTexOffset[0] = 1.0f / globalImages->blueNoiseImage256->GetUploadWidth();
+	jitterTexOffset[1] = 1.0f / globalImages->blueNoiseImage256->GetUploadHeight();
+
 	if( r_shadowMapRandomizeJitter.GetBool() )
 	{
-		jitterTexOffset[0] = ( rand() & 255 ) / 255.0;
-		jitterTexOffset[1] = ( rand() & 255 ) / 255.0;
+		jitterTexOffset[2] = Sys_Milliseconds() / 1000.0f;
+		jitterTexOffset[3] = tr.frameCount % 256;
 	}
 	else
 	{
-		jitterTexOffset[0] = 0;
-		jitterTexOffset[1] = 0;
+		jitterTexOffset[2] = 0.0f;
+		jitterTexOffset[3] = 0.0f;
 	}
-	jitterTexOffset[2] = viewDef->renderView.time[0] * 0.001f;
-	jitterTexOffset[3] = 0.0f;
+
 	SetFragmentParm( RENDERPARM_JITTERTEXOFFSET, jitterTexOffset ); // rpJitterTexOffset
 
 	GL_SelectTexture( 0 );
@@ -4847,6 +5000,9 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		globalImages->currentDepthImage->Bind();
 	}
 
+	GL_SelectTexture( 2 );
+	globalImages->blueNoiseImage256->Bind();
+
 	DrawElementsWithCounters( &unitSquareSurface );
 
 	if( r_ssaoFiltering.GetBool() )
@@ -4854,7 +5010,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		float jitterTexScale[4];
 
 		// AO blur X
-#if 1
 		globalFramebuffers.ambientOcclusionFBO[1]->Bind();
 
 		renderProgManager.BindShader_AmbientOcclusionBlur();
@@ -4870,21 +5025,27 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		globalImages->ambientOcclusionImage[0]->Bind();
 
 		DrawElementsWithCounters( &unitSquareSurface );
-#endif
 
 		// AO blur Y
-		if( hdrIsActive )
+		if( downModulateScreen )
 		{
-			globalFramebuffers.hdrFBO->Bind();
+			if( hdrIsActive )
+			{
+				globalFramebuffers.hdrFBO->Bind();
+			}
+			else
+			{
+				Framebuffer::Unbind();
+			}
+
+			if( r_ssaoDebug.GetInteger() <= 0 )
+			{
+				GL_State( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
+			}
 		}
 		else
 		{
-			Framebuffer::Unbind();
-		}
-
-		if( r_ssaoDebug.GetInteger() <= 0 )
-		{
-			GL_State( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
+			globalFramebuffers.ambientOcclusionFBO[0]->Bind();
 		}
 
 		renderProgManager.BindShader_AmbientOcclusionBlurAndOutput();
@@ -4902,9 +5063,31 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		DrawElementsWithCounters( &unitSquareSurface );
 	}
 
+	if( !downModulateScreen )
+	{
+		// go back to main scene render target
+		if( hdrIsActive )
+		{
+			globalFramebuffers.hdrFBO->Bind();
+		}
+		else
+		{
+			Framebuffer::Unbind();
+		}
+	}
+
+	//
+	// reset state
+	//
 	renderProgManager.Unbind();
 
+	GL_Viewport( 0, 0, screenWidth, screenHeight );
+	GL_Scissor( 0, 0, screenWidth, screenHeight );
+
 	GL_State( GLS_DEFAULT );
+
+	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
 
 	//GL_CheckErrors();
 #endif
@@ -5257,8 +5440,11 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 				break;
 
 			case RC_POST_PROCESS:
+			{
+				// apply optional post processing
 				PostProcess( cmds );
 				break;
+			}
 
 			default:
 				common->Error( "RB_ExecuteBackEndCommands: bad commandId" );
@@ -5268,14 +5454,11 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 	DrawFlickerBox();
 
-	// RB
-	//ImGuiHook::Render();
-
 	GL_EndFrame();
 
 	// stop rendering on this thread
 	uint64 backEndFinishTime = Sys_Microseconds();
-	pc.totalMicroSec = backEndFinishTime - backEndStartTime;
+	pc.cpuTotalMicroSec = backEndFinishTime - backEndStartTime;
 
 	if( r_debugRenderToTexture.GetInteger() == 1 )
 	{
@@ -5294,7 +5477,7 @@ idRenderBackend::DrawViewInternal
 */
 void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int stereoEye )
 {
-	renderLog.OpenBlock( "RB_DrawViewInternal" );
+	renderLog.OpenBlock( "Render_DrawViewInternal", colorRed );
 
 	//-------------------------------------------------
 	// guis can wind up referencing purged images that need to be loaded.
@@ -5397,7 +5580,12 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	AmbientPass( drawSurfs, numDrawSurfs, true );
 
 	//-------------------------------------------------
-	// fill the depth buffer and the color buffer with precomputed Q3A style lighting
+	// build hierarchical depth buffer and SSAO render target
+	//-------------------------------------------------
+	DrawScreenSpaceAmbientOcclusion( _viewDef, false );
+
+	//-------------------------------------------------
+	// render static lighting and consider SSAO results
 	//-------------------------------------------------
 	AmbientPass( drawSurfs, numDrawSurfs, false );
 
@@ -5418,7 +5606,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//-------------------------------------------------
 	// darken the scene using the screen space ambient occlusion
 	//-------------------------------------------------
-	DrawScreenSpaceAmbientOcclusion( _viewDef );
+	//DrawScreenSpaceAmbientOcclusion( _viewDef );
 	//RB_SSGI( _viewDef );
 
 	//-------------------------------------------------
@@ -5678,6 +5866,7 @@ void idRenderBackend::MotionBlur()
 
 	GL_SelectTexture( 0 );
 	globalImages->currentRenderImage->Bind();
+
 	GL_SelectTexture( 1 );
 	globalImages->currentDepthImage->Bind();
 
@@ -5816,7 +6005,8 @@ void idRenderBackend::PostProcess( const void* data )
 		return;
 	}
 
-	RENDERLOG_PRINTF( "---------- RB_PostProcess() ----------\n" );
+	renderLog.OpenMainBlock( MRB_POSTPROCESS );
+	renderLog.OpenBlock( "Render_PostProcessing", colorBlue );
 
 // FIXME
 #if !defined(USE_VULKAN)
@@ -5915,7 +6105,6 @@ void idRenderBackend::PostProcess( const void* data )
 #endif
 	}
 
-#if 1
 	if( r_useFilmicPostProcessEffects.GetBool() )
 	{
 		globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
@@ -5924,39 +6113,30 @@ void idRenderBackend::PostProcess( const void* data )
 		globalImages->currentRenderImage->Bind();
 
 		GL_SelectTexture( 1 );
-		globalImages->grainImage1->Bind();
+		globalImages->blueNoiseImage256->Bind();
 
 		renderProgManager.BindShader_PostProcess();
 
-		const static int GRAIN_SIZE = 128;
-
-		// screen power of two correction factor
-		float screenCorrectionParm[4];
-		screenCorrectionParm[0] = 1.0f / GRAIN_SIZE;
-		screenCorrectionParm[1] = 1.0f / GRAIN_SIZE;
-		screenCorrectionParm[2] = 1.0f;
-		screenCorrectionParm[3] = 1.0f;
-		SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-
 		float jitterTexOffset[4];
+		jitterTexOffset[0] = 1.0f / globalImages->blueNoiseImage256->GetUploadWidth();
+		jitterTexOffset[1] = 1.0f / globalImages->blueNoiseImage256->GetUploadHeight();
+
 		if( r_shadowMapRandomizeJitter.GetBool() )
 		{
-			jitterTexOffset[0] = ( rand() & 255 ) / 255.0;
-			jitterTexOffset[1] = ( rand() & 255 ) / 255.0;
+			jitterTexOffset[2] = Sys_Milliseconds() / 1000.0f;
+			jitterTexOffset[3] = tr.frameCount % 256;
 		}
 		else
 		{
-			jitterTexOffset[0] = 0;
-			jitterTexOffset[1] = 0;
+			jitterTexOffset[2] = 0.0f;
+			jitterTexOffset[3] = 0.0f;
 		}
-		jitterTexOffset[2] = 0.0f;
-		jitterTexOffset[3] = 0.0f;
+
 		SetFragmentParm( RENDERPARM_JITTERTEXOFFSET, jitterTexOffset ); // rpJitterTexOffset
 
 		// Draw
 		DrawElementsWithCounters( &unitSquareSurface );
 	}
-#endif
 
 	GL_SelectTexture( 0 );
 	renderProgManager.Unbind();
@@ -5964,4 +6144,5 @@ void idRenderBackend::PostProcess( const void* data )
 #endif
 
 	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
 }

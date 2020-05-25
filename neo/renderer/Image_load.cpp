@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2017 Robert Beckebans
+Copyright (C) 2013-2020 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 Copyright (C) 2016-2017 Dustin Land
 
@@ -69,6 +69,8 @@ int BitsForFormat( textureFormat_t format )
 			return 4;
 		case FMT_SHADOW_ARRAY:
 			return ( 32 * 6 );
+		case FMT_RG16F:
+			return 32;
 		case FMT_RGBA16F:
 			return 64;
 		case FMT_RGBA32F:
@@ -114,6 +116,10 @@ ID_INLINE void idImage::DeriveOpts()
 				opts.format = FMT_SHADOW_ARRAY;
 				break;
 
+			case TD_RG16F:
+				opts.format = FMT_RG16F;
+				break;
+
 			case TD_RGBA16F:
 				opts.format = FMT_RGBA16F;
 				break;
@@ -137,6 +143,19 @@ ID_INLINE void idImage::DeriveOpts()
 				opts.format = FMT_DXT1;
 				opts.colorFormat = CFM_DEFAULT;
 				break;
+
+			case TD_SPECULAR_PBR_RMAO:
+				opts.gammaMips = false;
+				opts.format = FMT_DXT1;
+				opts.colorFormat = CFM_DEFAULT;
+				break;
+
+			case TD_SPECULAR_PBR_RMAOD:
+				opts.gammaMips = false;
+				opts.format = FMT_DXT5;
+				opts.colorFormat = CFM_DEFAULT;
+				break;
+
 			case TD_DEFAULT:
 				opts.gammaMips = true;
 				opts.format = FMT_DXT5;
@@ -168,6 +187,17 @@ ID_INLINE void idImage::DeriveOpts()
 			case TD_LOOKUP_TABLE_RGB1:
 			case TD_LOOKUP_TABLE_RGBA:
 				opts.format = FMT_RGBA8;
+				break;
+			// motorsep 05-17-2015; added this for uncompressed cubemap/skybox textures
+			case TD_HIGHQUALITY_CUBE:
+				opts.colorFormat = CFM_DEFAULT;
+				opts.format = FMT_RGBA8;
+				opts.gammaMips = true;
+				break;
+			case TD_LOWQUALITY_CUBE:
+				opts.colorFormat = CFM_DEFAULT; // CFM_YCOCG_DXT5;
+				opts.format = FMT_DXT5;
+				opts.gammaMips = true;
 				break;
 			default:
 				assert( false );
@@ -261,6 +291,12 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		return;
 	}
 
+	// RB: the following does not load the source images from disk because pic is NULL
+	// but it tries to get the timestamp to see if we have a newer file than the one in the compressed .bimage
+
+	// TODO also check for alternative names like .png suffices or _rmao.png or even _rmaod.png files
+	// to support the PBR code path
+
 	if( com_productionMode.GetInteger() != 0 )
 	{
 		sourceFileTime = FILE_NOT_FOUND_TIMESTAMP;
@@ -290,12 +326,23 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		}
 	}
 
+	// RB: PBR HACK - RMAO maps should end with _rmao insted of _s
+	if( usage == TD_SPECULAR_PBR_RMAO )
+	{
+		if( imgName.StripTrailingOnce( "_s" ) )
+		{
+			imgName += "_rmao";
+		}
+	}
+	// RB end
+
 	// Figure out opts.colorFormat and opts.format so we can make sure the binary image is up to date
 	DeriveOpts();
 
 	idStrStatic< MAX_OSPATH > generatedName = GetName();
 	GetGeneratedName( generatedName, usage, cubeFiles );
 
+	// RB: try to load the .bimage and skip if sourceFileTime is newer
 	idBinaryImage im( generatedName );
 	binaryFileTime = im.LoadFromGeneratedFile( sourceFileTime );
 
@@ -364,6 +411,8 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 	}
 	else
 	{
+		// RB: try to read the source image from disk
+
 		idStr binarizeReason = "binarize: unknown reason";
 		if( binaryFileTime == FILE_NOT_FOUND_TIMESTAMP )
 		{
@@ -392,6 +441,7 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 			if( !R_LoadCubeImages( GetName(), cubeFiles, pics, &size, &sourceFileTime ) || size == 0 )
 			{
 				idLib::Warning( "Couldn't load cube image: %s", GetName() );
+				defaulted = true; // RB
 				return;
 			}
 
@@ -474,11 +524,27 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 				commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 );
 			}
 
+			commonLocal.LoadPacifierBinarizeEnd();
+
+			// foresthale 2014-05-30: give a nice progress display when binarizing
+			commonLocal.LoadPacifierBinarizeFilename( generatedName.c_str(), binarizeReason.c_str() );
+			if( opts.numLevels > 1 )
+			{
+				commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 * 4 / 3 );
+			}
+			else
+			{
+				commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 );
+			}
+
+			// RB: convert to compressed DXT or whatever choosen target format
 			im.Load2DFromMemory( opts.width, opts.height, pic, opts.numLevels, opts.format, opts.colorFormat, opts.gammaMips );
 			commonLocal.LoadPacifierBinarizeEnd();
 
 			Mem_Free( pic );
 		}
+
+		// RB: write the compressed .bimage which contains the optimized GPU format
 		binaryFileTime = im.WriteGeneratedFile( sourceFileTime );
 	}
 
@@ -571,6 +637,7 @@ void idImage::Print() const
 			// RB begin
 			NAME_FORMAT( ETC1_RGB8_OES );
 			NAME_FORMAT( SHADOW_ARRAY );
+			NAME_FORMAT( RG16F );
 			NAME_FORMAT( RGBA16F );
 			NAME_FORMAT( RGBA32F );
 			NAME_FORMAT( R32F );

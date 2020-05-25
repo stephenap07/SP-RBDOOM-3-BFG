@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2016 Robert Beckebans
+Copyright (C) 2013-2020 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -32,6 +32,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 
 #include "RenderCommon.h"
+#include "../framework/Common_local.h"
+#include "../imgui/BFGimgui.h"
 
 idRenderSystemLocal	tr;
 idRenderSystem* renderSystem = &tr;
@@ -131,13 +133,17 @@ void idRenderSystemLocal::RenderCommandBuffers( const emptyCommand_t* const cmdH
 #if !defined(USE_VULKAN)
 		if( glConfig.timerQueryAvailable )
 		{
-			if( tr.timerQueryId == 0 )
+			if( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ MRB_GPU_TIME ] == 0 )
 			{
-				glGenQueries( 1, & tr.timerQueryId );
+				glCreateQueries( GL_TIMESTAMP, 2, &glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][MRB_GPU_TIME ] );
 			}
-			glBeginQuery( GL_TIME_ELAPSED_EXT, tr.timerQueryId );
+
+			glQueryCounter( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ MRB_GPU_TIME * 2 + 0 ], GL_TIMESTAMP );
 			backend.ExecuteBackEndCommands( cmdHead );
-			glEndQuery( GL_TIME_ELAPSED_EXT );
+			glQueryCounter( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ MRB_GPU_TIME * 2 + 1 ], GL_TIMESTAMP );
+
+			glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ][ MRB_GPU_TIME * 2 + 1 ]++;
+
 			glFlush();
 		}
 		else
@@ -238,6 +244,7 @@ idRenderSystemLocal::idRenderSystemLocal
 idRenderSystemLocal::idRenderSystemLocal() :
 	unitSquareTriangles( NULL ),
 	zeroOneCubeTriangles( NULL ),
+	zeroOneSphereTriangles( NULL ),
 	testImageTriangles( NULL ),
 	bInitialized( false )
 {
@@ -610,10 +617,13 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers(
 	uint64* frontEndMicroSec,
 	uint64* backEndMicroSec,
 	uint64* shadowMicroSec,
-	uint64* gpuMicroSec )
+	uint64* gpuMicroSec,
+	backEndCounters_t* bc,
+	performanceCounters_t* pc
+)
 {
 
-	SwapCommandBuffers_FinishRendering( frontEndMicroSec, backEndMicroSec, shadowMicroSec, gpuMicroSec );
+	SwapCommandBuffers_FinishRendering( frontEndMicroSec, backEndMicroSec, shadowMicroSec, gpuMicroSec, bc, pc );
 
 	return SwapCommandBuffers_FinishCommandBuffers();
 }
@@ -623,11 +633,15 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers(
 idRenderSystemLocal::SwapCommandBuffers_FinishRendering
 =====================
 */
+#define	FPS_FRAMES	6
 void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 	uint64* frontEndMicroSec,
 	uint64* backEndMicroSec,
 	uint64* shadowMicroSec,
-	uint64* gpuMicroSec )
+	uint64* gpuMicroSec,
+	backEndCounters_t* bc,
+	performanceCounters_t* pc
+)
 {
 	SCOPED_PROFILE_EVENT( "SwapCommandBuffers" );
 
@@ -641,33 +655,94 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 		return;
 	}
 
-
 	// After coming back from an autoswap, we won't have anything to render
 	//if( frameData && frameData->cmdHead->next != NULL )
 	{
-		// RB: FIXME move this elsewhere
+#if !defined( USE_VULKAN ) && !defined( IMGUI_BFGUI )
 		ImGuiHook::Render();
+#endif
 
 		// wait for our fence to hit, which means the swap has actually happened
 		// We must do this before clearing any resources the GPU may be using
 		backend.GL_BlockingSwapBuffers();
 	}
 
-#if !defined(USE_VULKAN)
+#if defined(USE_VULKAN)
+	if( gpuMicroSec != NULL )
+	{
+		*gpuMicroSec = backend.pc.gpuMicroSec;
+	}
+#else
 	// read back the start and end timer queries from the previous frame
 	if( glConfig.timerQueryAvailable )
 	{
-		// RB: 64 bit fixes, changed int64 to GLuint64EXT
-		GLuint64EXT drawingTimeNanoseconds = 0;
-		// RB end
+		GLuint64EXT gpuStartNanoseconds = 0;
+		GLuint64EXT gpuEndNanoseconds = 0;
 
-		if( tr.timerQueryId != 0 )
+		if( glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ MRB_GPU_TIME * 2 + 1 ] > 0 )
 		{
-			glGetQueryObjectui64vEXT( tr.timerQueryId, GL_QUERY_RESULT, &drawingTimeNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_GPU_TIME * 2 + 0], GL_QUERY_RESULT, &gpuStartNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_GPU_TIME * 2 + 1], GL_QUERY_RESULT, &gpuEndNanoseconds );
+
+			backend.pc.gpuMicroSec = ( gpuEndNanoseconds - gpuStartNanoseconds ) / 1000;
+
+			if( gpuMicroSec != NULL )
+			{
+				*gpuMicroSec = backend.pc.gpuMicroSec;
+			}
 		}
-		if( gpuMicroSec != NULL )
+
+		if( glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ MRB_FILL_DEPTH_BUFFER  * 2 + 1 ] > 0 )
 		{
-			*gpuMicroSec = drawingTimeNanoseconds / 1000;
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_FILL_DEPTH_BUFFER * 2 + 0], GL_QUERY_RESULT, &gpuStartNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_FILL_DEPTH_BUFFER * 2 + 1], GL_QUERY_RESULT, &gpuEndNanoseconds );
+
+			backend.pc.gpuDepthMicroSec = ( gpuEndNanoseconds - gpuStartNanoseconds ) / 1000;
+		}
+
+		if( glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ MRB_SSAO_PASS  * 2 + 1 ] > 0 )
+		{
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_SSAO_PASS * 2 + 0], GL_QUERY_RESULT, &gpuStartNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_SSAO_PASS * 2 + 1], GL_QUERY_RESULT, &gpuEndNanoseconds );
+
+			backend.pc.gpuScreenSpaceAmbientOcclusionMicroSec = ( gpuEndNanoseconds - gpuStartNanoseconds ) / 1000;
+		}
+
+		if( glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ MRB_AMBIENT_PASS  * 2 + 1 ] > 0 )
+		{
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_AMBIENT_PASS * 2 + 0], GL_QUERY_RESULT, &gpuStartNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_AMBIENT_PASS * 2 + 1], GL_QUERY_RESULT, &gpuEndNanoseconds );
+
+			backend.pc.gpuAmbientPassMicroSec = ( gpuEndNanoseconds - gpuStartNanoseconds ) / 1000;
+		}
+
+		if( glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ MRB_DRAW_INTERACTIONS  * 2 + 1 ] > 0 )
+		{
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_DRAW_INTERACTIONS * 2 + 0], GL_QUERY_RESULT, &gpuStartNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_DRAW_INTERACTIONS * 2 + 1], GL_QUERY_RESULT, &gpuEndNanoseconds );
+
+			backend.pc.gpuInteractionsMicroSec = ( gpuEndNanoseconds - gpuStartNanoseconds ) / 1000;
+		}
+
+		if( glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ MRB_DRAW_SHADER_PASSES  * 2 + 1 ] > 0 )
+		{
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_DRAW_SHADER_PASSES * 2 + 0], GL_QUERY_RESULT, &gpuStartNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_DRAW_SHADER_PASSES * 2 + 1], GL_QUERY_RESULT, &gpuEndNanoseconds );
+
+			backend.pc.gpuShaderPassMicroSec = ( gpuEndNanoseconds - gpuStartNanoseconds ) / 1000;
+		}
+
+		if( glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ MRB_POSTPROCESS  * 2 + 1 ] > 0 )
+		{
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_POSTPROCESS * 2 + 0], GL_QUERY_RESULT, &gpuStartNanoseconds );
+			glGetQueryObjectui64vEXT( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ^ 1 ][ MRB_POSTPROCESS * 2 + 1], GL_QUERY_RESULT, &gpuEndNanoseconds );
+
+			backend.pc.gpuPostProcessingMicroSec = ( gpuEndNanoseconds - gpuStartNanoseconds ) / 1000;
+		}
+
+		for( int i = 0; i < MRB_TOTAL_QUERIES; i++ )
+		{
+			glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ^ 1 ][ i ] = 0;
 		}
 	}
 #endif
@@ -677,15 +752,28 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 	// save out timing information
 	if( frontEndMicroSec != NULL )
 	{
-		*frontEndMicroSec = pc.frontEndMicroSec;
+		*frontEndMicroSec = this->pc.frontEndMicroSec;
 	}
+
 	if( backEndMicroSec != NULL )
 	{
-		*backEndMicroSec = backend.pc.totalMicroSec;
+		*backEndMicroSec = backend.pc.cpuTotalMicroSec;
 	}
+
 	if( shadowMicroSec != NULL )
 	{
-		*shadowMicroSec = backend.pc.shadowMicroSec;
+		*shadowMicroSec = backend.pc.cpuShadowMicroSec;
+	}
+
+	// RB: TODO clean up the above and just pass entire backend and performance stats before they get cleared
+	if( bc != NULL )
+	{
+		*bc = backend.pc;
+	}
+
+	if( pc != NULL )
+	{
+		*pc = this->pc;
 	}
 
 	// print any other statistics and clear all of them
@@ -714,6 +802,12 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 		return NULL;
 	}
 
+	// RB: general GUI system path to treat ImGui surfaces in the renderer frontend like SWF
+	// this calls io.RenderDrawListsFn
+#if defined( USE_VULKAN ) || IMGUI_BFGUI
+	ImGuiHook::Render();
+#endif
+
 	// close any gui drawing
 	guiModel->EmitFullScreen();
 	guiModel->Clear();
@@ -728,6 +822,7 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	// allocated at the start of the buffer memory to the backEnd referenced locations
 	backend.unitSquareSurface = tr.unitSquareSurface_;
 	backend.zeroOneCubeSurface = tr.zeroOneCubeSurface_;
+	backend.zeroOneSphereSurface = tr.zeroOneSphereSurface_;
 	backend.testImageSurface = tr.testImageSurface_;
 
 	// use the other buffers next frame, because another CPU
@@ -752,6 +847,7 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	//------------------------------
 	R_InitDrawSurfFromTri( tr.unitSquareSurface_, *tr.unitSquareTriangles );
 	R_InitDrawSurfFromTri( tr.zeroOneCubeSurface_, *tr.zeroOneCubeTriangles );
+	R_InitDrawSurfFromTri( tr.zeroOneSphereSurface_, *tr.zeroOneSphereTriangles );
 	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles );
 
 	// Reset render crop to be the full screen
@@ -848,7 +944,6 @@ In split screen mode the rendering size is also smaller.
 */
 void idRenderSystemLocal::PerformResolutionScaling( int& newWidth, int& newHeight )
 {
-
 	float xScale = 1.0f;
 	float yScale = 1.0f;
 	resolutionScale.GetCurrentResolutionScale( xScale, yScale );
@@ -964,7 +1059,7 @@ void idRenderSystemLocal::CaptureRenderToImage( const char* imageName, bool clea
 			common->Printf( "write DC_CAPTURE_RENDER: %s\n", imageName );
 		}
 	}
-	idImage*	 image = globalImages->GetImage( imageName );
+	idImage* image = globalImages->GetImage( imageName );
 	if( image == NULL )
 	{
 		image = globalImages->AllocImage( imageName );
@@ -1000,6 +1095,7 @@ void idRenderSystemLocal::CaptureRenderToFile( const char* fileName, bool fixAlp
 
 	guiModel->EmitFullScreen();
 	guiModel->Clear();
+
 	RenderCommandBuffers( frameData->cmdHead );
 
 #if !defined(USE_VULKAN)

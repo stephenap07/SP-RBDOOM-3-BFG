@@ -206,7 +206,7 @@ void SetClipboardText( void*, const char* text )
 
 bool ShowWindows()
 {
-	return ( ImGuiTools::AreEditorsActive() || imgui_showDemoWindow.GetBool() );
+	return ( ImGuiTools::AreEditorsActive() || imgui_showDemoWindow.GetBool() || com_showFPS.GetInteger() > 1 );
 }
 
 bool UseInput()
@@ -282,6 +282,16 @@ void NotifyDisplaySizeChanged( int width, int height )
 		{
 			Destroy();
 			Init( width, height );
+
+			// reuse the default ImGui font
+			idImage* image = globalImages->GetImage( "_imguiFont" );
+
+			ImGuiIO& io = ImGui::GetIO();
+
+			byte* pixels = NULL;
+			io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
+
+			io.Fonts->TexID = ( void* )( intptr_t )image->GetImGuiTextureID();
 		}
 	}
 }
@@ -340,7 +350,7 @@ bool InjectMouseWheel( int delta )
 
 void NewFrame()
 {
-	if( IsInitialized() && ShowWindows() )
+	if( !g_haveNewFrame && IsInitialized() && ShowWindows() )
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -351,6 +361,12 @@ void NewFrame()
 		int	time = Sys_Milliseconds();
 		double current_time = time * 0.001;
 		io.DeltaTime = g_Time > 0.0 ? ( float )( current_time - g_Time ) : ( float )( 1.0f / 60.0f );
+
+		if( io.DeltaTime <= 0.0F )
+		{
+			io.DeltaTime = ( 1.0f / 60.0f );
+		}
+
 		g_Time = current_time;
 
 		// Setup inputs
@@ -383,6 +399,23 @@ void NewFrame()
 	}
 }
 
+bool IsReadyToRender()
+{
+	if( IsInitialized() && ShowWindows() )
+	{
+		if( !g_haveNewFrame )
+		{
+			// for screenshots etc, where we didn't go through idCommonLocal::Frame()
+			// before idRenderSystemLocal::SwapCommandBuffers_FinishRendering()
+			NewFrame();
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 void Render()
 {
 	if( IsInitialized() && ShowWindows() )
@@ -401,7 +434,7 @@ void Render()
 			ImGui::ShowDemoWindow();
 		}
 
-		ImGui::End();
+		//ImGui::End();
 
 		ImGui::Render();
 		g_haveNewFrame = false;
@@ -414,6 +447,7 @@ void Destroy()
 	{
 		ImGui::DestroyContext();
 		g_IsInit = false;
+		g_haveNewFrame = false;
 	}
 }
 

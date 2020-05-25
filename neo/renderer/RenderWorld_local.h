@@ -69,6 +69,7 @@ typedef struct portalArea_s
 	portal_t* 		portals;		// never changes after load
 	areaReference_t	entityRefs;		// head/tail of doubly linked list, may change
 	areaReference_t	lightRefs;		// head/tail of doubly linked list, may change
+	areaReference_t	envprobeRefs;	// head/tail of doubly linked list, may change
 } portalArea_t;
 
 
@@ -116,6 +117,13 @@ public:
 	virtual	void			UpdateLightDef( qhandle_t lightHandle, const renderLight_t* rlight );
 	virtual	void			FreeLightDef( qhandle_t lightHandle );
 	virtual const renderLight_t* GetRenderLight( qhandle_t lightHandle ) const;
+
+	// RB: environment probes for IBL
+	virtual	qhandle_t		AddEnvprobeDef( const renderEnvironmentProbe_t* ep );
+	virtual	void			UpdateEnvprobeDef( qhandle_t envprobeHandle, const renderEnvironmentProbe_t* ep );
+	virtual	void			FreeEnvprobeDef( qhandle_t envprobeHandle );
+	virtual const renderEnvironmentProbe_t* GetRenderEnvprobe( qhandle_t envprobeHandle ) const;
+	// RB end
 
 	virtual bool			CheckAreaForPortalSky( int areaNum );
 
@@ -177,8 +185,9 @@ public:
 
 	idList<idRenderModel*, TAG_MODEL>	localModels;
 
-	idList<idRenderEntityLocal*, TAG_ENTITY>	entityDefs;
-	idList<idRenderLightLocal*, TAG_LIGHT>		lightDefs;
+	idList<idRenderEntityLocal*, TAG_ENTITY>		entityDefs;
+	idList<idRenderLightLocal*, TAG_LIGHT>			lightDefs;
+	idList<RenderEnvprobeLocal*, TAG_ENVPROBE>		envprobeDefs; // RB
 
 	idBlockAlloc<areaReference_t, 1024> areaReferenceAllocator;
 	idBlockAlloc<idInteraction, 256>	interactionAllocator;
@@ -225,10 +234,31 @@ public:
 	//--------------------------
 	// RenderWorld_portals.cpp
 
+	// if we hit this many planes, we will just stop cropping the
+	// view down, which is still correct, just conservative
+	static const int MAX_PORTAL_PLANES	= 20;
+
+	struct portalStack_t
+	{
+		const portal_t* 		p;
+		const portalStack_t* 	next;
+		// positive side is outside the visible frustum
+		int						numPortalPlanes;
+		idPlane					portalPlanes[MAX_PORTAL_PLANES + 1];
+		idScreenRect			rect;
+	};
+
 	bool					CullEntityByPortals( const idRenderEntityLocal* entity, const portalStack_t* ps );
 	void					AddAreaViewEntities( int areaNum, const portalStack_t* ps );
+
 	bool					CullLightByPortals( const idRenderLightLocal* light, const portalStack_t* ps );
 	void					AddAreaViewLights( int areaNum, const portalStack_t* ps );
+
+	// RB begin
+	bool					CullEnvprobeByPortals( const RenderEnvprobeLocal* probe, const portalStack_t* ps );
+	void					AddAreaViewEnvprobes( int areaNum, const portalStack_t* ps );
+	// RB end
+
 	void					AddAreaToView( int areaNum, const portalStack_t* ps );
 	idScreenRect			ScreenRectFromWinding( const idWinding* w, const viewEntity_t* space );
 	bool					PortalIsFoggedOut( const portal_t* p );
@@ -266,12 +296,15 @@ public:
 	void					WriteFreeOverlay( idDemoFile* f, qhandle_t handle );
 	void					WriteFreeLight( qhandle_t handle );
 	void					WriteFreeEntity( qhandle_t handle );
+	void					WriteFreeEnvprobe( qhandle_t handle ); // RB
 	void					WriteRenderDecal( idDemoFile* f, qhandle_t handle );
 	void					WriteRenderOverlay( idDemoFile* f, qhandle_t handle );
 	void					WriteRenderLight( idDemoFile* f, qhandle_t handle, const renderLight_t* light );
 	void					WriteRenderEntity( idDemoFile* f, idRenderEntityLocal* entity );
+	void					WriteRenderEnvprobe( qhandle_t handle, const renderEnvironmentProbe_t* probe ); // RB
 	void					ReadRenderEntity();
 	void					ReadRenderLight();
+	void					ReadRenderEnvprobe(); // RB
 
 
 	//--------------------------
@@ -281,6 +314,7 @@ public:
 
 	void					AddEntityRefToArea( idRenderEntityLocal* def, portalArea_t* area );
 	void					AddLightRefToArea( idRenderLightLocal* light, portalArea_t* area );
+	void					AddEnvprobeRefToArea( RenderEnvprobeLocal* probe, portalArea_t* area ); // RB
 
 	void					RecurseProcBSP_r( modelTrace_t* results, int parentNodeNum, int nodeNum, float p1f, float p2f, const idVec3& p1, const idVec3& p2 ) const;
 	void					BoundsInAreas_r( int nodeNum, const idBounds& bounds, int* areas, int* numAreas, int maxAreas ) const;
@@ -291,6 +325,7 @@ public:
 
 	void					PushFrustumIntoTree_r( idRenderEntityLocal* def, idRenderLightLocal* light, const frustumCorners_t& corners, int nodeNum );
 	void					PushFrustumIntoTree( idRenderEntityLocal* def, idRenderLightLocal* light, const idRenderMatrix& frustumTransform, const idBounds& frustumBounds );
+	void					PushEnvprobeIntoTree_r( RenderEnvprobeLocal* probe, int nodeNum ); // RB
 
 	idRenderModelDecal* 	AllocDecal( qhandle_t newEntityHandle, int startTime );
 	idRenderModelOverlay* 	AllocOverlay( qhandle_t newEntityHandle, int startTime );

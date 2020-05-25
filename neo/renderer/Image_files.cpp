@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2012-2014 Robert Beckebans
+Copyright (C) 2012-2020 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -761,6 +761,10 @@ static void LoadPNG( const char* filename, unsigned char** pic, int* width, int*
 
 	R_StaticFree( rowPointers );
 	Mem_Free( fbuffer );
+
+	// RB: PNG needs to be flipped to match the .tga behavior
+	// edit: this is wrong and flips images UV mapped in Blender 2.83
+	//R_VerticalFlip( *pic, *width, *height );
 }
 
 
@@ -848,6 +852,161 @@ void R_WritePNG( const char* filename, const byte* data, int bytesPerPixel, int 
 
 	Mem_Free( buffer );
 }
+
+/*
+================
+R_WriteEXR
+================
+*/
+// miniexr.cpp - v0.2 - public domain - 2013 Aras Pranckevicius / Unity Technologies
+//
+// Writes OpenEXR RGB files out of half-precision RGBA or RGB data.
+//
+// Only tested on Windows (VS2008) and Mac (clang 3.3), little endian.
+// Testing status: "works for me".
+//
+// History:
+// 0.2 Source data can be RGB or RGBA now.
+// 0.1 Initial release.
+
+void R_WriteEXR( const char* filename, const void* rgba16f, int channelsPerPixel, int width, int height, const char* basePath )
+{
+	const unsigned ww = width - 1;
+	const unsigned hh = height - 1;
+	const unsigned char kHeader[] =
+	{
+		0x76, 0x2f, 0x31, 0x01, // magic
+		2, 0, 0, 0, // version, scanline
+		// channels
+		'c', 'h', 'a', 'n', 'n', 'e', 'l', 's', 0,
+		'c', 'h', 'l', 'i', 's', 't', 0,
+		55, 0, 0, 0,
+		'B', 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, // B, half
+		'G', 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, // G, half
+		'R', 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, // R, half
+		0,
+		// compression
+		'c', 'o', 'm', 'p', 'r', 'e', 's', 's', 'i', 'o', 'n', 0,
+		'c', 'o', 'm', 'p', 'r', 'e', 's', 's', 'i', 'o', 'n', 0,
+		1, 0, 0, 0,
+		0, // no compression
+		// dataWindow
+		'd', 'a', 't', 'a', 'W', 'i', 'n', 'd', 'o', 'w', 0,
+		'b', 'o', 'x', '2', 'i', 0,
+		16, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		ww & 0xFF, ( ww >> 8 ) & 0xFF, ( ww >> 16 ) & 0xFF, ( ww >> 24 ) & 0xFF,
+		hh & 0xFF, ( hh >> 8 ) & 0xFF, ( hh >> 16 ) & 0xFF, ( hh >> 24 ) & 0xFF,
+		// displayWindow
+		'd', 'i', 's', 'p', 'l', 'a', 'y', 'W', 'i', 'n', 'd', 'o', 'w', 0,
+		'b', 'o', 'x', '2', 'i', 0,
+		16, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		ww & 0xFF, ( ww >> 8 ) & 0xFF, ( ww >> 16 ) & 0xFF, ( ww >> 24 ) & 0xFF,
+		hh & 0xFF, ( hh >> 8 ) & 0xFF, ( hh >> 16 ) & 0xFF, ( hh >> 24 ) & 0xFF,
+		// lineOrder
+		'l', 'i', 'n', 'e', 'O', 'r', 'd', 'e', 'r', 0,
+		'l', 'i', 'n', 'e', 'O', 'r', 'd', 'e', 'r', 0,
+		1, 0, 0, 0,
+		0, // increasing Y
+		// pixelAspectRatio
+		'p', 'i', 'x', 'e', 'l', 'A', 's', 'p', 'e', 'c', 't', 'R', 'a', 't', 'i', 'o', 0,
+		'f', 'l', 'o', 'a', 't', 0,
+		4, 0, 0, 0,
+		0, 0, 0x80, 0x3f, // 1.0f
+		// screenWindowCenter
+		's', 'c', 'r', 'e', 'e', 'n', 'W', 'i', 'n', 'd', 'o', 'w', 'C', 'e', 'n', 't', 'e', 'r', 0,
+		'v', '2', 'f', 0,
+		8, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		// screenWindowWidth
+		's', 'c', 'r', 'e', 'e', 'n', 'W', 'i', 'n', 'd', 'o', 'w', 'W', 'i', 'd', 't', 'h', 0,
+		'f', 'l', 'o', 'a', 't', 0,
+		4, 0, 0, 0,
+		0, 0, 0x80, 0x3f, // 1.0f
+		// end of header
+		0,
+	};
+	const int kHeaderSize = sizeof( kHeader );
+
+	const int kScanlineTableSize = 8 * height;
+	const unsigned pixelRowSize = width * 3 * 2;
+	const unsigned fullRowSize = pixelRowSize + 8;
+
+	unsigned bufSize = kHeaderSize + kScanlineTableSize + height * fullRowSize;
+	unsigned char* buf = ( unsigned char* )Mem_Alloc( bufSize, TAG_TEMP );
+	if( !buf )
+	{
+		return;
+	}
+
+	// copy in header
+	memcpy( buf, kHeader, kHeaderSize );
+
+	// line offset table
+	unsigned ofs = kHeaderSize + kScanlineTableSize;
+	unsigned char* ptr = buf + kHeaderSize;
+	for( int y = 0; y < height; ++y )
+	{
+		*ptr++ = ofs & 0xFF;
+		*ptr++ = ( ofs >> 8 ) & 0xFF;
+		*ptr++ = ( ofs >> 16 ) & 0xFF;
+		*ptr++ = ( ofs >> 24 ) & 0xFF;
+		*ptr++ = 0;
+		*ptr++ = 0;
+		*ptr++ = 0;
+		*ptr++ = 0;
+		ofs += fullRowSize;
+	}
+
+	// scanline data
+	const unsigned char* src = ( const unsigned char* )rgba16f;
+	const int stride = channelsPerPixel * 2;
+	for( int y = 0; y < height; ++y )
+	{
+		// coordinate
+		*ptr++ = y & 0xFF;
+		*ptr++ = ( y >> 8 ) & 0xFF;
+		*ptr++ = ( y >> 16 ) & 0xFF;
+		*ptr++ = ( y >> 24 ) & 0xFF;
+		// data size
+		*ptr++ = pixelRowSize & 0xFF;
+		*ptr++ = ( pixelRowSize >> 8 ) & 0xFF;
+		*ptr++ = ( pixelRowSize >> 16 ) & 0xFF;
+		*ptr++ = ( pixelRowSize >> 24 ) & 0xFF;
+		// B, G, R
+		const unsigned char* chsrc;
+		chsrc = src + 4;
+		for( int x = 0; x < width; ++x )
+		{
+			*ptr++ = chsrc[0];
+			*ptr++ = chsrc[1];
+			chsrc += stride;
+		}
+		chsrc = src + 2;
+		for( int x = 0; x < width; ++x )
+		{
+			*ptr++ = chsrc[0];
+			*ptr++ = chsrc[1];
+			chsrc += stride;
+		}
+		chsrc = src + 0;
+		for( int x = 0; x < width; ++x )
+		{
+			*ptr++ = chsrc[0];
+			*ptr++ = chsrc[1];
+			chsrc += stride;
+		}
+
+		src += width * stride;
+	}
+
+	assert( ptr - buf == bufSize );
+
+	fileSystem->WriteFile( filename, buf, bufSize, basePath );
+
+	Mem_Free( buf );
+}
 // RB end
 
 //===================================================================
@@ -892,7 +1051,7 @@ If pic is NULL, the image won't actually be loaded, it will just find the
 timestamp.
 =================
 */
-void R_LoadImage( const char* cname, byte** pic, int* width, int* height, ID_TIME_T* timestamp, bool makePowerOf2 )
+void R_LoadImage( const char* cname, byte** pic, int* width, int* height, ID_TIME_T* timestamp, bool makePowerOf2, textureUsage_t* usage )
 {
 	idStr name = cname;
 
@@ -925,9 +1084,32 @@ void R_LoadImage( const char* cname, byte** pic, int* width, int* height, ID_TIM
 	name.ExtractFileExtension( ext );
 	idStr origName = name;
 
-// RB begin
+	// RB begin
+
+	// PBR HACK - look for the same file name that provides a _rmao[d] suffix and prefer it
+	// if it is available, otherwise
+	bool pbrImageLookup = false;
+	if( usage && *usage == TD_SPECULAR )
+	{
+		name.StripFileExtension();
+
+		if( name.StripTrailingOnce( "_s" ) )
+		{
+			name += "_rmao";
+		}
+
+		ext = "png";
+		name.DefaultFileExtension( ".png" );
+
+		pbrImageLookup = true;
+	}
+
+retry:
+
+	// try
 	if( !ext.IsEmpty() )
 	{
+		// try only the image with the specified extension: default .tga
 		int i;
 		for( i = 0; i < numImageLoaders; i++ )
 		{
@@ -940,9 +1122,9 @@ void R_LoadImage( const char* cname, byte** pic, int* width, int* height, ID_TIM
 
 		if( i < numImageLoaders )
 		{
-			if( pic && *pic == NULL )
+			if( ( pic && *pic == NULL ) || ( timestamp && *timestamp == FILE_NOT_FOUND_TIMESTAMP ) )
 			{
-				// image with the specified extension was not found so try all formats
+				// image with the specified extension was not found so try all extensions
 				for( i = 0; i < numImageLoaders; i++ )
 				{
 					name.SetFileExtension( imageLoaders[i].ext );
@@ -950,14 +1132,38 @@ void R_LoadImage( const char* cname, byte** pic, int* width, int* height, ID_TIM
 
 					if( pic && *pic != NULL )
 					{
-						//common->Warning("image %s failed to load, using %s instead", origName.c_str(), name.c_str());
+						//idLib::Warning( "image %s failed to load, using %s instead", origName.c_str(), name.c_str());
+						break;
+					}
+
+					if( !pic && timestamp && *timestamp != FILE_NOT_FOUND_TIMESTAMP )
+					{
+						// we are only interested in the timestamp and we got one
 						break;
 					}
 				}
 			}
 		}
+
+		if( pbrImageLookup )
+		{
+			if( ( pic && *pic == NULL ) || ( !pic && timestamp && *timestamp == FILE_NOT_FOUND_TIMESTAMP ) )
+			{
+				name = origName;
+				name.ExtractFileExtension( ext );
+
+				pbrImageLookup = false;
+				goto retry;
+			}
+
+			if( ( pic && *pic != NULL ) || ( !pic && timestamp && *timestamp != FILE_NOT_FOUND_TIMESTAMP ) )
+			{
+				idLib::Printf( "PBR hack: using '%s' instead of '%s'\n", name.c_str(), origName.c_str() );
+				*usage = TD_SPECULAR_PBR_RMAO;
+			}
+		}
 	}
-// RB end
+	// RB end
 
 	if( ( width && *width < 1 ) || ( height && *height < 1 ) )
 	{

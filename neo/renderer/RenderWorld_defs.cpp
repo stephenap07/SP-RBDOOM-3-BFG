@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2014 Robert Beckebans
+Copyright (C) 2013-2015 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -753,6 +753,151 @@ void R_CreateLightRefs( idRenderLightLocal* light )
 /*
 =================================================================================
 
+ENVPROBE DEFS
+
+=================================================================================
+*/
+
+void R_DeriveEnvprobeData( RenderEnvprobeLocal* probe )
+{
+	idStr basename = tr.primaryWorld->mapName;
+	basename.StripFileExtension();
+
+	idStr fullname;
+
+	int probeIndex = tr.primaryWorld->envprobeDefs.Num() - 1;
+
+	// TODO get preconvolved cubemaps
+	fullname.Format( "env/%s/envprobe%i_amb", basename.c_str(), probeIndex );
+	probe->irradianceImage = globalImages->ImageFromFile( fullname, TF_DEFAULT, TR_CLAMP, TD_HIGHQUALITY_CUBE, CF_NATIVE );
+
+	fullname.Format( "env/%s/envprobe%i_spec", basename.c_str(), probeIndex );
+	probe->radianceImage = globalImages->ImageFromFile( fullname, TF_DEFAULT, TR_CLAMP, TD_HIGHQUALITY_CUBE, CF_NATIVE );
+
+	// ------------------------------------
+	// compute the light projection matrix
+	// ------------------------------------
+
+	idRenderMatrix localProject;
+	float zScale = 1.0f;
+	float radius = 300.0f; // TODO
+
+	// An environemt probe uses a box projection like a point light.
+	// This projects into the 0.0 - 1.0 texture range instead of -1.0 to 1.0 clip space range.
+	localProject.Zero();
+	localProject[0][0] = 0.5f / radius;
+	localProject[1][1] = 0.5f / radius;
+	localProject[2][2] = 0.5f / radius;
+	localProject[0][3] = 0.5f;
+	localProject[1][3] = 0.5f;
+	localProject[2][3] = 0.5f;
+	localProject[3][3] = 1.0f;	// identity perspective
+
+	// set the old style light projection where Z and W are flipped and
+	// for projected lights lightProject[3] is divided by ( zNear + zFar )
+	/*
+	light->lightProject[0][0] = localProject[0][0];
+	light->lightProject[0][1] = localProject[0][1];
+	light->lightProject[0][2] = localProject[0][2];
+	light->lightProject[0][3] = localProject[0][3];
+
+	light->lightProject[1][0] = localProject[1][0];
+	light->lightProject[1][1] = localProject[1][1];
+	light->lightProject[1][2] = localProject[1][2];
+	light->lightProject[1][3] = localProject[1][3];
+
+	light->lightProject[2][0] = localProject[3][0];
+	light->lightProject[2][1] = localProject[3][1];
+	light->lightProject[2][2] = localProject[3][2];
+	light->lightProject[2][3] = localProject[3][3];
+
+	light->lightProject[3][0] = localProject[2][0] * zScale;
+	light->lightProject[3][1] = localProject[2][1] * zScale;
+	light->lightProject[3][2] = localProject[2][2] * zScale;
+	light->lightProject[3][3] = localProject[2][3] * zScale;
+
+	// transform the lightProject
+	float lightTransform[16];
+	R_AxisToModelMatrix( light->parms.axis, light->parms.origin, lightTransform );
+	for( int i = 0; i < 4; i++ )
+	{
+		idPlane temp = light->lightProject[i];
+		R_LocalPlaneToGlobal( lightTransform, temp, light->lightProject[i] );
+	}
+	*/
+
+	// Rotate and translate the light projection by the light matrix.
+	// 99% of lights remain axis aligned in world space.
+	idMat3 axis;
+	axis.Identity();
+
+	idRenderMatrix lightMatrix;
+	idRenderMatrix::CreateFromOriginAxis( probe->parms.origin, axis, lightMatrix );
+
+	idRenderMatrix inverseLightMatrix;
+	if( !idRenderMatrix::Inverse( lightMatrix, inverseLightMatrix ) )
+	{
+		idLib::Warning( "lightMatrix invert failed" );
+	}
+
+	// 'baseLightProject' goes from global space -> light local space -> light projective space
+	idRenderMatrix::Multiply( localProject, inverseLightMatrix, probe->baseLightProject );
+
+	// Invert the light projection so we can deform zero-to-one cubes into
+	// the light model and calculate global bounds.
+	if( !idRenderMatrix::Inverse( probe->baseLightProject, probe->inverseBaseLightProject ) )
+	{
+		idLib::Warning( "baseLightProject invert failed" );
+	}
+
+	// calculate the global light bounds by inverse projecting the zero to one cube with the 'inverseBaseLightProject'
+	idRenderMatrix::ProjectedBounds( probe->globalProbeBounds, probe->inverseBaseLightProject, bounds_zeroOneCube, false );
+}
+
+void R_CreateEnvprobeRefs( RenderEnvprobeLocal* probe )
+{
+	// derive envprobe data
+	R_DeriveEnvprobeData( probe );
+
+	// determine the areaNum for the envprobe origin, which may let us
+	// cull the envprobe if it is behind a closed door
+	probe->areaNum = probe->world->PointInArea( probe->parms.origin );
+
+	// bump the view count so we can tell if an
+	// area already has a reference
+	tr.viewCount++;
+
+	// push the probe down the BSP tree into areas
+	probe->world->PushEnvprobeIntoTree_r( probe, 0 );
+}
+
+void R_FreeEnvprobeDefDerivedData( RenderEnvprobeLocal* probe )
+{
+	// TODO free all the interactions
+	//while( ldef->firstInteraction != NULL )
+	//{
+	//	ldef->firstInteraction->UnlinkAndFree();
+	//}
+
+	// free all the references to the envprobe
+	areaReference_t* nextRef = NULL;
+	for( areaReference_t* lref = probe->references; lref != NULL; lref = nextRef )
+	{
+		nextRef = lref->ownerNext;
+
+		// unlink from the area
+		lref->areaNext->areaPrev = lref->areaPrev;
+		lref->areaPrev->areaNext = lref->areaNext;
+
+		// put it back on the free list for reuse
+		probe->world->areaReferenceAllocator.Free( lref );
+	}
+	probe->references = NULL;
+}
+
+/*
+=================================================================================
+
 WORLD MODEL & LIGHT DEFS
 
 =================================================================================
@@ -790,6 +935,18 @@ void R_FreeDerivedData()
 			}
 			R_FreeLightDefDerivedData( light );
 		}
+
+		// RB begin
+		for( int i = 0; i < rw->envprobeDefs.Num(); i++ )
+		{
+			RenderEnvprobeLocal* probe = rw->envprobeDefs[i];
+			if( probe == NULL )
+			{
+				continue;
+			}
+			R_FreeEnvprobeDefDerivedData( probe );
+		}
+		// RB end
 	}
 }
 
@@ -869,6 +1026,21 @@ void R_ReCreateWorldReferences()
 			light->world->FreeLightDef( i );
 			rw->UpdateLightDef( i, &parms );
 		}
+
+		// RB begin
+		for( int i = 0; i < rw->envprobeDefs.Num(); i++ )
+		{
+			RenderEnvprobeLocal* probe = rw->envprobeDefs[i];
+			if( probe == NULL )
+			{
+				continue;
+			}
+			renderEnvironmentProbe_t parms = probe->parms;
+
+			probe->world->FreeLightDef( i );
+			rw->UpdateEnvprobeDef( i, &parms );
+		}
+		// RB end
 	}
 }
 

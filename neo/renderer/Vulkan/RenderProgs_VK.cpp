@@ -35,7 +35,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../RenderProgs.h"
 
 
-void RpPrintState( uint64 stateBits, uint64* stencilBits );
+void RpPrintState( uint64 stateBits );
 
 struct vertexLayout_t
 {
@@ -198,7 +198,6 @@ void CreateDescriptorPools( VkDescriptorPool( &pools )[ NUM_FRAME_DATA ] )
 	}
 }
 
-
 /*
 ========================
 GetDescriptorType
@@ -337,14 +336,70 @@ void idRenderProgManager::LoadShader( int index, rpStage_t stage )
 CompileGLSLtoSPIRV
 ================================================================================================
 */
-#define USE_GLSLANG 1
 
-#if defined(USE_GLSLANG)
 
-#include <glslang/public/ShaderLang.h>
+#if defined(SPIRV_SHADERC)
+
+#include <shaderc/shaderc.hpp>
+
+static int CompileGLSLtoSPIRV( const char* filename, const idStr& dataGLSL, const rpStage_t stage, uint32** spirvBuffer )
+{
+	shaderc::Compiler compiler;
+	shaderc::CompileOptions options;
+
+	// Like -DMY_DEFINE=1
+	//options.AddMacroDefinition("MY_DEFINE", "1");
+
+	//if (optimize)
+	{
+		options.SetOptimizationLevel( shaderc_optimization_level_size );
+	}
+
+	shaderc_shader_kind shaderKind;
+	if( stage == SHADER_STAGE_VERTEX )
+	{
+		shaderKind = shaderc_glsl_vertex_shader;
+	}
+	else if( stage == SHADER_STAGE_COMPUTE )
+	{
+		shaderKind = shaderc_glsl_compute_shader;
+	}
+	else
+	{
+		shaderKind = shaderc_glsl_fragment_shader;
+	}
+
+	std::string source = dataGLSL.c_str();
+
+	shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv( source, shaderKind, filename, options );
+
+	if( module.GetCompilationStatus() != shaderc_compilation_status_success )
+	{
+		idLib::Printf( "Comping GLSL to SPIR-V using shaderc failed for: %s\n", filename );
+		idLib::Printf( "%s\n", module.GetErrorMessage().c_str() );
+		return 0;
+	}
+
+	std::vector<uint32_t> spirV = { module.cbegin(), module.cend() };
+
+	// copy to spirvBuffer
+	int32 spirvLen = spirV.size() * sizeof( uint32_t );
+
+	void* buffer = Mem_Alloc( spirvLen, TAG_RENDERPROG );
+	memcpy( buffer, spirV.data(), spirvLen );
+
+	*spirvBuffer = ( uint32_t* ) buffer;
+	return spirvLen;
+
+
+}
+#else
+
+#include <glslang/Public/ShaderLang.h>
 #include <glslang/Include/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
-#include <StandAlone/DirStackFileIncluder.h>
+
+//#include <glslang/StandAlone/DirStackFileIncluder.h>
 
 namespace glslang
 {
@@ -353,8 +408,11 @@ namespace glslang
 //  - parsing this string for the case where the user didn't supply one,
 //  - dumping out a template for user construction of a config file.
 #if 0
+// RB: if you want to use this then you need to compile GLSLANG with ENABLE_GLSLANG_BINARIES ON
 extern const TBuiltInResource DefaultTBuiltInResource;
 #else
+
+// RB: see RBDOOM-3-BFG\neo\extern\glslang\StandAlone\ResourceLimits.cpp
 const TBuiltInResource DefaultTBuiltInResource =
 {
 	/* .MaxLights = */ 32,
@@ -440,6 +498,16 @@ const TBuiltInResource DefaultTBuiltInResource =
 	/* .MaxCullDistances = */ 8,
 	/* .MaxCombinedClipAndCullDistances = */ 8,
 	/* .MaxSamples = */ 4,
+	/* .maxMeshOutputVerticesNV = */ 256,
+	/* .maxMeshOutputPrimitivesNV = */ 512,
+	/* .maxMeshWorkGroupSizeX_NV = */ 32,
+	/* .maxMeshWorkGroupSizeY_NV = */ 1,
+	/* .maxMeshWorkGroupSizeZ_NV = */ 1,
+	/* .maxTaskWorkGroupSizeX_NV = */ 32,
+	/* .maxTaskWorkGroupSizeY_NV = */ 1,
+	/* .maxTaskWorkGroupSizeZ_NV = */ 1,
+	/* .maxMeshViewCountNV = */ 4,
+
 	/* .limits = */ {
 		/* .nonInductiveForLoops = */ 1,
 		/* .whileLoops = */ 1,
@@ -515,7 +583,7 @@ static int CompileGLSLtoSPIRV( const char* filename, const idStr& dataGLSL, cons
 		idLib::Printf( "%s\n", shader.getInfoDebugLog() );
 	}
 
-	// All that’s left to do now is to convert the program’s intermediate representation into SpirV:
+	// All thatï¿½s left to do now is to convert the programï¿½s intermediate representation into SpirV:
 	std::vector<unsigned int>	spirV;
 	spv::SpvBuildLogger			logger;
 	glslang::SpvOptions			spvOptions;
@@ -637,7 +705,7 @@ void idRenderProgManager::LoadShader( shader_t& shader )
 
 		idStr hlslCode( hlslFileBuffer );
 		idStr programHLSL = StripDeadCode( hlslCode, inFile, compileMacros, shader.builtin );
-		programGLSL = ConvertCG2GLSL( programHLSL, inFile, shader.stage, programLayout, true, hasGPUSkinning );
+		programGLSL = ConvertCG2GLSL( programHLSL, inFile, shader.stage, programLayout, true, hasGPUSkinning, shader.vertexLayout );
 
 		fileSystem->WriteFile( outFileHLSL, programHLSL.c_str(), programHLSL.Length(), "fs_savepath" );
 		fileSystem->WriteFile( outFileGLSL, programGLSL.c_str(), programGLSL.Length(), "fs_savepath" );
@@ -1190,13 +1258,13 @@ static VkPipeline CreateGraphicsPipeline(
 
 		if( stateBits & GLS_SEPARATE_STENCIL )
 		{
-			depthStencilState.front = GetStencilOpState( vkcontext.stencilOperations[ STENCIL_FACE_FRONT ] );
+			depthStencilState.front = GetStencilOpState( stateBits & GLS_STENCIL_FRONT_OPS );
 			depthStencilState.front.writeMask = 0xFFFFFFFF;
 			depthStencilState.front.compareOp = stencilCompareOp;
 			depthStencilState.front.compareMask = mask;
 			depthStencilState.front.reference = ref;
 
-			depthStencilState.back = GetStencilOpState( vkcontext.stencilOperations[ STENCIL_FACE_BACK ] );
+			depthStencilState.back = GetStencilOpState( ( stateBits & GLS_STENCIL_BACK_OPS ) >> 12 );
 			depthStencilState.back.writeMask = 0xFFFFFFFF;
 			depthStencilState.back.compareOp = stencilCompareOp;
 			depthStencilState.back.compareMask = mask;
@@ -1247,12 +1315,12 @@ static VkPipeline CreateGraphicsPipeline(
 	dynamic.Append( VK_DYNAMIC_STATE_SCISSOR );
 	dynamic.Append( VK_DYNAMIC_STATE_VIEWPORT );
 
-	if( stateBits & GLS_POLYGON_OFFSET )
+	//if( stateBits & GLS_POLYGON_OFFSET )
 	{
 		dynamic.Append( VK_DYNAMIC_STATE_DEPTH_BIAS );
 	}
 
-	if( stateBits & GLS_DEPTH_TEST_MASK )
+	//if( stateBits & GLS_DEPTH_TEST_MASK )
 	{
 		dynamic.Append( VK_DYNAMIC_STATE_DEPTH_BOUNDS );
 	}
@@ -1300,26 +1368,10 @@ VkPipeline idRenderProgManager::renderProg_t::GetPipeline( uint64 stateBits, VkS
 {
 	for( int i = 0; i < pipelines.Num(); ++i )
 	{
-		pipelineState_t& pipelineState = pipelines[ i ];
-		if( stateBits != pipelineState.stateBits )
+		if( stateBits == pipelines[ i ].stateBits )
 		{
-			continue;
+			return pipelines[ i ].pipeline;
 		}
-
-		if( stateBits & GLS_SEPARATE_STENCIL )
-		{
-			if( vkcontext.stencilOperations[ STENCIL_FACE_FRONT ] != pipelineState.stencilOperations[ STENCIL_FACE_FRONT ] )
-			{
-				continue;
-			}
-
-			if( vkcontext.stencilOperations[ STENCIL_FACE_BACK ] != pipelineState.stencilOperations[ STENCIL_FACE_BACK ] )
-			{
-				continue;
-			}
-		}
-
-		return pipelineState.pipeline;
 	}
 
 	VkPipeline pipeline = CreateGraphicsPipeline( vertexLayout, vertexShader, fragmentShader, pipelineLayout, stateBits );
@@ -1327,12 +1379,6 @@ VkPipeline idRenderProgManager::renderProg_t::GetPipeline( uint64 stateBits, VkS
 	pipelineState_t pipelineState;
 	pipelineState.pipeline = pipeline;
 	pipelineState.stateBits = stateBits;
-
-	if( stateBits & GLS_SEPARATE_STENCIL )
-	{
-		memcpy( pipelineState.stencilOperations, vkcontext.stencilOperations, sizeof( pipelineState.stencilOperations ) );
-	}
-
 	pipelines.Append( pipelineState );
 
 	return pipeline;
@@ -1539,7 +1585,7 @@ void idRenderProgManager::PrintPipelines()
 		{
 			idLib::Printf( "%s: %llu\n", prog.name.c_str(), prog.pipelines[ j ].stateBits );
 			idLib::Printf( "------------------------------------------\n" );
-			RpPrintState( prog.pipelines[ j ].stateBits, vkcontext.stencilOperations );
+			RpPrintState( prog.pipelines[ j ].stateBits );
 			idLib::Printf( "\n" );
 		}
 	}

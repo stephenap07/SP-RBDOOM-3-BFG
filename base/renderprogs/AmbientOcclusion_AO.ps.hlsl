@@ -94,6 +94,7 @@ const float projScale = 500.0;
 // *INDENT-OFF*
 uniform sampler2D samp0 : register( s0 ); // view normal/roughness
 uniform sampler2D samp1 : register( s1 ); // view depth
+uniform sampler2D samp2	: register( s2 ); // blue noise 256
 
 #define CS_Z_buffer		samp1
 
@@ -109,7 +110,21 @@ struct PS_OUT
 // *INDENT-ON*
 
 
+float BlueNoise( float2 n, float x )
+{
+	float noise = tex2D( samp2, n.xy * rpJitterTexOffset.xy ).r;
 
+#if TEMPORALLY_VARY_TAPS
+	noise = fract( noise + 0.61803398875 * rpJitterTexOffset.z * x );
+#else
+	noise = fract( noise );
+#endif
+
+	//noise = RemapNoiseTriErp( noise );
+	//noise = noise * 2.0 - 0.5;
+
+	return noise;
+}
 
 /** Used for packing Z into the GB channels */
 // float CSZToKey( float z )
@@ -147,7 +162,7 @@ float3 reconstructCSPosition( float2 S, float z )
 {
 	float4 P;
 	P.z = z * 2.0 - 1.0;
-	P.xy = ( S * rpScreenCorrectionFactor.xy ) * 2.0 - 1.0;
+	P.xy = ( S * rpWindowCoord.xy ) * 2.0 - 1.0;
 	P.w = 1.0;
 
 	float4 csP;
@@ -335,10 +350,10 @@ void main( PS_IN fragment, out PS_OUT result )
 #endif
 
 	// Pixel being shaded
-	//float2 ssC = fragment.texcoord0;
-	//int2 issC = int2( ssC.x * rpScreenCorrectionFactor.z, ssC.y * rpScreenCorrectionFactor.w );
+	float2 ssC = fragment.texcoord0 * rpScreenCorrectionFactor.xy;
+	int2 ssP = int2( ssC.x * rpWindowCoord.z, ssC.y * rpWindowCoord.w );
 
-	int2 ssP = int2( gl_FragCoord.xy );
+	//int2 ssP = int2( gl_FragCoord.xy );
 
 	// World space point being shaded
 	vec3 C = getPosition( ssP, CS_Z_buffer );
@@ -390,12 +405,19 @@ void main( PS_IN fragment, out PS_OUT result )
 	}
 #endif
 
+#if 1
+	float randomPatternRotationAngle = BlueNoise( ssP.xy, 10.0 ) * 10.0;
+	//float randomPatternRotationAngle = InterleavedGradientNoise( ssP.xy ) * 10.0;
+#else
+
 	// Hash function used in the HPG12 AlchemyAO paper
 	float randomPatternRotationAngle = float( ( ( 3 * ssP.x ) ^ ( ssP.y + ssP.x * ssP.y ) )
 #if TEMPORALLY_VARY_TAPS
-									   + rpJitterTexOffset.x
+									   + rpJitterTexOffset.z
 #endif
 											) * 10.0;
+
+#endif
 
 	// Choose the screen-space sample radius
 	// proportional to the projected area of the sphere

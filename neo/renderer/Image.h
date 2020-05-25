@@ -96,6 +96,7 @@ enum textureFormat_t
 	// RB: don't change above for legacy .bimage compatibility
 	FMT_ETC1_RGB8_OES,	// 4 bpp
 	FMT_SHADOW_ARRAY,	// 32 bpp * 6
+	FMT_RG16F,			// 32 bpp
 	FMT_RGBA16F,		// 64 bpp
 	FMT_RGBA32F,		// 128 bpp
 	FMT_R32F,			// 32 bpp
@@ -216,7 +217,12 @@ typedef enum
 	TD_COVERAGE,			// coverage map for fill depth pass when YCoCG is used
 	TD_DEPTH,				// depth buffer copy for motion blur
 	// RB begin
+	TD_SPECULAR_PBR_RMAO,	// may be compressed, and always zeros the alpha channel, linear RGB R = roughness, G = metal, B = ambient occlusion
+	TD_SPECULAR_PBR_RMAOD,	// may be compressed, alpha channel contains displacement map
+	TD_HIGHQUALITY_CUBE,	// motorsep - Uncompressed cubemap texture (RGB colorspace)
+	TD_LOWQUALITY_CUBE,		// motorsep - Compressed cubemap texture (RGB colorspace DXT5)
 	TD_SHADOW_ARRAY,		// 2D depth buffer array for shadow mapping
+	TD_RG16F,
 	TD_RGBA16F,
 	TD_RGBA32F,
 	TD_R32F,
@@ -365,6 +371,11 @@ public:
 		return ( opts.format == FMT_DXT1 || opts.format == FMT_DXT5 );
 	}
 
+	textureUsage_t GetUsage() const
+	{
+		return usage;
+	}
+
 	bool				IsLoaded() const;
 
 	static void	GetGeneratedName( idStr& _name, const textureUsage_t& _usage, const cubeFiles_t& _cube );
@@ -394,7 +405,12 @@ public:
 			ActuallyLoadImage( true );
 		}
 
+#if defined( USE_VULKAN )
+		return ( void* )( intptr_t )image;
+#else
 		return ( void* )( intptr_t )texnum;
+#endif
+
 	}
 	// DG end
 
@@ -464,6 +480,7 @@ void	R_WriteTGA( const char* filename, const byte* data, int width, int height, 
 
 // RB begin
 void	R_WritePNG( const char* filename, const byte* data, int bytesPerPixel, int width, int height, bool flipVertical = false, const char* basePath = "fs_savepath" );
+void	R_WriteEXR( const char* filename, const void* data, int channelsPerPixel, int width, int height, const char* basePath = "fs_savepath" );
 // RB end
 
 class idImageManager
@@ -531,6 +548,7 @@ public:
 	idImage* 			alphaNotchImage;			// 2x1 texture with just 1110 and 1111 with point sampling
 	idImage* 			whiteImage;					// full of 0xff
 	idImage* 			blackImage;					// full of 0x00
+	idImage* 			cyanImage;					// cyan
 	idImage* 			noFalloffImage;				// all 255, but zero clamped
 	idImage* 			fogImage;					// increasing alpha is denser fog
 	idImage* 			fogEnterImage;				// adjust fogImage alpha based on terminator plane
@@ -541,6 +559,7 @@ public:
 	idImage*			jitterImage16;
 	idImage*			grainImage1;
 	idImage*			randomImage256;
+	idImage*			blueNoiseImage256;
 	idImage*			currentRenderHDRImage;
 #if defined(USE_HDR_MSAA)
 	idImage*			currentRenderHDRImageNoMSAA;
@@ -559,6 +578,12 @@ public:
 	idImage*			ambientOcclusionImage[2];		// contain AO and bilateral filtering keys
 	idImage*			hierarchicalZbufferImage;		// zbuffer with mip maps to accelerate screen space ray tracing
 	idImage*			imguiFontImage;
+
+	idImage* 			chromeSpecImage;				// only for the PBR color checker chart
+	idImage* 			plasticSpecImage;				// only for the PBR color checker chart
+	idImage*			brdfLutImage;
+	idImage*			defaultUACIrradianceCube;
+	idImage*			defaultUACRadianceCube;
 	// RB end
 	idImage* 			scratchImage;
 	idImage* 			scratchImage2;
@@ -567,7 +592,7 @@ public:
 	idImage* 			currentDepthImage;				// for motion blur
 	idImage* 			originalCurrentRenderImage;		// currentRenderImage before any changes for stereo rendering
 	idImage* 			loadingIconImage;				// loading icon must exist always
-	idImage* 			hellLoadingIconImage;				// loading icon must exist always
+	idImage* 			hellLoadingIconImage;			// loading icon must exist always
 
 	//--------------------------------------------------------
 
@@ -615,7 +640,9 @@ IMAGEFILES
 ====================================================================
 */
 
-void R_LoadImage( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp, bool makePowerOf2 );
+// RB: added texture usage for PBR _rmao[d] HACK
+void R_LoadImage( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp, bool makePowerOf2, textureUsage_t* usage );
+
 // pic is in top to bottom raster format
 bool R_LoadCubeImages( const char* cname, cubeFiles_t extensions, byte* pic[6], int* size, ID_TIME_T* timestamp );
 

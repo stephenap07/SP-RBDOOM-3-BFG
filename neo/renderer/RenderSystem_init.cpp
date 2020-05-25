@@ -58,7 +58,7 @@ idCVar r_debugContext( "r_debugContext", "0", CVAR_RENDERER, "Enable various lev
 idCVar r_glDriver( "r_glDriver", "", CVAR_RENDERER, "\"opengl32\", etc." );
 idCVar r_skipIntelWorkarounds( "r_skipIntelWorkarounds", "0", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for Intel driver bugs" );
 // RB: disabled 16x MSAA
-idCVar r_antiAliasing( "r_antiAliasing", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = SMAA 1x\n 2 = MSAA 2x\n 3 = MSAA 4x\n 4 = MSAA 8x\n", 0, ANTI_ALIASING_MSAA_8X );
+idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = SMAA 1x\n 2 = MSAA 2x\n 3 = MSAA 4x\n 4 = MSAA 8x\n", 0, ANTI_ALIASING_MSAA_8X );
 // RB end
 idCVar r_vidMode( "r_vidMode", "0", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_INTEGER, "fullscreen video mode number" );
 idCVar r_displayRefresh( "r_displayRefresh", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_NOCHEAT, "optional display refresh rate option for vid mode", 0.0f, 240.0f );
@@ -108,7 +108,11 @@ idCVar r_jitter( "r_jitter", "0", CVAR_RENDERER | CVAR_BOOL, "randomly subpixel 
 idCVar r_skipStaticInteractions( "r_skipStaticInteractions", "0", CVAR_RENDERER | CVAR_BOOL, "skip interactions created at level load" );
 idCVar r_skipDynamicInteractions( "r_skipDynamicInteractions", "0", CVAR_RENDERER | CVAR_BOOL, "skip interactions created after level load" );
 idCVar r_skipSuppress( "r_skipSuppress", "0", CVAR_RENDERER | CVAR_BOOL, "ignore the per-view suppressions" );
-idCVar r_skipPostProcess( "r_skipPostProcess", "0", CVAR_RENDERER | CVAR_BOOL, "skip all post-process renderings" );
+#if defined( USE_VULKAN )
+	idCVar r_skipPostProcess( "r_skipPostProcess", "1", CVAR_RENDERER | CVAR_BOOL, "skip all post-process renderings" );
+#else
+	idCVar r_skipPostProcess( "r_skipPostProcess", "0", CVAR_RENDERER | CVAR_BOOL, "skip all post-process renderings" );
+#endif
 idCVar r_skipInteractions( "r_skipInteractions", "0", CVAR_RENDERER | CVAR_BOOL, "skip all light/surface interaction drawing" );
 idCVar r_skipDynamicTextures( "r_skipDynamicTextures", "0", CVAR_RENDERER | CVAR_BOOL, "don't dynamically create textures" );
 idCVar r_skipCopyTexture( "r_skipCopyTexture", "0", CVAR_RENDERER | CVAR_BOOL, "do all rendering, but don't actually copyTexSubImage2D" );
@@ -164,13 +168,14 @@ idCVar r_useScissor( "r_useScissor", "1", CVAR_RENDERER | CVAR_BOOL, "scissor cl
 idCVar r_useLightDepthBounds( "r_useLightDepthBounds", "1", CVAR_RENDERER | CVAR_BOOL, "use depth bounds test on lights to reduce both shadow and interaction fill" );
 idCVar r_useShadowDepthBounds( "r_useShadowDepthBounds", "1", CVAR_RENDERER | CVAR_BOOL, "use depth bounds test on individual shadow volumes to reduce shadow fill" );
 // RB begin
-idCVar r_useHalfLambertLighting( "r_useHalfLambertLighting", "1", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "use Half-Lambert lighting instead of classic Lambert, requires reloadShaders" );
+idCVar r_useHalfLambertLighting( "r_useHalfLambertLighting", "0", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "use Half-Lambert lighting instead of classic Lambert, requires reloadShaders" );
 // RB end
 
 idCVar r_screenFraction( "r_screenFraction", "100", CVAR_RENDERER | CVAR_INTEGER, "for testing fill rate, the resolution of the entire screen can be changed" );
 idCVar r_usePortals( "r_usePortals", "1", CVAR_RENDERER | CVAR_BOOL, " 1 = use portals to perform area culling, otherwise draw everything" );
 idCVar r_singleLight( "r_singleLight", "-1", CVAR_RENDERER | CVAR_INTEGER, "suppress all but one light" );
 idCVar r_singleEntity( "r_singleEntity", "-1", CVAR_RENDERER | CVAR_INTEGER, "suppress all but one entity" );
+idCVar r_singleEnvprobe( "r_singleEnvprobe", "-1", CVAR_RENDERER | CVAR_INTEGER, "suppress all but one environment probe" );
 idCVar r_singleSurface( "r_singleSurface", "-1", CVAR_RENDERER | CVAR_INTEGER, "suppress all but one surface on each entity" );
 idCVar r_singleArea( "r_singleArea", "0", CVAR_RENDERER | CVAR_BOOL, "only draw the portal area the view is actually in" );
 idCVar r_orderIndexes( "r_orderIndexes", "1", CVAR_RENDERER | CVAR_BOOL, "perform index reorganization to optimize vertex use" );
@@ -233,14 +238,18 @@ idCVar stereoRender_deGhost( "stereoRender_deGhost", "0.05", CVAR_FLOAT | CVAR_A
 idCVar r_useVirtualScreenResolution( "r_useVirtualScreenResolution", "1", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "do 2D rendering at 640x480 and stretch to the current resolution" );
 
 // RB: shadow mapping parameters
-idCVar r_useShadowMapping( "r_useShadowMapping", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "use shadow mapping instead of stencil shadows" );
+#if defined( USE_VULKAN )
+	idCVar r_useShadowMapping( "r_useShadowMapping", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_INTEGER, "use shadow mapping instead of stencil shadows" );
+#else
+	idCVar r_useShadowMapping( "r_useShadowMapping", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "use shadow mapping instead of stencil shadows" );
+#endif
 idCVar r_shadowMapFrustumFOV( "r_shadowMapFrustumFOV", "92", CVAR_RENDERER | CVAR_FLOAT, "oversize FOV for point light side matching" );
 idCVar r_shadowMapSingleSide( "r_shadowMapSingleSide", "-1", CVAR_RENDERER | CVAR_INTEGER, "only draw a single side (0-5) of point lights" );
 idCVar r_shadowMapImageSize( "r_shadowMapImageSize", "1024", CVAR_RENDERER | CVAR_INTEGER, "", 128, 2048 );
-idCVar r_shadowMapJitterScale( "r_shadowMapJitterScale", "3", CVAR_RENDERER | CVAR_FLOAT, "scale factor for jitter offset" );
+idCVar r_shadowMapJitterScale( "r_shadowMapJitterScale", "2.5", CVAR_RENDERER | CVAR_FLOAT, "scale factor for jitter offset" );
 idCVar r_shadowMapBiasScale( "r_shadowMapBiasScale", "0.0001", CVAR_RENDERER | CVAR_FLOAT, "scale factor for jitter bias" );
 idCVar r_shadowMapRandomizeJitter( "r_shadowMapRandomizeJitter", "1", CVAR_RENDERER | CVAR_BOOL, "randomly offset jitter texture each draw" );
-idCVar r_shadowMapSamples( "r_shadowMapSamples", "1", CVAR_RENDERER | CVAR_INTEGER, "0, 1, 4, or 16" );
+idCVar r_shadowMapSamples( "r_shadowMapSamples", "16", CVAR_RENDERER | CVAR_INTEGER, "1, 4, 12 or 16", 1, 64 );
 idCVar r_shadowMapSplits( "r_shadowMapSplits", "3", CVAR_RENDERER | CVAR_INTEGER, "number of splits for cascaded shadow mapping with parallel lights", 0, 4 );
 idCVar r_shadowMapSplitWeight( "r_shadowMapSplitWeight", "0.9", CVAR_RENDERER | CVAR_FLOAT, "" );
 idCVar r_shadowMapLodScale( "r_shadowMapLodScale", "1.4", CVAR_RENDERER | CVAR_FLOAT, "" );
@@ -252,8 +261,13 @@ idCVar r_shadowMapRegularDepthBiasScale( "r_shadowMapRegularDepthBiasScale", "0.
 idCVar r_shadowMapSunDepthBiasScale( "r_shadowMapSunDepthBiasScale", "0.999991", CVAR_RENDERER | CVAR_FLOAT, "shadowmap bias to fight shadow acne for cascaded shadow mapping with parallel lights" );
 
 // RB: HDR parameters
-idCVar r_useHDR( "r_useHDR", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use high dynamic range rendering" );
-idCVar r_hdrAutoExposure( "r_hdrAutoExposure", "1", CVAR_RENDERER | CVAR_BOOL, "EXPENSIVE: enables adapative HDR tone mapping otherwise the exposure is derived by r_exposure" );
+#if defined( USE_VULKAN )
+	idCVar r_useHDR( "r_useHDR", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "use high dynamic range rendering" );
+#else
+	idCVar r_useHDR( "r_useHDR", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use high dynamic range rendering" );
+#endif
+
+idCVar r_hdrAutoExposure( "r_hdrAutoExposure", "0", CVAR_RENDERER | CVAR_BOOL, "EXPENSIVE: enables adapative HDR tone mapping otherwise the exposure is derived by r_exposure" );
 idCVar r_hdrMinLuminance( "r_hdrMinLuminance", "0.005", CVAR_RENDERER | CVAR_FLOAT, "" );
 idCVar r_hdrMaxLuminance( "r_hdrMaxLuminance", "300", CVAR_RENDERER | CVAR_FLOAT, "" );
 idCVar r_hdrKey( "r_hdrKey", "0.015", CVAR_RENDERER | CVAR_FLOAT, "magic exposure key that works well with Doom 3 maps" );
@@ -267,7 +281,12 @@ idCVar r_ldrContrastThreshold( "r_ldrContrastThreshold", "1.1", CVAR_RENDERER | 
 idCVar r_ldrContrastOffset( "r_ldrContrastOffset", "3", CVAR_RENDERER | CVAR_FLOAT, "" );
 
 idCVar r_useFilmicPostProcessEffects( "r_useFilmicPostProcessEffects", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "apply several post process effects to mimic a filmic look" );
-idCVar r_forceAmbient( "r_forceAmbient", "0.2", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "render additional ambient pass to make the game less dark", 0.0f, 0.4f );
+
+#if defined( USE_VULKAN )
+	idCVar r_forceAmbient( "r_forceAmbient", "0.2", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "render additional ambient pass to make the game less dark", 0.0f, 0.75f );
+#else
+	idCVar r_forceAmbient( "r_forceAmbient", "0.2", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "render additional ambient pass to make the game less dark", 0.0f, 0.75f );
+#endif
 
 idCVar r_useSSGI( "r_useSSGI", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space global illumination and reflections" );
 idCVar r_ssgiDebug( "r_ssgiDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
@@ -275,8 +294,12 @@ idCVar r_ssgiFiltering( "r_ssgiFiltering", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 
 idCVar r_useSSAO( "r_useSSAO", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
 idCVar r_ssaoDebug( "r_ssaoDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
-idCVar r_ssaoFiltering( "r_ssaoFiltering", "1", CVAR_RENDERER | CVAR_BOOL, "" );
+idCVar r_ssaoFiltering( "r_ssaoFiltering", "0", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_useHierarchicalDepthBuffer( "r_useHierarchicalDepthBuffer", "1", CVAR_RENDERER | CVAR_BOOL, "" );
+
+idCVar r_usePBR( "r_usePBR", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use PBR and Image Based Lighting instead of old Quake 4 style ambient lighting" );
+idCVar r_pbrDebug( "r_pbrDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "show which materials have PBR support (green = PBR, red = oldschool D3)" );
+idCVar r_showViewEnvprobes( "r_showViewEnvprobes", "1", CVAR_RENDERER | CVAR_INTEGER, "1 = displays the bounding boxes of all view environment probes, 2 = show irradiance" );
 
 idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [0.0 .. 1.0]", 0.0f, 1.0f );
 // RB end
@@ -344,6 +367,7 @@ void R_SetNewMode( const bool fullInit )
 				r_fullscreen.SetInteger( 1 );
 				R_GetModeListForDisplay( r_fullscreen.GetInteger() - 1, modeList );
 			}
+
 			if( modeList.Num() < 1 )
 			{
 				idLib::Printf( "Going to safe mode because mode list failed." );
@@ -405,7 +429,11 @@ void R_SetNewMode( const bool fullInit )
 		if( fullInit )
 		{
 			// create the context as well as setting up the window
+#if defined(__linux__) && defined(USE_VULKAN)
+			if( VKimp_Init( parms ) )
+#else
 			if( GLimp_Init( parms ) )
+#endif
 			{
 				// it worked
 
@@ -418,7 +446,11 @@ void R_SetNewMode( const bool fullInit )
 		else
 		{
 			// just rebuild the window
+#if defined(__linux__) && defined(USE_VULKAN)
+			if( VKimp_SetScreenParms( parms ) )
+#else
 			if( GLimp_SetScreenParms( parms ) )
+#endif
 			{
 				// it worked
 
@@ -715,10 +747,10 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 	}
 
 	// make sure the game / draw thread has completed
-	//commonLocal.WaitGameThread();
+	commonLocal.WaitGameThread();
 
 	// discard anything currently on the list
-	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL );
+	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
 	int originalNativeWidth = glConfig.nativeScreenWidth;
 	int originalNativeHeight = glConfig.nativeScreenHeight;
@@ -736,7 +768,7 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 			// foresthale 2014-03-01: fixed custom screenshot resolution by doing a more direct render path
 #ifdef BUGFIXEDSCREENSHOTRESOLUTION
 			// discard anything currently on the list
-			tr.SwapCommandBuffers( NULL, NULL, NULL, NULL );
+			tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 			if( ref )
 			{
 				// ref is only used by envShot, Event_camShot, etc to grab screenshots of things in the world,
@@ -749,13 +781,13 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 				commonLocal.Draw();
 			}
 			// this should exit right after vsync, with the GPU idle and ready to draw
-			const emptyCommand_t* cmd = tr.SwapCommandBuffers( NULL, NULL, NULL, NULL );
+			const emptyCommand_t* cmd = tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
 			// get the GPU busy with new commands
 			tr.RenderCommandBuffers( cmd );
 
 			// discard anything currently on the list (this triggers SwapBuffers)
-			tr.SwapCommandBuffers( NULL, NULL, NULL, NULL );
+			tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 #else
 			// foresthale 2014-03-01: note: ref is always NULL in every call path to this function
 			if( ref )
@@ -806,7 +838,7 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 	// foresthale 2014-03-01: fixed custom screenshot resolution by doing a more direct render path
 #ifdef BUGFIXEDSCREENSHOTRESOLUTION
 	// discard anything currently on the list
-	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL );
+	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
 	glConfig.nativeScreenWidth = originalNativeWidth;
 	glConfig.nativeScreenHeight = originalNativeHeight;
@@ -912,6 +944,7 @@ void idRenderSystemLocal::TakeScreenshot( int width, int height, const char* fil
 		R_StaticFree( shortBuffer );
 		r_jitter.SetBool( false );
 	}
+
 	if( exten == PNG )
 	{
 		R_WritePNG( finalFileName, buffer, 3, width, height, false, "fs_basepath" );
@@ -1179,7 +1212,6 @@ void R_EnvShot_f( const idCmdArgs& args )
 
 	for( i = 0 ; i < 6 ; i++ )
 	{
-
 		ref = primary.renderView;
 
 		extension = envDirection[ i ];
@@ -1188,7 +1220,7 @@ void R_EnvShot_f( const idCmdArgs& args )
 		ref.viewaxis = axis[i];
 		fullname.Format( "env/%s%s", baseName, extension );
 
-		tr.TakeScreenshot( size, size, fullname, blends, &ref, TGA );
+		tr.TakeScreenshot( size, size, fullname, blends, &ref, PNG );
 	}
 
 	// restore the original resolution, axis and fov
@@ -1207,363 +1239,7 @@ void R_EnvShot_f( const idCmdArgs& args )
 static idMat3		cubeAxis[6];
 
 
-/*
-==================
-R_SampleCubeMap
-==================
-*/
-void R_SampleCubeMap( const idVec3& dir, int size, byte* buffers[6], byte result[4] )
-{
-	float	adir[3];
-	int		axis, x, y;
 
-	adir[0] = fabs( dir[0] );
-	adir[1] = fabs( dir[1] );
-	adir[2] = fabs( dir[2] );
-
-	if( dir[0] >= adir[1] && dir[0] >= adir[2] )
-	{
-		axis = 0;
-	}
-	else if( -dir[0] >= adir[1] && -dir[0] >= adir[2] )
-	{
-		axis = 1;
-	}
-	else if( dir[1] >= adir[0] && dir[1] >= adir[2] )
-	{
-		axis = 2;
-	}
-	else if( -dir[1] >= adir[0] && -dir[1] >= adir[2] )
-	{
-		axis = 3;
-	}
-	else if( dir[2] >= adir[1] && dir[2] >= adir[2] )
-	{
-		axis = 4;
-	}
-	else
-	{
-		axis = 5;
-	}
-
-	float	fx = ( dir * cubeAxis[axis][1] ) / ( dir * cubeAxis[axis][0] );
-	float	fy = ( dir * cubeAxis[axis][2] ) / ( dir * cubeAxis[axis][0] );
-
-	fx = -fx;
-	fy = -fy;
-	x = size * 0.5 * ( fx + 1 );
-	y = size * 0.5 * ( fy + 1 );
-	if( x < 0 )
-	{
-		x = 0;
-	}
-	else if( x >= size )
-	{
-		x = size - 1;
-	}
-	if( y < 0 )
-	{
-		y = 0;
-	}
-	else if( y >= size )
-	{
-		y = size - 1;
-	}
-
-	result[0] = buffers[axis][( y * size + x ) * 4 + 0];
-	result[1] = buffers[axis][( y * size + x ) * 4 + 1];
-	result[2] = buffers[axis][( y * size + x ) * 4 + 2];
-	result[3] = buffers[axis][( y * size + x ) * 4 + 3];
-}
-
-class CommandlineProgressBar
-{
-private:
-	size_t tics = 0;
-	size_t nextTicCount = 0;
-	int	count = 0;
-	int expectedCount = 0;
-
-public:
-	CommandlineProgressBar( int _expectedCount )
-	{
-		expectedCount = _expectedCount;
-
-		common->Printf( "0%%  10   20   30   40   50   60   70   80   90   100%%\n" );
-		common->Printf( "|----|----|----|----|----|----|----|----|----|----|\n" );
-
-		common->UpdateScreen( false );
-	}
-
-	void Increment()
-	{
-		if( ( count + 1 ) >= nextTicCount )
-		{
-			size_t ticsNeeded = ( size_t )( ( ( double )( count + 1 ) / expectedCount ) * 50.0 );
-
-			do
-			{
-				common->Printf( "*" );
-			}
-			while( ++tics < ticsNeeded );
-
-			nextTicCount = ( size_t )( ( tics / 50.0 ) * expectedCount );
-			if( count == ( expectedCount - 1 ) )
-			{
-				if( tics < 51 )
-				{
-					common->Printf( "*" );
-				}
-				common->Printf( "\n" );
-			}
-
-			common->UpdateScreen( false );
-		}
-
-		count++;
-	}
-};
-
-
-// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
-
-// To implement the Hammersley point set we only need an efficent way to implement the Van der Corput radical inverse phi2(i).
-// Since it is in base 2 we can use some basic bit operations to achieve this.
-// The brilliant book Hacker's Delight [warren01] provides us a a simple way to reverse the bits in a given 32bit integer. Using this, the following code then implements phi2(i)
-
-/*
-GLSL version
-
-float radicalInverse_VdC( uint bits )
-{
-	bits = (bits << 16u) | (bits >> 16u);
-	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-	return float(bits) * 2.3283064365386963e-10; // / 0x100000000
-}
-*/
-
-// RB: radical inverse implementation from the Mitsuba PBR system
-
-// Van der Corput radical inverse in base 2 with single precision
-inline float RadicalInverse_VdC( uint32_t n, uint32_t scramble = 0U )
-{
-	/* Efficiently reverse the bits in 'n' using binary operations */
-#if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))) || defined(__clang__)
-	n = __builtin_bswap32( n );
-#else
-	n = ( n << 16 ) | ( n >> 16 );
-	n = ( ( n & 0x00ff00ff ) << 8 ) | ( ( n & 0xff00ff00 ) >> 8 );
-#endif
-	n = ( ( n & 0x0f0f0f0f ) << 4 ) | ( ( n & 0xf0f0f0f0 ) >> 4 );
-	n = ( ( n & 0x33333333 ) << 2 ) | ( ( n & 0xcccccccc ) >> 2 );
-	n = ( ( n & 0x55555555 ) << 1 ) | ( ( n & 0xaaaaaaaa ) >> 1 );
-
-	// Account for the available precision and scramble
-	n = ( n >> ( 32 - 24 ) ) ^ ( scramble & ~ -( 1 << 24 ) );
-
-	return ( float ) n / ( float )( 1U << 24 );
-}
-
-// The ith point xi is then computed by
-inline idVec2 Hammersley2D( uint i, uint N )
-{
-	return idVec2( float( i ) / float( N ), RadicalInverse_VdC( i ) );
-}
-
-idVec3 ImportanceSampleGGX( const idVec2& Xi, float roughness, const idVec3& N )
-{
-	float a = roughness * roughness;
-
-	// cosinus distributed direction (Z-up or tangent space) from the hammersley point xi
-	float Phi = 2 * idMath::PI * Xi.x;
-	float cosTheta = sqrt( ( 1 - Xi.y ) / ( 1 + ( a * a - 1 ) * Xi.y ) );
-	float sinTheta = sqrt( 1 - cosTheta * cosTheta );
-
-	idVec3 H;
-	H.x = sinTheta * cos( Phi );
-	H.y = sinTheta * sin( Phi );
-	H.z = cosTheta;
-
-	// rotate from tangent space to world space along N
-	idVec3 upVector = abs( N.z ) < 0.999f ? idVec3( 0, 0, 1 ) : idVec3( 1, 0, 0 );
-	idVec3 tangentX = upVector.Cross( N );
-	tangentX.Normalize();
-	idVec3 tangentY = N.Cross( tangentX );
-
-	return tangentX * H.x + tangentY * H.y + N * H.z;
-}
-
-/*
-==================
-R_MakeAmbientMap_f
-
-R_MakeAmbientMap_f <basename> [size]
-
-Saves out env/<basename>_amb_ft.tga, etc
-==================
-*/
-void R_MakeAmbientMap_f( const idCmdArgs& args )
-{
-	idStr fullname;
-	const char*	baseName;
-	int			i;
-	renderView_t	ref;
-	viewDef_t	primary;
-	int			downSample;
-	int			outSize;
-	byte*		buffers[6];
-	int			width = 0, height = 0;
-
-	if( args.Argc() != 2 && args.Argc() != 3 )
-	{
-		common->Printf( "USAGE: ambientshot <basename> [size]\n" );
-		return;
-	}
-	baseName = args.Argv( 1 );
-
-	downSample = 0;
-	if( args.Argc() == 3 )
-	{
-		outSize = atoi( args.Argv( 2 ) );
-	}
-	else
-	{
-		outSize = 32;
-	}
-
-	memset( &cubeAxis, 0, sizeof( cubeAxis ) );
-	cubeAxis[0][0][0] = 1;
-	cubeAxis[0][1][2] = 1;
-	cubeAxis[0][2][1] = 1;
-
-	cubeAxis[1][0][0] = -1;
-	cubeAxis[1][1][2] = -1;
-	cubeAxis[1][2][1] = 1;
-
-	cubeAxis[2][0][1] = 1;
-	cubeAxis[2][1][0] = -1;
-	cubeAxis[2][2][2] = -1;
-
-	cubeAxis[3][0][1] = -1;
-	cubeAxis[3][1][0] = -1;
-	cubeAxis[3][2][2] = 1;
-
-	cubeAxis[4][0][2] = 1;
-	cubeAxis[4][1][0] = -1;
-	cubeAxis[4][2][1] = 1;
-
-	cubeAxis[5][0][2] = -1;
-	cubeAxis[5][1][0] = 1;
-	cubeAxis[5][2][1] = 1;
-
-	// read all of the images
-	for( i = 0 ; i < 6 ; i++ )
-	{
-		fullname.Format( "env/%s%s.%s", baseName, envDirection[i], fileExten[TGA] );
-		common->Printf( "loading %s\n", fullname.c_str() );
-		const bool captureToImage = false;
-		common->UpdateScreen( captureToImage );
-		R_LoadImage( fullname, &buffers[i], &width, &height, NULL, true );
-		if( !buffers[i] )
-		{
-			common->Printf( "failed.\n" );
-			for( i-- ; i >= 0 ; i-- )
-			{
-				Mem_Free( buffers[i] );
-			}
-			return;
-		}
-	}
-
-	bool pacifier = true;
-
-	// resample with hemispherical blending
-	int	samples = 1000;
-
-	byte*	outBuffer = ( byte* )_alloca( outSize * outSize * 4 );
-
-	for( int map = 0 ; map < 2 ; map++ )
-	{
-		CommandlineProgressBar progressBar( outSize * outSize * 6 );
-
-		int	start = Sys_Milliseconds();
-
-		for( i = 0 ; i < 6 ; i++ )
-		{
-			for( int x = 0 ; x < outSize ; x++ )
-			{
-				for( int y = 0 ; y < outSize ; y++ )
-				{
-					idVec3	dir;
-					float	total[3];
-
-					dir = cubeAxis[i][0] + -( -1 + 2.0 * x / ( outSize - 1 ) ) * cubeAxis[i][1] + -( -1 + 2.0 * y / ( outSize - 1 ) ) * cubeAxis[i][2];
-					dir.Normalize();
-					total[0] = total[1] = total[2] = 0;
-
-					float roughness = map ? 0.1 : 0.95;		// small for specular, almost hemisphere for ambient
-
-					for( int s = 0 ; s < samples ; s++ )
-					{
-						idVec2 Xi = Hammersley2D( s, samples );
-						idVec3 test = ImportanceSampleGGX( Xi, roughness, dir );
-
-						byte	result[4];
-						//test = dir;
-						R_SampleCubeMap( test, width, buffers, result );
-						total[0] += result[0];
-						total[1] += result[1];
-						total[2] += result[2];
-					}
-					outBuffer[( y * outSize + x ) * 4 + 0] = total[0] / samples;
-					outBuffer[( y * outSize + x ) * 4 + 1] = total[1] / samples;
-					outBuffer[( y * outSize + x ) * 4 + 2] = total[2] / samples;
-					outBuffer[( y * outSize + x ) * 4 + 3] = 255;
-
-					progressBar.Increment();
-				}
-			}
-
-			if( map == 0 )
-			{
-				fullname.Format( "env/%s_amb%s.%s", baseName, envDirection[i], fileExten[PNG] );
-			}
-			else
-			{
-				fullname.Format( "env/%s_spec%s.%s", baseName, envDirection[i], fileExten[PNG] );
-			}
-			//common->Printf( "writing %s\n", fullname.c_str() );
-
-			const bool captureToImage = false;
-			common->UpdateScreen( captureToImage );
-
-			//R_WriteTGA( fullname, outBuffer, outSize, outSize, false, "fs_basepath" );
-			R_WritePNG( fullname, outBuffer, 4, outSize, outSize, true, "fs_basepath" );
-		}
-
-		int	end = Sys_Milliseconds();
-
-		if( map == 0 )
-		{
-			common->Printf( "env/%s_amb convolved  in %5.1f seconds\n\n", baseName, ( end - start ) * 0.001f );
-		}
-		else
-		{
-			common->Printf( "env/%s_spec convolved  in %5.1f seconds\n\n", baseName, ( end - start ) * 0.001f );
-		}
-	}
-
-	for( i = 0 ; i < 6 ; i++ )
-	{
-		if( buffers[i] )
-		{
-			Mem_Free( buffers[i] );
-		}
-	}
-}
 
 void R_TransformCubemap( const char* orgDirection[6], const char* orgDir, const char* destDirection[6], const char* destDir, const char* baseName )
 {
@@ -1580,7 +1256,7 @@ void R_TransformCubemap( const char* orgDirection[6], const char* orgDir, const 
 		common->Printf( "loading %s\n", fullname.c_str() );
 		const bool captureToImage = false;
 		common->UpdateScreen( captureToImage );
-		R_LoadImage( fullname, &buffers[i], &width, &height, NULL, true );
+		R_LoadImage( fullname, &buffers[i], &width, &height, NULL, true, NULL );
 
 		//check if the buffer is troublesome
 		if( !buffers[i] )
@@ -1640,7 +1316,6 @@ to skybox textures ( forward, back, left, right, up, down)
 */
 void R_TransformEnvToSkybox_f( const idCmdArgs& args )
 {
-
 	if( args.Argc() != 2 )
 	{
 		common->Printf( "USAGE: envToSky <basename>\n" );
@@ -1692,8 +1367,11 @@ void R_SetColorMappings()
 		int inf = idMath::Ftoi( 0xffff * pow( j / 255.0f, invg ) + 0.5f );
 		tr.gammaTable[i] = idMath::ClampInt( 0, 0xFFFF, inf );
 	}
-
+#if defined(__linux__) && defined(USE_VULKAN)
+	VKimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );
+#else
 	GLimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );
+#endif
 }
 
 /*
@@ -1852,6 +1530,9 @@ void R_InitMaterials()
 	tr.defaultProjectedLight = declManager->FindMaterial( "lights/defaultProjectedLight" );
 	tr.whiteMaterial = declManager->FindMaterial( "_white" );
 	tr.charSetMaterial = declManager->FindMaterial( "textures/bigchars" );
+
+	// RB: create implicit material
+	tr.imgGuiMaterial = declManager->FindMaterial( "_imguiFont", true );
 }
 
 
@@ -1934,7 +1615,6 @@ void R_InitCommands()
 	cmdSystem->AddCommand( "touchGui", R_TouchGui_f, CMD_FL_RENDERER, "touches a gui" );
 	cmdSystem->AddCommand( "screenshot", R_ScreenShot_f, CMD_FL_RENDERER, "takes a screenshot" );
 	cmdSystem->AddCommand( "envshot", R_EnvShot_f, CMD_FL_RENDERER, "takes an environment shot" );
-	cmdSystem->AddCommand( "makeAmbientMap", R_MakeAmbientMap_f, CMD_FL_RENDERER | CMD_FL_CHEAT, "makes an ambient map" );
 	cmdSystem->AddCommand( "envToSky", R_TransformEnvToSkybox_f, CMD_FL_RENDERER | CMD_FL_CHEAT, "transforms environment textures to sky box textures" );
 	cmdSystem->AddCommand( "skyToEnv", R_TransformSkyboxToEnv_f, CMD_FL_RENDERER | CMD_FL_CHEAT, "transforms sky box textures to environment textures" );
 	cmdSystem->AddCommand( "gfxInfo", GfxInfo_f, CMD_FL_RENDERER, "show graphics info" );
@@ -1991,6 +1671,12 @@ void idRenderSystemLocal::Clear()
 	{
 		Mem_Free( zeroOneCubeTriangles );
 		zeroOneCubeTriangles = NULL;
+	}
+
+	if( zeroOneSphereTriangles != NULL )
+	{
+		Mem_Free( zeroOneSphereTriangles );
+		zeroOneSphereTriangles = NULL;
 	}
 
 	if( testImageTriangles != NULL )
@@ -2146,6 +1832,72 @@ static srfTriangles_t* R_MakeZeroOneCubeTris()
 	return tri;
 }
 
+// RB begin
+static srfTriangles_t* R_MakeZeroOneSphereTris()
+{
+	srfTriangles_t* tri = ( srfTriangles_t* )Mem_ClearedAlloc( sizeof( *tri ), TAG_RENDER_TOOLS );
+
+	const float radius = 1.0f;
+	const int rings = 20.0f;
+	const int sectors = 20.0f;
+
+	tri->numVerts = ( rings * sectors );
+	tri->numIndexes = ( ( rings - 1 ) * sectors ) * 6;
+
+	const int indexSize = tri->numIndexes * sizeof( tri->indexes[0] );
+	const int allocatedIndexBytes = ALIGN( indexSize, 16 );
+	tri->indexes = ( triIndex_t* )Mem_Alloc( allocatedIndexBytes, TAG_RENDER_TOOLS );
+
+	const int vertexSize = tri->numVerts * sizeof( tri->verts[0] );
+	const int allocatedVertexBytes =  ALIGN( vertexSize, 16 );
+	tri->verts = ( idDrawVert* )Mem_ClearedAlloc( allocatedVertexBytes, TAG_RENDER_TOOLS );
+
+	idDrawVert* verts = tri->verts;
+
+	float const R = 1.0f / ( float )( rings - 1 );
+	float const S = 1.0f / ( float )( sectors - 1 );
+
+	int numTris = 0;
+	int numVerts = 0;
+	for( int r = 0; r < rings; ++r )
+	{
+		for( int s = 0; s < sectors; ++s )
+		{
+			const float y = sin( -idMath::HALF_PI +  idMath::PI * r * R );
+			const float x = cos( 2 * idMath::PI * s * S ) * sin( idMath::PI * r * R );
+			const float z = sin( 2 * idMath::PI * s * S ) * sin( idMath::PI * r * R );
+
+			verts[ numVerts ].SetTexCoord( s * S, r * R );
+			verts[ numVerts ].xyz = idVec3( x, y, z ) * radius;
+			verts[ numVerts ].SetNormal( -x, -y, -z );
+			verts[ numVerts ].SetColor( 0xffffffff );
+			numVerts++;
+
+			if( r < ( rings - 1 ) )
+			{
+				int curRow = r * sectors;
+				int nextRow = ( r + 1 ) * sectors;
+				int nextS = ( s + 1 ) % sectors;
+
+				tri->indexes[( numTris * 3 ) + 2] = ( curRow + s );
+				tri->indexes[( numTris * 3 ) + 1] = ( nextRow + s );
+				tri->indexes[( numTris * 3 ) + 0] = ( nextRow + nextS );
+
+				numTris += 1;
+
+				tri->indexes[( numTris * 3 ) + 2] = ( curRow + s );
+				tri->indexes[( numTris * 3 ) + 1] = ( nextRow + nextS );
+				tri->indexes[( numTris * 3 ) + 0] = ( curRow + nextS );
+
+				numTris += 1;
+			}
+		}
+	}
+
+	return tri;
+}
+// RB end
+
 /*
 ================
 R_MakeTestImageTriangles
@@ -2254,11 +2006,21 @@ void idRenderSystemLocal::Init()
 	{
 		unitSquareTriangles = R_MakeFullScreenTris();
 	}
+
 	// make sure the tr.zeroOneCubeTriangles data is current in the vertex / index cache
 	if( zeroOneCubeTriangles == NULL )
 	{
 		zeroOneCubeTriangles = R_MakeZeroOneCubeTris();
+		R_DeriveTangents( zeroOneCubeTriangles ); // RB: we need normals for debugging reflections
 	}
+
+	// RB make sure the tr.zeroOneSphereTriangles data is current in the vertex / index cache
+	if( zeroOneSphereTriangles == NULL )
+	{
+		zeroOneSphereTriangles = R_MakeZeroOneSphereTris();
+		//R_DeriveTangents( zeroOneSphereTriangles );
+	}
+
 	// make sure the tr.testImageTriangles data is current in the vertex / index cache
 	if( testImageTriangles == NULL )
 	{
@@ -2270,7 +2032,7 @@ void idRenderSystemLocal::Init()
 	bInitialized = true;
 
 	// make sure the command buffers are ready to accept the first screen update
-	SwapCommandBuffers( NULL, NULL, NULL, NULL );
+	SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
 	common->Printf( "renderSystem initialized.\n" );
 	common->Printf( "--------------------------------------\n" );

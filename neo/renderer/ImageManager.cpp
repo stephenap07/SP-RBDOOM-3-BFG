@@ -445,7 +445,7 @@ idImage*	idImageManager::ImageFromFile( const char* _name, textureFilter_t filte
 	image->levelLoadReferenced = true;
 
 	// load it if we aren't in a level preload
-	if( !insideLevelLoad || preloadingMapImages )
+	if( ( !insideLevelLoad || preloadingMapImages ) && idLib::IsMainThread() )
 	{
 		image->referencedOutsideLevelLoad = ( !insideLevelLoad && !preloadingMapImages );
 		image->ActuallyLoadImage( false );	// load is from front end
@@ -654,7 +654,7 @@ void R_CombineCubeImages_f( const idCmdArgs& args )
 			sprintf( filename, "%s%i%04i.tga", baseName.c_str(), orderRemap[side], frameNum );
 
 			idLib::Printf( "reading %s\n", filename );
-			R_LoadImage( filename, &pics[side], &width, &height, NULL, true );
+			R_LoadImage( filename, &pics[side], &width, &height, NULL, true, NULL );
 
 			if( !pics[side] )
 			{

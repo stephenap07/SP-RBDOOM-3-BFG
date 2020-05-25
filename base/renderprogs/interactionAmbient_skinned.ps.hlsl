@@ -2,10 +2,10 @@
 ===========================================================================
 
 Doom 3 BFG Edition GPL Source Code
-Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company. 
-Copyright (C) 2013 Robert Beckebans
+Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2013-2020 Robert Beckebans
 
-This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").  
+This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
 Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "global.inc.hlsl"
 
+// *INDENT-OFF*
 uniform sampler2D samp0 : register(s0); // texture 1 is the per-surface normal map
 uniform sampler2D samp1 : register(s1); // texture 3 is the per-surface specular or roughness/metallic/AO mixer map
 uniform sampler2D samp2 : register(s2); // texture 2 is the per-surface baseColor map 
@@ -49,17 +50,20 @@ struct PS_IN {
 struct PS_OUT {
 	half4 color : COLOR;
 };
+// *INDENT-ON*
 
-void main( PS_IN fragment, out PS_OUT result ) {
+void main( PS_IN fragment, out PS_OUT result )
+{
 	half4 bumpMap =			tex2D( samp0, fragment.texcoord1.xy );
 	half4 lightFalloff =	idtex2Dproj( samp3, fragment.texcoord2 );
 	half4 lightProj	=		idtex2Dproj( samp4, fragment.texcoord3 );
 	half4 YCoCG =			tex2D( samp2, fragment.texcoord4.xy );
-	half4 specMap =			tex2D( samp1, fragment.texcoord5.xy );
+	half4 specMapSRGB =		tex2D( samp1, fragment.texcoord5.xy );
+	half4 specMap =			sRGBAToLinearRGBA( specMapSRGB );
 
 	const half3 ambientLightVector = half3( 0.5f, 9.5f - 0.385f, 0.8925f );
 	half3 lightVector = normalize( ambientLightVector );
-	half3 diffuseMap = ConvertYCoCgToRGB( YCoCG );
+	half3 diffuseMap = sRGBToLinearRGB( ConvertYCoCgToRGB( YCoCG ) );
 
 	half3 localNormal;
 	// RB begin
@@ -71,7 +75,7 @@ void main( PS_IN fragment, out PS_OUT result ) {
 	// RB end
 	localNormal.z = sqrt( abs( dot( localNormal.xy, localNormal.xy ) - 0.25 ) );
 	localNormal = normalize( localNormal );
-	
+
 	// traditional very dark Lambert light model used in Doom 3
 	half ldotN = saturate( dot3( localNormal, lightVector ) );
 
@@ -84,15 +88,15 @@ void main( PS_IN fragment, out PS_OUT result ) {
 #else
 	half lambert = ldotN;
 #endif
-	
+
 	const half specularPower = 10.0f;
 	half hDotN = dot3( normalize( fragment.texcoord6.xyz ), localNormal );
 	// RB: added abs
 	half3 specularContribution = _half3( pow( abs( hDotN ), specularPower ) );
 
-	half3 diffuseColor = diffuseMap * rpDiffuseModifier.xyz;
-	half3 specularColor = specMap.xyz * specularContribution * rpSpecularModifier.xyz;
-	half3 lightColor = 1.0 * lightProj.xyz * lightFalloff.xyz;
+	half3 diffuseColor = diffuseMap * ( rpDiffuseModifier.xyz );
+	half3 specularColor = specMap.xyz * specularContribution * ( rpSpecularModifier.xyz );
+	half3 lightColor = sRGBToLinearRGB( lightProj.xyz * lightFalloff.xyz );
 
 	result.color.xyz = ( diffuseColor + specularColor ) * lightColor * fragment.color.xyz;
 	result.color.w = 1.0;

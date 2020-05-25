@@ -4,7 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2016-2017 Dustin Land
-Copyright (C) 2017 Robert Beckebans
+Copyright (C) 2017-2020 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -31,7 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __RENDERER_BACKEND_H__
 #define __RENDERER_BACKEND_H__
 
-
+#include "RenderLog.h"
 
 bool			GL_CheckErrors_( const char* filename, int line );
 #if 1 // !defined(RETAIL)
@@ -55,25 +55,6 @@ enum stencilFace_t
 	STENCIL_FACE_FRONT,
 	STENCIL_FACE_BACK,
 	STENCIL_FACE_NUM
-};
-
-struct backEndCounters_t
-{
-	int		c_surfaces;
-	int		c_shaders;
-
-	int		c_drawElements;
-	int		c_drawIndexes;
-
-	int		c_shadowElements;
-	int		c_shadowIndexes;
-
-	int		c_copyFrameBuffer;
-
-	float	c_overDraw;
-
-	int		totalMicroSec;		// total microseconds for backend run
-	int		shadowMicroSec;
 };
 
 struct gfxImpParms_t
@@ -132,6 +113,11 @@ void RB_SetVertexColorParms( stageVertexColor_t svc );
 
 #if defined( USE_VULKAN )
 
+#if defined(__linux__)
+	#include <SDL.h>
+	#include <SDL_vulkan.h>
+#endif
+
 struct gpuInfo_t
 {
 	VkPhysicalDevice					device;
@@ -146,11 +132,14 @@ struct gpuInfo_t
 
 struct vulkanContext_t
 {
+	// Eric: If on linux, use this to pass SDL_Window pointer to the SDL_Vulkan_* methods not in sdl_vkimp.cpp file.
+#if defined(__linux__)
+	SDL_Window*						sdlWindow = nullptr;
+#endif
 	uint64							frameCounter;
 	uint32							frameParity;
 
 	vertCacheHandle_t				jointCacheHandle;
-	uint64							stencilOperations[ STENCIL_FACE_NUM ];
 
 	VkInstance						instance;
 
@@ -170,6 +159,9 @@ struct vulkanContext_t
 	idList< const char* >			instanceExtensions;
 	idList< const char* >			deviceExtensions;
 	idList< const char* >			validationLayers;
+
+	bool							debugMarkerSupportAvailable;
+	bool							debugUtilsSupportAvailable;
 
 	// selected GPU
 	gpuInfo_t* 						gpu;
@@ -212,6 +204,14 @@ struct vulkanContext_t
 
 	int											currentImageParm;
 	idArray< idImage*, MAX_IMAGE_PARMS >		imageParms;
+
+	//typedef uint32 QueryTuple[2];
+
+	// GPU timestamp queries
+	idArray< uint32, NUM_FRAME_DATA >									queryIndex;
+	idArray< idArray< uint32, MRB_TOTAL_QUERIES >, NUM_FRAME_DATA >		queryAssignedIndex;
+	idArray< idArray< uint64, NUM_TIMESTAMP_QUERIES >, NUM_FRAME_DATA >	queryResults;
+	idArray< VkQueryPool, NUM_FRAME_DATA >		queryPools;
 };
 
 extern vulkanContext_t vkcontext;
@@ -220,13 +220,15 @@ extern vulkanContext_t vkcontext;
 
 struct glContext_t
 {
-//	bool		bAnisotropicFilterAvailable;
-//	bool		bTextureLODBiasAvailable;
-
-//	float		maxTextureAnisotropy;
+	uint64		frameCounter;
+	uint32		frameParity;
 
 	tmu_t		tmu[ MAX_MULTITEXTURE_UNITS ];
 	uint64		stencilOperations[ STENCIL_FACE_NUM ];
+
+	// for GL_TIME_ELAPSED_EXT queries
+	GLuint		renderLogMainBlockTimeQueryIds[ NUM_FRAME_DATA ][ MRB_TOTAL_QUERIES ];
+	uint32		renderLogMainBlockTimeQueryIssued[ NUM_FRAME_DATA ][ MRB_TOTAL_QUERIES ];
 };
 
 extern glContext_t glcontext;
@@ -242,12 +244,6 @@ all state modified by the back end is separated from the front end state
 
 ===========================================================================
 */
-//namespace ImGui
-//{
-//
-//}
-
-//#include "../libs/imgui/imgui.h"
 struct ImDrawData;
 
 class idRenderBackend
@@ -304,7 +300,7 @@ private:
 			idVec4 matrix[2], float color[4] );
 
 	void				DrawInteractions( const viewDef_t* _viewDef );
-	void				DrawSingleInteraction( drawInteraction_t* din );
+	void				DrawSingleInteraction( drawInteraction_t* din, bool useFastPath, bool useIBL, bool setInteractionShader );
 	int					DrawShaderPasses( const drawSurf_t* const* const drawSurfs, const int numDrawSurfs,
 										  const float guiStereoScreenOffset, const int stereoEye );
 
@@ -324,7 +320,7 @@ private:
 	void				Tonemap( const viewDef_t* viewDef );
 	void				Bloom( const viewDef_t* viewDef );
 
-	void				DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef );
+	void				DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef, bool downModulateScreen );
 	void				DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewDef );
 
 	// Experimental feature
@@ -342,7 +338,7 @@ private:
 	void				GL_SetDefaultState();
 
 	void				GL_State( uint64 stateBits, bool forceGlState = false );
-	void				GL_SeparateStencil( stencilFace_t face, uint64 stencilBits );
+//	void				GL_SeparateStencil( stencilFace_t face, uint64 stencilBits );
 
 	void				GL_SelectTexture( int unit );
 //	void				GL_BindTexture( idImage* image );
@@ -429,16 +425,14 @@ private:
 	void				DBG_ShowDominantTris( drawSurf_t** drawSurfs, int numDrawSurfs );
 	void				DBG_ShowEdges( drawSurf_t** drawSurfs, int numDrawSurfs );
 	void				DBG_ShowLights();
+	void				DBG_ShowViewEnvprobes(); // RB
 	void				DBG_ShowShadowMapLODs(); // RB
 	void				DBG_ShowPortals();
-
 	void				DBG_ShowDebugText();
 	void				DBG_ShowDebugLines();
 	void				DBG_ShowDebugPolygons();
-
 	void				DBG_ShowCenterOfProjection();
 	void				DBG_ShowLines();
-
 	void				DBG_TestGamma();
 	void				DBG_TestGammaBias();
 	void				DBG_TestImage();
@@ -452,6 +446,7 @@ public:
 	// surfaces used for code-based drawing
 	drawSurf_t			unitSquareSurface;
 	drawSurf_t			zeroOneCubeSurface;
+	drawSurf_t			zeroOneSphereSurface; // RB
 	drawSurf_t			testImageSurface;
 
 private:
