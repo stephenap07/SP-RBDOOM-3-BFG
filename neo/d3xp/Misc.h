@@ -46,9 +46,9 @@ class idSpawnableEntity : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idSpawnableEntity );
-	
+
 	void				Spawn();
-	
+
 private:
 };
 
@@ -68,27 +68,27 @@ class idPlayerStart : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idPlayerStart );
-	
+
 	enum
 	{
 		EVENT_TELEPORTPLAYER = idEntity::EVENT_MAXEVENTS,
 		EVENT_MAXEVENTS
 	};
-	
+
 	idPlayerStart();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	void				Event_Enable(void); //added for OpenCoop maps Compability
-	void				Event_Disable(void); //added for OpenCoop maps Compability
-	
+	void				Event_Enable( void ); //added for OpenCoop maps Compability
+	void				Event_Disable( void ); //added for OpenCoop maps Compability
+
 	virtual bool		ClientReceiveEvent( int event, int time, const idBitMsg& msg );
-	
+
 private:
 	int					teleportStage;
-	
+
 	void				Event_TeleportPlayer( idEntity* activator );
 	void				Event_TeleportStage( idEntity* player );
 	void				TeleportPlayer( idPlayer* player );
@@ -110,17 +110,17 @@ class idActivator : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idActivator );
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	virtual void		Think();
-	
+
 private:
 	bool				stay_on;
-	
+
 	void				Event_Activate( idEntity* activator );
 };
 
@@ -136,13 +136,13 @@ class idPathCorner : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idPathCorner );
-	
+
 	void				Spawn();
-	
+
 	static void			DrawDebugInfo();
-	
+
 	static idPathCorner* RandomPath( const idEntity* source, const idEntity* ignore );
-	
+
 private:
 	void				Event_RandomPath();
 };
@@ -160,22 +160,22 @@ class idDamagable : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idDamagable );
-	
+
 	idDamagable();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	void				Spawn();
 	void				Killed( idEntity* inflictor, idEntity* attacker, int damage, const idVec3& dir, int location );
-	
+
 	virtual void		Hide();
 	virtual void		Show();
-	
+
 private:
 	int					count;
 	int					nextTriggerTime;
-	
+
 	void				BecomeBroken( idEntity* activator );
 	void				Event_BecomeBroken( idEntity* activator );
 	void				Event_RestoreDamagable();
@@ -194,9 +194,9 @@ class idExplodable : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idExplodable );
-	
+
 	void				Spawn();
-	
+
 private:
 	void				Event_Explode( idEntity* activator );
 };
@@ -214,11 +214,11 @@ class idSpring : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idSpring );
-	
+
 	void				Spawn();
-	
+
 	virtual void		Think();
-	
+
 private:
 	idEntity* 			ent1;
 	idEntity* 			ent2;
@@ -227,7 +227,7 @@ private:
 	idVec3				p1;
 	idVec3				p2;
 	idForce_Spring		spring;
-	
+
 	void				Event_LinkSpring();
 };
 
@@ -244,19 +244,19 @@ class idForceField : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idForceField );
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	void				Spawn();
-	
+
 	virtual void		Think();
 	virtual void		ClientThink( const int curTime, const float fraction, const bool predict ) ;
 private:
 	idForce_Field		forceField;
-	
+
 	void				Toggle();
-	
+
 	void				Event_Activate( idEntity* activator );
 	void				Event_Toggle();
 	void				Event_FindTargets();
@@ -275,24 +275,24 @@ class idAnimated : public idAFEntity_Gibbable
 {
 public:
 	CLASS_PROTOTYPE( idAnimated );
-	
+
 	idAnimated();
 	~idAnimated();
-	
+
 	void					Save( idSaveGame* savefile ) const;
 	void					Restore( idRestoreGame* savefile );
-	
+
 	void					Spawn();
 	virtual bool			LoadAF();
 	bool					StartRagdoll();
 	virtual bool			GetPhysicsToSoundTransform( idVec3& origin, idMat3& axis );
 
-	virtual void			WriteToSnapshot(idBitMsg& msg) const; //added for COOP
-	virtual void			ReadFromSnapshot(const idBitMsg& msg); //added for COOP
+	virtual void			WriteToSnapshot( idBitMsg& msg ) const; //added for COOP
+	virtual void			ReadFromSnapshot( const idBitMsg& msg ); //added for COOP
 
-	virtual void			ClientThink(const int curTime, const float fraction, const bool predict); //added for coop
-	virtual void			Think(void); //added for COOP
-	
+	virtual void			ClientThink( const int curTime, const float fraction, const bool predict ); //added for coop
+	virtual void			Think( void ); //added for COOP
+
 private:
 	int						num_anims;
 	int						current_anim_index;
@@ -304,9 +304,9 @@ private:
 	idEntityPtr<idEntity>	activator;
 	bool					activated;
 	int						achievement;
-	
+
 	void					PlayNextAnim();
-	
+
 	void					Event_Activate( idEntity* activator );
 	void					Event_Start();
 	void					Event_StartRagdoll();
@@ -331,12 +331,12 @@ class idStaticEntity : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idStaticEntity );
-	
+
 	idStaticEntity();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	void				Spawn();
 	void				ShowEditingDialog();
 	virtual void		Hide();
@@ -345,7 +345,8 @@ public:
 	virtual void		Think();
 
 	//added for coop
-	enum {
+	enum
+	{
 		EVENT_STATIC_ACTIVATE = idEntity::EVENT_MAXEVENTS,
 		EVENT_STATIC_HIDE,
 		EVENT_STATIC_SHOW,
@@ -353,17 +354,17 @@ public:
 		EVENT_MAXEVENTS
 	};
 	//end for coop
-	
+
 	virtual void		WriteToSnapshot( idBitMsg& msg ) const;
 	virtual void		ReadFromSnapshot( const idBitMsg& msg );
-	virtual bool		ClientReceiveEvent(int event, int time, const idBitMsg& msg); //added for coop
-	virtual void		ClientThink(const int curTime, const float fraction, const bool predict);  //added for coop
-	
+	virtual bool		ClientReceiveEvent( int event, int time, const idBitMsg& msg ); //added for coop
+	virtual void		ClientThink( const int curTime, const float fraction, const bool predict ); //added for coop
+
 private:
 	void				Event_Activate( idEntity* activator );
 	void				Event_Remove( void ); //added for coop
-	void				Event_Hide(void); //added for coop
-	void				Event_Show(void); //added for coop
+	void				Event_Hide( void ); //added for coop
+	void				Event_Show( void ); //added for coop
 
 	int					spawnTime;
 	bool				active;
@@ -387,21 +388,21 @@ class idFuncEmitter : public idStaticEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncEmitter );
-	
+
 	idFuncEmitter();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	void				Spawn();
 	void				Event_Activate( idEntity* activator );
-	
+
 	virtual void		WriteToSnapshot( idBitMsg& msg ) const;
 	virtual void		ReadFromSnapshot( const idBitMsg& msg );
-	
+
 private:
 	bool				hidden;
-	
+
 };
 
 
@@ -417,20 +418,20 @@ class idFuncShootProjectile : public idStaticEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncShootProjectile );
-	
+
 	idFuncShootProjectile();
-	
+
 	void						Save( idSaveGame* savefile ) const;
 	void						Restore( idRestoreGame* savefile );
-	
+
 	void						Spawn();
 	void						Event_Activate( idEntity* activator );
-	
+
 	virtual void				Think();
-	
+
 	virtual void				WriteToSnapshot( idBitMsg& msg ) const;
 	virtual void				ReadFromSnapshot( const idBitMsg& msg );
-	
+
 private:
 	int							mRespawnDelay;
 	int							mRespawnTime;
@@ -438,7 +439,7 @@ private:
 	idVec3						mShootDir;
 	idStr						mEntityDefName;
 	idEntityPtr< idEntity >		mLastProjectile;
-	
+
 };
 
 
@@ -454,17 +455,17 @@ class idFuncSmoke : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncSmoke );
-	
+
 	idFuncSmoke();
-	
+
 	void					Spawn();
-	
+
 	void					Save( idSaveGame* savefile ) const;
 	void					Restore( idRestoreGame* savefile );
-	
+
 	virtual void			Think();
 	void					Event_Activate( idEntity* activator );
-	
+
 private:
 	int						smokeTime;
 	const idDeclParticle* 	smoke;
@@ -484,11 +485,11 @@ class idFuncSplat : public idFuncEmitter
 {
 public:
 	CLASS_PROTOTYPE( idFuncSplat );
-	
+
 	idFuncSplat();
-	
+
 	void				Spawn();
-	
+
 private:
 	void				Event_Activate( idEntity* activator );
 	void				Event_Splat();
@@ -507,14 +508,14 @@ class idTextEntity : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idTextEntity );
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	virtual void		Think();
-	
+
 private:
 	idStr				text;
 	bool				playerOriented;
@@ -533,15 +534,15 @@ class idLocationEntity : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idLocationEntity );
-	
+
 	void				Spawn();
-	
+
 	const char* 		GetLocation() const;
-	int					GetPlayersIn(void) const; //added for OpenCoop maps support
-	void				Event_NumPlayers(void); //added for OpenCoop maps support
-	void				Event_AllPlayersIn(void); //added for OpenCoop maps support
-	void				Event_NoPlayersIn(void); //added for OpenCoop maps support
-	
+	int					GetPlayersIn( void ) const; //added for OpenCoop maps support
+	void				Event_NumPlayers( void ); //added for OpenCoop maps support
+	void				Event_AllPlayersIn( void ); //added for OpenCoop maps support
+	void				Event_NoPlayersIn( void ); //added for OpenCoop maps support
+
 private:
 };
 
@@ -549,9 +550,9 @@ class idLocationSeparatorEntity : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idLocationSeparatorEntity );
-	
+
 	void				Spawn();
-	
+
 private:
 };
 
@@ -559,16 +560,16 @@ class idVacuumSeparatorEntity : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idVacuumSeparatorEntity );
-	
+
 	idVacuumSeparatorEntity();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	void				Event_Activate( idEntity* activator );
-	
+
 private:
 	qhandle_t			portal;
 };
@@ -577,9 +578,9 @@ class idVacuumEntity : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idVacuumEntity );
-	
+
 	void				Spawn();
-	
+
 private:
 };
 
@@ -596,40 +597,41 @@ class idBeam : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idBeam );
-	
+
 	idBeam();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	virtual void		Think();
-	
+
 	void				SetMaster( idBeam* masterbeam );
 	void				SetBeamTarget( const idVec3& origin );
-	
+
 	virtual void		Show();
 
 	//added for coop
-	enum {
+	enum
+	{
 		EVENT_BEAM_ACTIVATE = idEntity::EVENT_MAXEVENTS,
 		EVENT_BEAM_REMOVE,
 		EVENT_MAXEVENTS
 	};
 	//end for coop
-	virtual void		ClientThink(const int curTime, const float fraction, const bool predict); //added for COOP
-	
+	virtual void		ClientThink( const int curTime, const float fraction, const bool predict ); //added for COOP
+
 	virtual void		WriteToSnapshot( idBitMsg& msg ) const;
 	virtual void		ReadFromSnapshot( const idBitMsg& msg );
 
-	virtual bool		ClientReceiveEvent(int event, int time, const idBitMsg& msg); //added for coop
-	
+	virtual bool		ClientReceiveEvent( int event, int time, const idBitMsg& msg ); //added for coop
+
 private:
 	void				Event_MatchTarget();
 	void				Event_Activate( idEntity* activator );
-	void				Event_Remove(void); //added for coop
-	
+	void				Event_Remove( void ); //added for coop
+
 	idEntityPtr<idBeam>	target;
 	idEntityPtr<idBeam>	master;
 };
@@ -649,16 +651,16 @@ class idLiquid : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idLiquid );
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 private:
 	void				Event_Touch( idEntity* other, trace_t* trace );
-	
-	
+
+
 	idRenderModelLiquid* model;
 };
 
@@ -675,18 +677,18 @@ class idShaking : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idShaking );
-	
+
 	idShaking();
-	
+
 	void					Spawn();
-	
+
 	void					Save( idSaveGame* savefile ) const;
 	void					Restore( idRestoreGame* savefile );
-	
+
 private:
 	idPhysics_Parametric	physicsObj;
 	bool					active;
-	
+
 	void					BeginShaking();
 	void					Event_Activate( idEntity* activator );
 };
@@ -704,16 +706,16 @@ class idEarthQuake : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idEarthQuake );
-	
+
 	idEarthQuake();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	virtual void		Think();
-	
+
 private:
 	int					nextTriggerTime;
 	int					shakeStopTime;
@@ -723,7 +725,7 @@ private:
 	bool				playerOriented;
 	bool				disabled;
 	float				shakeTime;
-	
+
 	void				Event_Activate( idEntity* activator );
 };
 
@@ -740,18 +742,18 @@ class idFuncPortal : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncPortal );
-	
+
 	idFuncPortal();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 private:
 	qhandle_t			portal;
 	bool				state;
-	
+
 	void				Event_Activate( idEntity* activator );
 };
 
@@ -767,17 +769,17 @@ class idFuncAASPortal : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncAASPortal );
-	
+
 	idFuncAASPortal();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 private:
 	bool				state;
-	
+
 	void				Event_Activate( idEntity* activator );
 };
 
@@ -793,17 +795,17 @@ class idFuncAASObstacle : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncAASObstacle );
-	
+
 	idFuncAASObstacle();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 private:
 	bool				state;
-	
+
 	void				Event_Activate( idEntity* activator );
 };
 
@@ -820,14 +822,14 @@ class idFuncRadioChatter : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncRadioChatter );
-	
+
 	idFuncRadioChatter();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 private:
 	float				time;
 	void				Event_Activate( idEntity* activator );
@@ -847,21 +849,21 @@ class idPhantomObjects : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idPhantomObjects );
-	
+
 	idPhantomObjects();
-	
+
 	void				Spawn();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 	virtual void		Think();
-	
+
 private:
 	void				Event_Activate( idEntity* activator );
 	void				Event_Throw();
 	void				Event_ShakeObject( idEntity* object, int starttime );
-	
+
 	int					end_time;
 	float				throw_time;
 	float				shake_time;
@@ -885,33 +887,33 @@ class idShockwave : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idShockwave );
-	
+
 	idShockwave();
 	~idShockwave();
-	
+
 	void				Spawn();
 	void				Think();
-	
+
 	void				Save( idSaveGame* savefile ) const;
 	void				Restore( idRestoreGame* savefile );
-	
+
 private:
 	void				Event_Activate( idEntity* activator );
-	
+
 	bool				isActive;
 	int					startTime;
 	int					duration;
-	
+
 	float				startSize;
 	float				endSize;
 	float				currentSize;
-	
+
 	float				magnitude;
-	
+
 	float				height;
 	bool				playerDamaged;
 	float				playerDamageSize;
-	
+
 };
 
 /*
@@ -925,22 +927,22 @@ class idFuncMountedObject : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idFuncMountedObject );
-	
+
 	idFuncMountedObject();
 	~idFuncMountedObject();
-	
+
 	void				Spawn();
 	void				Think();
-	
+
 	void				GetAngleRestrictions( int& yaw_min, int& yaw_max, int& pitch );
-	
+
 private:
 	int					harc;
 	int					varc;
-	
+
 	void				Event_Touch( idEntity* other, trace_t* trace );
 	void				Event_Activate( idEntity* activator );
-	
+
 public:
 	bool				isMounted;
 	function_t*			scriptFunction;
@@ -952,29 +954,29 @@ class idFuncMountedWeapon : public idFuncMountedObject
 {
 public:
 	CLASS_PROTOTYPE( idFuncMountedWeapon );
-	
+
 	idFuncMountedWeapon();
 	~idFuncMountedWeapon();
-	
+
 	void				Spawn();
 	void				Think();
-	
+
 private:
 
 	// The actual turret that moves with the player's view
 	idEntity*			turret;
-	
+
 	// the muzzle bone's position, used for launching projectiles and trailing smoke
 	idVec3				muzzleOrigin;
 	idMat3				muzzleAxis;
-	
+
 	float				weaponLastFireTime;
 	float				weaponFireDelay;
-	
+
 	const idDict* 		projectile;
-	
+
 	const idSoundShader*	soundFireWeapon;
-	
+
 	void				Event_PostSpawn();
 };
 
@@ -989,10 +991,10 @@ class idPortalSky : public idEntity
 {
 public:
 	CLASS_PROTOTYPE( idPortalSky );
-	
+
 	idPortalSky();
 	~idPortalSky();
-	
+
 	void				Spawn();
 	void				Event_PostSpawn();
 	void				Event_Activate( idEntity* activator );

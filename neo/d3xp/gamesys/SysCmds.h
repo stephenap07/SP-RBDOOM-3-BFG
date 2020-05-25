@@ -29,7 +29,8 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __SYS_CMDS_H__
 #define __SYS_CMDS_H__
 
-enum {
+enum
+{
 	COOP_CMD_ADDCHECKPOINT,
 	COOP_CMD_GOTOCHECKPOINT,
 	COOP_CMD_GLOBALCHECKPOINT

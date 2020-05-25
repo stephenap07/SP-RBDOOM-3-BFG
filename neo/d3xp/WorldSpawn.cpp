@@ -60,19 +60,20 @@ void idWorldspawn::Spawn()
 	idThread*			thread;
 	const function_t*	func;
 	const idKeyValue*	kv;
-	
+
 	assert( gameLocal.world == NULL );
 	gameLocal.world = this;
-	
+
 	g_gravity.SetFloat( spawnArgs.GetFloat( "gravity", va( "%f", DEFAULT_GRAVITY ) ) );
-	
+
 	// disable stamina on hell levels
 	if( spawnArgs.GetBool( "no_stamina" ) )
 	{
 		pm_stamina.SetFloat( 0.0f );
 	}
-	
-	if (gameLocal.mpGame.IsGametypeCoopBased() && !gameLocal.isRestartingMap) {
+
+	if( gameLocal.mpGame.IsGametypeCoopBased() && !gameLocal.isRestartingMap )
+	{
 		InitializateMapScript(); //Added by Stradex
 	}
 
@@ -95,9 +96,9 @@ idWorldspawn::Restore
 void idWorldspawn::Restore( idRestoreGame* savefile )
 {
 	assert( gameLocal.world == this );
-	
+
 	g_gravity.SetFloat( spawnArgs.GetFloat( "gravity", va( "%f", DEFAULT_GRAVITY ) ) );
-	
+
 	// disable stamina on hell levels
 	if( spawnArgs.GetBool( "no_stamina" ) )
 	{
@@ -138,7 +139,8 @@ idWorldspawn::InitializateMapScript
 ================
 */
 
-void idWorldspawn::InitializateMapScript(void) {
+void idWorldspawn::InitializateMapScript( void )
+{
 	idStr				scriptname;
 	idThread* thread;
 	const function_t* func;
@@ -146,33 +148,33 @@ void idWorldspawn::InitializateMapScript(void) {
 
 	// load script
 	scriptname = gameLocal.GetMapName();
-	scriptname.SetFileExtension(".script");
-	if (fileSystem->ReadFile(scriptname, NULL, NULL) > 0)
+	scriptname.SetFileExtension( ".script" );
+	if( fileSystem->ReadFile( scriptname, NULL, NULL ) > 0 )
 	{
-		gameLocal.program.CompileFile(scriptname);
+		gameLocal.program.CompileFile( scriptname );
 
 		// call the main function by default
-		func = gameLocal.program.FindFunction("main");
-		if (func != NULL)
+		func = gameLocal.program.FindFunction( "main" );
+		if( func != NULL )
 		{
-			thread = new idThread(func);
-			thread->DelayedStart(0);
+			thread = new idThread( func );
+			thread->DelayedStart( 0 );
 		}
 	}
 
 	// call any functions specified in worldspawn
-	kv = spawnArgs.MatchPrefix("call");
-	while (kv != NULL)
+	kv = spawnArgs.MatchPrefix( "call" );
+	while( kv != NULL )
 	{
-		func = gameLocal.program.FindFunction(kv->GetValue());
-		if (func == NULL)
+		func = gameLocal.program.FindFunction( kv->GetValue() );
+		if( func == NULL )
 		{
-			gameLocal.Error("Function '%s' not found in script for '%s' key on worldspawn", kv->GetValue().c_str(), kv->GetKey().c_str());
+			gameLocal.Error( "Function '%s' not found in script for '%s' key on worldspawn", kv->GetValue().c_str(), kv->GetKey().c_str() );
 		}
 
-		thread = new idThread(func);
-		thread->DelayedStart(0);
-		kv = spawnArgs.MatchPrefix("call", kv);
+		thread = new idThread( func );
+		thread->DelayedStart( 0 );
+		kv = spawnArgs.MatchPrefix( "call", kv );
 	}
-	common->Printf("[COOP] Worldspawn map script loaded...\n");
+	common->Printf( "[COOP] Worldspawn map script loaded...\n" );
 }

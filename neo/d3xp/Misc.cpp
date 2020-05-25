@@ -73,14 +73,14 @@ void idSpawnableEntity::Spawn()
 */
 
 const idEventDef EV_TeleportStage( "<TeleportStage>", "e" );
-const idEventDef EV_Spawn_Enable("enable", NULL); //added for OpenCoop maps compatibility
-const idEventDef EV_Spawn_Disable("disable", NULL); //added for OpenCoop maps compatibility
+const idEventDef EV_Spawn_Enable( "enable", NULL ); //added for OpenCoop maps compatibility
+const idEventDef EV_Spawn_Disable( "disable", NULL ); //added for OpenCoop maps compatibility
 
 CLASS_DECLARATION( idEntity, idPlayerStart )
 EVENT( EV_Activate,			idPlayerStart::Event_TeleportPlayer )
 EVENT( EV_TeleportStage,	idPlayerStart::Event_TeleportStage )
-EVENT(EV_Spawn_Enable, idPlayerStart::Event_Enable) //added for OpenCoop maps compatibility
-EVENT(EV_Spawn_Disable, idPlayerStart::Event_Disable) //added for OpenCoop maps compatibility
+EVENT( EV_Spawn_Enable, idPlayerStart::Event_Enable ) //added for OpenCoop maps compatibility
+EVENT( EV_Spawn_Disable, idPlayerStart::Event_Disable ) //added for OpenCoop maps compatibility
 END_CLASS
 
 /*
@@ -131,7 +131,7 @@ idPlayerStart::ClientReceiveEvent
 bool idPlayerStart::ClientReceiveEvent( int event, int time, const idBitMsg& msg )
 {
 	int entityNumber;
-	
+
 	switch( event )
 	{
 		case EVENT_TELEPORTPLAYER:
@@ -208,13 +208,14 @@ void idPlayerStart::TeleportPlayer( idPlayer* player )
 	const char* viewName = spawnArgs.GetString( "visualView", "" );
 	idEntity* ent = viewName ? gameLocal.FindEntity( viewName ) : NULL;
 
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer()) { //create a new global checkpoint at this position for Coop
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() )  //create a new global checkpoint at this position for Coop
+	{
 		player->nextTimeCoopTeleported = gameLocal.time + COOP_TELEPORT_CLEARDELAY;
-		gameLocal.mpGame.CreateNewCheckpoint(GetPhysics()->GetOrigin());
+		gameLocal.mpGame.CreateNewCheckpoint( GetPhysics()->GetOrigin() );
 	}
-	
+
 	SetTimeState ts( player->timeGroup );
-	
+
 	if( f && ent != NULL )
 	{
 		// place in private camera view for some time
@@ -230,12 +231,13 @@ void idPlayerStart::TeleportPlayer( idPlayer* player )
 	}
 	else
 	{
-		if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer()) {
-			ActivateTargets(this); //for opencoop
+		if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() )
+		{
+			ActivateTargets( this ); //for opencoop
 		}
 		// direct to exit, Teleport will take care of the killbox
 		player->Teleport( GetPhysics()->GetOrigin(), GetPhysics()->GetAxis().ToAngles(), NULL );
-		
+
 		// multiplayer hijacked this entity, so only push the player in multiplayer
 		if( common->IsMultiplayer() )
 		{
@@ -252,11 +254,14 @@ idPlayerStart::Event_TeleportPlayer
 void idPlayerStart::Event_TeleportPlayer( idEntity* activator )
 {
 	idPlayer* player;
-	
-	if (activator && !activator->IsType(idPlayer::Type) && activator->entityNumber != this->entityNumber) { //for OpenCoop teleport target support
-		for (int i = 0; i < gameLocal.numClients; i++) {
-			idPlayer* p = gameLocal.GetClientByNum(i);
-			if (!p || p->nextTimeCoopTeleported >= gameLocal.time) {
+
+	if( activator && !activator->IsType( idPlayer::Type ) && activator->entityNumber != this->entityNumber ) //for OpenCoop teleport target support
+	{
+		for( int i = 0; i < gameLocal.numClients; i++ )
+		{
+			idPlayer* p = gameLocal.GetClientByNum( i );
+			if( !p || p->nextTimeCoopTeleported >= gameLocal.time )
+			{
 				continue;
 			}
 			activator = p;
@@ -264,11 +269,15 @@ void idPlayerStart::Event_TeleportPlayer( idEntity* activator )
 		}
 	}
 
-	if (activator && activator->IsType(idPlayer::Type)) {
+	if( activator && activator->IsType( idPlayer::Type ) )
+	{
 		player = static_cast<idPlayer*>( activator );
-	} else if (gameLocal.mpGame.IsGametypeCoopBased() && gameLocal.GetCoopPlayer()) {
+	}
+	else if( gameLocal.mpGame.IsGametypeCoopBased() && gameLocal.GetCoopPlayer() )
+	{
 		player = gameLocal.GetCoopPlayer();
-	} else
+	}
+	else
 	{
 		player = gameLocal.GetLocalPlayer();
 	}
@@ -277,25 +286,25 @@ void idPlayerStart::Event_TeleportPlayer( idEntity* activator )
 		player->nextTimeCoopTeleported = gameLocal.time + COOP_TELEPORT_CLEARDELAY;
 		if( spawnArgs.GetBool( "visualFx" ) )
 		{
-		
+
 			teleportStage = 0;
 			Event_TeleportStage( player );
-			
+
 		}
 		else
 		{
-		
+
 			if( common->IsServer() )
 			{
 				idBitMsg	msg;
 				byte		msgBuf[MAX_EVENT_PARAM_SIZE];
-				
+
 				msg.InitWrite( msgBuf, sizeof( msgBuf ) );
 				msg.BeginWriting();
 				msg.WriteBits( player->entityNumber, GENTITYNUM_BITS );
 				ServerSendEvent( EVENT_TELEPORTPLAYER, &msg, false );
 			}
-			
+
 			TeleportPlayer( player );
 		}
 	}
@@ -306,23 +315,27 @@ void idPlayerStart::Event_TeleportPlayer( idEntity* activator )
 idPlayerStart::Event_Enable
 ================
 */
-void idPlayerStart::Event_Enable(void)
+void idPlayerStart::Event_Enable( void )
 {
-	if (spawnArgs.GetBool("initial") && (gameLocal.initialSpots.FindIndex(this) < 0)) {
-		gameLocal.initialSpots.Append(this);
+	if( spawnArgs.GetBool( "initial" ) && ( gameLocal.initialSpots.FindIndex( this ) < 0 ) )
+	{
+		gameLocal.initialSpots.Append( this );
 	}
 	int spawnSpotIndex = -1;
-	for (int i = 0; i < gameLocal.spawnSpots.Num(); i++) {
-		if (gameLocal.spawnSpots[i].ent && (gameLocal.spawnSpots[i].ent->entityNumber == this->entityNumber)) {
+	for( int i = 0; i < gameLocal.spawnSpots.Num(); i++ )
+	{
+		if( gameLocal.spawnSpots[i].ent && ( gameLocal.spawnSpots[i].ent->entityNumber == this->entityNumber ) )
+		{
 			spawnSpotIndex = i;
 			break;
 		}
 	}
-	if (spawnSpotIndex < 0) {
+	if( spawnSpotIndex < 0 )
+	{
 		spawnSpot_t	spot;
 		spot.dist = 0;
 		spot.ent = this;
-		gameLocal.spawnSpots.Append(spot);
+		gameLocal.spawnSpots.Append( spot );
 	}
 
 }
@@ -332,19 +345,23 @@ void idPlayerStart::Event_Enable(void)
 idPlayerStart::Event_Disable
 ================
 */
-void idPlayerStart::Event_Disable(void) {
+void idPlayerStart::Event_Disable( void )
+{
 
-	gameLocal.initialSpots.Remove(this);
+	gameLocal.initialSpots.Remove( this );
 
 	int spawnSpotIndex = -1;
-	for (int i = 0; i < gameLocal.spawnSpots.Num(); i++) {
-		if (gameLocal.spawnSpots[i].ent && (gameLocal.spawnSpots[i].ent->entityNumber == this->entityNumber)) {
+	for( int i = 0; i < gameLocal.spawnSpots.Num(); i++ )
+	{
+		if( gameLocal.spawnSpots[i].ent && ( gameLocal.spawnSpots[i].ent->entityNumber == this->entityNumber ) )
+		{
 			spawnSpotIndex = i;
 			break;
 		}
 	}
-	if (spawnSpotIndex >= 0) {
-		gameLocal.spawnSpots.RemoveIndex(spawnSpotIndex);
+	if( spawnSpotIndex >= 0 )
+	{
+		gameLocal.spawnSpots.RemoveIndex( spawnSpotIndex );
 	}
 
 }
@@ -380,7 +397,7 @@ idActivator::Restore
 void idActivator::Restore( idRestoreGame* savefile )
 {
 	savefile->ReadBool( stay_on );
-	
+
 	if( stay_on )
 	{
 		BecomeActive( TH_THINK );
@@ -395,13 +412,13 @@ idActivator::Spawn
 void idActivator::Spawn()
 {
 	bool start_off;
-	
+
 	spawnArgs.GetBool( "stay_on", "0", stay_on );
 	spawnArgs.GetBool( "start_off", "0", start_off );
-	
+
 	GetPhysics()->SetClipBox( idBounds( vec3_origin ).Expand( 4 ), 1.0f );
 	GetPhysics()->SetContents( 0 );
-	
+
 	if( !start_off )
 	{
 		BecomeActive( TH_THINK );
@@ -477,14 +494,14 @@ void idPathCorner::DrawDebugInfo()
 {
 	idEntity* ent;
 	idBounds bnds( idVec3( -4.0, -4.0f, -8.0f ), idVec3( 4.0, 4.0f, 64.0f ) );
-	
+
 	for( ent = gameLocal.spawnedEntities.Next(); ent != NULL; ent = ent->spawnNode.Next() )
 	{
 		if( !ent->IsType( idPathCorner::Type ) )
 		{
 			continue;
 		}
-		
+
 		idVec3 org = ent->GetPhysics()->GetOrigin();
 		gameRenderWorld->DebugBounds( colorRed, bnds, org, 0 );
 	}
@@ -502,7 +519,7 @@ idPathCorner* idPathCorner::RandomPath( const idEntity* source, const idEntity* 
 	int which;
 	idEntity* ent;
 	idPathCorner* path[ MAX_GENTITIES ];
-	
+
 	num = 0;
 	for( i = 0; i < source->targets.Num(); i++ )
 	{
@@ -516,12 +533,12 @@ idPathCorner* idPathCorner::RandomPath( const idEntity* source, const idEntity* 
 			}
 		}
 	}
-	
+
 	if( !num )
 	{
 		return NULL;
 	}
-	
+
 	which = gameLocal.random.RandomInt( num );
 	return path[ which ];
 }
@@ -534,7 +551,7 @@ idPathCorner::Event_RandomPath
 void idPathCorner::Event_RandomPath()
 {
 	idPathCorner* path;
-	
+
 	path = RandomPath( this, NULL );
 	idThread::ReturnEntity( path );
 }
@@ -595,18 +612,18 @@ idDamagable::Spawn
 void idDamagable::Spawn()
 {
 	idStr broken;
-	
+
 	health = spawnArgs.GetInt( "health", "5" );
 	spawnArgs.GetInt( "count", "1", count );
 	nextTriggerTime = 0;
-	
+
 	// make sure the model gets cached
 	spawnArgs.GetString( "broken", "", broken );
 	if( broken.Length() && !renderModelManager->CheckModel( broken ) )
 	{
 		gameLocal.Error( "idDamagable '%s' at (%s): cannot load broken model '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), broken.c_str() );
 	}
-	
+
 	fl.takedamage = true;
 	GetPhysics()->SetContents( CONTENTS_SOLID );
 }
@@ -622,12 +639,12 @@ void idDamagable::BecomeBroken( idEntity* activator )
 	int		numStates;
 	int		cycle;
 	float	wait;
-	
+
 	if( gameLocal.time < nextTriggerTime )
 	{
 		return;
 	}
-	
+
 	spawnArgs.GetFloat( "wait", "0.1", wait );
 	nextTriggerTime = gameLocal.time + SEC2MS( wait );
 	if( count > 0 )
@@ -642,22 +659,22 @@ void idDamagable::BecomeBroken( idEntity* activator )
 			health = spawnArgs.GetInt( "health", "5" );
 		}
 	}
-	
+
 	idStr	broken;
-	
+
 	spawnArgs.GetString( "broken", "", broken );
 	if( broken.Length() )
 	{
 		SetModel( broken );
 	}
-	
+
 	// offset the start time of the shader to sync it to the gameLocal time
 	renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] = -MS2SEC( gameLocal.time );
-	
+
 	spawnArgs.GetInt( "numstates", "1", numStates );
 	spawnArgs.GetInt( "cycle", "0", cycle );
 	spawnArgs.GetFloat( "forcestate", "0", forceState );
-	
+
 	// set the state parm
 	if( cycle )
 	{
@@ -675,11 +692,11 @@ void idDamagable::BecomeBroken( idEntity* activator )
 	{
 		renderEntity.shaderParms[ SHADERPARM_MODE ] = gameLocal.random.RandomInt( numStates ) + 1;
 	}
-	
+
 	renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] = -MS2SEC( gameLocal.time );
-	
+
 	ActivateTargets( activator );
-	
+
 	if( spawnArgs.GetBool( "hideWhenBroken" ) )
 	{
 		Hide();
@@ -700,7 +717,7 @@ void idDamagable::Killed( idEntity* inflictor, idEntity* attacker, int damage, c
 		health += damage;
 		return;
 	}
-	
+
 	BecomeBroken( attacker );
 }
 
@@ -778,14 +795,14 @@ idExplodable::Event_Explode
 void idExplodable::Event_Explode( idEntity* activator )
 {
 	const char* temp;
-	
+
 	if( spawnArgs.GetString( "def_damage", "damage_explosion", &temp ) )
 	{
 		gameLocal.RadiusDamage( GetPhysics()->GetOrigin(), activator, activator, this, this, temp );
 	}
-	
+
 	StartSound( "snd_explode", SND_CHANNEL_ANY, 0, false, NULL );
-	
+
 	// Show() calls UpdateVisuals, so we don't need to call it ourselves after setting the shaderParms
 	renderEntity.shaderParms[SHADERPARM_RED]		= 1.0f;
 	renderEntity.shaderParms[SHADERPARM_GREEN]		= 1.0f;
@@ -794,9 +811,9 @@ void idExplodable::Event_Explode( idEntity* activator )
 	renderEntity.shaderParms[SHADERPARM_TIMEOFFSET] = -MS2SEC( gameLocal.time );
 	renderEntity.shaderParms[SHADERPARM_DIVERSITY]	= 0.0f;
 	Show();
-	
+
 	PostEventMS( &EV_Remove, 2000 );
-	
+
 	ActivateTargets( activator );
 }
 
@@ -822,15 +839,15 @@ void idSpring::Think()
 {
 	idVec3 start, end, origin;
 	idMat3 axis;
-	
+
 	// run physics
 	RunPhysics();
-	
+
 	if( thinkFlags & TH_THINK )
 	{
 		// evaluate force
 		spring.Evaluate( gameLocal.time );
-		
+
 		start = p1;
 		if( ent1->GetPhysics() )
 		{
@@ -838,7 +855,7 @@ void idSpring::Think()
 			origin = ent1->GetPhysics()->GetOrigin();
 			start = origin + start * axis;
 		}
-		
+
 		end = p2;
 		if( ent2->GetPhysics() )
 		{
@@ -846,10 +863,10 @@ void idSpring::Think()
 			origin = ent2->GetPhysics()->GetOrigin();
 			end = origin + p2 * axis;
 		}
-		
+
 		gameRenderWorld->DebugLine( idVec4( 1, 1, 0, 1 ), start, end, 0, true );
 	}
-	
+
 	Present();
 }
 
@@ -861,10 +878,10 @@ idSpring::Event_LinkSpring
 void idSpring::Event_LinkSpring()
 {
 	idStr name1, name2;
-	
+
 	spawnArgs.GetString( "ent1", "", name1 );
 	spawnArgs.GetString( "ent2", "", name2 );
-	
+
 	if( name1.Length() )
 	{
 		ent1 = gameLocal.FindEntity( name1 );
@@ -878,7 +895,7 @@ void idSpring::Event_LinkSpring()
 	{
 		ent1 = gameLocal.entities[ENTITYNUM_WORLD];
 	}
-	
+
 	if( name2.Length() )
 	{
 		ent2 = gameLocal.FindEntity( name2 );
@@ -892,7 +909,7 @@ void idSpring::Event_LinkSpring()
 	{
 		ent2 = gameLocal.entities[ENTITYNUM_WORLD];
 	}
-	
+
 	spring.SetPosition( ent1->GetPhysics(), id1, p1, ent2->GetPhysics(), id2, p2 );
 	BecomeActive( TH_THINK );
 }
@@ -905,7 +922,7 @@ idSpring::Spawn
 void idSpring::Spawn()
 {
 	float Kstretch, damping, restLength;
-	
+
 	spawnArgs.GetInt( "id1", "0", id1 );
 	spawnArgs.GetInt( "id2", "0", id2 );
 	spawnArgs.GetVector( "point1", "0 0 0", p1 );
@@ -913,11 +930,11 @@ void idSpring::Spawn()
 	spawnArgs.GetFloat( "constant", "100.0f", Kstretch );
 	spawnArgs.GetFloat( "damping", "10.0f", damping );
 	spawnArgs.GetFloat( "restlength", "0.0f", restLength );
-	
+
 	spring.InitSpring( Kstretch, 0.0f, damping, restLength );
-	
+
 	ent1 = ent2 = NULL;
-	
+
 	PostEventMS( &EV_PostSpawn, 0 );
 }
 
@@ -966,7 +983,7 @@ void idForceField::ClientThink( const int curTime, const float fraction, const b
 
 	// evaluate force
 	forceField.Evaluate( gameLocal.time );
-	
+
 	Present();
 }
 
@@ -1014,7 +1031,7 @@ void idForceField::Spawn()
 {
 	idVec3 uniform;
 	float explosion, implosion, randomTorque;
-	
+
 	if( spawnArgs.GetVector( "uniform", "0 0 0", uniform ) )
 	{
 		forceField.Uniform( uniform );
@@ -1027,12 +1044,12 @@ void idForceField::Spawn()
 	{
 		forceField.Implosion( implosion );
 	}
-	
+
 	if( spawnArgs.GetFloat( "randomTorque", "0", randomTorque ) )
 	{
 		forceField.RandomTorque( randomTorque );
 	}
-	
+
 	if( spawnArgs.GetBool( "applyForce", "0" ) )
 	{
 		forceField.SetApplyType( FORCEFIELD_APPLY_FORCE );
@@ -1045,16 +1062,16 @@ void idForceField::Spawn()
 	{
 		forceField.SetApplyType( FORCEFIELD_APPLY_VELOCITY );
 	}
-	
+
 	forceField.SetPlayerOnly( spawnArgs.GetBool( "playerOnly", "0" ) );
 	forceField.SetMonsterOnly( spawnArgs.GetBool( "monsterOnly", "0" ) );
-	
+
 	// set the collision model on the force field
 	forceField.SetClipModel( new( TAG_PHYSICS_CLIP_ENTITY ) idClipModel( GetPhysics()->GetClipModel() ) );
-	
+
 	// remove the collision model from the physics object
 	GetPhysics()->SetClipModel( NULL, 1.0f );
-	
+
 	if( spawnArgs.GetBool( "start_on" ) )
 	{
 		BecomeActive( TH_THINK );
@@ -1079,7 +1096,7 @@ idForceField::Event_Activate
 void idForceField::Event_Activate( idEntity* activator )
 {
 	float wait;
-	
+
 	Toggle();
 	if( spawnArgs.GetFloat( "wait", "0.01", wait ) )
 	{
@@ -1152,7 +1169,7 @@ idAnimated::idAnimated()
 	num_anims = 0;
 	achievement = -1;
 	canBeCsTarget = true; //added for coop
-	
+
 }
 
 /*
@@ -1209,33 +1226,33 @@ void idAnimated::Spawn()
 	int			anim2;
 	float		wait;
 	const char*	joint;
-	
+
 	joint = spawnArgs.GetString( "sound_bone", "origin" );
 	soundJoint = animator.GetJointHandle( joint );
 	if( soundJoint == INVALID_JOINT )
 	{
 		gameLocal.Warning( "idAnimated '%s' at (%s): cannot find joint '%s' for sound playback", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), joint );
 	}
-	
+
 	LoadAF();
-	
+
 	// allow bullets to collide with a combat model
 	if( spawnArgs.GetBool( "combatModel", "0" ) )
 	{
 		combatModel = new( TAG_PHYSICS_CLIP_ENTITY ) idClipModel( modelDefHandle );
 	}
-	
+
 	// allow the entity to take damage
 	if( spawnArgs.GetBool( "takeDamage", "0" ) )
 	{
 		fl.takedamage = true;
 	}
-	
+
 	current_anim_index = 0;
 	spawnArgs.GetInt( "num_anims", "0", num_anims );
-	
+
 	blendFrames = spawnArgs.GetInt( "blend_in" );
-	
+
 	animname = spawnArgs.GetString( num_anims ? "anim1" : "anim" );
 	if( !animname.Length() )
 	{
@@ -1249,11 +1266,11 @@ void idAnimated::Spawn()
 			gameLocal.Error( "idAnimated '%s' at (%s): cannot find anim '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), animname.c_str() );
 		}
 	}
-	
+
 	if( spawnArgs.GetBool( "hide" ) )
 	{
 		Hide();
-		
+
 		if( !num_anims )
 		{
 			blendFrames = 0;
@@ -1272,17 +1289,17 @@ void idAnimated::Spawn()
 	{
 		// init joints to the first frame of the animation
 		animator.SetFrame( ANIMCHANNEL_ALL, anim, 1, gameLocal.time, 0 );
-		
+
 		if( !num_anims )
 		{
 			blendFrames = 0;
 		}
 	}
-	
+
 	spawnArgs.GetFloat( "wait", "-1", wait );
 
-	currentAnimPlaying = animator.CurrentAnim(ANIMCHANNEL_ALL)->AnimNum(); //for coop
-	
+	currentAnimPlaying = animator.CurrentAnim( ANIMCHANNEL_ALL )->AnimNum(); //for coop
+
 	if( wait >= 0 )
 	{
 		PostEventSec( &EV_Activate, wait, this );
@@ -1297,7 +1314,7 @@ idAnimated::LoadAF
 bool idAnimated::LoadAF()
 {
 	idStr fileName;
-	
+
 	if( !spawnArgs.GetString( "ragdoll", "*unknown*", fileName ) )
 	{
 		return false;
@@ -1330,19 +1347,19 @@ bool idAnimated::StartRagdoll()
 	{
 		return false;
 	}
-	
+
 	// if the AF is already active
 	if( af.IsActive() )
 	{
 		return true;
 	}
-	
+
 	// disable any collision model used
 	GetPhysics()->DisableClip();
-	
+
 	// start using the AF
 	af.StartFromCurrentPose( spawnArgs.GetInt( "velocityTime", "0" ) );
-	
+
 	return true;
 }
 
@@ -1356,7 +1373,7 @@ void idAnimated::PlayNextAnim()
 	const char* animname;
 	int len;
 	int cycle;
-	
+
 	if( current_anim_index >= num_anims )
 	{
 		Hide();
@@ -1370,10 +1387,10 @@ void idAnimated::PlayNextAnim()
 		}
 		return;
 	}
-	
+
 	Show();
 	current_anim_index++;
-	
+
 	spawnArgs.GetString( va( "anim%d", current_anim_index ), NULL, &animname );
 	if( !animname )
 	{
@@ -1381,42 +1398,44 @@ void idAnimated::PlayNextAnim()
 		animator.Clear( ANIMCHANNEL_ALL, gameLocal.time, FRAME2MS( blendFrames ) );
 		return;
 	}
-	
+
 	anim = animator.GetAnim( animname );
 	if( !anim )
 	{
 		gameLocal.Warning( "missing anim '%s' on %s", animname, name.c_str() );
 		return;
 	}
-	
+
 	if( g_debugCinematic.GetBool() )
 	{
 		gameLocal.Printf( "%d: '%s' start anim '%s'\n", gameLocal.framenum, GetName(), animname );
 	}
-	
+
 	spawnArgs.GetInt( "cycle", "1", cycle );
 	if( ( current_anim_index == num_anims ) && spawnArgs.GetBool( "loop_last_anim" ) )
 	{
 		cycle = -1;
 	}
-	
+
 	animator.CycleAnim( ANIMCHANNEL_ALL, anim, gameLocal.time, FRAME2MS( blendFrames ) );
 	animator.CurrentAnim( ANIMCHANNEL_ALL )->SetCycleCount( cycle );
-	
+
 	len = animator.CurrentAnim( ANIMCHANNEL_ALL )->PlayLength();
 	if( len >= 0 )
 	{
-		if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient()) {
-			CS_PostEventMS(&EV_AnimDone, len, current_anim_index);
+		if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient() )
+		{
+			CS_PostEventMS( &EV_AnimDone, len, current_anim_index );
 		}
-		else {
-			PostEventMS(&EV_AnimDone, len, current_anim_index);
+		else
+		{
+			PostEventMS( &EV_AnimDone, len, current_anim_index );
 		}
 	}
-	
+
 	// offset the start time of the shader to sync it to the game time
 	renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] = -MS2SEC( gameLocal.time );
-	
+
 	animator.ForceUpdate();
 	UpdateAnimation();
 	UpdateVisuals();
@@ -1445,15 +1464,17 @@ void idAnimated::Event_AnimDone( int animindex )
 		const idAnim* animPtr = animator.GetAnim( anim );
 		gameLocal.Printf( "%d: '%s' end anim '%s'\n", gameLocal.framenum, GetName(), animPtr ? animPtr->Name() : "" );
 	}
-	
+
 	if( ( animindex >= num_anims ) && spawnArgs.GetBool( "remove" ) )
 	{
 		Hide();
-		if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient()) {
-			CS_PostEventMS(&EV_Remove, 0);
+		if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient() )
+		{
+			CS_PostEventMS( &EV_Remove, 0 );
 		}
-		else {
-			PostEventMS(&EV_Remove, 0);
+		else
+		{
+			PostEventMS( &EV_Remove, 0 );
 		}
 	}
 	else if( spawnArgs.GetBool( "auto_advance" ) )
@@ -1465,10 +1486,11 @@ void idAnimated::Event_AnimDone( int animindex )
 		activated = false;
 	}
 
-	if (common->IsClient() && gameLocal.mpGame.IsGametypeCoopBased()) {
+	if( common->IsClient() && gameLocal.mpGame.IsGametypeCoopBased() )
+	{
 		return;
 	}
-	
+
 	ActivateTargets( activator.GetEntity() );
 }
 
@@ -1485,13 +1507,13 @@ void idAnimated::Event_Activate( idEntity* _activator )
 		activator = _activator;
 		return;
 	}
-	
+
 	if( activated )
 	{
 		// already activated
 		return;
 	}
-	
+
 	// achievement associated with this entity (given on activation)
 	achievement = spawnArgs.GetInt( "achievement", "-1" );
 	if( achievement != -1 )
@@ -1505,14 +1527,14 @@ void idAnimated::Event_Activate( idEntity* _activator )
 			{
 				shouldCountAction = false;
 			}
-			
+
 			if( shouldCountAction )
 			{
 				player->GetAchievementManager().EventCompletesAchievement( ( achievement_t )achievement );
 			}
 		}
 	}
-	
+
 	activated = true;
 	hasBeenActivated = true; //for coop only
 	activator = _activator;
@@ -1528,15 +1550,15 @@ void idAnimated::Event_Start()
 {
 	int cycle;
 	int len;
-	
+
 	Show();
-	
+
 	if( num_anims )
 	{
 		PlayNextAnim();
 		return;
 	}
-	
+
 	if( anim )
 	{
 		if( g_debugCinematic.GetBool() )
@@ -1547,22 +1569,24 @@ void idAnimated::Event_Start()
 		spawnArgs.GetInt( "cycle", "1", cycle );
 		animator.CycleAnim( ANIMCHANNEL_ALL, anim, gameLocal.time, FRAME2MS( blendFrames ) );
 		animator.CurrentAnim( ANIMCHANNEL_ALL )->SetCycleCount( cycle );
-		
+
 		len = animator.CurrentAnim( ANIMCHANNEL_ALL )->PlayLength();
 		if( len >= 0 )
 		{
-			if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient()) {
-				CS_PostEventMS(&EV_AnimDone, len, 1);
+			if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient() )
+			{
+				CS_PostEventMS( &EV_AnimDone, len, 1 );
 			}
-			else {
-				PostEventMS(&EV_AnimDone, len, 1);
+			else
+			{
+				PostEventMS( &EV_AnimDone, len, 1 );
 			}
 		}
 	}
-	
+
 	// offset the start time of the shader to sync it to the game time
 	renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] = -MS2SEC( gameLocal.time );
-	
+
 	animator.ForceUpdate();
 	UpdateAnimation();
 	UpdateVisuals();
@@ -1586,14 +1610,16 @@ void idAnimated::Event_Footstep()
 idAnimated::Think
 =====================
 */
-void idAnimated::Think(void) {
+void idAnimated::Think( void )
+{
 	idAFEntity_Gibbable::Think();
 
-	if (!gameLocal.mpGame.IsGametypeCoopBased()) {
+	if( !gameLocal.mpGame.IsGametypeCoopBased() )
+	{
 		return;
 	}
 	//coop stuff
-	currentAnimPlaying = animator.CurrentAnim(ANIMCHANNEL_ALL)->AnimNum();
+	currentAnimPlaying = animator.CurrentAnim( ANIMCHANNEL_ALL )->AnimNum();
 }
 
 /*
@@ -1601,9 +1627,11 @@ void idAnimated::Think(void) {
 idAnimated::ClientThink
 =====================
 */
-void idAnimated::ClientThink(const int curTime, const float fraction, const bool predict) {
-	if (!gameLocal.mpGame.IsGametypeCoopBased()) {
-		idAFEntity_Gibbable::ClientThink(curTime, fraction, predict);
+void idAnimated::ClientThink( const int curTime, const float fraction, const bool predict )
+{
+	if( !gameLocal.mpGame.IsGametypeCoopBased() )
+	{
+		idAFEntity_Gibbable::ClientThink( curTime, fraction, predict );
 		return;
 	}
 	//coop stuff
@@ -1619,18 +1647,20 @@ void idAnimated::ClientThink(const int curTime, const float fraction, const bool
 idAnimated::WriteToSnapshot
 =====================
 */
-void idAnimated::WriteToSnapshot(idBitMsg& msg) const {
-	if (!gameLocal.mpGame.IsGametypeCoopBased()) {
-		idAFEntity_Gibbable::WriteBindToSnapshot(msg);
+void idAnimated::WriteToSnapshot( idBitMsg& msg ) const
+{
+	if( !gameLocal.mpGame.IsGametypeCoopBased() )
+	{
+		idAFEntity_Gibbable::WriteBindToSnapshot( msg );
 		return;
 	}
 
 	//common->Warning("[COOP] sending snapshot for %s\n", this->GetName());
 	//FIXME: Snapshot being sended every single f*cking frame
 	//coop stuff
-	WriteBindToSnapshot(msg);
-	msg.WriteShort(currentAnimPlaying);
-	msg.WriteBits(hasBeenActivated, 1);
+	WriteBindToSnapshot( msg );
+	msg.WriteShort( currentAnimPlaying );
+	msg.WriteBits( hasBeenActivated, 1 );
 }
 
 /*
@@ -1638,34 +1668,38 @@ void idAnimated::WriteToSnapshot(idBitMsg& msg) const {
 idAnimated::ReadFromSnapshot
 =====================
 */
-void idAnimated::ReadFromSnapshot(const idBitMsg& msg) {
-	if (!gameLocal.mpGame.IsGametypeCoopBased()) {
-		idAFEntity_Gibbable::ReadFromSnapshot(msg);
+void idAnimated::ReadFromSnapshot( const idBitMsg& msg )
+{
+	if( !gameLocal.mpGame.IsGametypeCoopBased() )
+	{
+		idAFEntity_Gibbable::ReadFromSnapshot( msg );
 		return;
 	}
 	int newAnim;
 	bool newActivated;
 	//coop stuff
-	ReadBindFromSnapshot(msg);
+	ReadBindFromSnapshot( msg );
 	newAnim = msg.ReadShort();
-	newActivated = msg.ReadBits(1) != 0;
+	newActivated = msg.ReadBits( 1 ) != 0;
 
 	//common->Warning("[COOP] reading snapshot for %s\n", this->GetName());
 
-	if ((newAnim != this->currentAnimPlaying) || (newActivated != this->hasBeenActivated)) {
+	if( ( newAnim != this->currentAnimPlaying ) || ( newActivated != this->hasBeenActivated ) )
+	{
 		this->activated = newActivated;
 		this->hasBeenActivated = newActivated;
 		this->currentAnimPlaying = newAnim;
 		int cycle;
 		Show();
-		spawnArgs.GetInt("cycle", "1", cycle);
-		animator.CycleAnim(ANIMCHANNEL_ALL, this->currentAnimPlaying, gameLocal.time, FRAME2MS(blendFrames));
-		animator.CurrentAnim(ANIMCHANNEL_ALL)->SetCycleCount(cycle);
-		renderEntity.shaderParms[SHADERPARM_TIMEOFFSET] = -MS2SEC(gameLocal.time);
+		spawnArgs.GetInt( "cycle", "1", cycle );
+		animator.CycleAnim( ANIMCHANNEL_ALL, this->currentAnimPlaying, gameLocal.time, FRAME2MS( blendFrames ) );
+		animator.CurrentAnim( ANIMCHANNEL_ALL )->SetCycleCount( cycle );
+		renderEntity.shaderParms[SHADERPARM_TIMEOFFSET] = -MS2SEC( gameLocal.time );
 		animator.ForceUpdate();
 		//common->Warning("[COOP] New animation for %s\n", this->GetName());
 	}
-	if (msg.HasChanged()) {
+	if( msg.HasChanged() )
+	{
 		UpdateVisuals();
 	}
 }
@@ -1688,7 +1722,7 @@ void idAnimated::Event_LaunchMissilesUpdate( int launchjoint, int targetjoint, i
 	idProjectile* 	projectile;
 	const idDict* 	projectileDef;
 	const char* 	projectilename;
-	
+
 	projectilename = spawnArgs.GetString( "projectilename" );
 	projectileDef = gameLocal.FindEntityDefDict( projectilename, false );
 	if( !projectileDef )
@@ -1696,18 +1730,18 @@ void idAnimated::Event_LaunchMissilesUpdate( int launchjoint, int targetjoint, i
 		gameLocal.Warning( "idAnimated '%s' at (%s): 'launchMissiles' called with unknown projectile '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), projectilename );
 		return;
 	}
-	
+
 	StartSound( "snd_missile", SND_CHANNEL_WEAPON, 0, false, NULL );
-	
+
 	animator.GetJointTransform( ( jointHandle_t )launchjoint, gameLocal.time, launchPos, axis );
 	launchPos = renderEntity.origin + launchPos * renderEntity.axis;
-	
+
 	animator.GetJointTransform( ( jointHandle_t )targetjoint, gameLocal.time, targetPos, axis );
 	targetPos = renderEntity.origin + targetPos * renderEntity.axis;
-	
+
 	dir = targetPos - launchPos;
 	dir.Normalize();
-	
+
 	gameLocal.SpawnEntityDef( *projectileDef, &ent, false );
 	if( ent == NULL || !ent->IsType( idProjectile::Type ) )
 	{
@@ -1717,7 +1751,7 @@ void idAnimated::Event_LaunchMissilesUpdate( int launchjoint, int targetjoint, i
 	projectile = ( idProjectile* )ent;
 	projectile->Create( this, launchPos, dir );
 	projectile->Launch( launchPos, dir, vec3_origin );
-	
+
 	if( numshots > 0 )
 	{
 		PostEventMS( &EV_LaunchMissilesUpdate, FRAME2MS( framedelay ), launchjoint, targetjoint, numshots - 1, framedelay );
@@ -1734,30 +1768,30 @@ void idAnimated::Event_LaunchMissiles( const char* projectilename, const char* s
 	const idDict* 	projectileDef;
 	jointHandle_t	launch;
 	jointHandle_t	target;
-	
+
 	projectileDef = gameLocal.FindEntityDefDict( projectilename, false );
 	if( !projectileDef )
 	{
 		gameLocal.Warning( "idAnimated '%s' at (%s): unknown projectile '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), projectilename );
 		return;
 	}
-	
+
 	launch = animator.GetJointHandle( launchjoint );
 	if( launch == INVALID_JOINT )
 	{
 		gameLocal.Warning( "idAnimated '%s' at (%s): unknown launch joint '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), launchjoint );
 		gameLocal.Error( "Unknown joint '%s'", launchjoint );
 	}
-	
+
 	target = animator.GetJointHandle( targetjoint );
 	if( target == INVALID_JOINT )
 	{
 		gameLocal.Warning( "idAnimated '%s' at (%s): unknown target joint '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), targetjoint );
 	}
-	
+
 	spawnArgs.Set( "projectilename", projectilename );
 	spawnArgs.Set( "missilesound", sound );
-	
+
 	CancelEvents( &EV_LaunchMissilesUpdate );
 	ProcessEvent( &EV_LaunchMissilesUpdate, launch, target, numshots - 1, framedelay );
 }
@@ -1777,7 +1811,7 @@ void idAnimated::Event_SetAnimation( const char* animName )
 	{
 		gameLocal.Error( "idAnimated '%s' at (%s): cannot find anim '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), animName );
 	}
-	
+
 }
 
 /*
@@ -1788,12 +1822,12 @@ idAnimated::Event_GetAnimationLength
 void idAnimated::Event_GetAnimationLength()
 {
 	float length = 0;
-	
+
 	if( anim )
 	{
 		length = ( float )( animator.AnimLength( anim ) ) / 1000.f;
 	}
-	
+
 	idThread::ReturnFloat( length );
 }
 
@@ -1809,9 +1843,9 @@ void idAnimated::Event_GetAnimationLength()
 
 CLASS_DECLARATION( idEntity, idStaticEntity )
 EVENT( EV_Activate,				idStaticEntity::Event_Activate )
-EVENT(EV_Remove,				idStaticEntity::Event_Remove) //added for coop
-EVENT(EV_Hide,					idStaticEntity::Event_Hide)
-EVENT(EV_Show,					idStaticEntity::Event_Show)
+EVENT( EV_Remove,				idStaticEntity::Event_Remove ) //added for coop
+EVENT( EV_Hide,					idStaticEntity::Event_Hide )
+EVENT( EV_Show,					idStaticEntity::Event_Show )
 
 END_CLASS
 
@@ -1874,17 +1908,17 @@ void idStaticEntity::Spawn()
 {
 	bool solid;
 	bool hidden;
-	
+
 	// an inline static model will not do anything at all
 	if( spawnArgs.GetBool( "inline" ) || gameLocal.world->spawnArgs.GetBool( "inlineAllStatics" ) )
 	{
 		Hide();
 		return;
 	}
-	
+
 	solid = spawnArgs.GetBool( "solid" );
 	hidden = spawnArgs.GetBool( "hide" );
-	
+
 	if( solid && !hidden )
 	{
 		GetPhysics()->SetContents( CONTENTS_SOLID );
@@ -1893,22 +1927,22 @@ void idStaticEntity::Spawn()
 	{
 		GetPhysics()->SetContents( 0 );
 	}
-	
+
 	spawnTime = gameLocal.time;
 	active = false;
-	
+
 	idStr model = spawnArgs.GetString( "model" );
 	if( model.Find( ".prt" ) >= 0 )
 	{
 		// we want the parametric particles out of sync with each other
 		renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] = gameLocal.random.RandomInt( 32767 );
 	}
-	
+
 	fadeFrom.Set( 1, 1, 1, 1 );
 	fadeTo.Set( 1, 1, 1, 1 );
 	fadeStart = 0;
 	fadeEnd	= 0;
-	
+
 	// NOTE: this should be used very rarely because it is expensive
 	runGui = spawnArgs.GetBool( "runGui" );
 	if( runGui )
@@ -2022,13 +2056,13 @@ void idStaticEntity::Event_Activate( idEntity* activator )
 	//hack for coop start
 	bool wasCalledViaScript = calledViaScriptThread;
 	calledViaScriptThread = false;
-	//hack for coop ends 
+	//hack for coop ends
 
 	idStr activateGui;
-	
+
 	spawnTime = gameLocal.time;
 	active = !active;
-	
+
 	const idKeyValue* kv = spawnArgs.FindKey( "hide" );
 	if( kv )
 	{
@@ -2041,17 +2075,18 @@ void idStaticEntity::Event_Activate( idEntity* activator )
 			Hide();
 		}
 
-		if (common->IsServer() && gameLocal.mpGame.IsGametypeCoopBased() && wasCalledViaScript) { //extra sync for coop
+		if( common->IsServer() && gameLocal.mpGame.IsGametypeCoopBased() && wasCalledViaScript )  //extra sync for coop
+		{
 			idBitMsg	msg;
 			byte		msgBuf[MAX_EVENT_PARAM_SIZE];
 
-			msg.InitWrite(msgBuf, sizeof(msgBuf));
-			msg.WriteBits(IsHidden(), 1);
-			
-			ServerSendEvent(EVENT_STATIC_ACTIVATE, &msg, true, lobbyUserID_t(), true); //saveLastOnly  = true to only save the last event from this entity
+			msg.InitWrite( msgBuf, sizeof( msgBuf ) );
+			msg.WriteBits( IsHidden(), 1 );
+
+			ServerSendEvent( EVENT_STATIC_ACTIVATE, &msg, true, lobbyUserID_t(), true ); //saveLastOnly  = true to only save the last event from this entity
 		}
 	}
-	
+
 	renderEntity.shaderParms[ SHADERPARM_TIMEOFFSET ] = -MS2SEC( spawnTime );
 	renderEntity.shaderParms[5] = active;
 	// this change should be a good thing, it will automatically turn on
@@ -2066,7 +2101,8 @@ void idStaticEntity::Event_Activate( idEntity* activator )
 idStaticEntity::ClientThink( const int curTime, const float fraction, const bool predict );
 ================
 */
-void idStaticEntity::ClientThink(const int curTime, const float fraction, const bool predict) {
+void idStaticEntity::ClientThink( const int curTime, const float fraction, const bool predict )
+{
 	Think();
 }
 
@@ -2093,7 +2129,7 @@ idStaticEntity::ReadFromSnapshot
 void idStaticEntity::ReadFromSnapshot( const idBitMsg& msg )
 {
 	bool hidden;
-	
+
 	GetPhysics()->ReadFromSnapshot( msg );
 	ReadBindFromSnapshot( msg );
 	ReadColorFromSnapshot( msg );
@@ -2123,9 +2159,11 @@ void idStaticEntity::ReadFromSnapshot( const idBitMsg& msg )
 idStaticEntity::Event_Remove
 ================
 */
-void idStaticEntity::Event_Remove(void) {
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer()) {
-		ServerSendEvent(EVENT_STATIC_REMOVE, NULL, true);
+void idStaticEntity::Event_Remove( void )
+{
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() )
+	{
+		ServerSendEvent( EVENT_STATIC_REMOVE, NULL, true );
 	}
 	delete this;
 }
@@ -2135,9 +2173,11 @@ void idStaticEntity::Event_Remove(void) {
 idStaticEntity::Event_Hide
 ================
 */
-void idStaticEntity::Event_Hide(void) {
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer()) {
-		ServerSendEvent(EVENT_STATIC_HIDE, NULL, true, lobbyUserID_t(), true);
+void idStaticEntity::Event_Hide( void )
+{
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() )
+	{
+		ServerSendEvent( EVENT_STATIC_HIDE, NULL, true, lobbyUserID_t(), true );
 	}
 	Hide();
 }
@@ -2148,9 +2188,11 @@ void idStaticEntity::Event_Hide(void) {
 idStaticEntity::Event_Show
 ================
 */
-void idStaticEntity::Event_Show(void) {
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient()) {
-		ServerSendEvent(EVENT_STATIC_SHOW, NULL, true, lobbyUserID_t(), true);
+void idStaticEntity::Event_Show( void )
+{
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient() )
+	{
+		ServerSendEvent( EVENT_STATIC_SHOW, NULL, true, lobbyUserID_t(), true );
 	}
 	Show();
 }
@@ -2161,40 +2203,49 @@ void idStaticEntity::Event_Show(void) {
 idStaticEntity::ClientReceiveEvent
 ================
 */
-bool idStaticEntity::ClientReceiveEvent(int event, int time, const idBitMsg& msg) {
-	if (!gameLocal.mpGame.IsGametypeCoopBased()) {
-		return idEntity::ClientReceiveEvent(event, time, msg); //OG D3 netcode non-coop
+bool idStaticEntity::ClientReceiveEvent( int event, int time, const idBitMsg& msg )
+{
+	if( !gameLocal.mpGame.IsGametypeCoopBased() )
+	{
+		return idEntity::ClientReceiveEvent( event, time, msg ); //OG D3 netcode non-coop
 	}
-	switch (event) {
-	case EVENT_STATIC_ACTIVATE: {
-		if (msg.ReadBits(1)) {
-			Hide();
+	switch( event )
+	{
+		case EVENT_STATIC_ACTIVATE:
+		{
+			if( msg.ReadBits( 1 ) )
+			{
+				Hide();
+			}
+			else
+			{
+				Show();
+			}
+			UpdateVisuals();
+			return true;
 		}
-		else {
-			Show();
+		case EVENT_STATIC_REMOVE:
+		{
+			CS_PostEventMS( &EV_Remove, 0 );
+			return true;
 		}
-		UpdateVisuals();
-		return true;
-	}
-	case EVENT_STATIC_REMOVE: {
-		CS_PostEventMS(&EV_Remove, 0);
-		return true;
-	}
-	case EVENT_STATIC_HIDE: {
-		Event_Hide();
-		UpdateVisuals();
-		return true;
-	}
-	case EVENT_STATIC_SHOW: {
-		Event_Show();
-		UpdateVisuals();
-		return true;
-	}
-	default:
-		break;
+		case EVENT_STATIC_HIDE:
+		{
+			Event_Hide();
+			UpdateVisuals();
+			return true;
+		}
+		case EVENT_STATIC_SHOW:
+		{
+			Event_Show();
+			UpdateVisuals();
+			return true;
+		}
+		default:
+			break;
 	}
 
-	return idEntity::ClientReceiveEvent(event, time, msg);
+	return idEntity::ClientReceiveEvent( event, time, msg );
 }
 //END COOP STUFF
 
@@ -2364,7 +2415,7 @@ void idFuncShootProjectile::Think()
 			if( ent != NULL )
 			{
 				idProjectile* proj = static_cast<idProjectile*>( ent );
-				
+
 				idVec3 pushVel = mShootDir * mShootSpeed;
 				proj->Create( this, GetPhysics()->GetOrigin(), mShootDir );
 				proj->Launch( GetPhysics()->GetOrigin(), mShootDir, pushVel );
@@ -2376,7 +2427,7 @@ void idFuncShootProjectile::Think()
 				{
 					proj->GetPhysics()->SetLinearVelocity( pushVel );
 				}
-				
+
 				mLastProjectile = proj;
 			}
 			if( mShootSpeed == 0.0f )
@@ -2434,7 +2485,7 @@ void idFuncShootProjectile::Event_Activate( idEntity* activator )
 			return;
 		}
 	}
-	
+
 	mRespawnDelay = spawnArgs.GetInt( "spawn_delay_ms" );
 	mShootSpeed = spawnArgs.GetFloat( "speed" );
 	mEntityDefName = spawnArgs.GetString( "def_projectile" );
@@ -2449,7 +2500,7 @@ void idFuncShootProjectile::Event_Activate( idEntity* activator )
 		mShootSpeed = 0.0f;
 		mRespawnTime = 0;
 	}
-	
+
 	if( ( thinkFlags & TH_THINK ) != 0 )
 	{
 		// currently active, deactivate
@@ -2670,7 +2721,7 @@ void idFuncSmoke::Think()
 	{
 		return;
 	}
-	
+
 	if( ( thinkFlags & TH_UPDATEPARTICLES ) && !IsHidden() )
 	{
 		if( !gameLocal.smokeParticles->EmitSmoke( smoke, smokeTime, gameLocal.random.CRandomFloat(), GetPhysics()->GetOrigin(), GetPhysics()->GetAxis(), timeGroup /*_D3XP*/ ) )
@@ -2686,7 +2737,7 @@ void idFuncSmoke::Think()
 			}
 		}
 	}
-	
+
 }
 
 
@@ -2809,10 +2860,10 @@ idVacuumSeparatorEntity::Restore
 void idVacuumSeparatorEntity::Restore( idRestoreGame* savefile )
 {
 	int state;
-	
+
 	savefile->ReadInt( ( int& )portal );
 	savefile->ReadInt( state );
-	
+
 	gameLocal.SetPortalState( portal, state );
 }
 
@@ -2824,7 +2875,7 @@ idVacuumSeparatorEntity::Spawn
 void idVacuumSeparatorEntity::Spawn()
 {
 	idBounds b;
-	
+
 	b = idBounds( spawnArgs.GetVector( "origin" ) ).Expand( 16 );
 	portal = gameRenderWorld->FindPortal( b );
 	if( !portal )
@@ -2869,7 +2920,7 @@ idLocationSeparatorEntity::Spawn
 void idLocationSeparatorEntity::Spawn()
 {
 	idBounds b;
-	
+
 	b = idBounds( spawnArgs.GetVector( "origin" ) ).Expand( 16 );
 	qhandle_t portal = gameRenderWorld->FindPortal( b );
 	if( !portal )
@@ -2905,9 +2956,9 @@ void idVacuumEntity::Spawn()
 		gameLocal.Warning( "idVacuumEntity::Spawn: multiple idVacuumEntity in level" );
 		return;
 	}
-	
+
 	idVec3 org = spawnArgs.GetVector( "origin" );
-	
+
 	gameLocal.vacuumAreaNum = gameRenderWorld->PointInArea( org );
 }
 
@@ -2920,14 +2971,14 @@ idLocationEntity
 ===============================================================================
 */
 
-const idEventDef EV_NumPlayers("numPlayers", NULL, 'd'); //added for OpenCoop maps support
-const idEventDef EV_AllPlayersIn("allPlayersIn", NULL, 'd'); //added for OpenCoop maps support
-const idEventDef EV_NoPlayersIn("noPlayersIn", NULL, 'd'); //added for OpenCoop maps support
+const idEventDef EV_NumPlayers( "numPlayers", NULL, 'd' ); //added for OpenCoop maps support
+const idEventDef EV_AllPlayersIn( "allPlayersIn", NULL, 'd' ); //added for OpenCoop maps support
+const idEventDef EV_NoPlayersIn( "noPlayersIn", NULL, 'd' ); //added for OpenCoop maps support
 
 CLASS_DECLARATION( idEntity, idLocationEntity )
-EVENT(EV_NumPlayers, idLocationEntity::Event_NumPlayers)
-EVENT(EV_AllPlayersIn, idLocationEntity::Event_AllPlayersIn)
-EVENT(EV_NoPlayersIn, idLocationEntity::Event_NoPlayersIn)
+EVENT( EV_NumPlayers, idLocationEntity::Event_NumPlayers )
+EVENT( EV_AllPlayersIn, idLocationEntity::Event_AllPlayersIn )
+EVENT( EV_NoPlayersIn, idLocationEntity::Event_NoPlayersIn )
 END_CLASS
 
 /*
@@ -2938,9 +2989,9 @@ idLocationEntity::Spawn
 void idLocationEntity::Spawn()
 {
 	idStr realName;
-	
+
 	// this just holds dict information
-	
+
 	// if "location" not already set, use the entity name.
 	if( !spawnArgs.GetString( "location", "", realName ) )
 	{
@@ -2963,17 +3014,21 @@ const char* idLocationEntity::GetLocation() const
 idLocationEntity::GetPlayersIn
 ======================
 */
-int	idLocationEntity::GetPlayersIn(void) const {
+int	idLocationEntity::GetPlayersIn( void ) const
+{
 	int playersInside = 0;
 
-	for (int i = 0; i < gameLocal.numClients; i++) {
-		idPlayer* client = gameLocal.GetClientByNum(i);
+	for( int i = 0; i < gameLocal.numClients; i++ )
+	{
+		idPlayer* client = gameLocal.GetClientByNum( i );
 
-		if (!client || client->spectating) {
+		if( !client || client->spectating )
+		{
 			continue;
 		}
-		idLocationEntity* locationEntity = gameLocal.LocationForPoint(client->GetEyePosition());
-		if (locationEntity && (locationEntity->entityNumber == this->entityNumber)) {
+		idLocationEntity* locationEntity = gameLocal.LocationForPoint( client->GetEyePosition() );
+		if( locationEntity && ( locationEntity->entityNumber == this->entityNumber ) )
+		{
 			playersInside++;
 		}
 	}
@@ -2988,9 +3043,9 @@ int	idLocationEntity::GetPlayersIn(void) const {
 idLocationEntity::Event_NumPlayers
 ======================
 */
-void	idLocationEntity::Event_NumPlayers(void)
+void	idLocationEntity::Event_NumPlayers( void )
 {
-	idThread::ReturnInt(GetPlayersIn());
+	idThread::ReturnInt( GetPlayersIn() );
 }
 
 /*
@@ -2998,29 +3053,31 @@ void	idLocationEntity::Event_NumPlayers(void)
 idLocationEntity::Event_AllPlayersIn
 ======================
 */
-void	idLocationEntity::Event_AllPlayersIn(void)
+void	idLocationEntity::Event_AllPlayersIn( void )
 {
 	int totalPlayers = 0;
 
-	for (int i = 0; i < gameLocal.numClients; i++) {
-		idPlayer* client = gameLocal.GetClientByNum(i);
+	for( int i = 0; i < gameLocal.numClients; i++ )
+	{
+		idPlayer* client = gameLocal.GetClientByNum( i );
 
-		if (!client || client->spectating) {
+		if( !client || client->spectating )
+		{
 			continue;
 		}
 		totalPlayers++;
 	}
 
-	idThread::ReturnInt(GetPlayersIn() == totalPlayers);
+	idThread::ReturnInt( GetPlayersIn() == totalPlayers );
 }
 /*
 ======================
 idLocationEntity::Event_NoPlayersIn
 ======================
 */
-void	idLocationEntity::Event_NoPlayersIn(void)
+void	idLocationEntity::Event_NoPlayersIn( void )
 {
-	idThread::ReturnInt(GetPlayersIn() == 0);
+	idThread::ReturnInt( GetPlayersIn() == 0 );
 }
 
 
@@ -3035,7 +3092,7 @@ void	idLocationEntity::Event_NoPlayersIn(void)
 CLASS_DECLARATION( idEntity, idBeam )
 EVENT( EV_PostSpawn,			idBeam::Event_MatchTarget )
 EVENT( EV_Activate,				idBeam::Event_Activate )
-EVENT(EV_Remove,				idBeam::Event_Remove) //added for coop
+EVENT( EV_Remove,				idBeam::Event_Remove ) //added for coop
 END_CLASS
 
 /*
@@ -3081,19 +3138,21 @@ idBeam::Spawn
 void idBeam::Spawn()
 {
 	float width;
-	
+
 	if( spawnArgs.GetFloat( "width", "0", width ) )
 	{
 		renderEntity.shaderParms[ SHADERPARM_BEAM_WIDTH ] = width;
 	}
-	
+
 	SetModel( "_BEAM" );
 	Hide();
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient()) {
-		CS_PostEventMS(&EV_PostSpawn, 0);
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient() )
+	{
+		CS_PostEventMS( &EV_PostSpawn, 0 );
 	}
-	else {
-		PostEventMS(&EV_PostSpawn, 0);
+	else
+	{
+		PostEventMS( &EV_PostSpawn, 0 );
 	}
 }
 
@@ -3105,15 +3164,15 @@ idBeam::Think
 void idBeam::Think()
 {
 	idBeam* masterEnt;
-	
+
 	if( !IsHidden() && !target.GetEntity() )
 	{
 		// hide if our target is removed
 		Hide();
 	}
-	
+
 	RunPhysics();
-	
+
 	masterEnt = master.GetEntity();
 	if( masterEnt )
 	{
@@ -3157,9 +3216,9 @@ idBeam::Show
 void idBeam::Show()
 {
 	idBeam* targetEnt;
-	
+
 	idEntity::Show();
-	
+
 	targetEnt = target.GetEntity();
 	if( targetEnt )
 	{
@@ -3178,12 +3237,12 @@ void idBeam::Event_MatchTarget()
 	int i;
 	idEntity* targetEnt;
 	idBeam* targetBeam;
-	
+
 	if( !targets.Num() )
 	{
 		return;
 	}
-	
+
 	targetBeam = NULL;
 	for( i = 0; i < targets.Num(); i++ )
 	{
@@ -3194,13 +3253,13 @@ void idBeam::Event_MatchTarget()
 			break;
 		}
 	}
-	
+
 	if( targetBeam == NULL )
 	{
 		gameLocal.Error( "Could not find valid beam target for '%s'", name.c_str() );
 		return;
 	}
-	
+
 	target = targetBeam;
 	targetBeam->SetMaster( this );
 	if( !spawnArgs.GetBool( "start_off" ) )
@@ -3220,7 +3279,7 @@ void idBeam::Event_Activate( idEntity* activator )
 	//hack for coop start
 	bool wasCalledViaScript = calledViaScriptThread;
 	calledViaScriptThread = false;
-	//hack for coop ends 
+	//hack for coop ends
 
 	if( IsHidden() )
 	{
@@ -3231,13 +3290,14 @@ void idBeam::Event_Activate( idEntity* activator )
 		Hide();
 	}
 
-	if (common->IsServer() && gameLocal.mpGame.IsGametypeCoopBased() && wasCalledViaScript) { //extra sync for coop
+	if( common->IsServer() && gameLocal.mpGame.IsGametypeCoopBased() && wasCalledViaScript )  //extra sync for coop
+	{
 		idBitMsg	msg;
 		byte		msgBuf[MAX_EVENT_PARAM_SIZE];
 
-		msg.InitWrite(msgBuf, sizeof(msgBuf));
-		msg.WriteBits(IsHidden() ? 1 : 0, 1);
-		ServerSendEvent(EVENT_BEAM_ACTIVATE, &msg, true, lobbyUserID_t(), true); //saveLastOnly  = true to only save the last event from this entity
+		msg.InitWrite( msgBuf, sizeof( msgBuf ) );
+		msg.WriteBits( IsHidden() ? 1 : 0, 1 );
+		ServerSendEvent( EVENT_BEAM_ACTIVATE, &msg, true, lobbyUserID_t(), true ); //saveLastOnly  = true to only save the last event from this entity
 	}
 }
 
@@ -3282,9 +3342,11 @@ void idBeam::ReadFromSnapshot( const idBitMsg& msg )
 idStaticEntity::Event_Remove
 ================
 */
-void idBeam::Event_Remove(void) {
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer()) {
-		ServerSendEvent(EVENT_BEAM_REMOVE, NULL, true);
+void idBeam::Event_Remove( void )
+{
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() )
+	{
+		ServerSendEvent( EVENT_BEAM_REMOVE, NULL, true );
 	}
 	delete this;
 }
@@ -3295,34 +3357,42 @@ void idBeam::Event_Remove(void) {
 idBeam::ClientReceiveEvent
 ================
 */
-bool idBeam::ClientReceiveEvent(int event, int time, const idBitMsg& msg) {
-	if (!gameLocal.mpGame.IsGametypeCoopBased()) {
-		return idEntity::ClientReceiveEvent(event, time, msg); //OG D3 netcode non-coop
+bool idBeam::ClientReceiveEvent( int event, int time, const idBitMsg& msg )
+{
+	if( !gameLocal.mpGame.IsGametypeCoopBased() )
+	{
+		return idEntity::ClientReceiveEvent( event, time, msg ); //OG D3 netcode non-coop
 	}
-	switch (event) {
-	case EVENT_BEAM_ACTIVATE: {
-		bool hidden = (msg.ReadBits(1) != 0);
-		if (hidden != IsHidden()) {
-			if (hidden) {
-				Hide();
-			}
-			else {
-				Show();
-			}
+	switch( event )
+	{
+		case EVENT_BEAM_ACTIVATE:
+		{
+			bool hidden = ( msg.ReadBits( 1 ) != 0 );
+			if( hidden != IsHidden() )
+			{
+				if( hidden )
+				{
+					Hide();
+				}
+				else
+				{
+					Show();
+				}
 
-			UpdateVisuals();
+				UpdateVisuals();
+			}
+			return true;
 		}
-		return true;
-	}
-	case EVENT_BEAM_REMOVE: {
-		CS_PostEventMS(&EV_Remove, 0);
-		return true;
-	}
-	default:
-		break;
+		case EVENT_BEAM_REMOVE:
+		{
+			CS_PostEventMS( &EV_Remove, 0 );
+			return true;
+		}
+		default:
+			break;
 	}
 
-	return idEntity::ClientReceiveEvent(event, time, msg);
+	return idEntity::ClientReceiveEvent( event, time, msg );
 }
 
 /*
@@ -3330,10 +3400,12 @@ bool idBeam::ClientReceiveEvent(int event, int time, const idBitMsg& msg) {
 idBeam::ClientThink
 ================
 */
-void idBeam::ClientThink(const int curTime, const float fraction, const bool predict) {
+void idBeam::ClientThink( const int curTime, const float fraction, const bool predict )
+{
 	idBeam* masterEnt;
 
-	if (!IsHidden() && !target.GetEntity()) {
+	if( !IsHidden() && !target.GetEntity() )
+	{
 		// hide if our target is removed
 		Hide();
 	}
@@ -3341,9 +3413,10 @@ void idBeam::ClientThink(const int curTime, const float fraction, const bool pre
 	RunPhysics();
 
 	masterEnt = master.GetEntity();
-	if (masterEnt) {
+	if( masterEnt )
+	{
 		const idVec3& origin = GetPhysics()->GetOrigin();
-		masterEnt->SetBeamTarget(origin);
+		masterEnt->SetBeamTarget( origin );
 	}
 	Present();
 }
@@ -3412,9 +3485,9 @@ void idLiquid::Event_Touch( idEntity* other, trace_t* trace )
 		if ( common->IsClient() ) {
 			return;
 		}
-	
+
 		idVec3 pos;
-	
+
 		pos = other->GetPhysics()->GetOrigin() - GetPhysics()->GetOrigin();
 		model->IntersectBounds( other->GetPhysics()->GetBounds().Translate( pos ), -10.0f );
 	*/
@@ -3479,7 +3552,7 @@ void idShaking::Spawn()
 	physicsObj.SetAxis( GetPhysics()->GetAxis() );
 	physicsObj.SetClipMask( MASK_SOLID );
 	SetPhysics( &physicsObj );
-	
+
 	active = false;
 	if( !spawnArgs.GetBool( "start_off" ) )
 	{
@@ -3497,7 +3570,7 @@ void idShaking::BeginShaking()
 	int			phase;
 	idAngles	shake;
 	int			period;
-	
+
 	active = true;
 	phase = gameLocal.random.RandomInt( 1000 );
 	shake = spawnArgs.GetAngles( "shake", "0.5 0.5 0.5" );
@@ -3584,7 +3657,7 @@ void idEarthQuake::Restore( idRestoreGame* savefile )
 	savefile->ReadBool( playerOriented );
 	savefile->ReadBool( disabled );
 	savefile->ReadFloat( shakeTime );
-	
+
 	if( shakeStopTime > gameLocal.time )
 	{
 		BecomeActive( TH_THINK );
@@ -3606,7 +3679,7 @@ void idEarthQuake::Spawn()
 	playerOriented = spawnArgs.GetBool( "playerOriented" );
 	disabled = false;
 	shakeTime = spawnArgs.GetFloat( "shakeTime", "0" );
-	
+
 	if( !triggered )
 	{
 		PostEventSec( &EV_Activate, spawnArgs.GetFloat( "wait" ), this );
@@ -3626,20 +3699,20 @@ void idEarthQuake::Event_Activate( idEntity* activator )
 	{
 		return;
 	}
-	
+
 	if( disabled && activator == this )
 	{
 		return;
 	}
-	
+
 	idPlayer* player = gameLocal.GetLocalPlayer();
 	if( player == NULL )
 	{
 		return;
 	}
-	
+
 	nextTriggerTime = 0;
-	
+
 	if( !triggered && activator != this )
 	{
 		// if we are not triggered ( i.e. random ), disable or enable
@@ -3653,9 +3726,9 @@ void idEarthQuake::Event_Activate( idEntity* activator )
 			PostEventSec( &EV_Activate, wait + random * gameLocal.random.CRandomFloat(), this );
 		}
 	}
-	
+
 	ActivateTargets( activator );
-	
+
 	const idSoundShader* shader = declManager->FindSound( spawnArgs.GetString( "snd_quake" ) );
 	if( playerOriented )
 	{
@@ -3665,13 +3738,13 @@ void idEarthQuake::Event_Activate( idEntity* activator )
 	{
 		StartSoundShader( shader, SND_CHANNEL_ANY, SSF_GLOBAL, false, NULL );
 	}
-	
+
 	if( shakeTime > 0.0f )
 	{
 		shakeStopTime = gameLocal.time + SEC2MS( shakeTime );
 		BecomeActive( TH_THINK );
 	}
-	
+
 	if( wait > 0.0f )
 	{
 		if( !triggered )
@@ -3988,21 +4061,26 @@ void idFuncRadioChatter::Event_Activate( idEntity* activator )
 	//hack for coop start
 	bool wasCalledViaScript = calledViaScriptThread;
 	calledViaScriptThread = false;
-	//hack for coop ends 
+	//hack for coop ends
 
 	idPlayer* player;
 
-	if (activator && activator->IsType(idPlayer::Type) && !common->IsClient()) {
-		player = static_cast<idPlayer*>(activator);
-	} else if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer()) {
+	if( activator && activator->IsType( idPlayer::Type ) && !common->IsClient() )
+	{
+		player = static_cast<idPlayer*>( activator );
+	}
+	else if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() )
+	{
 		player = gameLocal.GetCoopPlayer();
 	}
-	else {
+	else
+	{
 		player = gameLocal.GetLocalPlayer();
 	}
-	
-	if (!player && gameLocal.mpGame.IsGametypeCoopBased()) { //ERROR!
-		common->Warning("[COOP] No player detected at idFuncRadioChatter::Event_Activate!\n");
+
+	if( !player && gameLocal.mpGame.IsGametypeCoopBased() )  //ERROR!
+	{
+		common->Warning( "[COOP] No player detected at idFuncRadioChatter::Event_Activate!\n" );
 		return;
 	}
 
@@ -4010,7 +4088,7 @@ void idFuncRadioChatter::Event_Activate( idEntity* activator )
 	{
 		player->hudManager->SetRadioMessage( true );
 	}
-	
+
 	const char* sound = spawnArgs.GetString( "snd_radiochatter", "" );
 	if( sound != NULL && *sound != '\0' )
 	{
@@ -4019,25 +4097,28 @@ void idFuncRadioChatter::Event_Activate( idEntity* activator )
 		player->StartSoundShader( shader, SND_CHANNEL_RADIO, SSF_GLOBAL, false, &length );
 		time = MS2SEC( length + 150 );
 
-		if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() && wasCalledViaScript) {
+		if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() && wasCalledViaScript )
+		{
 			idBitMsg outMsg;
 			byte msgBuf[1024];
-			outMsg.InitWrite(msgBuf, sizeof(msgBuf));
-			outMsg.WriteLong(gameLocal.ServerRemapDecl(-1, DECL_SOUND, shader->Index()));
+			outMsg.InitWrite( msgBuf, sizeof( msgBuf ) );
+			outMsg.WriteLong( gameLocal.ServerRemapDecl( -1, DECL_SOUND, shader->Index() ) );
 
 			idLobbyBase& lobby = session->GetActingGameStateLobbyBase();
-			peerMask_t peerMask = MAX_UNSIGNED_TYPE(peerMask_t);
-			lobby.SendReliable(GAME_RELIABLE_MESSAGE_SOUND_INDEX, outMsg, false, peerMask);
-			gameLocal.DebugPrintf("Sending idFuncRadioChatter::Event_Activate\n");
+			peerMask_t peerMask = MAX_UNSIGNED_TYPE( peerMask_t );
+			lobby.SendReliable( GAME_RELIABLE_MESSAGE_SOUND_INDEX, outMsg, false, peerMask );
+			gameLocal.DebugPrintf( "Sending idFuncRadioChatter::Event_Activate\n" );
 		}
 	}
 	// we still put the hud up because this is used with no sound on
 	// certain frame commands when the chatter is triggered
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient()) {
-		CS_PostEventSec(&EV_ResetRadioHud, time, player);
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient() )
+	{
+		CS_PostEventSec( &EV_ResetRadioHud, time, player );
 	}
-	else {
-		PostEventSec(&EV_ResetRadioHud, time, player);
+	else
+	{
+		PostEventSec( &EV_ResetRadioHud, time, player );
 	}
 }
 
@@ -4051,25 +4132,30 @@ void idFuncRadioChatter::Event_ResetRadioHud( idEntity* activator )
 
 	idPlayer* player;
 
-	if (activator && activator->IsType(idPlayer::Type) && !common->IsClient()) {
-		player = static_cast<idPlayer*>(activator);
+	if( activator && activator->IsType( idPlayer::Type ) && !common->IsClient() )
+	{
+		player = static_cast<idPlayer*>( activator );
 	}
-	else if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer()) {
+	else if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsServer() )
+	{
 		player = gameLocal.GetCoopPlayer();
 	}
-	else {
+	else
+	{
 		player = gameLocal.GetLocalPlayer(); // for this for clients in coop
 	}
 
-	
+
 	if( player != NULL && player->hudManager )
 	{
 		player->hudManager->SetRadioMessage( false );
 	}
 
 
-	if (gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient())
+	if( gameLocal.mpGame.IsGametypeCoopBased() && common->IsClient() )
+	{
 		return;
+	}
 
 	ActivateTargets( activator );
 }
@@ -4113,7 +4199,7 @@ idPhantomObjects::Save
 void idPhantomObjects::Save( idSaveGame* savefile ) const
 {
 	int i;
-	
+
 	savefile->WriteInt( end_time );
 	savefile->WriteFloat( throw_time );
 	savefile->WriteFloat( shake_time );
@@ -4122,7 +4208,7 @@ void idPhantomObjects::Save( idSaveGame* savefile ) const
 	savefile->WriteInt( min_wait );
 	savefile->WriteInt( max_wait );
 	target.Save( savefile );
-	
+
 	savefile->WriteInt( targetTime.Num() );
 	for( i = 0; i < targetTime.Num(); i++ )
 	{
@@ -4143,7 +4229,7 @@ void idPhantomObjects::Restore( idRestoreGame* savefile )
 {
 	int num;
 	int i;
-	
+
 	savefile->ReadInt( end_time );
 	savefile->ReadFloat( throw_time );
 	savefile->ReadFloat( shake_time );
@@ -4152,13 +4238,13 @@ void idPhantomObjects::Restore( idRestoreGame* savefile )
 	savefile->ReadInt( min_wait );
 	savefile->ReadInt( max_wait );
 	target.Restore( savefile );
-	
+
 	savefile->ReadInt( num );
 	targetTime.SetGranularity( 1 );
 	targetTime.SetNum( num );
 	lastTargetPos.SetGranularity( 1 );
 	lastTargetPos.SetNum( num );
-	
+
 	for( i = 0; i < num; i++ )
 	{
 		savefile->ReadInt( targetTime[ i ] );
@@ -4186,7 +4272,7 @@ void idPhantomObjects::Spawn()
 	}
 	min_wait = SEC2MS( spawnArgs.GetFloat( "min_wait", "1" ) );
 	max_wait = SEC2MS( spawnArgs.GetFloat( "max_wait", "3" ) );
-	
+
 	shake_ang = spawnArgs.GetVector( "shake_ang", "65 65 65" );
 	Hide();
 	GetPhysics()->SetContents( 0 );
@@ -4203,19 +4289,19 @@ void idPhantomObjects::Event_Activate( idEntity* activator )
 	float time;
 	float frac;
 	float scale;
-	
+
 	if( thinkFlags & TH_THINK )
 	{
 		BecomeInactive( TH_THINK );
 		return;
 	}
-	
+
 	RemoveNullTargets();
 	if( !targets.Num() )
 	{
 		return;
 	}
-	
+
 	if( !activator || !activator->IsType( idActor::Type ) )
 	{
 		target = gameLocal.GetLocalPlayer();
@@ -4224,32 +4310,32 @@ void idPhantomObjects::Event_Activate( idEntity* activator )
 	{
 		target = static_cast<idActor*>( activator );
 	}
-	
+
 	end_time = gameLocal.time + SEC2MS( spawnArgs.GetFloat( "end_time", "0" ) );
-	
+
 	targetTime.SetNum( targets.Num() );
 	lastTargetPos.SetNum( targets.Num() );
-	
+
 	const idVec3& toPos = target.GetEntity()->GetEyePosition();
-	
+
 	// calculate the relative times of all the objects
 	time = 0.0f;
 	for( i = 0; i < targetTime.Num(); i++ )
 	{
 		targetTime[ i ] = SEC2MS( time );
 		lastTargetPos[ i ] = toPos;
-		
+
 		frac = 1.0f - ( float )i / ( float )targetTime.Num();
 		time += ( gameLocal.random.RandomFloat() + 1.0f ) * 0.5f * frac + 0.1f;
 	}
-	
+
 	// scale up the times to fit within throw_time
 	scale = throw_time / time;
 	for( i = 0; i < targetTime.Num(); i++ )
 	{
 		targetTime[ i ] = gameLocal.time + SEC2MS( shake_time ) + targetTime[ i ] * scale;
 	}
-	
+
 	BecomeActive( TH_THINK );
 }
 
@@ -4269,28 +4355,28 @@ void idPhantomObjects::Think()
 	idActor*		targetEnt;
 	idPhysics*	entPhys;
 	trace_t		tr;
-	
+
 	// if we are completely closed off from the player, don't do anything at all
 	if( CheckDormant() )
 	{
 		return;
 	}
-	
+
 	if( !( thinkFlags & TH_THINK ) )
 	{
 		BecomeInactive( thinkFlags & ~TH_THINK );
 		return;
 	}
-	
+
 	targetEnt = target.GetEntity();
 	if( targetEnt == NULL || ( targetEnt->health <= 0 ) || ( end_time && ( gameLocal.time > end_time ) ) || gameLocal.inCinematic )
 	{
 		BecomeInactive( TH_THINK );
 		return;
 	}
-	
+
 	const idVec3& toPos = targetEnt->GetEyePosition();
-	
+
 	num = 0;
 	for( i = 0; i < targets.Num(); i++ )
 	{
@@ -4299,36 +4385,36 @@ void idPhantomObjects::Think()
 		{
 			continue;
 		}
-		
+
 		if( ent->fl.hidden )
 		{
 			// don't throw hidden objects
 			continue;
 		}
-		
+
 		if( !targetTime[ i ] )
 		{
 			// already threw this object
 			continue;
 		}
-		
+
 		num++;
-		
+
 		time = MS2SEC( targetTime[ i ] - gameLocal.time );
 		if( time > shake_time )
 		{
 			continue;
 		}
-		
+
 		entPhys = ent->GetPhysics();
 		const idVec3& entOrg = entPhys->GetOrigin();
-		
+
 		gameLocal.clip.TracePoint( tr, entOrg, toPos, MASK_OPAQUE, ent );
 		if( tr.fraction >= 1.0f || ( gameLocal.GetTraceEntity( tr ) == targetEnt ) )
 		{
 			lastTargetPos[ i ] = toPos;
 		}
-		
+
 		if( time < 0.0f )
 		{
 			idAI::PredictTrajectory( entPhys->GetOrigin(), lastTargetPos[ i ], speed, entPhys->GetGravity(),
@@ -4357,7 +4443,7 @@ void idPhantomObjects::Think()
 			entPhys->SetAngularVelocity( ang );
 		}
 	}
-	
+
 	if( !num )
 	{
 		BecomeInactive( TH_THINK );
@@ -4389,7 +4475,7 @@ idShockwave::idShockwave()
 	endSize = 0.f;
 	currentSize = 0.f;
 	magnitude = 0.f;
-	
+
 	height = 0.0f;
 	playerDamaged = false;
 	playerDamageSize = 0.0f;
@@ -4414,13 +4500,13 @@ void idShockwave::Save( idSaveGame* savefile ) const
 	savefile->WriteBool( isActive );
 	savefile->WriteInt( startTime );
 	savefile->WriteInt( duration );
-	
+
 	savefile->WriteFloat( startSize );
 	savefile->WriteFloat( endSize );
 	savefile->WriteFloat( currentSize );
-	
+
 	savefile->WriteFloat( magnitude );
-	
+
 	savefile->WriteFloat( height );
 	savefile->WriteBool( playerDamaged );
 	savefile->WriteFloat( playerDamageSize );
@@ -4436,17 +4522,17 @@ void idShockwave::Restore( idRestoreGame* savefile )
 	savefile->ReadBool( isActive );
 	savefile->ReadInt( startTime );
 	savefile->ReadInt( duration );
-	
+
 	savefile->ReadFloat( startSize );
 	savefile->ReadFloat( endSize );
 	savefile->ReadFloat( currentSize );
-	
+
 	savefile->ReadFloat( magnitude );
-	
+
 	savefile->ReadFloat( height );
 	savefile->ReadBool( playerDamaged );
 	savefile->ReadFloat( playerDamageSize );
-	
+
 }
 
 /*
@@ -4461,10 +4547,10 @@ void idShockwave::Spawn()
 	spawnArgs.GetFloat( "startsize", "8", startSize );
 	spawnArgs.GetFloat( "endsize", "512", endSize );
 	spawnArgs.GetFloat( "magnitude", "100", magnitude );
-	
+
 	spawnArgs.GetFloat( "height", "0", height );
 	spawnArgs.GetFloat( "player_damage_size", "20", playerDamageSize );
-	
+
 	if( spawnArgs.GetBool( "start_on" ) )
 	{
 		ProcessEvent( &EV_Activate, this );
@@ -4479,34 +4565,34 @@ idShockwave::Think
 void idShockwave::Think()
 {
 	int endTime;
-	
+
 	if( !isActive )
 	{
 		BecomeInactive( TH_THINK );
 		return;
 	}
-	
+
 	endTime = startTime + duration;
-	
+
 	if( gameLocal.time < endTime )
 	{
 		float u;
 		float newSize;
-		
+
 		// Expand shockwave
 		u = ( float )( gameLocal.time - startTime ) / ( float )duration;
 		newSize = startSize + u * ( endSize - startSize );
-		
+
 		// Find all clipmodels between currentSize and newSize
 		idVec3		pos, end;
 		idClipModel* clipModelList[ MAX_GENTITIES ];
 		idClipModel* clip;
 		idEntity*	ent;
 		int			i, listedClipModels;
-		
+
 		// Set bounds
 		pos = GetPhysics()->GetOrigin();
-		
+
 		float zVal;
 		if( !height )
 		{
@@ -4516,54 +4602,54 @@ void idShockwave::Think()
 		{
 			zVal = height / 2.0f;
 		}
-		
+
 		//Expand in a sphere
 		end = pos + idVec3( newSize, newSize, zVal );
 		idBounds bounds( end );
 		end = pos + idVec3( -newSize, -newSize, -zVal );
 		bounds.AddPoint( end );
-		
+
 		if( g_debugShockwave.GetBool() )
 		{
 			gameRenderWorld->DebugBounds( colorRed,  bounds, vec3_origin );
 		}
-		
+
 		listedClipModels = gameLocal.clip.ClipModelsTouchingBounds( bounds, -1, clipModelList, MAX_GENTITIES );
-		
+
 		for( i = 0; i < listedClipModels; i++ )
 		{
 			clip = clipModelList[ i ];
 			ent = clip->GetEntity();
-			
+
 			if( ent->IsHidden() )
 			{
 				continue;
 			}
-			
+
 			if( !ent->IsType( idMoveable::Type ) && !ent->IsType( idAFEntity_Base::Type ) && !ent->IsType( idPlayer::Type ) )
 			{
 				continue;
 			}
-			
+
 			idVec3 point = ent->GetPhysics()->GetOrigin();
 			idVec3 force = point - pos;
-			
+
 			float dist = force.Normalize();
-			
+
 			if( ent->IsType( idPlayer::Type ) )
 			{
-			
+
 				if( ent->GetPhysics()->GetAbsBounds().IntersectsBounds( bounds ) )
 				{
-				
+
 					//For player damage we check the current radius and a specified player damage ring size
 					if( dist <= newSize && dist > newSize - playerDamageSize )
 					{
-					
+
 						idStr damageDef = spawnArgs.GetString( "def_player_damage", "" );
 						if( damageDef.Length() > 0 && !playerDamaged )
 						{
-						
+
 							playerDamaged = true;	//Only damage once per shockwave
 							idPlayer* player = static_cast< idPlayer* >( ent );
 							idVec3 dir = ent->GetPhysics()->GetOrigin() - pos;
@@ -4572,17 +4658,17 @@ void idShockwave::Think()
 						}
 					}
 				}
-				
+
 			}
 			else
 			{
-			
+
 				// If the object is inside the current expansion...
 				if( dist <= newSize && dist > currentSize )
 				{
 					force.z += 4.f;
 					force.NormalizeFast();
-					
+
 					if( ent->IsType( idAFEntity_Base::Type ) )
 					{
 						force = force * ( ent->GetPhysics()->GetMass() * magnitude * 0.01f );
@@ -4591,12 +4677,12 @@ void idShockwave::Think()
 					{
 						force = force * ent->GetPhysics()->GetMass() * magnitude;
 					}
-					
+
 					// Kick it up, move force point off object origin
 					float rad = ent->GetPhysics()->GetBounds().GetRadius();
 					point.x += gameLocal.random.CRandomFloat() * rad;
 					point.y += gameLocal.random.CRandomFloat() * rad;
-					
+
 					int j;
 					for( j = 0; j < ent->GetPhysics()->GetNumClipModels(); j++ )
 					{
@@ -4605,14 +4691,14 @@ void idShockwave::Think()
 				}
 			}
 		}
-		
+
 		// Update currentSize for next frame
 		currentSize = newSize;
-		
+
 	}
 	else
 	{
-	
+
 		// turn off
 		isActive = false;
 	}
@@ -4629,7 +4715,7 @@ void idShockwave::Event_Activate( idEntity* activator )
 	isActive = true;
 	startTime = gameLocal.time;
 	playerDamaged = false;
-	
+
 	BecomeActive( TH_THINK );
 }
 
@@ -4680,7 +4766,7 @@ void idFuncMountedObject::Spawn()
 	// Get viewOffset
 	spawnArgs.GetInt( "harc", "45", harc );
 	spawnArgs.GetInt( "varc", "30", varc );
-	
+
 	// Get script function
 	idStr funcName = spawnArgs.GetString( "call", "" );
 	if( funcName.Length() )
@@ -4691,7 +4777,7 @@ void idFuncMountedObject::Spawn()
 			gameLocal.Warning( "idFuncMountedObject '%s' at (%s) calls unknown function '%s'\n", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), funcName.c_str() );
 		}
 	}
-	
+
 	BecomeActive( TH_THINK );
 }
 
@@ -4715,16 +4801,16 @@ void idFuncMountedObject::GetAngleRestrictions( int& yaw_min, int& yaw_max, int&
 {
 	idMat3		axis;
 	idAngles	angs;
-	
+
 	axis = GetPhysics()->GetAxis();
 	angs = axis.ToAngles();
-	
+
 	yaw_min = angs.yaw - harc;
 	yaw_min = idMath::AngleNormalize180( yaw_min );
-	
+
 	yaw_max = angs.yaw + harc;
 	yaw_max = idMath::AngleNormalize180( yaw_max );
-	
+
 	pitch = varc;
 }
 
@@ -4739,7 +4825,7 @@ void idFuncMountedObject::Event_Touch( idEntity* other, trace_t* trace )
 	{
 		return;
 	}
-	
+
 	ProcessEvent( &EV_Activate, other );
 }
 
@@ -4753,28 +4839,28 @@ void idFuncMountedObject::Event_Activate( idEntity* activator )
 	if( !isMounted && activator->IsType( idPlayer::Type ) )
 	{
 		idPlayer* client = ( idPlayer* )activator;
-		
+
 		mountedPlayer = client;
-		
+
 		/*
 		// Place player at path_corner targeted by mounted object
 		int i;
 		idPathCorner	*spot;
-		
+
 		for ( i = 0; i < targets.Num(); i++ ) {
 		if ( targets[i]->IsType( idPathCorner::Type ) ) {
 		spot = (idPathCorner*)targets[i];
 		break;
 		}
 		}
-		
+
 		mountedPlayer->GetPhysics()->SetOrigin( spot->GetPhysics()->GetOrigin() );
 		mountedPlayer->GetPhysics()->SetAxis( spot->GetPhysics()->GetAxis() );
 		*/
-		
+
 		mountedPlayer->Bind( this, true );
 		mountedPlayer->mountedObject = this;
-		
+
 		// Call a script function
 		idThread*	mountthread;
 		if( scriptFunction )
@@ -4782,7 +4868,7 @@ void idFuncMountedObject::Event_Activate( idEntity* activator )
 			mountthread = new idThread( scriptFunction );
 			mountthread->DelayedStart( 0 );
 		}
-		
+
 		isMounted = true;
 	}
 }
@@ -4820,16 +4906,16 @@ void idFuncMountedWeapon::Spawn()
 	{
 		gameLocal.Warning( "Invalid projectile on func_mountedweapon." );
 	}
-	
+
 	float firerate;
 	spawnArgs.GetFloat( "firerate", "3", firerate );
 	weaponFireDelay = 1000.f / firerate;
-	
+
 	// Get the firing sound
 	idStr fireSound;
 	spawnArgs.GetString( "snd_fire", "", fireSound );
 	soundFireWeapon = declManager->FindSound( fireSound );
-	
+
 	PostEventMS( &EV_PostSpawn, 0 );
 }
 
@@ -4840,10 +4926,10 @@ void idFuncMountedWeapon::Think()
 	{
 		idVec3		vec = mountedPlayer->viewAngles.ToForward();
 		idAngles	ang = mountedPlayer->GetLocalVector( vec ).ToAngles();
-		
+
 		turret->GetPhysics()->SetAxis( ang.ToMat3() );
 		turret->UpdateVisuals();
-		
+
 		// Check for firing
 		if( mountedPlayer->usercmd.buttons & BUTTON_ATTACK && ( gameLocal.time > weaponLastFireTime + weaponFireDelay ) )
 		{
@@ -4852,33 +4938,33 @@ void idFuncMountedWeapon::Think()
 			idProjectile*	proj;
 			idBounds		projBounds;
 			idVec3			dir;
-			
+
 			gameLocal.SpawnEntityDef( *projectile, &ent );
 			if( !ent || !ent->IsType( idProjectile::Type ) )
 			{
 				const char* projectileName = spawnArgs.GetString( "def_projectile" );
 				gameLocal.Error( "'%s' is not an idProjectile", projectileName );
 			}
-			
+
 			mountedPlayer->GetViewPos( muzzleOrigin, muzzleAxis );
-			
+
 			muzzleOrigin += ( muzzleAxis[0] * 128 );
 			muzzleOrigin -= ( muzzleAxis[2] * 20 );
-			
+
 			dir = muzzleAxis[0];
-			
+
 			proj = static_cast<idProjectile*>( ent );
 			proj->Create( this, muzzleOrigin, dir );
-			
+
 			projBounds = proj->GetPhysics()->GetBounds().Rotate( proj->GetPhysics()->GetAxis() );
-			
+
 			proj->Launch( muzzleOrigin, dir, vec3_origin );
 			StartSoundShader( soundFireWeapon, SND_CHANNEL_WEAPON, SSF_GLOBAL, false, NULL );
-			
+
 			weaponLastFireTime = gameLocal.time;
 		}
 	}
-	
+
 	idFuncMountedObject::Think();
 }
 

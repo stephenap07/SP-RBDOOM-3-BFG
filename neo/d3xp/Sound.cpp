@@ -114,21 +114,21 @@ void idSound::Spawn()
 	spawnArgs.GetAngles( "rotate", "0 0 0", shakeRotate );
 	spawnArgs.GetFloat( "random", "0", random );
 	spawnArgs.GetFloat( "wait", "0", wait );
-	
+
 	if( ( wait > 0.0f ) && ( random >= wait ) )
 	{
 		random = wait - 0.001;
 		gameLocal.Warning( "speaker '%s' at (%s) has random >= wait", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ) );
 	}
-	
+
 	soundVol		= 0.0f;
 	lastSoundVol	= 0.0f;
-	
+
 	if( ( shakeRotate != ang_zero ) || ( shakeTranslate != vec3_zero ) )
 	{
 		BecomeActive( TH_THINK );
 	}
-	
+
 	if( !refSound.waitfortrigger && ( wait > 0.0f ) )
 	{
 		timerOn = true;
@@ -211,10 +211,10 @@ idSound::Think
 void idSound::Think()
 {
 	idAngles	ang;
-	
+
 	// run physics
 	RunPhysics();
-	
+
 	// clear out our update visuals think flag since we never call Present
 	BecomeInactive( TH_UPDATEVISUALS );
 }
@@ -228,7 +228,7 @@ void idSound::UpdateChangeableSpawnArgs( const idDict* source )
 {
 
 	idEntity::UpdateChangeableSpawnArgs( source );
-	
+
 	if( source )
 	{
 		FreeSoundEmitter( true );
@@ -236,10 +236,10 @@ void idSound::UpdateChangeableSpawnArgs( const idDict* source )
 		idSoundEmitter* saveRef = refSound.referenceSound;
 		gameEdit->ParseSpawnArgsToRefSound( &spawnArgs, &refSound );
 		refSound.referenceSound = saveRef;
-		
+
 		idVec3 origin;
 		idMat3 axis;
-		
+
 		if( GetPhysicsToSoundTransform( origin, axis ) )
 		{
 			refSound.origin = GetPhysics()->GetOrigin() + origin * axis;
@@ -248,16 +248,16 @@ void idSound::UpdateChangeableSpawnArgs( const idDict* source )
 		{
 			refSound.origin = GetPhysics()->GetOrigin();
 		}
-		
+
 		spawnArgs.GetFloat( "random", "0", random );
 		spawnArgs.GetFloat( "wait", "0", wait );
-		
+
 		if( ( wait > 0.0f ) && ( random >= wait ) )
 		{
 			random = wait - 0.001;
 			gameLocal.Warning( "speaker '%s' at (%s) has random >= wait", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ) );
 		}
-		
+
 		if( !refSound.waitfortrigger && ( wait > 0.0f ) )
 		{
 			timerOn = true;
@@ -309,7 +309,7 @@ void idSound::DoSound( bool play )
 	}
 	else
 	{
-		StopSound( SND_CHANNEL_ANY, calledViaScriptThread);
+		StopSound( SND_CHANNEL_ANY, calledViaScriptThread );
 		playingUntilTime = 0;
 	}
 }
