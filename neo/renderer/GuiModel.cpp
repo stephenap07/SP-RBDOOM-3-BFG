@@ -433,3 +433,53 @@ idDrawVert* idGuiModel::AllocTris( int vertCount, const triIndex_t* tempIndexes,
 	
 	return vertexPointer + startVert;
 }
+
+std::pair<idDrawVert*, triIndex_t*> idGuiModel::Alloc(int vertCount, int indexCount, const idMaterial* material, const uint64 glState, const stereoDepthType_t stereoType)
+{
+	if (material == NULL)
+	{
+		return std::make_pair(nullptr, nullptr);
+	}
+	if (numIndexes + indexCount > MAX_INDEXES)
+	{
+		static int warningFrame = 0;
+		if (warningFrame != tr.frameCount)
+		{
+			warningFrame = tr.frameCount;
+			idLib::Warning("idGuiModel::AllocTris: MAX_INDEXES exceeded");
+		}
+		return std::make_pair(nullptr, nullptr);
+	}
+	if (numVerts + vertCount > MAX_VERTS)
+	{
+		static int warningFrame = 0;
+		if (warningFrame != tr.frameCount)
+		{
+			warningFrame = tr.frameCount;
+			idLib::Warning("idGuiModel::AllocTris: MAX_VERTS exceeded");
+		}
+		return std::make_pair(nullptr, nullptr);
+	}
+
+	// break the current surface if we are changing to a new material or we can't
+	// fit the data into our allocated block
+	if (material != surf->material || glState != surf->glState || stereoType != surf->stereoType)
+	{
+		if (surf->numIndexes)
+		{
+			AdvanceSurf();
+		}
+		surf->material = material;
+		surf->glState = glState;
+		surf->stereoType = stereoType;
+	}
+
+	int startVert = numVerts;
+	int startIndex = numIndexes;
+
+	numVerts += vertCount;
+	numIndexes += indexCount;
+	surf->numIndexes += indexCount;
+
+	return std::make_pair(vertexPointer + startVert, indexPointer + startIndex);
+}

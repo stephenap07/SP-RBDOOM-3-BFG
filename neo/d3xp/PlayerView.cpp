@@ -72,7 +72,7 @@ idPlayerView::idPlayerView()
 	
 	ClearEffects();
 
-	testFont = renderSystem->RegisterFont2("fonts/TooMuchInk.ttf");
+	testFont = renderSystem->RegisterFont2("fonts/TooMuchInk.ttf", 32);
 }
 
 /*
@@ -82,7 +82,7 @@ idPlayerView::~idPlayerView
 */
 idPlayerView::~idPlayerView()
 {
-	// TODO(Stephen): Free testFont
+	renderSystem->FreeFont(testFont);
 	delete fxManager;
 }
 /*
@@ -426,6 +426,8 @@ idAngles idPlayerView::AngleOffset() const
 	return ang;
 }
 
+idCVar  testString("testString", "Hello, World!", CVAR_RENDERER, "Render a string to the screen");
+
 /*
 ==================
 idPlayerView::SingleView
@@ -575,13 +577,19 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 		}
 	}
 
-	renderSystem->SetColor4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	renderSystem->DrawStretchPic(
-		renderSystem->GetVirtualWidth() / 4.0f, renderSystem->GetVirtualHeight() / 4.0f, renderSystem->GetVirtualWidth() / 2.0f, renderSystem->GetVirtualHeight() / 2.0f,
-		-1.0f, 1.0f, 1.0f, -1.0f,
-		fontMaterial,
-		0.0f);
+	auto man = renderSystem->GetTextureBufferManager();
+
+	auto h = man->createTextBuffer(0, BufferType::Static);
+	
+	man->setPenPosition(h, 10.0f, 1.0f);
+	man->setTextColor(h, 0xFF0000FF);
+	man->appendText(h, testFont, testString.GetString());
+	man->setTextColor(h, 0x00FF00FF);
+	man->appendText(h, testFont, " OKAY....\nMcGee\nIs Bad");
+	man->appendText(h, testFont, "Another line?");
+	man->submitTextBuffer(h);
+	man->destroyTextBuffer(h);
 }
 
 

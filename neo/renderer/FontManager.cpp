@@ -351,7 +351,7 @@ struct FontManager::CachedFont
 
 #define MAX_FONT_BUFFER_SIZE (512 * 512 * 4)
 
-FontManager::FontManager(CubeAtlas* _atlas)
+FontManager::FontManager(Atlas* _atlas)
 	: m_ownAtlas(false)
 	, m_atlas(_atlas)
 {
@@ -360,7 +360,7 @@ FontManager::FontManager(CubeAtlas* _atlas)
 
 FontManager::FontManager(uint16_t _textureSideWidth)
 	: m_ownAtlas(true)
-	, m_atlas(new CubeAtlas(_textureSideWidth))
+	, m_atlas(new Atlas(_textureSideWidth))
 {
 	init();
 }

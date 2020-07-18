@@ -239,13 +239,13 @@ void RectanglePacker::merge()
 	}
 }
 
-struct CubeAtlas::PackedLayer
+struct Atlas::PackedLayer
 {
 	RectanglePacker packer;
 	AtlasRegion faceRegion;
 };
 
-CubeAtlas::CubeAtlas(uint16_t aTextureSize, uint16_t aMaxRegionsCount)
+Atlas::Atlas(uint16_t aTextureSize, uint16_t aMaxRegionsCount)
 	: m_usedLayers(0)
 	, m_usedFaces(0)
 	, m_textureSize(aTextureSize)
@@ -283,7 +283,7 @@ CubeAtlas::CubeAtlas(uint16_t aTextureSize, uint16_t aMaxRegionsCount)
 	m_image->ActuallyLoadImage(false);
 }
 
-CubeAtlas::CubeAtlas(uint16_t aTextureSize, const uint8_t* aTextureBuffer, uint16_t aRegionCount, const uint8_t* aRegionBuffer, uint16_t aMaxRegionsCount)
+Atlas::Atlas(uint16_t aTextureSize, const uint8_t* aTextureBuffer, uint16_t aRegionCount, const uint8_t* aRegionBuffer, uint16_t aMaxRegionsCount)
 	: m_usedLayers(24)
 	, m_usedFaces(6)
 	, m_textureSize(aTextureSize)
@@ -316,14 +316,14 @@ CubeAtlas::CubeAtlas(uint16_t aTextureSize, const uint8_t* aTextureBuffer, uint1
 	m_image->ActuallyLoadImage(false);
 }
 
-CubeAtlas::~CubeAtlas()
+Atlas::~Atlas()
 {
 	delete[] m_layers;
 	delete[] m_regions;
 	delete[] m_textureBuffer;
 }
 
-void CubeAtlas::init()
+void Atlas::init()
 {
 	m_texelSize = float(UINT16_MAX) / float(m_textureSize);
 	float texelHalf = m_texelSize / 2.0f;
@@ -332,7 +332,7 @@ void CubeAtlas::init()
 	m_texelOffset[1] = -texelHalf;
 }
 
-uint16_t CubeAtlas::addRegion(uint16_t _width, uint16_t _height, const uint8_t* _bitmapBuffer, AtlasRegion::Type _type, uint16_t outline)
+uint16_t Atlas::addRegion(uint16_t _width, uint16_t _height, const uint8_t* _bitmapBuffer, AtlasRegion::Type _type, uint16_t outline)
 {
 	if (m_regionCount >= m_maxRegionCount)
 	{
@@ -397,7 +397,7 @@ uint16_t CubeAtlas::addRegion(uint16_t _width, uint16_t _height, const uint8_t* 
 	return m_regionCount++;
 }
 
-void CubeAtlas::updateRegion(const AtlasRegion& _region, const uint8_t* _bitmapBuffer)
+void Atlas::updateRegion(const AtlasRegion& _region, const uint8_t* _bitmapBuffer)
 {
 	uint32_t size = _region._width * _region._height * 4;
 	if (0 < size)
@@ -442,80 +442,78 @@ void CubeAtlas::updateRegion(const AtlasRegion& _region, const uint8_t* _bitmapB
 	}
 }
 
-void CubeAtlas::packFaceLayerUV(uint32_t _idx, uint8_t* _vertexBuffer, uint32_t _offset, uint32_t _stride) const
+void Atlas::packFaceLayerUV(uint32_t _idx, idDrawVert* _vertexBuffer) const
 {
-	packUV(m_layers[_idx].faceRegion, _vertexBuffer, _offset, _stride);
+	packUV(m_layers[_idx].faceRegion, _vertexBuffer);
 }
 
-void CubeAtlas::packUV(uint16_t _regionHandle, uint8_t* _vertexBuffer, uint32_t _offset, uint32_t _stride) const
+void Atlas::packUV(uint16_t _regionHandle, idDrawVert* _vertexBuffer) const
 {
 	const AtlasRegion& region = m_regions[_regionHandle];
-	packUV(region, _vertexBuffer, _offset, _stride);
+	packUV(region, _vertexBuffer);
 }
 
-static void writeUV(uint8_t* _vertexBuffer, int16_t _x, int16_t _y, int16_t _z, int16_t _w)
+static void writeUV(idDrawVert* _vertexBuffer, float _x, float _y, float _z, float _w)
 {
-	uint16_t* xyzw = (uint16_t*)_vertexBuffer;
-	xyzw[0] = _x;
-	xyzw[1] = _y;
-	xyzw[2] = _z;
-	xyzw[3] = _w;
+	_vertexBuffer->SetTexCoord(_x, _y);
+	_vertexBuffer->xyz[2] = _z;
+	//xyzw[3] = _w;
 }
 
-void CubeAtlas::packUV(const AtlasRegion& _region, uint8_t* _vertexBuffer, uint32_t _offset, uint32_t _stride) const
+void Atlas::packUV(const AtlasRegion& _region, idDrawVert* _vertexBuffer) const
 {
-	int16_t x0 = (int16_t)(((float)_region._x * m_texelSize + m_texelOffset[0]) - float(INT16_MAX));
-	int16_t y0 = (int16_t)(((float)_region._y * m_texelSize + m_texelOffset[1]) - float(INT16_MAX));
-	int16_t x1 = (int16_t)((((float)_region._x + _region._width) * m_texelSize + m_texelOffset[0]) - float(INT16_MAX));
-	int16_t y1 = (int16_t)((((float)_region._y + _region._height) * m_texelSize + m_texelOffset[1]) - float(INT16_MAX));
+	float x0 = ((float)_region._x / (m_textureSize / 2.0f)) - 1.0f;
+	float y0 = ((float)_region._y / (m_textureSize / 2.0f)) - 1.0f;
+	float x1 = ((float)(_region._x + _region._width)) / (m_textureSize / 2.0f) - 1.0f;
+	float y1 = ((float)(_region._y + _region._height)) / (m_textureSize / 2.0f) - 1.0f;
 	int16_t ww = (int16_t)((float(INT16_MAX) / 4.0f) * (float)_region.getComponentIndex());
 
-	_vertexBuffer += _offset;
 	switch (_region.getFaceIndex())
-	{
+	{	
 	case 0: // +X
 		x0 = -x0;
 		x1 = -x1;
 		y0 = -y0;
 		y1 = -y1;
-		writeUV(_vertexBuffer, INT16_MAX, y0, x0, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, INT16_MAX, y1, x0, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, INT16_MAX, y1, x1, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, INT16_MAX, y0, x1, ww); _vertexBuffer += _stride;
+
+		writeUV(&_vertexBuffer[0], 1.0f, y0, x0, ww);
+		writeUV(&_vertexBuffer[1], 1.0f, y0, x1, ww);
+		writeUV(&_vertexBuffer[2], 1.0f, y1, x1, ww);
+		writeUV(&_vertexBuffer[3], 1.0f, y1, x0, ww);
 		break;
 
 	case 1: // -X
 		y0 = -y0;
 		y1 = -y1;
-		writeUV(_vertexBuffer, INT16_MIN, y0, x0, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, INT16_MIN, y1, x0, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, INT16_MIN, y1, x1, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, INT16_MIN, y0, x1, ww); _vertexBuffer += _stride;
+		writeUV(&_vertexBuffer[0], INT16_MIN, y0, x0, ww);
+		writeUV(&_vertexBuffer[1], INT16_MIN, y1, x0, ww);
+		writeUV(&_vertexBuffer[2], INT16_MIN, y1, x1, ww);
+		writeUV(&_vertexBuffer[3], INT16_MIN, y0, x1, ww);
 		break;
 
 	case 2: // +Y
-		writeUV(_vertexBuffer, x0, INT16_MAX, y0, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x0, INT16_MAX, y1, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, INT16_MAX, y1, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, INT16_MAX, y0, ww); _vertexBuffer += _stride;
+		writeUV(&_vertexBuffer[0], x0, INT16_MAX, y0, ww);
+		writeUV(&_vertexBuffer[1], x0, INT16_MAX, y1, ww);
+		writeUV(&_vertexBuffer[2], x1, INT16_MAX, y1, ww);
+		writeUV(&_vertexBuffer[3], x1, INT16_MAX, y0, ww);
 		break;
 
 	case 3: // -Y
 		y0 = -y0;
 		y1 = -y1;
-		writeUV(_vertexBuffer, x0, INT16_MIN, y0, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x0, INT16_MIN, y1, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, INT16_MIN, y1, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, INT16_MIN, y0, ww); _vertexBuffer += _stride;
+		writeUV(&_vertexBuffer[0], x0, INT16_MIN, y0, ww);
+		writeUV(&_vertexBuffer[1], x0, INT16_MIN, y1, ww);
+		writeUV(&_vertexBuffer[2], x1, INT16_MIN, y1, ww);
+		writeUV(&_vertexBuffer[3], x1, INT16_MIN, y0, ww);
 		break;
 
 	case 4: // +Z
 		y0 = -y0;
 		y1 = -y1;
-		writeUV(_vertexBuffer, x0, y0, INT16_MAX, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x0, y1, INT16_MAX, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, y1, INT16_MAX, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, y0, INT16_MAX, ww); _vertexBuffer += _stride;
+		writeUV(&_vertexBuffer[0], x0, y0, INT16_MAX, ww);
+		writeUV(&_vertexBuffer[1], x0, y1, INT16_MAX, ww);
+		writeUV(&_vertexBuffer[2], x1, y1, INT16_MAX, ww);
+		writeUV(&_vertexBuffer[3], x1, y0, INT16_MAX, ww);
 		break;
 
 	case 5: // -Z
@@ -523,10 +521,10 @@ void CubeAtlas::packUV(const AtlasRegion& _region, uint8_t* _vertexBuffer, uint3
 		x1 = -x1;
 		y0 = -y0;
 		y1 = -y1;
-		writeUV(_vertexBuffer, x0, y0, INT16_MIN, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x0, y1, INT16_MIN, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, y1, INT16_MIN, ww); _vertexBuffer += _stride;
-		writeUV(_vertexBuffer, x1, y0, INT16_MIN, ww); _vertexBuffer += _stride;
+		writeUV(&_vertexBuffer[0], x0, y0, INT16_MIN, ww);
+		writeUV(&_vertexBuffer[1], x0, y1, INT16_MIN, ww);
+		writeUV(&_vertexBuffer[2], x1, y1, INT16_MIN, ww);
+		writeUV(&_vertexBuffer[3], x1, y0, INT16_MIN, ww);
 		break;
 	}
 }

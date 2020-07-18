@@ -7,9 +7,12 @@
 
 #include "TextBufferManager.h"
 #include "CubeAtlas.h"
+#include "GuiModel.h"
 
 
 #define MAX_BUFFERED_CHARACTERS (8192 - 5)
+
+extern idGuiModel* tr_guiModel;
 
 class TextBuffer
 {
@@ -81,7 +84,7 @@ public:
 	/// Size in bytes of a vertex.
 	uint32_t getVertexSize() const
 	{
-		return sizeof(TextVertex);
+		return sizeof(idDrawVert);
 	}
 
 	/// get a pointer to the index buffer to submit it to the graphic
@@ -99,7 +102,7 @@ public:
 	/// Size in bytes of an index.
 	uint32_t getIndexSize() const
 	{
-		return sizeof(uint16_t);
+		return sizeof(triIndex_t);
 	}
 
 	uint32_t getTextColor() const
@@ -110,6 +113,11 @@ public:
 	TextRectangle getRectangle() const
 	{
 		return m_rectangle;
+	}
+
+	const idMaterial* getMaterial() const
+	{
+		return m_material;
 	}
 
 private:
@@ -148,24 +156,18 @@ private:
 
 	TextRectangle m_rectangle;
 	FontManager* m_fontManager;
+	const idMaterial* m_material;
 
 	void setVertex(uint32_t _i, float _x, float _y, uint32_t _rgba, uint8_t _style = STYLE_NORMAL)
 	{
-		m_vertexBuffer[_i].x = _x;
-		m_vertexBuffer[_i].y = _y;
-		m_vertexBuffer[_i].rgba = _rgba;
 		m_styleBuffer[_i] = _style;
+		m_vertexBuffer[_i].xyz[0] = _x;
+		m_vertexBuffer[_i].xyz[1] = _y;
+		m_vertexBuffer[_i].SetColor(_rgba);
 	}
 
-	struct TextVertex
-	{
-		float x, y;
-		int16_t u, v, w, t;
-		uint32_t rgba;
-	};
-
-	TextVertex* m_vertexBuffer;
-	uint16_t* m_indexBuffer;
+	idDrawVert* m_vertexBuffer;
+	triIndex_t* m_indexBuffer;
 	uint8_t* m_styleBuffer;
 
 	uint32_t m_indexCount;
@@ -188,8 +190,9 @@ TextBuffer::TextBuffer(FontManager* _fontManager)
 	, m_lineDescender(0)
 	, m_lineGap(0)
 	, m_fontManager(_fontManager)
-	, m_vertexBuffer(new TextVertex[MAX_BUFFERED_CHARACTERS * 4])
-	, m_indexBuffer(new uint16_t[MAX_BUFFERED_CHARACTERS * 6])
+	, m_material(nullptr)
+	, m_vertexBuffer(new idDrawVert[MAX_BUFFERED_CHARACTERS * 4])
+	, m_indexBuffer(new triIndex_t[MAX_BUFFERED_CHARACTERS * 6])
 	, m_styleBuffer(new uint8_t[MAX_BUFFERED_CHARACTERS * 4])
 	, m_indexCount(0)
 	, m_lineStartIndex(0)
@@ -197,6 +200,7 @@ TextBuffer::TextBuffer(FontManager* _fontManager)
 {
 	m_rectangle.width = 0;
 	m_rectangle.height = 0;
+	m_material = declManager->FindMaterial("_fontAtlas");
 }
 
 TextBuffer::~TextBuffer()
@@ -239,23 +243,24 @@ void TextBuffer::appendAtlasFace(uint16_t _faceIndex)
 	float x1 = x0 + (float)m_fontManager->getAtlas()->getTextureSize();
 	float y1 = y0 + (float)m_fontManager->getAtlas()->getTextureSize();
 
-	m_fontManager->getAtlas()->packFaceLayerUV(_faceIndex
-		, (uint8_t*)m_vertexBuffer
-		, sizeof(TextVertex) * m_vertexCount + offsetof(TextVertex, u)
-		, sizeof(TextVertex)
-	);
+	m_fontManager->getAtlas()->packFaceLayerUV(_faceIndex, &m_vertexBuffer[m_vertexCount]);
+
+	//setVertex(m_vertexCount + 0, x0, y0, m_backgroundColor);
+	//setVertex(m_vertexCount + 1, x1, y0, m_backgroundColor);
+	//setVertex(m_vertexCount + 2, x1, y1, m_backgroundColor);
+	//setVertex(m_vertexCount + 3, x0, y1, m_backgroundColor);
 
 	setVertex(m_vertexCount + 0, x0, y0, m_backgroundColor);
-	setVertex(m_vertexCount + 1, x0, y1, m_backgroundColor);
+	setVertex(m_vertexCount + 1, x1, y0, m_backgroundColor);
 	setVertex(m_vertexCount + 2, x1, y1, m_backgroundColor);
-	setVertex(m_vertexCount + 3, x1, y0, m_backgroundColor);
+	setVertex(m_vertexCount + 3, x0, y1, m_backgroundColor);
 
-	m_indexBuffer[m_indexCount + 0] = m_vertexCount + 0;
-	m_indexBuffer[m_indexCount + 1] = m_vertexCount + 1;
+	m_indexBuffer[m_indexCount + 0] = m_vertexCount + 3;
+	m_indexBuffer[m_indexCount + 1] = m_vertexCount + 0;
 	m_indexBuffer[m_indexCount + 2] = m_vertexCount + 2;
-	m_indexBuffer[m_indexCount + 3] = m_vertexCount + 0;
-	m_indexBuffer[m_indexCount + 4] = m_vertexCount + 2;
-	m_indexBuffer[m_indexCount + 5] = m_vertexCount + 3;
+	m_indexBuffer[m_indexCount + 3] = m_vertexCount + 2;
+	m_indexBuffer[m_indexCount + 4] = m_vertexCount + 0;
+	m_indexBuffer[m_indexCount + 5] = m_vertexCount + 1;
 	m_vertexCount += 4;
 	m_indexCount += 6;
 }
@@ -276,6 +281,8 @@ void TextBuffer::clearTextBuffer()
 	m_rectangle.width = 0;
 	m_rectangle.height = 0;
 }
+
+static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
 
 void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 {
@@ -338,7 +345,7 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 	m_penX += kerning;
 
 	const GlyphInfo& blackGlyph = m_fontManager->getBlackGlyph();
-	const CubeAtlas* atlas = m_fontManager->getAtlas();
+	const Atlas* atlas = m_fontManager->getAtlas();
 
 	if (m_styleFlags & STYLE_BACKGROUND
 		&& m_backgroundColor & 0xff000000)
@@ -348,11 +355,7 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 		float x1 = ((float)x0 + (glyph->advance_x));
 		float y1 = (m_penY + m_lineAscender - m_lineDescender + m_lineGap);
 
-		atlas->packUV(blackGlyph.regionIndex
-			, (uint8_t*)m_vertexBuffer
-			, sizeof(TextVertex) * m_vertexCount + offsetof(TextVertex, u)
-			, sizeof(TextVertex)
-		);
+		atlas->packUV(blackGlyph.regionIndex, &m_vertexBuffer[m_vertexCount]);
 
 		const uint16_t vertexCount = m_vertexCount;
 		setVertex(vertexCount + 0, x0, y0, m_backgroundColor, STYLE_BACKGROUND);
@@ -360,12 +363,12 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 		setVertex(vertexCount + 2, x1, y1, m_backgroundColor, STYLE_BACKGROUND);
 		setVertex(vertexCount + 3, x1, y0, m_backgroundColor, STYLE_BACKGROUND);
 
-		m_indexBuffer[m_indexCount + 0] = vertexCount + 0;
-		m_indexBuffer[m_indexCount + 1] = vertexCount + 1;
+		m_indexBuffer[m_indexCount + 0] = vertexCount + 3;
+		m_indexBuffer[m_indexCount + 1] = vertexCount + 0;
 		m_indexBuffer[m_indexCount + 2] = vertexCount + 2;
-		m_indexBuffer[m_indexCount + 3] = vertexCount + 0;
-		m_indexBuffer[m_indexCount + 4] = vertexCount + 2;
-		m_indexBuffer[m_indexCount + 5] = vertexCount + 3;
+		m_indexBuffer[m_indexCount + 3] = vertexCount + 2;
+		m_indexBuffer[m_indexCount + 4] = vertexCount + 0;
+		m_indexBuffer[m_indexCount + 5] = vertexCount + 1;
 		m_vertexCount += 4;
 		m_indexCount += 6;
 	}
@@ -378,23 +381,19 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 		float x1 = ((float)x0 + (glyph->advance_x));
 		float y1 = y0 + font.underlineThickness;
 
-		atlas->packUV(blackGlyph.regionIndex
-			, (uint8_t*)m_vertexBuffer
-			, sizeof(TextVertex) * m_vertexCount + offsetof(TextVertex, u)
-			, sizeof(TextVertex)
-		);
+		atlas->packUV(blackGlyph.regionIndex, &m_vertexBuffer[m_vertexCount]);
 
 		setVertex(m_vertexCount + 0, x0, y0, m_underlineColor, STYLE_UNDERLINE);
 		setVertex(m_vertexCount + 1, x0, y1, m_underlineColor, STYLE_UNDERLINE);
 		setVertex(m_vertexCount + 2, x1, y1, m_underlineColor, STYLE_UNDERLINE);
 		setVertex(m_vertexCount + 3, x1, y0, m_underlineColor, STYLE_UNDERLINE);
 
-		m_indexBuffer[m_indexCount + 0] = m_vertexCount + 0;
-		m_indexBuffer[m_indexCount + 1] = m_vertexCount + 1;
+		m_indexBuffer[m_indexCount + 0] = m_vertexCount + 3;
+		m_indexBuffer[m_indexCount + 1] = m_vertexCount + 0;
 		m_indexBuffer[m_indexCount + 2] = m_vertexCount + 2;
-		m_indexBuffer[m_indexCount + 3] = m_vertexCount + 0;
-		m_indexBuffer[m_indexCount + 4] = m_vertexCount + 2;
-		m_indexBuffer[m_indexCount + 5] = m_vertexCount + 3;
+		m_indexBuffer[m_indexCount + 3] = m_vertexCount + 2;
+		m_indexBuffer[m_indexCount + 4] = m_vertexCount + 0;
+		m_indexBuffer[m_indexCount + 5] = m_vertexCount + 1;
 		m_vertexCount += 4;
 		m_indexCount += 6;
 	}
@@ -407,23 +406,19 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 		float x1 = ((float)x0 + (glyph->advance_x));
 		float y1 = y0 + font.underlineThickness;
 
-		m_fontManager->getAtlas()->packUV(blackGlyph.regionIndex
-			, (uint8_t*)m_vertexBuffer
-			, sizeof(TextVertex) * m_vertexCount + offsetof(TextVertex, u)
-			, sizeof(TextVertex)
-		);
+		atlas->packUV(blackGlyph.regionIndex, &m_vertexBuffer[m_vertexCount]);
 
 		setVertex(m_vertexCount + 0, x0, y0, m_overlineColor, STYLE_OVERLINE);
 		setVertex(m_vertexCount + 1, x0, y1, m_overlineColor, STYLE_OVERLINE);
 		setVertex(m_vertexCount + 2, x1, y1, m_overlineColor, STYLE_OVERLINE);
 		setVertex(m_vertexCount + 3, x1, y0, m_overlineColor, STYLE_OVERLINE);
 
-		m_indexBuffer[m_indexCount + 0] = m_vertexCount + 0;
-		m_indexBuffer[m_indexCount + 1] = m_vertexCount + 1;
+		m_indexBuffer[m_indexCount + 0] = m_vertexCount + 3;
+		m_indexBuffer[m_indexCount + 1] = m_vertexCount + 0;
 		m_indexBuffer[m_indexCount + 2] = m_vertexCount + 2;
-		m_indexBuffer[m_indexCount + 3] = m_vertexCount + 0;
-		m_indexBuffer[m_indexCount + 4] = m_vertexCount + 2;
-		m_indexBuffer[m_indexCount + 5] = m_vertexCount + 3;
+		m_indexBuffer[m_indexCount + 3] = m_vertexCount + 2;
+		m_indexBuffer[m_indexCount + 4] = m_vertexCount + 0;
+		m_indexBuffer[m_indexCount + 5] = m_vertexCount + 1;
 		m_vertexCount += 4;
 		m_indexCount += 6;
 	}
@@ -436,23 +431,19 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 		float x1 = ((float)x0 + (glyph->advance_x));
 		float y1 = y0 + font.underlineThickness;
 
-		atlas->packUV(blackGlyph.regionIndex
-			, (uint8_t*)m_vertexBuffer
-			, sizeof(TextVertex) * m_vertexCount + offsetof(TextVertex, u)
-			, sizeof(TextVertex)
-		);
+		atlas->packUV(blackGlyph.regionIndex, &m_vertexBuffer[m_vertexCount]);
 
 		setVertex(m_vertexCount + 0, x0, y0, m_strikeThroughColor, STYLE_STRIKE_THROUGH);
 		setVertex(m_vertexCount + 1, x0, y1, m_strikeThroughColor, STYLE_STRIKE_THROUGH);
 		setVertex(m_vertexCount + 2, x1, y1, m_strikeThroughColor, STYLE_STRIKE_THROUGH);
 		setVertex(m_vertexCount + 3, x1, y0, m_strikeThroughColor, STYLE_STRIKE_THROUGH);
 
-		m_indexBuffer[m_indexCount + 0] = m_vertexCount + 0;
-		m_indexBuffer[m_indexCount + 1] = m_vertexCount + 1;
+		m_indexBuffer[m_indexCount + 0] = m_vertexCount + 3;
+		m_indexBuffer[m_indexCount + 1] = m_vertexCount + 0;
 		m_indexBuffer[m_indexCount + 2] = m_vertexCount + 2;
-		m_indexBuffer[m_indexCount + 3] = m_vertexCount + 0;
-		m_indexBuffer[m_indexCount + 4] = m_vertexCount + 2;
-		m_indexBuffer[m_indexCount + 5] = m_vertexCount + 3;
+		m_indexBuffer[m_indexCount + 3] = m_vertexCount + 2;
+		m_indexBuffer[m_indexCount + 4] = m_vertexCount + 0;
+		m_indexBuffer[m_indexCount + 5] = m_vertexCount + 1;
 		m_vertexCount += 4;
 		m_indexCount += 6;
 	}
@@ -462,23 +453,19 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 	float x1 = (x0 + glyph->width);
 	float y1 = (y0 + glyph->height);
 
-	atlas->packUV(glyph->regionIndex
-		, (uint8_t*)m_vertexBuffer
-		, sizeof(TextVertex) * m_vertexCount + offsetof(TextVertex, u)
-		, sizeof(TextVertex)
-	);
+	atlas->packUV(glyph->regionIndex, &m_vertexBuffer[m_vertexCount]);
 
 	setVertex(m_vertexCount + 0, x0, y0, m_textColor);
-	setVertex(m_vertexCount + 1, x0, y1, m_textColor);
+	setVertex(m_vertexCount + 1, x1, y0, m_textColor);
 	setVertex(m_vertexCount + 2, x1, y1, m_textColor);
-	setVertex(m_vertexCount + 3, x1, y0, m_textColor);
+	setVertex(m_vertexCount + 3, x0, y1, m_textColor);
 
-	m_indexBuffer[m_indexCount + 0] = m_vertexCount + 0;
-	m_indexBuffer[m_indexCount + 1] = m_vertexCount + 1;
+	m_indexBuffer[m_indexCount + 0] = m_vertexCount + 3;
+	m_indexBuffer[m_indexCount + 1] = m_vertexCount + 0;
 	m_indexBuffer[m_indexCount + 2] = m_vertexCount + 2;
-	m_indexBuffer[m_indexCount + 3] = m_vertexCount + 0;
-	m_indexBuffer[m_indexCount + 4] = m_vertexCount + 2;
-	m_indexBuffer[m_indexCount + 5] = m_vertexCount + 3;
+	m_indexBuffer[m_indexCount + 3] = m_vertexCount + 2;
+	m_indexBuffer[m_indexCount + 4] = m_vertexCount + 0;
+	m_indexBuffer[m_indexCount + 5] = m_vertexCount + 1;
 	m_vertexCount += 4;
 	m_indexCount += 6;
 
@@ -500,25 +487,31 @@ void TextBuffer::verticalCenterLastLine(float _dy, float _top, float _bottom)
 	{
 		if (m_styleBuffer[ii] == STYLE_BACKGROUND)
 		{
-			m_vertexBuffer[ii + 0].y = _top;
-			m_vertexBuffer[ii + 1].y = _bottom;
-			m_vertexBuffer[ii + 2].y = _bottom;
-			m_vertexBuffer[ii + 3].y = _top;
+			m_vertexBuffer[ii + 0].xyz[1] = _top;
+			m_vertexBuffer[ii + 1].xyz[1] = _bottom;
+			m_vertexBuffer[ii + 2].xyz[1] = _bottom;
+			m_vertexBuffer[ii + 3].xyz[1] = _top;
 		}
 		else
 		{
-			m_vertexBuffer[ii + 0].y += _dy;
-			m_vertexBuffer[ii + 1].y += _dy;
-			m_vertexBuffer[ii + 2].y += _dy;
-			m_vertexBuffer[ii + 3].y += _dy;
+			m_vertexBuffer[ii + 0].xyz[1] += _dy;
+			m_vertexBuffer[ii + 1].xyz[1] += _dy;
+			m_vertexBuffer[ii + 2].xyz[1] += _dy;
+			m_vertexBuffer[ii + 3].xyz[1] += _dy;
 		}
 	}
 }
 
 TextBufferManager::TextBufferManager(FontManager* _fontManager)
 	: m_fontManager(_fontManager)
+	, m_fontMaterial(nullptr)
 {
 	m_textBuffers = new BufferCache[MAX_TEXT_BUFFER_COUNT];
+	m_fontMaterial = declManager->FindMaterial("_fontAtlas");
+	if (!m_fontMaterial)
+	{
+		common->Warning("Failed to load font atlas");
+	}
 }
 
 TextBufferManager::~TextBufferManager()
@@ -535,6 +528,8 @@ TextBufferHandle TextBufferManager::createTextBuffer(uint32_t _type, BufferType:
 	bc.textBuffer = new TextBuffer(m_fontManager);
 	bc.fontType = _type;
 	bc.bufferType = _bufferType;
+	bc.indexBufferHandle = 0;
+	bc.vertexBufferHandle = 0;
 
 	TextBufferHandle ret = { textIdx };
 	return ret;
@@ -564,7 +559,18 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 		return;
 	}
 
+	idDrawVert* verts = tr_guiModel->AllocTris(bc.textBuffer->getVertexCount(), bc.textBuffer->getIndexBuffer(), bc.textBuffer->getIndexCount(), bc.textBuffer->getMaterial(), 0, STEREO_DEPTH_TYPE_NONE);
+	WriteDrawVerts16(verts, (idDrawVert*)bc.textBuffer->getVertexBuffer(), bc.textBuffer->getVertexCount());
+
 	/*
+
+	renderSystem->DrawStretchPic(
+		bc.textBuffer->
+		renderSystem->GetVirtualWidth() / 4.0f, renderSystem->GetVirtualHeight() / 4.0f, renderSystem->GetVirtualWidth() / 2.0f, renderSystem->GetVirtualHeight() / 2.0f,
+		-1.0f, 1.0f, 1.0f, -1.0f,
+		fontMaterial,
+		0.0f);
+
 	bgfx::setTexture(0, s_texColor, m_fontManager->getAtlas()->getTextureHandle());
 
 	bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;

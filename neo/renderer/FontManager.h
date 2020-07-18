@@ -2,7 +2,7 @@
 
 #include "../idlib/HandleManager.h"
 
-class CubeAtlas;
+class Atlas;
 
 
 #define MAX_OPENED_FILES 64
@@ -91,7 +91,7 @@ class FontManager
 public:
 	/// Create the font manager using an external cube atlas (doesn't take
 	/// ownership of the atlas).
-	FontManager(CubeAtlas* _atlas);
+	FontManager(Atlas* _atlas);
 
 	/// Create the font manager and create the texture cube as BGRA8 with
 	/// linear filtering.
@@ -100,7 +100,7 @@ public:
 	~FontManager();
 
 	/// Retrieve the atlas used by the font manager (e.g. to add stuff to it)
-	const CubeAtlas* getAtlas() const
+	const Atlas* getAtlas() const
 	{
 		return m_atlas;
 	}
@@ -159,7 +159,7 @@ private:
 	bool addBitmap(GlyphInfo& _glyphInfo, const uint8_t* _data);
 
 	bool m_ownAtlas;
-	CubeAtlas* m_atlas;
+	Atlas* m_atlas;
 
 	HandleManagerT<MAX_OPENED_FONT> m_fontHandles;
 	CachedFont* m_cachedFonts;

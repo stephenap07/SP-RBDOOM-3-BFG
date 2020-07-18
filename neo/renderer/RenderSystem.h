@@ -33,6 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 
 
 #include "FontManager.h"
+#include "TextBufferManager.h"
 
 /*
 ===============================================================================
@@ -283,7 +284,8 @@ public:
 	
 	// font support
 	virtual class idFont* 	RegisterFont( const char* fontName ) = 0;
-	virtual FontHandle      RegisterFont2(const char* aFontName) = 0;
+	virtual FontHandle      RegisterFont2(const char* aFontName, int aSize) = 0;
+	virtual void            FreeFont(FontHandle aHandle) = 0;
 	virtual void			ResetFonts() = 0;
 	
 	virtual void			SetColor( const idVec4& rgba ) = 0;
@@ -308,10 +310,11 @@ public:
 	
 	virtual void			PrintMemInfo( MemInfo_t* mi ) = 0;
 	
-	virtual void			DrawSmallChar( int x, int y, int ch ) = 0;
-	virtual void			DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
-	virtual void			DrawBigChar( int x, int y, int ch ) = 0;
-	virtual void			DrawBigStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
+	virtual TextBufferManager* GetTextureBufferManager() = 0;
+	virtual void			   DrawSmallChar( int x, int y, int ch ) = 0;
+	virtual void		   	   DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
+	virtual void			   DrawBigChar( int x, int y, int ch ) = 0;
+	virtual void			   DrawBigStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
 	
 	// dump all 2D drawing so far this frame to the demo file
 	virtual void			WriteDemoPics() = 0;

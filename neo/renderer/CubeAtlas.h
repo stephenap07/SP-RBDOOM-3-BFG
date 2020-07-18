@@ -39,13 +39,13 @@ struct AtlasRegion
 	}
 };
 
-class CubeAtlas
+class Atlas
 {
 public:
 	/// create an empty dynamic atlas (region can be updated and added)
 	/// @param textureSize an atlas creates a texture cube of 6 faces with size equal to (textureSize*textureSize * sizeof(RGBA) )
 	/// @param maxRegionCount maximum number of region allowed in the atlas
-	CubeAtlas(uint16_t _textureSize, uint16_t _maxRegionsCount = 4096);
+	Atlas(uint16_t _textureSize, uint16_t _maxRegionsCount = 4096);
 
 	/// initialize a static atlas with serialized data	(region can be updated but not added)
 	/// @param textureSize an atlas creates a texture cube of 6 faces with size equal to (textureSize*textureSize * sizeof(RGBA) )
@@ -53,8 +53,8 @@ public:
 	/// @param regionCount number of region in the Atlas
 	/// @param regionBuffer buffer containing the region (will be copied)
 	/// @param maxRegionCount maximum number of region allowed in the atlas
-	CubeAtlas(uint16_t _textureSize, const uint8_t* _textureBuffer, uint16_t _regionCount, const uint8_t* _regionBuffer, uint16_t _maxRegionsCount = 4096);
-	~CubeAtlas();
+	Atlas(uint16_t _textureSize, const uint8_t* _textureBuffer, uint16_t _regionCount, const uint8_t* _regionBuffer, uint16_t _maxRegionsCount = 4096);
+	~Atlas();
 
 	/// add a region to the atlas, and copy the content of mem to the underlying texture
 	uint16_t addRegion(uint16_t _width, uint16_t _height, const uint8_t* _bitmapBuffer, AtlasRegion::Type _type = AtlasRegion::TYPE_RGBA8, uint16_t outline = 0);
@@ -72,11 +72,11 @@ public:
 	/// @param vertexBuffer address of the first vertex we want to update. Must be valid up to vertexBuffer + offset + 3*stride + 4*sizeof(int16_t), which means the buffer must contains at least 4 vertexes including the first.
 	/// @param offset byte offset to the first uv coordinate of the vertex in the buffer
 	/// @param stride stride between the UV coordinates, usually size of a Vertex.
-	void packUV(uint16_t _regionHandle, uint8_t* _vertexBuffer, uint32_t _offset, uint32_t _stride) const;
-	void packUV(const AtlasRegion& _region, uint8_t* _vertexBuffer, uint32_t _offset, uint32_t _stride) const;
+	void packUV(uint16_t _regionHandle, idDrawVert* _vertexBuffer) const;
+	void packUV(const AtlasRegion& _region, idDrawVert* _vertexBuffer) const;
 
 	/// Same as packUV but pack a whole face of the atlas cube, mostly used for debugging and visualizing atlas
-	void packFaceLayerUV(uint32_t _idx, uint8_t* _vertexBuffer, uint32_t _offset, uint32_t _stride) const;
+	void packFaceLayerUV(uint32_t _idx, idDrawVert* _vertexBuffer) const;
 
 	/// return the TextureHandle (cube) of the atlas
 	idImage* getImage() const
@@ -141,6 +141,7 @@ private:
 
 	// @notowns
 	idImage* m_image;
+
 	uint16_t m_textureSize;
 	float m_texelSize;
 	float m_texelOffset[2];

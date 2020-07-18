@@ -39,6 +39,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "Font.h"
 #include "Framebuffer.h"
 #include "FontManager.h"
+#include "TextBufferManager.h"
 
 
 // maximum texture units
@@ -734,7 +735,8 @@ public:
 	virtual bool			AreAutomaticBackgroundSwapsRunning( autoRenderIconType_t* usingAlternateIcon = NULL ) const;
 	
 	virtual idFont* 		RegisterFont( const char* fontName );
-	virtual FontHandle      RegisterFont2(const char* aFontName);
+	virtual FontHandle      RegisterFont2(const char* aFontName, int aSize);
+	virtual void            FreeFont(FontHandle aHandle);
 	virtual void			ResetFonts();
 	virtual void			PrintMemInfo( MemInfo_t* mi );
 	
@@ -746,10 +748,12 @@ public:
 	virtual void			DrawStretchPic( const idVec4& topLeft, const idVec4& topRight, const idVec4& bottomRight, const idVec4& bottomLeft, const idMaterial* material, float z = 0.0f );
 	virtual void			DrawStretchTri( const idVec2& p1, const idVec2& p2, const idVec2& p3, const idVec2& t1, const idVec2& t2, const idVec2& t3, const idMaterial* material );
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE );
-	virtual void			DrawSmallChar( int x, int y, int ch );
-	virtual void			DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
-	virtual void			DrawBigChar( int x, int y, int ch );
-	virtual void			DrawBigStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
+	
+	virtual TextBufferManager* GetTextureBufferManager() { return textBufferManager; }
+	virtual void			   DrawSmallChar( int x, int y, int ch );
+	virtual void			   DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
+	virtual void			   DrawBigChar( int x, int y, int ch );
+	virtual void			   DrawBigStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 	
 	virtual void			WriteDemoPics();
 	virtual void			WriteEndFrame();
@@ -819,6 +823,7 @@ public:
 	const idMaterial* 		defaultMaterial;
 	const idMaterial*       fontAtlasMaterial;
 	FontManager*            fontManager;
+	TextBufferManager*      textBufferManager;
 	idImage* 				testImage;
 	idCinematic* 			testVideo;
 	int						testVideoStartTime;

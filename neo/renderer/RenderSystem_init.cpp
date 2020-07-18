@@ -2236,6 +2236,8 @@ void idRenderSystemLocal::Init()
 	idCinematic::InitCinematic();
 
 	fontManager = new FontManager(512);
+
+	textBufferManager = new TextBufferManager(fontManager);
 	
 	// build brightness translation tables
 	R_SetColorMappings();
@@ -2287,6 +2289,7 @@ void idRenderSystemLocal::Shutdown()
 	
 	fonts.DeleteContents();
 
+	delete textBufferManager;
 	delete fontManager;
 	
 	if( IsInitialized() )
@@ -2437,7 +2440,7 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 	return newFont;
 }
 
-FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName)
+FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName, int aSize)
 {
 	idFile* fd = fileSystem->OpenFileRead(fontName);
 	if (fd == nullptr)
@@ -2458,13 +2461,18 @@ FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName)
 	delete fd;
 	auto ttHandle = fontManager->createTtf(buffer.Ptr(), len);
 
-	auto handle = fontManager->createFontByPixelSize(ttHandle, 0, 32);
+	auto handle = fontManager->createFontByPixelSize(ttHandle, 0, aSize);
 
-	fontManager->preloadGlyph(handle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
+	fontManager->preloadGlyph(handle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,! \n");
 
 	fontManager->destroyTtf(ttHandle);
 
 	return handle;
+}
+
+void idRenderSystemLocal::FreeFont(FontHandle aHandle)
+{
+	fontManager->destroyFont(aHandle);
 }
 
 /*

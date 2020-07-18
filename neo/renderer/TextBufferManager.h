@@ -71,6 +71,8 @@ public:
 private:
 	struct BufferCache
 	{
+		vertCacheHandle_t vertexBufferHandle;
+		vertCacheHandle_t indexBufferHandle;
 		TextBuffer* textBuffer;
 		BufferType::Enum bufferType;
 		uint32_t fontType;
@@ -79,4 +81,6 @@ private:
 	BufferCache* m_textBuffers;
 	HandleManagerT<MAX_TEXT_BUFFER_COUNT> m_textBufferHandles;
 	FontManager* m_fontManager;
+
+	const idMaterial* m_fontMaterial;
 };
