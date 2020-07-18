@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 
 // _D3XP : rename all gameLocal.time to gameLocal.slow.time for merge!
 
+idCVar  testString("testString", "Hello, World!", CVAR_RENDERER, "Render a string to the screen");
+
 const int IMPULSE_DELAY = 150;
 /*
 ==============
@@ -73,6 +75,17 @@ idPlayerView::idPlayerView()
 	ClearEffects();
 
 	testFont = renderSystem->RegisterFont2("fonts/TooMuchInk.ttf", 32);
+
+	auto man = renderSystem->GetTextureBufferManager();
+
+	textHandle = man->createTextBuffer(0, BufferType::Static);
+
+	man->setPenPosition(textHandle, 10.0f, 1.0f);
+	man->setTextColor(textHandle, 0xFF0000FF);
+	man->appendText(textHandle, testFont, testString.GetString());
+	man->setTextColor(textHandle, 0x00FF00FF);
+	man->appendText(textHandle, testFont, " OKAY....\nMcGee\nIs Bad");
+	man->appendText(textHandle, testFont, "\nAnother line?");
 }
 
 /*
@@ -82,6 +95,7 @@ idPlayerView::~idPlayerView
 */
 idPlayerView::~idPlayerView()
 {
+	renderSystem->GetTextureBufferManager()->destroyTextBuffer(textHandle);
 	renderSystem->FreeFont(testFont);
 	delete fxManager;
 }
@@ -426,7 +440,6 @@ idAngles idPlayerView::AngleOffset() const
 	return ang;
 }
 
-idCVar  testString("testString", "Hello, World!", CVAR_RENDERER, "Render a string to the screen");
 
 /*
 ==================
@@ -578,18 +591,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	}
 
 
-	auto man = renderSystem->GetTextureBufferManager();
-
-	auto h = man->createTextBuffer(0, BufferType::Static);
-	
-	man->setPenPosition(h, 10.0f, 1.0f);
-	man->setTextColor(h, 0xFF0000FF);
-	man->appendText(h, testFont, testString.GetString());
-	man->setTextColor(h, 0x00FF00FF);
-	man->appendText(h, testFont, " OKAY....\nMcGee\nIs Bad");
-	man->appendText(h, testFont, "Another line?");
-	man->submitTextBuffer(h);
-	man->destroyTextBuffer(h);
+	renderSystem->GetTextureBufferManager()->submitTextBuffer(textHandle);
 }
 
 
