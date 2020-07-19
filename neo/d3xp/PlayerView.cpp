@@ -74,7 +74,7 @@ idPlayerView::idPlayerView()
 	
 	ClearEffects();
 
-	testFont = renderSystem->RegisterFont2("fonts/TooMuchInk.ttf", 32);
+	testFont = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-BlackItalic.ttf", 32);
 
 	auto man = renderSystem->GetTextureBufferManager();
 

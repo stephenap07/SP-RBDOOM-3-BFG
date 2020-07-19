@@ -1554,8 +1554,8 @@ void idCommonLocal::Shutdown()
 	printf( "Stop();\n" );
 	Stop();
 
-	gameThread.StopThread();
-	gameThread.RunGameAndDraw(0, userCmdMgr, IsClient(), gameFrame);
+	//gameThread.StopThread();
+	//gameThread.RunGameAndDraw(0, userCmdMgr, IsClient(), gameFrame);
 	
 	printf( "CleanupShell();\n" );
 	CleanupShell();
@@ -1664,7 +1664,7 @@ void idCommonLocal::Shutdown()
 	printf( "errorList.Clear();\n" );
 	errorList.Clear();
 
-	gameThread.WaitForThread();
+	//gameThread.WaitForThread();
 	
 	// shutdown idLib
 	printf( "idLib::ShutDown();\n" );

@@ -846,6 +846,8 @@ public:
 	class idGuiModel* 		guiModel;
 	
 	idList<idFont*, TAG_FONT>		fonts;
+
+	idList<TrueTypeHandle, TAG_FONT> newFonts;
 	
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
 	

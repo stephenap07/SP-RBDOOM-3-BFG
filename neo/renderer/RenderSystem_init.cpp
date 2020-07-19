@@ -2286,6 +2286,13 @@ idRenderSystemLocal::Shutdown
 void idRenderSystemLocal::Shutdown()
 {
 	common->Printf( "idRenderSystem::Shutdown()\n" );
+
+	for (int i = 0; i < newFonts.Num(); i++)
+	{
+		fontManager->destroyTtf(newFonts[i]);
+	}
+
+	newFonts.Clear();
 	
 	fonts.DeleteContents();
 
@@ -2460,12 +2467,11 @@ FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName, int aSize)
 	
 	delete fd;
 	auto ttHandle = fontManager->createTtf(buffer.Ptr(), len);
+	newFonts.Append(ttHandle);
 
 	auto handle = fontManager->createFontByPixelSize(ttHandle, 0, aSize);
 
 	fontManager->preloadGlyph(handle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,! \n");
-
-	fontManager->destroyTtf(ttHandle);
 
 	return handle;
 }
