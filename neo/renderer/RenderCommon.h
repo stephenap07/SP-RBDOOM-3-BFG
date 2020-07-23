@@ -749,11 +749,12 @@ public:
 	virtual void			DrawStretchTri( const idVec2& p1, const idVec2& p2, const idVec2& p3, const idVec2& t1, const idVec2& t2, const idVec2& t3, const idMaterial* material );
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE );
 	
-	virtual TextBufferManager* GetTextureBufferManager() { return textBufferManager; }
+	virtual TextBufferManager* GetTextBufferManager() { return textBufferManager; }
 	virtual void			   DrawSmallChar( int x, int y, int ch );
 	virtual void			   DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 	virtual void			   DrawBigChar( int x, int y, int ch );
 	virtual void			   DrawBigStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
+	virtual void			   DrawBigStringExt2(int x, int y, const char* string, const idVec4& setColor, bool forceColor);
 	
 	virtual void			WriteDemoPics();
 	virtual void			WriteEndFrame();
@@ -824,6 +825,7 @@ public:
 	const idMaterial*       fontAtlasMaterial;
 	FontManager*            fontManager;
 	TextBufferManager*      textBufferManager;
+	FontHandle              defaultFont;
 	idImage* 				testImage;
 	idCinematic* 			testVideo;
 	int						testVideoStartTime;
@@ -847,7 +849,15 @@ public:
 	
 	idList<idFont*, TAG_FONT>		fonts;
 
-	idList<TrueTypeHandle, TAG_FONT> newFonts;
+	struct NewFontData
+	{
+		TrueTypeHandle ttfHandle;
+		FontHandle fontHandle;
+		int size;
+		idStr name;
+	};
+
+	idList<NewFontData, TAG_FONT> newFonts;
 	
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
 	

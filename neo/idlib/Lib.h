@@ -331,6 +331,7 @@ public:
 #include "Swap.h"
 #include "Callback.h"
 #include "ParallelJobList.h"
+#include "HandleManager.h"
 
 #include "SoftwareCache.h"
 

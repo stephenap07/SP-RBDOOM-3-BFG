@@ -2238,6 +2238,8 @@ void idRenderSystemLocal::Init()
 	fontManager = new FontManager(512);
 
 	textBufferManager = new TextBufferManager(fontManager);
+
+	defaultFont = RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 24);
 	
 	// build brightness translation tables
 	R_SetColorMappings();
@@ -2287,9 +2289,11 @@ void idRenderSystemLocal::Shutdown()
 {
 	common->Printf( "idRenderSystem::Shutdown()\n" );
 
+	fontManager->destroyFont(defaultFont);
+
 	for (int i = 0; i < newFonts.Num(); i++)
 	{
-		fontManager->destroyTtf(newFonts[i]);
+		fontManager->destroyTtf(newFonts[i].ttfHandle);
 	}
 
 	newFonts.Clear();
@@ -2449,6 +2453,20 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 
 FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName, int aSize)
 {
+	// Look for an already loaded font.
+	idStrStatic< MAX_OSPATH > baseFontName = fontName;
+	baseFontName.Replace("fonts/", "");
+
+	for (int i = 0; i < newFonts.Num(); i++)
+	{
+		if (idStr::Icmp(newFonts[i].name, baseFontName) == 0 &&
+			newFonts[i].size == aSize)
+		{
+			// Found one. Return it.
+			return newFonts[i].fontHandle;
+		}
+	}
+
 	idFile* fd = fileSystem->OpenFileRead(fontName);
 	if (fd == nullptr)
 	{
@@ -2461,19 +2479,23 @@ FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName, int aSize)
 
 	if ((int)fd->Read(buffer.Ptr(), len) != len)
 	{
+		// Couldn't open this file. Cleanup and return an invalid handle.
 		delete fd;
 		return FontHandle();
 	}
 	
 	delete fd;
-	auto ttHandle = fontManager->createTtf(buffer.Ptr(), len);
-	newFonts.Append(ttHandle);
 
-	auto handle = fontManager->createFontByPixelSize(ttHandle, 0, aSize);
+	NewFontData data;
+	data.ttfHandle = fontManager->createTtf(buffer.Ptr(), len);
+	data.fontHandle = fontManager->createFontByPixelSize(data.ttfHandle, 0, aSize);
+	data.name = baseFontName;
+	data.size = aSize;
+	newFonts.Append(data);
 
-	fontManager->preloadGlyph(handle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,! \n");
+	fontManager->preloadGlyph(data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,! \n");
 
-	return handle;
+	return data.fontHandle;
 }
 
 void idRenderSystemLocal::FreeFont(FontHandle aHandle)

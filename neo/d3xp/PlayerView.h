@@ -481,7 +481,6 @@ public:
 	renderView_t		view;
 
 	FontHandle          testFont;
-	TextBufferHandle    textHandle;
 	
 	FullscreenFXManager*	fxManager;
 	

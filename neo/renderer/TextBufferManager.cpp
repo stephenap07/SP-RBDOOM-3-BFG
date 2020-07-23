@@ -5,7 +5,6 @@
 #include <stddef.h> // offsetof
 #include <wchar.h>  // wcslen
 
-#include "TextBufferManager.h"
 #include "CubeAtlas.h"
 #include "GuiModel.h"
 
@@ -559,139 +558,15 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 		return;
 	}
 
-	idDrawVert* verts = tr_guiModel->AllocTris(bc.textBuffer->getVertexCount(), bc.textBuffer->getIndexBuffer(), bc.textBuffer->getIndexCount(), bc.textBuffer->getMaterial(), 0, STEREO_DEPTH_TYPE_NONE);
+	idDrawVert* verts = tr_guiModel->AllocTris(
+		bc.textBuffer->getVertexCount(),
+		bc.textBuffer->getIndexBuffer(),
+		bc.textBuffer->getIndexCount(),
+		bc.textBuffer->getMaterial(),
+		0,
+		STEREO_DEPTH_TYPE_NONE);
+
 	WriteDrawVerts16(verts, (idDrawVert*)bc.textBuffer->getVertexBuffer(), bc.textBuffer->getVertexCount());
-
-	/*
-
-	renderSystem->DrawStretchPic(
-		bc.textBuffer->
-		renderSystem->GetVirtualWidth() / 4.0f, renderSystem->GetVirtualHeight() / 4.0f, renderSystem->GetVirtualWidth() / 2.0f, renderSystem->GetVirtualHeight() / 2.0f,
-		-1.0f, 1.0f, 1.0f, -1.0f,
-		fontMaterial,
-		0.0f);
-
-	bgfx::setTexture(0, s_texColor, m_fontManager->getAtlas()->getTextureHandle());
-
-	bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;
-	switch (bc.fontType)
-	{
-	case FONT_TYPE_ALPHA:
-		program = m_basicProgram;
-		bgfx::setState(0
-			| BGFX_STATE_WRITE_RGB
-			| BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
-		);
-		break;
-
-	case FONT_TYPE_DISTANCE:
-		program = m_distanceProgram;
-		bgfx::setState(0
-			| BGFX_STATE_WRITE_RGB
-			| BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
-		);
-		break;
-
-	case FONT_TYPE_DISTANCE_SUBPIXEL:
-		program = m_distanceSubpixelProgram;
-		bgfx::setState(0
-			| BGFX_STATE_WRITE_RGB
-			| BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_SRC_COLOR)
-			, bc.textBuffer->getTextColor()
-		);
-		break;
-	}
-
-	switch (bc.bufferType)
-	{
-	case BufferType::Static:
-	{
-		bgfx::IndexBufferHandle ibh;
-		bgfx::VertexBufferHandle vbh;
-
-		if (bgfx::kInvalidHandle == bc.vertexBufferHandleIdx)
-		{
-			ibh = bgfx::createIndexBuffer(
-				bgfx::copy(bc.textBuffer->getIndexBuffer(), indexSize)
-			);
-
-			vbh = bgfx::createVertexBuffer(
-				bgfx::copy(bc.textBuffer->getVertexBuffer(), vertexSize)
-				, m_vertexLayout
-			);
-
-			bc.vertexBufferHandleIdx = vbh.idx;
-			bc.indexBufferHandleIdx = ibh.idx;
-		}
-		else
-		{
-			vbh.idx = bc.vertexBufferHandleIdx;
-			ibh.idx = bc.indexBufferHandleIdx;
-		}
-
-		bgfx::setVertexBuffer(0, vbh, 0, bc.textBuffer->getVertexCount());
-		bgfx::setIndexBuffer(ibh, 0, bc.textBuffer->getIndexCount());
-	}
-	break;
-
-	case BufferType::Dynamic:
-	{
-		bgfx::DynamicIndexBufferHandle ibh;
-		bgfx::DynamicVertexBufferHandle vbh;
-
-		if (bgfx::kInvalidHandle == bc.vertexBufferHandleIdx)
-		{
-			ibh = bgfx::createDynamicIndexBuffer(
-				bgfx::copy(bc.textBuffer->getIndexBuffer(), indexSize)
-			);
-
-			vbh = bgfx::createDynamicVertexBuffer(
-				bgfx::copy(bc.textBuffer->getVertexBuffer(), vertexSize)
-				, m_vertexLayout
-			);
-
-			bc.indexBufferHandleIdx = ibh.idx;
-			bc.vertexBufferHandleIdx = vbh.idx;
-		}
-		else
-		{
-			ibh.idx = bc.indexBufferHandleIdx;
-			vbh.idx = bc.vertexBufferHandleIdx;
-
-			bgfx::update(
-				ibh
-				, 0
-				, bgfx::copy(bc.textBuffer->getIndexBuffer(), indexSize)
-			);
-
-			bgfx::update(
-				vbh
-				, 0
-				, bgfx::copy(bc.textBuffer->getVertexBuffer(), vertexSize)
-			);
-		}
-
-		bgfx::setVertexBuffer(0, vbh, 0, bc.textBuffer->getVertexCount());
-		bgfx::setIndexBuffer(ibh, 0, bc.textBuffer->getIndexCount());
-	}
-	break;
-
-	case BufferType::Transient:
-	{
-		bgfx::TransientIndexBuffer tib;
-		bgfx::TransientVertexBuffer tvb;
-		bgfx::allocTransientIndexBuffer(&tib, bc.textBuffer->getIndexCount());
-		bgfx::allocTransientVertexBuffer(&tvb, bc.textBuffer->getVertexCount(), m_vertexLayout);
-		bx::memCopy(tib.data, bc.textBuffer->getIndexBuffer(), indexSize);
-		bx::memCopy(tvb.data, bc.textBuffer->getVertexBuffer(), vertexSize);
-		bgfx::setVertexBuffer(0, &tvb, 0, bc.textBuffer->getVertexCount());
-		bgfx::setIndexBuffer(&tib, 0, bc.textBuffer->getIndexCount());
-	}
-	break;
-	}
-
-	bgfx::submit(_id, program, _depth);
-	*/
 }
 
 void TextBufferManager::setStyle(TextBufferHandle _handle, uint32_t _flags)

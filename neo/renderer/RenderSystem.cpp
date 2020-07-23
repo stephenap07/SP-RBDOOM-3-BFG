@@ -33,6 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 
+
 idRenderSystemLocal	tr;
 idRenderSystem* renderSystem = &tr;
 
@@ -591,6 +592,29 @@ void idRenderSystemLocal::DrawBigStringExt( int x, int y, const char* string, co
 		s++;
 	}
 	SetColor( colorWhite );
+}
+
+/*
+==================
+idRenderSystemLocal::DrawBigStringExt
+
+Draws a multi-colored string with a drop shadow, optionally forcing
+to a fixed color.
+
+Coordinates are at 640 by 480 virtual resolution
+==================
+*/
+void idRenderSystemLocal::DrawBigStringExt2(int x, int y, const char* string, const idVec4& setColor, bool forceColor)
+{
+	auto man = GetTextBufferManager();
+
+	auto textHandle = man->createTextBuffer(0, BufferType::Dynamic);
+
+	man->setPenPosition(textHandle, x, y);
+	man->setTextColor(textHandle, 0xFFFFFFFF);
+	man->appendText(textHandle, defaultFont, string);
+	man->submitTextBuffer(textHandle);
+	man->destroyTextBuffer(textHandle);
 }
 
 //======================================================================================

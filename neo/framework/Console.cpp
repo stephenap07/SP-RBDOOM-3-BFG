@@ -214,7 +214,7 @@ float idConsoleLocal::DrawFPS( float y )
 	static int previousTimes[FPS_FRAMES];
 	static int index;
 	static int previous;
-	
+
 	// don't use serverTime, because that will be drifting to
 	// correct for internet lag changes, timescales, timedemos, etc
 	int t = Sys_Milliseconds();
@@ -241,7 +241,9 @@ float idConsoleLocal::DrawFPS( float y )
 		const char* s = va( "%ifps", fps );
 		int w = strlen( s ) * BIGCHAR_WIDTH;
 		
-		renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
+		renderSystem->DrawBigStringExt2(LOCALSAFE_RIGHT - w, idMath::Ftoi(y) + 2, s, colorWhite, true);
+
+		//renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
 	}
 	
 	y += BIGCHAR_HEIGHT + 4;
@@ -303,7 +305,7 @@ float idConsoleLocal::DrawFPS( float y )
 	timeStr.Format( "%sGPU: %4.1f", rendererGPUTime > maxTime * 1000 ? S_COLOR_RED : "", rendererGPUTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
 	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
-	
+
 	return y + BIGCHAR_HEIGHT + 4;
 }
 

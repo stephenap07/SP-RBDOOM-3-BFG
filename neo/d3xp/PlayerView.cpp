@@ -74,18 +74,7 @@ idPlayerView::idPlayerView()
 	
 	ClearEffects();
 
-	testFont = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-BlackItalic.ttf", 32);
-
-	auto man = renderSystem->GetTextureBufferManager();
-
-	textHandle = man->createTextBuffer(0, BufferType::Static);
-
-	man->setPenPosition(textHandle, 10.0f, 1.0f);
-	man->setTextColor(textHandle, 0xFF0000FF);
-	man->appendText(textHandle, testFont, testString.GetString());
-	man->setTextColor(textHandle, 0x00FF00FF);
-	man->appendText(textHandle, testFont, " OKAY....\nMcGee\nIs Bad");
-	man->appendText(textHandle, testFont, "\nAnother line?");
+	testFont = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 16);
 }
 
 /*
@@ -95,8 +84,8 @@ idPlayerView::~idPlayerView
 */
 idPlayerView::~idPlayerView()
 {
-	renderSystem->GetTextureBufferManager()->destroyTextBuffer(textHandle);
 	renderSystem->FreeFont(testFont);
+	
 	delete fxManager;
 }
 /*
@@ -590,8 +579,19 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 		}
 	}
 
+	auto man = renderSystem->GetTextBufferManager();
 
-	renderSystem->GetTextureBufferManager()->submitTextBuffer(textHandle);
+	auto textHandle = man->createTextBuffer(0, BufferType::Dynamic);
+
+	man->setPenPosition(textHandle, 10.0f, 300);
+	man->setTextColor(textHandle, 0xFF0000FF);
+	man->appendText(textHandle, testFont, testString.GetString());
+	man->setTextColor(textHandle, 0x00FF00FF);
+	man->setBackgroundColor(textHandle, 0xFFFFFFFF);
+	man->appendText(textHandle, testFont, " OKAY....\nMcGee\nIs Bad");
+	man->appendText(textHandle, testFont, "\nAnother line?");
+	man->submitTextBuffer(textHandle);
+	man->destroyTextBuffer(textHandle);
 }
 
 
