@@ -36,6 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../sound/sound.h"
 
+
 // RB begin
 #if defined(USE_DOOMCLASSIC)
 #include "../../doomclassic/doom/doomlib.h"
@@ -1314,6 +1315,8 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		
 		// initialize the renderSystem data structures
 		renderSystem->Init();
+
+		console->InitView();
 		
 		whiteMaterial = declManager->FindMaterial( "_white" );
 		
@@ -1431,7 +1434,10 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		guiMainMenu = uiManager->FindGui("guis/mainmenu.gui", true, false, true);
 		guiLoading = uiManager->FindGui("guis/map/loading.gui", true, false, true);
-		SetGui(guiMainMenu);
+		pauseMenu = uiManager->FindGui("guis/pausemenu.gui", true, false, true);
+		//SetGui(guiMainMenu);
+
+		//idSWF testGui("test", soundWorld);
 
 		while( showSplash && (Sys_Milliseconds() - legalStartTime < legalMinTime) )
 		{
@@ -1505,6 +1511,8 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 void idCommonLocal::SetGui(idUserInterface* aGui)
 {
+	return; // TODO(Stephen): Remove this early return ifwe want to do something with this.
+
 	if (!aGui)
 	{
 		guiActive = aGui;
@@ -1611,6 +1619,9 @@ void idCommonLocal::Shutdown()
 	// shutdown the decl manager
 	printf( "declManager->Shutdown();\n" );
 	declManager->Shutdown();
+
+	// shutdown the console render view
+	console->ShutdownView();
 	
 	// shut down the renderSystem
 	printf( "renderSystem->Shutdown();\n" );
@@ -1686,17 +1697,16 @@ void idCommonLocal::CreateMainMenu()
 		soundSystem->BeginLevelLoad();
 		uiManager->BeginLevelLoad();
 
-		guiActive = nullptr;
+		//guiActive = nullptr;
 		
 		// create main inside an "empty" game level load - so assets get
 		// purged automagically when we transition to a "real" map
 
 		// TODO(STEPHEN): Add old GUI stuff here.
-		/*
+		
 		game->Shell_CreateMenu( false );
 		game->Shell_Show( true );
 		game->Shell_SyncWithSession();
-		*/
 		
 		// load
 		renderSystem->EndLevelLoad();
@@ -1837,7 +1847,8 @@ bool idCommonLocal::ProcessEvent( const sysEvent_t* event )
 			}
 			else
 			{
-				if( !guiActive )
+				if (!game->Shell_IsActive())
+				//if( !guiActive )
 				{
 					// menus / etc
 					if( MenuEvent( event ) )
