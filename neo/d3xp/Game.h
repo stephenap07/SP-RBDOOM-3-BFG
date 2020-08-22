@@ -55,7 +55,7 @@ struct gameReturn_t
 	
 	}
 	
-	char		sessionCommand[MAX_STRING_CHARS];	// "map", "disconnect", "victory", etc
+	char		sessionCommand[MAX_STRING_CHARS];	// "map", `"disconnect", "victory", etc
 	bool		syncNextGameFrame;					// used when cinematics are skipped to prevent session from simulating several game frames to
 	// keep the game time in sync with real time
 	int			vibrationLow;

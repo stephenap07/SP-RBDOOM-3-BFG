@@ -1,0 +1,12 @@
+textures/toiletpaper
+{
+    noselfShadow
+    qer_editorimage textures/toilet_paper/toilet_paper_Diffuse
+    diffusemap      textures/toilet_paper/toilet_paper_Diffuse
+    specularmap     textures/toilet_paper/toilet_paper_Specular
+
+    {
+        blend bumpmap
+        map addnormals( textures/toilet_paper/toilet_paper_Normal.tga, heightmap(textures/toilet_paper/toilet_paper_Height.tga, 6))
+    }
+}

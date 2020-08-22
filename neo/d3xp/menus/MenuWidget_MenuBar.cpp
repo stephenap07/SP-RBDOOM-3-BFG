@@ -85,7 +85,7 @@ void idMenuWidget_MenuBar::Update()
 	}
 	
 	// 640 is half the size of our flash files width
-	float xPos = 640.0f - ( totalWidth / 2.0f );
+	float xPos = SCREEN_WIDTH - ( totalWidth / 2.0f );
 	GetSprite()->SetXPos( xPos );
 	
 	idSWFSpriteInstance* backing = GetSprite()->GetScriptObject()->GetNestedSprite( "backing" );

@@ -1,0 +1,12 @@
+mapDef level1
+{
+    "name"            "Steve's Level"
+    "devname"         "Level1"
+    "desc"            "This is a test map and I'm using this for testing. Thanks."
+    "subTitle"        "Test Map"
+    "singleplayer"    "1"
+    "size0"           "208322592"
+    "size1"           "208322592"
+    "size2"           "325950691"
+    "size3"           "470025492"
+}

@@ -3,6 +3,8 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -427,7 +429,7 @@ void idSWFSpriteInstance::RunTo( int targetFrame )
 		targetFrame = sprite->frameOffsets.Num() - 1;
 	}
 	
-	// actions.Clear();
+	//actions.Clear();
 	
 	uint32 firstActionCommand = sprite->frameOffsets[ targetFrame - 1 ];
 	
@@ -468,11 +470,9 @@ idSWFSpriteInstance::DoAction
 */
 void idSWFSpriteInstance::DoAction( idSWFBitStream& bitstream )
 {
-#if 1
 	swfAction_t& action = actions.Alloc();
 	action.data = bitstream.ReadData( bitstream.Length() );
 	action.dataLength = bitstream.Length();
-#endif
 }
 
 /*
@@ -679,7 +679,7 @@ void idSWFSpriteInstance::PlayFrame( const idSWFParmList& parms )
 	}
 	else
 	{
-		idLib::Warning( "gotoAndPlay: expected 1 parameter" );
+		idLib::Warning( "gotoAndPlay: expected 1 paramater" );
 	}
 }
 
@@ -704,7 +704,7 @@ void idSWFSpriteInstance::StopFrame( const idSWFParmList& parms )
 	}
 	else
 	{
-		idLib::Warning( "gotoAndStop: expected 1 parameter" );
+		idLib::Warning( "gotoAndStop: expected 1 paramater" );
 	}
 }
 
@@ -1163,7 +1163,7 @@ SWF_SPRITE_FUNCTION_DEFINE( gotoAndPlay )
 	}
 	else
 	{
-		idLib::Warning( "gotoAndPlay: expected 1 parameter" );
+		idLib::Warning( "gotoAndPlay: expected 1 paramater" );
 	}
 	return idSWFScriptVar();
 }
@@ -1187,7 +1187,7 @@ SWF_SPRITE_FUNCTION_DEFINE( gotoAndStop )
 	}
 	else
 	{
-		idLib::Warning( "gotoAndStop: expected 1 parameter" );
+		idLib::Warning( "gotoAndStop: expected 1 paramater" );
 	}
 	return idSWFScriptVar();
 }

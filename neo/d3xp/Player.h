@@ -351,6 +351,8 @@ public:
 	int						weapon_soulcube;
 	int						weapon_pda;
 	int						weapon_fists;
+	int                     weapon_unarmed;
+	int                     weapon_arm2;
 	int						weapon_flashlight;
 	int						weapon_chainsaw;
 	int						weapon_bloodstone;

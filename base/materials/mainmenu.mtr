@@ -1,0 +1,4 @@
+textures/mainmenu
+{
+    "guisurf" "guis/mainmenu.gui"
+}

@@ -1,0 +1,9 @@
+textures/weapons/arm2/arm2
+{
+    diffusemap "textures/weapons/arm2/arm2.tga"
+}
+
+textures/items/keycard
+{
+    diffusemap "textures/items/keycard.tga"
+}

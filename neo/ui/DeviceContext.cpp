@@ -55,8 +55,7 @@ void idDeviceContext::Init()
 	yOffset = 0.0f;
 	whiteImage = declManager->FindMaterial( "guis/assets/white.tga" );
 	whiteImage->SetSort( SS_GUI );
-	//activeFont = renderSystem->RegisterFont( "" );
-	activeFont = nullptr;
+	activeFont = renderSystem->RegisterFont( "" );
 	colorPurple = idVec4( 1, 0, 1, 1 );
 	colorOrange = idVec4( 1, 1, 0, 1 );
 	colorYellow = idVec4( 0, 1, 1, 1 );

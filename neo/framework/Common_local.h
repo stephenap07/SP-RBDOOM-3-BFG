@@ -660,6 +660,7 @@ private:
 	idUserInterface* guiLoading = nullptr;
 	idUserInterface* guiActive = nullptr;
 	idUserInterface* guiMainMenu = nullptr;
+	idUserInterface* pauseMenu = nullptr;
 };
 
 extern idCommonLocal commonLocal;

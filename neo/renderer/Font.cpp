@@ -29,7 +29,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #include "Font.h"
 
-const char* DEFAULT_FONT = "Arial_Narrow";
+const char* DEFAULT_FONT = "orbitron_medium";
 
 static const float old_scale2 = 0.6f;
 static const float old_scale1 = 0.3f;

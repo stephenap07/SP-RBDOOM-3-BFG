@@ -3,6 +3,8 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -136,6 +138,9 @@ void idSWFTextInstance::Init( idSWFEditText* _editText, idSWF* _swf )
 	useStroke = false;
 	strokeStrength = 1.0f;
 	strokeWeight = swf_textStrokeSize.GetFloat();
+	strokeColorx = 0.0f;
+	strokeColory = 0.0f;
+	strokeColorz = 0.0f;
 	
 	scriptObject.SetPrototype( &textInstanceScriptObjectPrototype );
 	scriptObject.SetText( this );
@@ -706,15 +711,41 @@ void idSWFTextInstance::SubtitleCleanup()
 idSWFTextInstance::SetStrokeInfo
 ==============================================
 */
-void idSWFTextInstance::SetStrokeInfo( bool use, float strength, float weight )
+void idSWFTextInstance::SetStrokeInfo( bool use, float strength, float weight, float colorx, float colory, float colorz )
 {
 	useStroke = use;
 	if( use )
 	{
 		strokeWeight = weight;
 		strokeStrength = strength;
+		strokeColorx = colorx;
+		strokeColory = colory;
+		strokeColorz = colorz;
 	}
 }
+
+// ##################################### SR
+
+/*
+==============================================
+idSWFTextInstance::SetStrokeInfo2
+==============================================
+*/
+/*
+void idSWFTextInstance::SetStrokeInfo2( bool use, float strength, float weight, idVec4 color )
+{
+	useStroke = use;
+	if( use )
+	{
+		strokeWeight = weight;
+		strokeStrength = strength;
+		strokeColor = color;
+	}
+}
+*/
+// #################################### END SR
+
+
 
 /*
 ==============================================
@@ -1033,6 +1064,11 @@ idSWFScriptObject_TextInstancePrototype::idSWFScriptObject_TextInstancePrototype
 	SWF_TEXT_NATIVE_VAR_SET( _stroke );
 	SWF_TEXT_NATIVE_VAR_SET( _strokeStrength );
 	SWF_TEXT_NATIVE_VAR_SET( _strokeWeight );
+	
+	SWF_TEXT_NATIVE_VAR_SET( _strokeColorx );	// ################# SR
+	SWF_TEXT_NATIVE_VAR_SET( _strokeColory );	// ################# SR
+	SWF_TEXT_NATIVE_VAR_SET( _strokeColorz );	// ################# SR
+	
 	SWF_TEXT_NATIVE_VAR_SET( variable );
 	SWF_TEXT_NATIVE_VAR_SET( _alpha );
 	SWF_TEXT_NATIVE_VAR_SET( textColor );
@@ -1140,6 +1176,42 @@ SWF_TEXT_NATIVE_VAR_DEFINE_SET( _strokeWeight )
 	SWF_TEXT_PTHIS_SET( "_strokeWeight" );
 	pThis->strokeWeight = value.ToFloat();
 }
+
+// ######################## SR
+
+SWF_TEXT_NATIVE_VAR_DEFINE_GET( _strokeColorx )
+{
+	SWF_TEXT_PTHIS_GET( "_strokeColorx" );
+	return pThis->strokeColorx;
+}
+SWF_TEXT_NATIVE_VAR_DEFINE_SET( _strokeColorx )
+{
+	SWF_TEXT_PTHIS_SET( "_strokeColorx" );
+	pThis->strokeColorx = value.ToFloat();
+}
+SWF_TEXT_NATIVE_VAR_DEFINE_GET( _strokeColory )
+{
+	SWF_TEXT_PTHIS_GET( "_strokeColory" );
+	return pThis->strokeColory;
+}
+SWF_TEXT_NATIVE_VAR_DEFINE_SET( _strokeColory )
+{
+	SWF_TEXT_PTHIS_SET( "_strokeColory" );
+	pThis->strokeColory = value.ToFloat();
+}
+SWF_TEXT_NATIVE_VAR_DEFINE_GET( _strokeColorz )
+{
+	SWF_TEXT_PTHIS_GET( "_strokeColorz" );
+	return pThis->strokeColorz;
+}
+SWF_TEXT_NATIVE_VAR_DEFINE_SET( _strokeColorz )
+{
+	SWF_TEXT_PTHIS_SET( "_strokeColorz" );
+	pThis->strokeColorz = value.ToFloat();
+}
+
+// ######################## END SR
+
 SWF_TEXT_NATIVE_VAR_DEFINE_GET( variable )
 {
 	SWF_TEXT_PTHIS_GET( "variable" );

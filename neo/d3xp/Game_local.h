@@ -643,7 +643,7 @@ private:
 	
 	idList<idAAS*>			aasList;				// area system
 	
-	//idMenuHandler_Shell* 	shellHandler;
+	idMenuHandler_Shell* 	shellHandler;
 	
 	idStrList				aasNames;
 	

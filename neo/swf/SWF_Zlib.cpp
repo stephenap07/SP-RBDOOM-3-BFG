@@ -3,7 +3,8 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2015 Robert Beckebans
+Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -28,7 +29,7 @@ If you have questions concerning this license or the applicable additional terms
 */
 #pragma hdrstop
 #include "precompiled.h"
-#include <zlib.h>
+#include "../libs/zlib/zlib.h"
 
 /*
 ========================
@@ -62,40 +63,3 @@ bool idSWF::Inflate( const byte* input, int inputSize, byte* output, int outputS
 	
 	return success;
 }
-
-// RB begin
-bool idSWF::Deflate( const byte* input, int inputSize, byte* output, int& outputSize )
-{
-	struct local_swf_alloc_t
-	{
-		static void* zalloc( void* opaque, uint32 items, uint32 size )
-		{
-			return Mem_Alloc( items * size, TAG_SWF );
-		}
-		static void zfree( void* opaque, void* ptr )
-		{
-			Mem_Free( ptr );
-		}
-	};
-	z_stream stream;
-	memset( &stream, 0, sizeof( stream ) );
-	stream.next_in = ( Bytef* )input;
-	stream.avail_in = inputSize;
-	stream.next_out = ( Bytef* )output;
-	stream.avail_out = outputSize;
-	stream.zalloc = local_swf_alloc_t::zalloc;
-	stream.zfree = local_swf_alloc_t::zfree;
-	
-	int err = deflateInit( &stream, Z_DEFAULT_COMPRESSION );
-	if( err != Z_OK )
-		return false;
-		
-	err = deflate( &stream, Z_FINISH );
-	
-	outputSize = stream.total_out;
-	
-	deflateEnd( &stream );
-	
-	return ( err == Z_STREAM_END );
-}
-// RB end

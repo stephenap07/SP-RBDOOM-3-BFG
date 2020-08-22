@@ -52,7 +52,6 @@ idPlayerView::idPlayerView()
 	irGogglesMaterial = declManager->FindMaterial( "textures/decals/irblend" );
 	bloodSprayMaterial = declManager->FindMaterial( "textures/decals/bloodspray" );
 	bfgMaterial = declManager->FindMaterial( "textures/decals/bfgvision" );
-	fontMaterial = declManager->FindMaterial("_fontAtlas");
 	bfgVision = false;
 	dvFinishTime = 0;
 	kickFinishTime = 0;
@@ -73,8 +72,6 @@ idPlayerView::idPlayerView()
 	}
 	
 	ClearEffects();
-
-	testFont = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 16);
 }
 
 /*
@@ -84,8 +81,6 @@ idPlayerView::~idPlayerView
 */
 idPlayerView::~idPlayerView()
 {
-	renderSystem->FreeFont(testFont);
-	
 	delete fxManager;
 }
 /*
@@ -578,20 +573,6 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 			renderSystem->DrawStretchPic( 0.0f, 0.0f, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0.0f, 0.0f, 1.0f, 1.0f, mtr );
 		}
 	}
-
-	auto man = renderSystem->GetTextBufferManager();
-
-	auto textHandle = man->createTextBuffer(0, BufferType::Dynamic);
-
-	man->setPenPosition(textHandle, 10.0f, 300);
-	man->setTextColor(textHandle, 0xFF0000FF);
-	man->appendText(textHandle, testFont, testString.GetString());
-	man->setTextColor(textHandle, 0x00FF00FF);
-	man->setBackgroundColor(textHandle, 0xFFFFFFFF);
-	man->appendText(textHandle, testFont, " OKAY....\nMcGee\nIs Bad");
-	man->appendText(textHandle, testFont, "\nAnother line?");
-	man->submitTextBuffer(textHandle);
-	man->destroyTextBuffer(textHandle);
 }
 
 

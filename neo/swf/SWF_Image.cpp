@@ -3,7 +3,8 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2015 Robert Beckebans
+Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -30,9 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #include "../renderer/Image.h"
 //#include "../../renderer/ImageTools/ImageProcess.h"
-#include <jpeglib.h>
-
-idCVar swf_useChannelScale( "swf_useChannelScale", "0", CVAR_BOOL, "compress texture atlas colors" );
+#include "../libs/jpeg-6/jpeglib.h"
 
 /*
 ========================
@@ -272,16 +271,12 @@ void idSWF::WriteSwfImageAtlas( const char* filename )
 		// a bias as well as a scale to enable us to take advantage of the
 		// min values as well as the max, but very few gui images don't go to black,
 		// and just doing a scale avoids changing more code.
-		
-		if( swf_useChannelScale.GetBool() )
+		for( int j = 0; j < pack.trueSize.x * pack.trueSize.y * 4; j++ )
 		{
-			for( int j = 0; j < pack.trueSize.x * pack.trueSize.y * 4; j++ )
-			{
-				int	v = pack.imageData[ j ];
-				int	x = j & 3;
-				v = v * 255 / maxV[x];
-				pack.imageData[ j ] = v;
-			}
+			int	v = pack.imageData[ j ];
+			int	x = j & 3;
+			v = v * 255 / maxV[x];
+			pack.imageData[ j ] = v;
 		}
 		
 		assert( ( x + blockWidth ) * 4 <= atlasWidth );
@@ -325,13 +320,9 @@ void idSWF::WriteSwfImageAtlas( const char* filename )
 		entry->imageSize.y = pack.trueSize.y;
 		entry->imageAtlasOffset.x = x + 1;
 		entry->imageAtlasOffset.y = y + 1;
-		
-		if( swf_useChannelScale.GetBool() )
+		for( int i = 0; i < 4; i++ )
 		{
-			for( int i = 0; i < 4; i++ )
-			{
-				entry->channelScale[i] = maxV[i] / 255.0f;
-			}
+			entry->channelScale[i] = maxV[i] / 255.0f;
 		}
 		
 		Mem_Free( pack.imageData );
@@ -339,7 +330,7 @@ void idSWF::WriteSwfImageAtlas( const char* filename )
 	}
 	
 	// the TGA is only for examination during development
-	R_WritePNG( filename, swfAtlas.Ptr(), 4, atlasWidth, atlasHeight, false, "fs_basepath" );
+	R_WriteTGA( filename, swfAtlas.Ptr(), atlasWidth, atlasHeight, false, "fs_basepath" );
 }
 
 /*

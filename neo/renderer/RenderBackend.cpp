@@ -3822,6 +3822,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 							{
 								if (pStage->texture.isCubeMap)
 								{
+									// SP: Added a cube map font texture atlas for rendering character glyphs.
 									renderProgManager.BindShader_TextureCubeVertexColor_sRGB();
 								}
 								else
@@ -5276,7 +5277,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	DrawFlickerBox();
 	
 	// RB
-	//ImGuiHook::Render();
+	ImGuiHook::Render();
 	
 	GL_EndFrame();
 	

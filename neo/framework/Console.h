@@ -81,8 +81,10 @@ public:
 	
 	// some console commands, like timeDemo, will force the console closed before they start
 	virtual void	Close() = 0;
-	
+
+	virtual void    InitView() = 0;
 	virtual void	Draw( bool forceFullScreen ) = 0;
+	virtual void    ShutdownView() = 0;
 	virtual void	Print( const char* text ) = 0;
 	
 	virtual void	PrintOverlay( idOverlayHandle& handle, justify_t justify, VERIFY_FORMAT_STRING const char* text, ... ) = 0;

@@ -359,7 +359,16 @@ void idWeapon::Save( idSaveGame* savefile ) const
 	
 	savefile->WriteVec3( pushVelocity );
 	
-	savefile->WriteString( weaponDef->GetName() );
+	// TODO(Stephen): Figure out why weaponDef is null.
+	if (!weaponDef)
+	{
+		savefile->WriteString("");
+	}
+	else
+	{
+		savefile->WriteString(weaponDef->GetName());
+	}
+
 	savefile->WriteFloat( meleeDistance );
 	savefile->WriteString( meleeDefName );
 	savefile->WriteInt( brassDelay );

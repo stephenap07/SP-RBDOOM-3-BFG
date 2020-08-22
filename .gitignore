@@ -37,3 +37,7 @@ neo/.kdev4
 neo/neo.kdev4
 /imgui.ini
 *.swp
+*.swo
+/base/generated
+/base/screenshots
+/basedev

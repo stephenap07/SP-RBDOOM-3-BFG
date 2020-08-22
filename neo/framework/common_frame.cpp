@@ -260,7 +260,7 @@ void idCommonLocal::Draw()
 		Sys_Sleep( com_sleepDraw.GetInteger() );
 	}
 	
-	if (insideExecuteMapChange)
+	/*if (insideExecuteMapChange)
 	{
 		if (guiLoading)
 		{
@@ -270,7 +270,13 @@ void idCommonLocal::Draw()
 	else if (guiActive)
 	{
 		guiActive->Redraw(Sys_Milliseconds());
+	}*/
+
+	if (loadGUI != NULL)
+	{
+		loadGUI->Render(renderSystem, Sys_Milliseconds());
 	}
+
 	// RB begin
 #if defined(USE_DOOMCLASSIC)
 	else if( currentGame == DOOM_CLASSIC || currentGame == DOOM2_CLASSIC )

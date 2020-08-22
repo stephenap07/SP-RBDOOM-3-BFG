@@ -275,7 +275,7 @@ void idGameLocal::Clear()
 	eventQueue.Init();
 	savedEventQueue.Init();
 	
-	//shellHandler = NULL;
+	shellHandler = NULL;
 	selectedGroup = 0;
 	portalSkyEnt			= NULL;
 	portalSkyActive			= false;
@@ -340,7 +340,7 @@ void idGameLocal::Init()
 	
 	InitConsoleCommands();
 	
-	//shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
+	shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
 	
 	if( !g_xp_bind_run_once.GetBool() )
 	{
@@ -2850,6 +2850,7 @@ void idGameLocal::RunSingleUserCmd( usercmd_t& cmd, idPlayer& player )
 		const float clientEngineHz = 1000.0f / usercmdMillisecondDelta;
 		
 		// Force to 60 or 120, those are the only values allowed in multiplayer.
+		// TODO(Stephen): Maybe want to change this later to support higher client fps since many monitors allow for 144hz.
 		const float forcedClientEngineHz = ( clientEngineHz < 90.0f ) ? 60.0f : 120.0f;
 		SetScriptFPS( forcedClientEngineHz );
 	}
@@ -5654,9 +5655,9 @@ idGameLocal::Shell_ClearRepeater
 */
 void idGameLocal::Shell_ClearRepeater()
 {
-	//if( shellHandler != NULL )
+	if( shellHandler != NULL )
 	{
-		//shellHandler->ClearWidgetActionRepeater();
+		shellHandler->ClearWidgetActionRepeater();
 	}
 }
 
@@ -5667,9 +5668,9 @@ idGameLocal::Shell_Init
 */
 void idGameLocal::Shell_Init( const char* filename, idSoundWorld* sw )
 {
-	//if( shellHandler != NULL )
+	if( shellHandler != NULL )
 	{
-		//shellHandler->Initialize( filename, sw );
+		shellHandler->Initialize( filename, sw );
 	}
 }
 
@@ -5680,10 +5681,10 @@ idGameLocal::Shell_Init
 */
 void idGameLocal::Shell_Cleanup()
 {
-	//if( shellHandler != NULL )
+	if( shellHandler != NULL )
 	{
-		//delete shellHandler;
-		//shellHandler = NULL;
+		delete shellHandler;
+		shellHandler = NULL;
 	}
 	
 	mpGame.CleanupScoreboard();
@@ -5697,8 +5698,7 @@ idGameLocal::Shell_CreateMenu
 void idGameLocal::Shell_CreateMenu( bool inGame )
 {
 	Shell_ResetMenu();
-	
-	/*
+
 	if( shellHandler != NULL )
 	{
 		if( !inGame )
@@ -5719,7 +5719,6 @@ void idGameLocal::Shell_CreateMenu( bool inGame )
 			}
 		}
 	}
-	*/
 }
 
 /*
@@ -5729,7 +5728,6 @@ idGameLocal::Shell_ClosePause
 */
 void idGameLocal::Shell_ClosePause()
 {
-	/*
 	if( shellHandler != NULL )
 	{
 	
@@ -5745,7 +5743,6 @@ void idGameLocal::Shell_ClosePause()
 		
 		shellHandler->SetNextScreen( SHELL_AREA_INVALID, MENU_TRANSITION_SIMPLE );
 	}
-	*/
 }
 
 /*
@@ -5755,12 +5752,10 @@ idGameLocal::Shell_Show
 */
 void idGameLocal::Shell_Show( bool show )
 {
-	/*
 	if( shellHandler != NULL )
 	{
 		shellHandler->ActivateMenu( show );
 	}
-	*/
 }
 
 /*
@@ -5770,13 +5765,10 @@ idGameLocal::Shell_IsActive
 */
 bool idGameLocal::Shell_IsActive() const
 {
-	/*
 	if( shellHandler != NULL )
 	{
 		return shellHandler->IsActive();
 	}
-	return false;
-	*/
 	return false;
 }
 
@@ -5787,13 +5779,10 @@ idGameLocal::Shell_HandleGuiEvent
 */
 bool idGameLocal::Shell_HandleGuiEvent( const sysEvent_t* sev )
 {
-	/*
 	if( shellHandler != NULL )
 	{
 		return shellHandler->HandleGuiEvent( sev );
 	}
-	return false;
-	*/
 	return false;
 }
 
@@ -5804,12 +5793,10 @@ idGameLocal::Shell_Render
 */
 void idGameLocal::Shell_Render()
 {
-	/*
 	if( shellHandler != NULL )
 	{
 		shellHandler->Update();
 	}
-	*/
 }
 
 /*
@@ -5819,13 +5806,11 @@ idGameLocal::Shell_ResetMenu
 */
 void idGameLocal::Shell_ResetMenu()
 {
-	/*
 	if( shellHandler != NULL )
 	{
 		delete shellHandler;
 		shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
 	}
-	*/
 }
 
 /*
@@ -5835,49 +5820,49 @@ idGameLocal::Shell_SyncWithSession
 */
 void idGameLocal::Shell_SyncWithSession()
 {
-	//if( shellHandler == NULL )
-	//{
-	//	return;
-	//}
-	//switch( session->GetState() )
-	//{
-	//	case idSession::PRESS_START:
-	//		shellHandler->SetShellState( SHELL_STATE_PRESS_START );
-	//		break;
-	//	case idSession::INGAME:
-	//		shellHandler->SetShellState( SHELL_STATE_PAUSED );
-	//		break;
-	//	case idSession::IDLE:
-	//		shellHandler->SetShellState( SHELL_STATE_IDLE );
-	//		break;
-	//	case idSession::PARTY_LOBBY:
-	//		shellHandler->SetShellState( SHELL_STATE_PARTY_LOBBY );
-	//		break;
-	//	case idSession::GAME_LOBBY:
-	//		shellHandler->SetShellState( SHELL_STATE_GAME_LOBBY );
-	//		break;
-	//	case idSession::SEARCHING:
-	//		shellHandler->SetShellState( SHELL_STATE_SEARCHING );
-	//		break;
-	//	case idSession::LOADING:
-	//		shellHandler->SetShellState( SHELL_STATE_LOADING );
-	//		break;
-	//	case idSession::CONNECTING:
-	//		shellHandler->SetShellState( SHELL_STATE_CONNECTING );
-	//		break;
-	//	case idSession::BUSY:
-	//		shellHandler->SetShellState( SHELL_STATE_BUSY );
-	//		break;
-	//}
+	if( shellHandler == NULL )
+	{
+		return;
+	}
+	switch( session->GetState() )
+	{
+		case idSession::PRESS_START:
+			shellHandler->SetShellState( SHELL_STATE_PRESS_START );
+			break;
+		case idSession::INGAME:
+			shellHandler->SetShellState( SHELL_STATE_PAUSED );
+			break;
+		case idSession::IDLE:
+			shellHandler->SetShellState( SHELL_STATE_IDLE );
+			break;
+		case idSession::PARTY_LOBBY:
+			shellHandler->SetShellState( SHELL_STATE_PARTY_LOBBY );
+			break;
+		case idSession::GAME_LOBBY:
+			shellHandler->SetShellState( SHELL_STATE_GAME_LOBBY );
+			break;
+		case idSession::SEARCHING:
+			shellHandler->SetShellState( SHELL_STATE_SEARCHING );
+			break;
+		case idSession::LOADING:
+			shellHandler->SetShellState( SHELL_STATE_LOADING );
+			break;
+		case idSession::CONNECTING:
+			shellHandler->SetShellState( SHELL_STATE_CONNECTING );
+			break;
+		case idSession::BUSY:
+			shellHandler->SetShellState( SHELL_STATE_BUSY );
+			break;
+	}
 }
 
 void idGameLocal::Shell_SetGameComplete()
 {
-	//if( shellHandler != NULL )
-	//{
-	//	shellHandler->SetGameComplete();
-	//	Shell_Show( true );
-	//}
+	if( shellHandler != NULL )
+	{
+		shellHandler->SetGameComplete();
+		Shell_Show( true );
+	}
 }
 
 /*
@@ -5887,10 +5872,10 @@ idGameLocal::Shell_SetState_GameLobby
 */
 void idGameLocal::Shell_UpdateSavedGames()
 {
-	//if( shellHandler != NULL )
-	//{
-	//	shellHandler->UpdateSavedGames();
-	//}
+	if( shellHandler != NULL )
+	{
+		shellHandler->UpdateSavedGames();
+	}
 }
 
 /*
@@ -5900,10 +5885,10 @@ idGameLocal::Shell_SetCanContinue
 */
 void idGameLocal::Shell_SetCanContinue( bool valid )
 {
-	//if( shellHandler != NULL )
-	//{
-	//	shellHandler->SetCanContinue( valid );
-	//}
+	if( shellHandler != NULL )
+	{
+		shellHandler->SetCanContinue( valid );
+	}
 }
 
 /*
@@ -5913,10 +5898,10 @@ idGameLocal::Shell_SetState_GameLobby
 */
 void idGameLocal::Shell_UpdateClientCountdown( int countdown )
 {
-	//if( shellHandler != NULL )
-	//{
-	//	shellHandler->SetTimeRemaining( countdown );
-	//}
+	if( shellHandler != NULL )
+	{
+		shellHandler->SetTimeRemaining( countdown );
+	}
 }
 
 /*
@@ -5926,10 +5911,10 @@ idGameLocal::Shell_SetState_GameLobby
 */
 void idGameLocal::Shell_UpdateLeaderboard( const idLeaderboardCallback* callback )
 {
-	//if( shellHandler != NULL )
-	//{
-	//	shellHandler->UpdateLeaderboard( callback );
-	//}
+	if( shellHandler != NULL )
+	{
+		shellHandler->UpdateLeaderboard( callback );
+	}
 }
 
 /*

@@ -1557,6 +1557,8 @@ idPlayer::idPlayer():
 	weapon_soulcube			= -1;
 	weapon_pda				= -1;
 	weapon_fists			= -1;
+	weapon_unarmed          = -1;
+	weapon_arm2				= -1;
 	weapon_chainsaw			= -1;
 	weapon_bloodstone		= -1;
 	weapon_bloodstone_active1 = -1;
@@ -1760,6 +1762,8 @@ void idPlayer::Init()
 	weapon_soulcube			= SlotForWeapon( "weapon_soulcube" );
 	weapon_pda				= SlotForWeapon( "weapon_pda" );
 	weapon_fists			= SlotForWeapon( "weapon_fists" );
+	weapon_unarmed          = SlotForWeapon( "weapon_unarmed" );
+	weapon_arm2             = SlotForWeapon("weapon_arm2");
 	weapon_flashlight		= SlotForWeapon( "weapon_flashlight" );
 	weapon_chainsaw			= SlotForWeapon( "weapon_chainsaw" );
 	weapon_bloodstone		= SlotForWeapon( "weapon_bloodstone_passive" );
@@ -1913,11 +1917,12 @@ void idPlayer::Init()
 		renderEntity.shaderParms[6] = 0.0f;
 	}
 	
+	/*
 	value = spawnArgs.GetString( "bone_hips", "" );
 	hipJoint = animator.GetJointHandle( value );
 	if( hipJoint == INVALID_JOINT )
 	{
-		gameLocal.Error( "Joint '%s' not found for 'bone_hips' on '%s'", value, name.c_str() );
+		gameLocal.Error( "-Joint '%s' not found for 'bone_hips' on '%s'", value, name.c_str() );
 	}
 	
 	value = spawnArgs.GetString( "bone_chest", "" );
@@ -1933,7 +1938,8 @@ void idPlayer::Init()
 	{
 		gameLocal.Error( "Joint '%s' not found for 'bone_head' on '%s'", value, name.c_str() );
 	}
-	
+	*/
+
 	// initialize the script variables
 	AI_FORWARD		= false;
 	AI_BACKWARD		= false;
@@ -2161,7 +2167,7 @@ void idPlayer::Spawn()
 		{
 			weapon.GetEntity()->LowerWeapon();
 		}
-		idealWeapon = weapon_fists;
+		idealWeapon = weapon_unarmed;
 	}
 	else
 	{
@@ -4290,7 +4296,7 @@ bool idPlayer::GivePowerUp( int powerup, int time, unsigned int giveFlags )
 					{
 						if( !common->IsClient() )
 						{
-							idealWeapon = weapon_fists;
+							idealWeapon = weapon_unarmed;
 						}
 					}
 				}
@@ -5152,7 +5158,7 @@ void idPlayer::NextWeapon()
 		}
 		if( w == idealWeapon )
 		{
-			w = weapon_fists;
+			w = weapon_unarmed;
 			break;
 		}
 		if( ( inventory.weapons & ( 1 << w ) ) == 0 )
@@ -5212,7 +5218,7 @@ void idPlayer::PrevWeapon()
 		}
 		if( w == idealWeapon )
 		{
-			w = weapon_fists;
+			w = weapon_unarmed;
 			break;
 		}
 		if( ( inventory.weapons & ( 1 << w ) ) == 0 )
@@ -5540,7 +5546,7 @@ idPlayer::Weapon_Combat
 */
 void idPlayer::Weapon_Combat()
 {
-	if( influenceActive || !weaponEnabled || gameLocal.inCinematic || privateCameraView )
+	if (influenceActive || !weaponEnabled || gameLocal.inCinematic || privateCameraView)
 	{
 		return;
 	}
@@ -7240,7 +7246,10 @@ void idPlayer::SetCurrentHeartRate()
 			soundShaderParms_t	parms;
 			memset( &parms, 0, sizeof( parms ) );
 			parms.volume = pct;
-			refSound.referenceSound->ModifySound( SND_CHANNEL_HEART, &parms );
+			if (refSound.referenceSound)
+			{
+				refSound.referenceSound->ModifySound(SND_CHANNEL_HEART, &parms);
+			}
 		}
 		
 		lastHeartBeat = gameLocal.time;
@@ -8997,7 +9006,8 @@ void idPlayer::Think()
 		UpdateWeapon();
 	}
 	
-	UpdateFlashlight();
+	// TODO(Stephen): Set up the new flashlight
+	//UpdateFlashlight();
 	
 	UpdateAir();
 	
@@ -11160,7 +11170,7 @@ void idPlayer::Event_SelectWeapon( const char* weaponName )
 	
 	if( hiddenWeapon && gameLocal.world->spawnArgs.GetBool( "no_Weapons" ) )
 	{
-		idealWeapon = weapon_fists;
+		idealWeapon = weapon_unarmed;
 		weapon.GetEntity()->HideWeapon();
 		return;
 	}

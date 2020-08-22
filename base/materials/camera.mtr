@@ -1,0 +1,11 @@
+textures/camera
+{
+    noShadows
+    noselfShadow
+    unsmoothedTangents
+
+    renderbump  -size 1024 1024 -trace 0.03 -colorMap -aa 2  textures/camera_local.tga models/Camera.ase
+    diffusemap  textures/camera.tga
+    bumpmap     textures/camera_local.tga
+    specularmap textures/camera_specular.tga
+}

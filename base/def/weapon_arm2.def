@@ -1,0 +1,30 @@
+entityDef weapon_arm2
+{
+	"editor_color"				".3 .3 1"
+	"editor_mins"				"-16 -16 0"
+	"editor_maxs"				"16 16 32"
+	"editor_usage"				"Test Weapon"
+	"editor_rotatable"		    "1"
+
+	"spawnclass"				"idItem"
+	"size"						"32 32 32"
+	"model_view" 				"viewmodel_arm2"
+    "model"                     "models/static/toilet_paper.dae"
+	"joint_attach"				"SOUL_ATTACHER"
+
+	"inv_name"					"arm"
+	"inv_weapon"				"weapon_arm2"
+	"inv_item"					"1"
+	"display_name"				"My Arm"
+	"inv_desc"					"I can give something the finger with this hand"
+
+	"weapon_scriptobject"		"weapon_arm2"
+}
+
+model viewmodel_arm2
+{
+	mesh						models/md5/weapons/arm2_view/arm2.md5mesh
+	offset						( 12 0 -63 )
+	
+	anim idle 					models/md5/weapons/arm2_view/idle.md5anim
+}

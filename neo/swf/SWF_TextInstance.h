@@ -3,6 +3,8 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -71,6 +73,21 @@ public:
 		return strokeWeight;
 	}
 	
+	// ############## SR
+	float	GetStrokeColorx()
+	{
+		return strokeColorx;
+	}
+	float	GetStrokeColory()
+	{
+		return strokeColory;
+	}
+	float	GetStrokeColorz()
+	{
+		return strokeColorz;
+	}
+	// ############## END
+	
 	// used for when text has random render mode set
 	bool	IsGeneratingRandomText()
 	{
@@ -98,7 +115,8 @@ public:
 		ignoreColor = ignore;
 	}
 	
-	void	SetStrokeInfo( bool use, float strength = 0.75f, float weight = 1.75f );
+	void	SetStrokeInfo( bool use, float strength = 0.75f, float weight = 1.75f, float colorx = 0.0f, float colory = 0.0f, float colorz = 0.0f ); //###### SR
+	
 	int		CalcMaxScroll( int numLines = -1 );
 	int		CalcNumLines();
 	
@@ -215,6 +233,10 @@ public:
 	float strokeStrength;
 	float strokeWeight;
 	
+	float strokeColorx;	// ######################## SR
+	float strokeColory;	// ######################## SR
+	float strokeColorz;	// ######################## SR
+	
 	int		textLength;
 	bool	lengthCalculated;
 	
@@ -297,6 +319,11 @@ public:
 	SWF_NATIVE_VAR_DECLARE( _stroke );
 	SWF_NATIVE_VAR_DECLARE( _strokeStrength );
 	SWF_NATIVE_VAR_DECLARE( _strokeWeight );
+	
+	SWF_NATIVE_VAR_DECLARE( _strokeColorx );	// ############### SR
+	SWF_NATIVE_VAR_DECLARE( _strokeColory );	// ############### SR
+	SWF_NATIVE_VAR_DECLARE( _strokeColorz );	// ############### SR
+	
 	SWF_NATIVE_VAR_DECLARE( variable );
 	SWF_NATIVE_VAR_DECLARE( _alpha );
 	SWF_NATIVE_VAR_DECLARE( textColor );

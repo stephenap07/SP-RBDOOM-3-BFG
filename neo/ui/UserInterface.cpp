@@ -60,7 +60,7 @@ extern idCVar sys_lang;
 
 void idUserInterfaceManagerLocal::Init()
 {
-	screenRect = idRectangle( 0, 0, 640, 480 );
+	screenRect = idRectangle( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
 	dcOld.Init();
 	dcOptimized.Init();
 	
@@ -454,7 +454,7 @@ bool idUserInterfaceLocal::InitFromFile( const char* qpath, bool rebuild, bool c
 		desktop->SetFlag( WIN_DESKTOP );
 		desktop->name = "Desktop";
 		desktop->text = va( "Invalid GUI: %s", qpath );
-		desktop->rect = idRectangle( 0.0f, 0.0f, 640.0f, 480.0f );
+		desktop->rect = idRectangle( 0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT );
 		desktop->drawRect = desktop->rect;
 		desktop->foreColor = idVec4( 1.0f, 1.0f, 1.0f, 1.0f );
 		desktop->backColor = idVec4( 0.0f, 0.0f, 0.0f, 1.0f );

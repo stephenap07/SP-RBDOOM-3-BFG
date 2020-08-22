@@ -749,7 +749,9 @@ public:
 	virtual void			DrawStretchTri( const idVec2& p1, const idVec2& p2, const idVec2& p3, const idVec2& t1, const idVec2& t2, const idVec2& t3, const idMaterial* material );
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE );
 	
+	virtual FontHandle         GetDefaultFontHandle() { return defaultFont; }
 	virtual TextBufferManager* GetTextBufferManager() { return textBufferManager; }
+	virtual FontManager*       GetFontManager() { return fontManager; }
 	virtual void			   DrawSmallChar( int x, int y, int ch );
 	virtual void			   DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 	virtual void			   DrawBigChar( int x, int y, int ch );
@@ -822,7 +824,6 @@ public:
 	const idMaterial* 		defaultPointLight;
 	const idMaterial* 		defaultProjectedLight;
 	const idMaterial* 		defaultMaterial;
-	const idMaterial*       fontAtlasMaterial;
 	FontManager*            fontManager;
 	TextBufferManager*      textBufferManager;
 	FontHandle              defaultFont;
@@ -1119,8 +1120,8 @@ struct vidMode_t
 	// RB begin
 	vidMode_t()
 	{
-		width = 640;
-		height = 480;
+		width = SCREEN_WIDTH;
+		height = SCREEN_HEIGHT;
 		displayHz = 60;
 	}
 	

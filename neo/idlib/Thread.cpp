@@ -234,7 +234,7 @@ int idSysThread::ThreadProc( idSysThread* thread )
 				
 				if( thread->isTerminating )
 				{
-					thread->Shutdown();
+					//thread->Shutdown(); TODO(Stephen): Should I uncomment this??
 					break;
 				}
 				

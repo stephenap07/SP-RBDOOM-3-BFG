@@ -1,0 +1,11 @@
+table squarewave { snap { 0, 1 } }
+
+textures/guis/aperature
+{
+    {
+        blend blend
+        nearest
+        map guis/assets/aperature.tga
+        rgba squarewave [ time ]
+    }
+}

@@ -279,7 +279,7 @@ LightInfo::LightInfo()
 LightEditor LightEditor::TheLightEditor;
 
 // static
-bool LightEditor::showIt = true;
+bool LightEditor::showIt = false;
 
 // static
 void LightEditor::ReInit( const idDict* dict, idEntity* light )

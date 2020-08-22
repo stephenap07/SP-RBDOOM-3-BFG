@@ -145,11 +145,6 @@ idCommonLocal::StartMainMenu
 */
 void idCommonLocal::StartMenu(bool playIntro)
 {
-	if (guiActive == guiMainMenu)
-	{
-		return;
-	}
-
 	if (game && game->Shell_IsActive())
 	{
 		return;
@@ -159,18 +154,6 @@ void idCommonLocal::StartMenu(bool playIntro)
 	{
 		// if we're playing a demo, esc kills it
 		UnloadMap();
-	}
-
-	if (soundWorld && !soundWorld->IsPaused())
-	{
-		soundWorld->Pause();
-	}
-
-	soundSystem->SetPlayingSoundWorld(menuSoundWorld);
-
-	if (guiMainMenu)
-	{
-		SetGui(guiMainMenu);
 	}
 
 	if (game)
@@ -208,24 +191,22 @@ Executes any commands returned by the gui
 */
 bool idCommonLocal::MenuEvent(const sysEvent_t* event)
 {
-	if (guiActive)
-	{
-		const char* menuCommand = guiActive->HandleEvent(event, Sys_Milliseconds());
-		if (!menuCommand || !menuCommand[0]) {
-			// If the menu didn't handle the event, and it's a key down event for an F key, run the bind
-			if (event->evType == SE_KEY && event->evValue2 == 1 && event->evValue >= K_F1 && event->evValue <= K_F12) {
-				idKeyInput::ExecKeyBinding(event->evValue);
-				return true;
-			}
-			return false;
-		}
+	//if (guiActive)
+	//{
+	//	const char* menuCommand = guiActive->HandleEvent(event, Sys_Milliseconds());
+	//	if (!menuCommand || !menuCommand[0]) {
+	//		// If the menu didn't handle the event, and it's a key down event for an F key, run the bind
+	//		if (event->evType == SE_KEY && event->evValue2 == 1 && event->evValue >= K_F1 && event->evValue <= K_F12) {
+	//			idKeyInput::ExecKeyBinding(event->evValue);
+	//			return true;
+	//		}
+	//		return false;
+	//	}
 
-		HandleMainMenuCommands(menuCommand);
+	//	HandleMainMenuCommands(menuCommand);
 
-		return true;
-	}
-
-
+	//	return true;
+	//}
 
 	if (session->GetSignInManager().ProcessInputEvent(event))
 	{

@@ -1849,7 +1849,6 @@ void R_InitMaterials()
 	tr.defaultProjectedLight = declManager->FindMaterial( "lights/defaultProjectedLight" );
 	tr.whiteMaterial = declManager->FindMaterial( "_white" );
 	tr.charSetMaterial = declManager->FindMaterial( "textures/bigchars" );
-	tr.fontAtlasMaterial = declManager->FindMaterial("_fontAtlas");
 }
 
 
@@ -2289,10 +2288,11 @@ void idRenderSystemLocal::Shutdown()
 {
 	common->Printf( "idRenderSystem::Shutdown()\n" );
 
-	fontManager->destroyFont(defaultFont);
+	//fontManager->destroyFont(defaultFont);
 
 	for (int i = 0; i < newFonts.Num(); i++)
 	{
+		FreeFont(newFonts[i].fontHandle);
 		fontManager->destroyTtf(newFonts[i].ttfHandle);
 	}
 

@@ -199,7 +199,6 @@ TextBuffer::TextBuffer(FontManager* _fontManager)
 {
 	m_rectangle.width = 0;
 	m_rectangle.height = 0;
-	m_material = declManager->FindMaterial("_fontAtlas");
 }
 
 TextBuffer::~TextBuffer()
@@ -562,7 +561,7 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 		bc.textBuffer->getVertexCount(),
 		bc.textBuffer->getIndexBuffer(),
 		bc.textBuffer->getIndexCount(),
-		bc.textBuffer->getMaterial(),
+		m_fontMaterial,
 		0,
 		STEREO_DEPTH_TYPE_NONE);
 

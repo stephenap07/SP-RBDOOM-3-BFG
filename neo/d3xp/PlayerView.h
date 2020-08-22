@@ -479,8 +479,6 @@ public:
 	
 	idPlayer* 			player;
 	renderView_t		view;
-
-	FontHandle          testFont;
 	
 	FullscreenFXManager*	fxManager;
 	

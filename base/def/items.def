@@ -1,0 +1,30 @@
+entityDef weapon_keycard
+{
+	"editor_color"				".3 .3 1"
+	"editor_mins"				"-16 -16 0"
+	"editor_maxs"				"16 16 32"
+	"editor_usage"				"Test Keycard"
+	"editor_rotatable"		    "1"
+
+	"spawnclass"				"idItem"
+	"size"						"32 32 32"
+	"model_view" 				"viewmodel_keycard"
+    "model"                     "models/static/toilet_paper.dae"
+	"joint_attach"				"SOUL_ATTACHER"
+
+	"inv_name"					"keycard"
+	"inv_weapon"				"weapon_keycard"
+	"inv_item"					"2"
+	"display_name"				"A keycard"
+	"inv_desc"					"I can open doors with a keycard"
+
+	"weapon_scriptobject"		"weapon_keycard"
+}
+
+model viewmodel_keycard
+{
+	mesh						models/md5/items/keycard/keycard.md5mesh
+	offset						( 1.5 2.0 -62.0 )
+	
+	anim idle 					models/md5/items/keycard/keycard_idle.md5anim
+}

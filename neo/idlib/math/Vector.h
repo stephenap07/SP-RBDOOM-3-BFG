@@ -1749,6 +1749,14 @@ ID_INLINE idVec3 idPolar3::ToVec3() const
 	return idVec3( cp * radius * ct, cp * radius * st, radius * sp );
 }
 
+namespace VectorUtil
+{
+	inline uint32_t Vec4ToColorInt(const idVec4& vec)
+	{
+		idVec4 vecCopy = 255.0f * vec;
+		return ((uint32_t)vecCopy[0] << 28) | ((uint32_t)vecCopy[1] << 20) | ((uint32_t)vecCopy[2] << 12) | (uint32_t)vecCopy[3];
+	}
+}
 
 /*
 ===============================================================================

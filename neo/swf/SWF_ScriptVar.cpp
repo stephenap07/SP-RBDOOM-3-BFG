@@ -3,6 +3,8 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -292,11 +294,7 @@ idStr idSWFScriptVar::ToString() const
 			return idStrId( value.i ).GetLocalizedString();
 		case SWF_VAR_STRING:
 			return *value.string;
-		// RB begin
-		case SWF_VAR_RESULT:
-			return *value.string;
-		// RB end
-		
+			
 		case SWF_VAR_FLOAT:
 			return va( "%g", value.f );
 		case SWF_VAR_BOOL:
@@ -525,11 +523,7 @@ const char* idSWFScriptVar::TypeOf() const
 			return "stringid";
 		case SWF_VAR_STRING:
 			return "string";
-		// RB begin
-		case SWF_VAR_RESULT:
-			return "result";
-		// RB end
-		
+			
 		case SWF_VAR_FLOAT:
 			return "number";
 		case SWF_VAR_BOOL:

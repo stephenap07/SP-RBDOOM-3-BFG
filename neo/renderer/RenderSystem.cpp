@@ -608,10 +608,10 @@ void idRenderSystemLocal::DrawBigStringExt2(int x, int y, const char* string, co
 {
 	auto man = GetTextBufferManager();
 
-	auto textHandle = man->createTextBuffer(0, BufferType::Dynamic);
+	auto textHandle = man->createTextBuffer(1, BufferType::Dynamic);
 
 	man->setPenPosition(textHandle, x, y);
-	man->setTextColor(textHandle, 0xFFFFFFFF);
+	man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(setColor));
 	man->appendText(textHandle, defaultFont, string);
 	man->submitTextBuffer(textHandle);
 	man->destroyTextBuffer(textHandle);
@@ -659,7 +659,7 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 	uint64* gpuMicroSec )
 {
 	SCOPED_PROFILE_EVENT( "SwapCommandBuffers" );
-	
+
 	if( gpuMicroSec != NULL )
 	{
 		*gpuMicroSec = 0;		// until shown otherwise

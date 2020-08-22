@@ -1,0 +1,4 @@
+textures/common/Box
+{
+    diffusemap textures/common/Box.tga
+}
