@@ -93,7 +93,7 @@ idResolutionScale::GetCurrentResolutionScale
 */
 void idResolutionScale::GetCurrentResolutionScale( float& x, float& y )
 {
-	// TODO: This asserts when the window is minimized or in the backtrack for while.
+	// TODO(Stephen): This asserts when the window is minimized or in the backtrack for while.
 	assert( (currentResolution + 0.0001) >= MINIMUM_RESOLUTION_SCALE );
 	assert( (currentResolution - 0.0001) <= MAXIMUM_RESOLUTION_SCALE );
 	
