@@ -29,6 +29,8 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __PRECOMPILED_H__
 #define __PRECOMPILED_H__
 
+#pragma once
+
 #include "sys/sys_defines.h"
 #include "sys/sys_builddefines.h"
 #include "sys/sys_includes.h"
@@ -90,11 +92,11 @@ const int MAX_EXPRESSION_REGISTERS = 4096;
 const uint32 NUM_FRAME_DATA	= 2;
 
 #if defined(USE_VULKAN)
-#include "../renderer/Vulkan/qvk.h"
+	#include "../renderer/Vulkan/qvk.h"
 #else
-// RB: replaced QGL with GLEW
-#include <GL/glew.h>
-// RB end
+	// RB: replaced QGL with GLEW
+	#include <GL/glew.h>
+	// RB end
 #endif
 #include "../renderer/Cinematic.h"
 #include "../renderer/Material.h"
@@ -114,7 +116,7 @@ const uint32 NUM_FRAME_DATA	= 2;
 #include "../ui/UserInterface.h"
 
 // RB: required for SWF extensions
-#include "rapidjson/document.h"
+//#include "rapidjson/document.h"
 
 #include "../swf/SWF.h"
 
@@ -159,25 +161,25 @@ const uint32 NUM_FRAME_DATA	= 2;
 
 #ifndef _D3SDK
 
-#ifdef GAME_DLL
+	#ifdef GAME_DLL
 
-#include "../d3xp/Game_local.h"
+		#include "../d3xp/Game_local.h"
 
-#else
+	#else
 
-#include "../framework/DemoChecksum.h"
+		#include "../framework/DemoChecksum.h"
 
-// framework
-#include "../framework/Compressor.h"
-#include "../framework/EventLoop.h"
-#include "../framework/KeyInput.h"
-#include "../framework/EditField.h"
-#include "../framework/DebugGraph.h"
-#include "../framework/Console.h"
-#include "../framework/DemoFile.h"
-#include "../framework/Common_dialog.h"
+		// framework
+		#include "../framework/Compressor.h"
+		#include "../framework/EventLoop.h"
+		#include "../framework/KeyInput.h"
+		#include "../framework/EditField.h"
+		#include "../framework/DebugGraph.h"
+		#include "../framework/Console.h"
+		#include "../framework/DemoFile.h"
+		#include "../framework/Common_dialog.h"
 
-#endif /* !GAME_DLL */
+	#endif /* !GAME_DLL */
 
 #endif /* !_D3SDK */
 

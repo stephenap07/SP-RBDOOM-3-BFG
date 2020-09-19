@@ -360,9 +360,9 @@ FontManager::FontManager(Atlas* _atlas)
 
 FontManager::FontManager(uint16_t _textureSideWidth)
 	: m_ownAtlas(true)
-	, m_atlas(new Atlas(_textureSideWidth))
+	, m_atlas(nullptr)
 {
-	init();
+	m_atlas = new Atlas(_textureSideWidth);
 }
 
 void FontManager::init()
@@ -379,7 +379,9 @@ void FontManager::init()
 	m_blackGlyph.width = W;
 	m_blackGlyph.height = W;
 
-	///make sure the black glyph doesn't bleed by using a one pixel inner outline
+	m_atlas->init();
+
+	// Make sure the black glyph doesn't bleed by using a one pixel inner outline
 	m_blackGlyph.regionIndex = m_atlas->addRegion(W, W, buffer, AtlasRegion::TYPE_GRAY, 1);
 }
 

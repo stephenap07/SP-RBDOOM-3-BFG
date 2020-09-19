@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2017 Robert Beckebans
+Copyright (C) 2013-2020 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 Copyright (C) 2016-2017 Dustin Land
 
@@ -69,6 +69,8 @@ int BitsForFormat( textureFormat_t format )
 			return 4;
 		case FMT_SHADOW_ARRAY:
 			return ( 32 * 6 );
+		case FMT_RG16F:
+			return 32;
 		case FMT_RGBA16F:
 			return 64;
 		case FMT_RGBA32F:
@@ -98,34 +100,38 @@ ID_INLINE void idImage::DeriveOpts()
 	if( opts.format == FMT_NONE )
 	{
 		opts.colorFormat = CFM_DEFAULT;
-		
+
 		switch( usage )
 		{
 			case TD_COVERAGE:
 				opts.format = FMT_DXT1;
 				opts.colorFormat = CFM_GREEN_ALPHA;
 				break;
-				
+
 			case TD_DEPTH:
 				opts.format = FMT_DEPTH;
 				break;
-				
+
 			case TD_SHADOW_ARRAY:
 				opts.format = FMT_SHADOW_ARRAY;
 				break;
-				
+
+			case TD_RG16F:
+				opts.format = FMT_RG16F;
+				break;
+
 			case TD_RGBA16F:
 				opts.format = FMT_RGBA16F;
 				break;
-				
+
 			case TD_RGBA32F:
 				opts.format = FMT_RGBA32F;
 				break;
-				
+
 			case TD_R32F:
 				opts.format = FMT_R32F;
 				break;
-				
+
 			case TD_DIFFUSE:
 				// TD_DIFFUSE gets only set to when its a diffuse texture for an interaction
 				opts.gammaMips = true;
@@ -137,6 +143,19 @@ ID_INLINE void idImage::DeriveOpts()
 				opts.format = FMT_DXT1;
 				opts.colorFormat = CFM_DEFAULT;
 				break;
+
+			case TD_SPECULAR_PBR_RMAO:
+				opts.gammaMips = false;
+				opts.format = FMT_DXT1;
+				opts.colorFormat = CFM_DEFAULT;
+				break;
+
+			case TD_SPECULAR_PBR_RMAOD:
+				opts.gammaMips = false;
+				opts.format = FMT_DXT5;
+				opts.colorFormat = CFM_DEFAULT;
+				break;
+
 			case TD_DEFAULT:
 				opts.gammaMips = true;
 				opts.format = FMT_DXT5;
@@ -169,16 +188,27 @@ ID_INLINE void idImage::DeriveOpts()
 			case TD_LOOKUP_TABLE_RGBA:
 				opts.format = FMT_RGBA8;
 				break;
+			// motorsep 05-17-2015; added this for uncompressed cubemap/skybox textures
+			case TD_HIGHQUALITY_CUBE:
+				opts.colorFormat = CFM_DEFAULT;
+				opts.format = FMT_RGBA8;
+				opts.gammaMips = true;
+				break;
+			case TD_LOWQUALITY_CUBE:
+				opts.colorFormat = CFM_DEFAULT; // CFM_YCOCG_DXT5;
+				opts.format = FMT_DXT5;
+				opts.gammaMips = true;
+				break;
 			default:
 				assert( false );
 				opts.format = FMT_RGBA8;
 		}
 	}
-	
+
 	if( opts.numLevels == 0 )
 	{
 		opts.numLevels = 1;
-		
+
 		if( filter == TF_LINEAR || filter == TF_NEAREST )
 		{
 			// don't create mip maps if we aren't going to be using them
@@ -226,10 +256,10 @@ name contains GetName() upon entry
 void idImage::GetGeneratedName( idStr& _name, const textureUsage_t& _usage, const cubeFiles_t& _cube )
 {
 	idStrStatic< 64 > extension;
-	
+
 	_name.ExtractFileExtension( extension );
 	_name.StripFileExtension();
-	
+
 	_name += va( "#__%02d%02d", ( int )_usage, ( int )_cube );
 	if( extension.Length() > 0 )
 	{
@@ -253,14 +283,20 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 	//{
 	//	return;
 	//}
-	
+
 	// this is the ONLY place generatorFunction will ever be called
 	if( generatorFunction )
 	{
 		generatorFunction( this );
 		return;
 	}
-	
+
+	// RB: the following does not load the source images from disk because pic is NULL
+	// but it tries to get the timestamp to see if we have a newer file than the one in the compressed .bimage
+
+	// TODO also check for alternative names like .png suffices or _rmao.png or even _rmaod.png files
+	// to support the PBR code path
+
 	if( com_productionMode.GetInteger() != 0 )
 	{
 		sourceFileTime = FILE_NOT_FOUND_TIMESTAMP;
@@ -277,11 +313,11 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		{
 			opts.textureType = TT_2D_ARRAY;
 		}
-		else if( cubeFiles != CF_2D )
-		{
+		if( cubeFiles != CF_2D )
+		{ 
 			opts.textureType = TT_CUBIC;
 			repeat = TR_CLAMP;
-			R_LoadCubeImages( GetName(), cubeFiles, NULL, NULL, &sourceFileTime );
+			R_LoadCubeImages( GetName(), cubeFiles, NULL, NULL, &sourceFileTime, cubeMapSize );
 		}
 		else
 		{
@@ -289,16 +325,27 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 			R_LoadImageProgram( GetName(), NULL, NULL, NULL, &sourceFileTime, &usage );
 		}
 	}
-	
+
+	// RB: PBR HACK - RMAO maps should end with _rmao insted of _s
+	if( usage == TD_SPECULAR_PBR_RMAO )
+	{
+		if( imgName.StripTrailingOnce( "_s" ) )
+		{
+			imgName += "_rmao";
+		}
+	}
+	// RB end
+
 	// Figure out opts.colorFormat and opts.format so we can make sure the binary image is up to date
 	DeriveOpts();
-	
+
 	idStrStatic< MAX_OSPATH > generatedName = GetName();
 	GetGeneratedName( generatedName, usage, cubeFiles );
-	
+
+	// RB: try to load the .bimage and skip if sourceFileTime is newer
 	idBinaryImage im( generatedName );
 	binaryFileTime = im.LoadFromGeneratedFile( sourceFileTime );
-	
+
 	// BFHACK, do not want to tweak on buildgame so catch these images here
 	if( binaryFileTime == FILE_NOT_FOUND_TIMESTAMP && fileSystem->UsingResourceFiles() )
 	{
@@ -343,7 +390,7 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		}
 	}
 	const bimageFile_t& header = im.GetFileHeader();
-	
+
 	if( ( fileSystem->InProductionMode() && binaryFileTime != FILE_NOT_FOUND_TIMESTAMP ) || ( ( binaryFileTime != FILE_NOT_FOUND_TIMESTAMP )
 			&& ( header.colorFormat == opts.colorFormat )
 			&& ( header.format == opts.format )
@@ -364,6 +411,8 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 	}
 	else
 	{
+		// RB: try to read the source image from disk
+
 		idStr binarizeReason = "binarize: unknown reason";
 		if( binaryFileTime == FILE_NOT_FOUND_TIMESTAMP )
 		{
@@ -388,22 +437,23 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		{
 			int size;
 			byte* pics[6];
-			
-			if( !R_LoadCubeImages( GetName(), cubeFiles, pics, &size, &sourceFileTime ) || size == 0 )
+
+			if( !R_LoadCubeImages( GetName(), cubeFiles, pics, &size, &sourceFileTime, cubeMapSize ) || size == 0 )
 			{
 				idLib::Warning( "Couldn't load cube image: %s", GetName() );
+				defaulted = true; // RB
 				return;
 			}
-			
+
 			repeat = TR_CLAMP;
-			
+
 			opts.textureType = TT_CUBIC;
 			opts.width = size;
 			opts.height = size;
 			opts.numLevels = 0;
-			
+
 			DeriveOpts();
-			
+
 			// foresthale 2014-05-30: give a nice progress display when binarizing
 			commonLocal.LoadPacifierBinarizeFilename( generatedName.c_str(), binarizeReason.c_str() );
 			if( opts.numLevels > 1 )
@@ -414,13 +464,13 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 			{
 				commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 );
 			}
-			
+
 			im.LoadCubeFromMemory( size, ( const byte** )pics, opts.numLevels, opts.format, opts.gammaMips );
-			
+
 			commonLocal.LoadPacifierBinarizeEnd();
-			
+
 			repeat = TR_CLAMP;
-			
+
 			for( int i = 0; i < 6; i++ )
 			{
 				if( pics[i] )
@@ -433,10 +483,10 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		{
 			int width, height;
 			byte* pic;
-			
+
 			// load the full specification, and perform any image program calculations
 			R_LoadImageProgram( GetName(), &pic, &width, &height, &sourceFileTime, &usage );
-			
+
 			if( pic == NULL )
 			{
 				idLib::Warning( "Couldn't load image: %s : %s", GetName(), generatedName.c_str() );
@@ -446,7 +496,7 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 				opts.numLevels = 1;
 				DeriveOpts();
 				AllocImage();
-				
+
 				// clear the data so it's not left uninitialized
 				idTempArray<byte> clear( opts.width * opts.height * 4 );
 				memset( clear.Ptr(), 0, clear.Size() );
@@ -454,15 +504,15 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 				{
 					SubImageUpload( level, 0, 0, 0, opts.width >> level, opts.height >> level, clear.Ptr() );
 				}
-				
+
 				return;
 			}
-			
+
 			opts.width = width;
 			opts.height = height;
 			opts.numLevels = 0;
 			DeriveOpts();
-			
+
 			// foresthale 2014-05-30: give a nice progress display when binarizing
 			commonLocal.LoadPacifierBinarizeFilename( generatedName.c_str(), binarizeReason.c_str() );
 			if( opts.numLevels > 1 )
@@ -473,17 +523,33 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 			{
 				commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 );
 			}
-			
+
+			commonLocal.LoadPacifierBinarizeEnd();
+
+			// foresthale 2014-05-30: give a nice progress display when binarizing
+			commonLocal.LoadPacifierBinarizeFilename( generatedName.c_str(), binarizeReason.c_str() );
+			if( opts.numLevels > 1 )
+			{
+				commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 * 4 / 3 );
+			}
+			else
+			{
+				commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 );
+			}
+
+			// RB: convert to compressed DXT or whatever choosen target format
 			im.Load2DFromMemory( opts.width, opts.height, pic, opts.numLevels, opts.format, opts.colorFormat, opts.gammaMips );
 			commonLocal.LoadPacifierBinarizeEnd();
-			
+
 			Mem_Free( pic );
 		}
+
+		// RB: write the compressed .bimage which contains the optimized GPU format
 		binaryFileTime = im.WriteGeneratedFile( sourceFileTime );
 	}
-	
+
 	AllocImage();
-	
+
 	for( int i = 0; i < im.NumImages(); i++ )
 	{
 		const bimageImage_t& img = im.GetImageHeader( i );
@@ -530,7 +596,7 @@ void idImage::Print() const
 	{
 		common->Printf( " " );
 	}
-	
+
 	switch( opts.textureType )
 	{
 		case TT_2D:
@@ -539,22 +605,22 @@ void idImage::Print() const
 		case TT_CUBIC:
 			common->Printf( "C     " );
 			break;
-			
+
 		case TT_2D_ARRAY:
 			common->Printf( "2D-A  " );
 			break;
-			
+
 		case TT_2D_MULTISAMPLE:
 			common->Printf( "2D-MS " );
 			break;
-			
+
 		default:
 			common->Printf( "<BAD TYPE:%i>", opts.textureType );
 			break;
 	}
-	
+
 	common->Printf( "%4i %4i ",	opts.width, opts.height );
-	
+
 	switch( opts.format )
 	{
 #define NAME_FORMAT( x ) case FMT_##x: common->Printf( "%-16s ", #x ); break;
@@ -571,6 +637,7 @@ void idImage::Print() const
 			// RB begin
 			NAME_FORMAT( ETC1_RGB8_OES );
 			NAME_FORMAT( SHADOW_ARRAY );
+			NAME_FORMAT( RG16F );
 			NAME_FORMAT( RGBA16F );
 			NAME_FORMAT( RGBA32F );
 			NAME_FORMAT( R32F );
@@ -582,7 +649,7 @@ void idImage::Print() const
 			common->Printf( "<%3i>", opts.format );
 			break;
 	}
-	
+
 	switch( filter )
 	{
 		case TF_DEFAULT:
@@ -601,7 +668,7 @@ void idImage::Print() const
 			common->Printf( "<BAD FILTER:%i>", filter );
 			break;
 	}
-	
+
 	switch( repeat )
 	{
 		case TR_REPEAT:
@@ -620,9 +687,9 @@ void idImage::Print() const
 			common->Printf( "<BAD REPEAT:%i>", repeat );
 			break;
 	}
-	
+
 	common->Printf( "%4ik ", StorageSize() / 1024 );
-	
+
 	common->Printf( " %s\n", GetName() );
 }
 
@@ -640,7 +707,7 @@ void idImage::Reload( bool force )
 		generatorFunction( this );
 		return;
 	}
-	
+
 	// check file times
 	if( !force )
 	{
@@ -659,11 +726,11 @@ void idImage::Reload( bool force )
 			return;
 		}
 	}
-	
+
 	common->DPrintf( "reloading %s.\n", GetName() );
-	
+
 	PurgeImage();
-	
+
 	// Load is from the front end, so the back end must be synced
 	ActuallyLoadImage( false );
 }
@@ -676,19 +743,19 @@ GenerateImage
 void idImage::GenerateImage( const byte* pic, int width, int height, textureFilter_t filterParm, textureRepeat_t repeatParm, textureUsage_t usageParm, textureSamples_t samples )
 {
 	PurgeImage();
-	
+
 	filter = filterParm;
 	repeat = repeatParm;
 	usage = usageParm;
 	cubeFiles = CF_2D;
-	
+
 	opts.textureType = ( samples > SAMPLE_1 ) ? TT_2D_MULTISAMPLE : TT_2D;
 	opts.width = width;
 	opts.height = height;
 	opts.numLevels = 0;
 	opts.samples = samples;
 	DeriveOpts();
-	
+
 	// RB: allow pic == NULL for internal framebuffer images
 	if( pic == NULL || opts.textureType == TT_2D_MULTISAMPLE )
 	{
@@ -697,7 +764,7 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 	else
 	{
 		idBinaryImage im( GetName() );
-		
+
 		// foresthale 2014-05-30: give a nice progress display when binarizing
 		commonLocal.LoadPacifierBinarizeFilename( GetName() , "generated image" );
 		if( opts.numLevels > 1 )
@@ -708,13 +775,13 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 		{
 			commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.height );
 		}
-		
+
 		im.Load2DFromMemory( width, height, pic, opts.numLevels, opts.format, opts.colorFormat, opts.gammaMips );
-		
+
 		commonLocal.LoadPacifierBinarizeEnd();
-		
+
 		AllocImage();
-		
+
 		for( int i = 0; i < im.NumImages(); i++ )
 		{
 			const bimageImage_t& img = im.GetImageHeader( i );
@@ -735,18 +802,18 @@ Non-square cube sides are not allowed
 void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t filterParm, textureUsage_t usageParm )
 {
 	PurgeImage();
-	
+
 	filter = filterParm;
 	repeat = TR_CLAMP;
 	usage = usageParm;
 	cubeFiles = CF_NATIVE;
-	
+
 	opts.textureType = TT_CUBIC;
 	opts.width = size;
 	opts.height = size;
 	opts.numLevels = 0;
 	DeriveOpts();
-	
+
 	// if we don't have a rendering context, just return after we
 	// have filled in the parms.  We must have the values set, or
 	// an image match from a shader before the render starts would miss
@@ -755,9 +822,9 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 	{
 		return;
 	}
-	
+
 	idBinaryImage im( GetName() );
-	
+
 	// foresthale 2014-05-30: give a nice progress display when binarizing
 	commonLocal.LoadPacifierBinarizeFilename( GetName(), "generated cube image" );
 	if( opts.numLevels > 1 )
@@ -768,13 +835,13 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 	{
 		commonLocal.LoadPacifierBinarizeProgressTotal( opts.width * opts.width * 6 );
 	}
-	
+
 	im.LoadCubeFromMemory( size, pic, opts.numLevels, opts.format, opts.gammaMips );
-	
+
 	commonLocal.LoadPacifierBinarizeEnd();
-	
+
 	AllocImage();
-	
+
 	for( int i = 0; i < im.NumImages(); i++ )
 	{
 		const bimageImage_t& img = im.GetImageHeader( i );
@@ -787,18 +854,18 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 void idImage::GenerateShadowArray( int width, int height, textureFilter_t filterParm, textureRepeat_t repeatParm, textureUsage_t usageParm )
 {
 	PurgeImage();
-	
+
 	filter = filterParm;
 	repeat = repeatParm;
 	usage = usageParm;
 	cubeFiles = CF_2D_ARRAY;
-	
+
 	opts.textureType = TT_2D_ARRAY;
 	opts.width = width;
 	opts.height = height;
 	opts.numLevels = 0;
 	DeriveOpts();
-	
+
 	// if we don't have a rendering context, just return after we
 	// have filled in the parms.  We must have the values set, or
 	// an image match from a shader before the render starts would miss
@@ -807,12 +874,12 @@ void idImage::GenerateShadowArray( int width, int height, textureFilter_t filter
 	{
 		return;
 	}
-	
+
 	//idBinaryImage im( GetName() );
 	//im.Load2DFromMemory( width, height, pic, opts.numLevels, opts.format, opts.colorFormat, opts.gammaMips );
-	
+
 	AllocImage();
-	
+
 	/*
 	for( int i = 0; i < im.NumImages(); i++ )
 	{
@@ -841,7 +908,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows )
 		{
 			pic[i] = data + cols * rows * 4 * i;
 		}
-		
+
 		if( opts.textureType != TT_CUBIC || usage != TD_LOOKUP_TABLE_RGBA )
 		{
 			GenerateCubeImage( pic, cols, TF_LINEAR, TD_LOOKUP_TABLE_RGBA );
@@ -851,7 +918,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows )
 		{
 			opts.width = cols;
 			opts.height = rows;
-			
+
 			AllocImage();
 		}
 		SetSamplerState( TF_LINEAR, TR_CLAMP );
@@ -871,7 +938,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows )
 		{
 			opts.width = cols;
 			opts.height = rows;
-			
+
 			AllocImage();
 		}
 		SetSamplerState( TF_LINEAR, TR_REPEAT );

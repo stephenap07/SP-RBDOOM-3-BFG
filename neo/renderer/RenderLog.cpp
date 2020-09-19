@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013 Robert Beckebans
+Copyright (C) 2013-2020 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -44,24 +44,25 @@ static const int LOG_LEVEL_EVERYTHING	= 2;
 
 const char* renderLogMainBlockLabels[] =
 {
-	ASSERT_ENUM_STRING( MRB_NONE,							0 ),
+	ASSERT_ENUM_STRING( MRB_GPU_TIME,						0 ),
 	ASSERT_ENUM_STRING( MRB_BEGIN_DRAWING_VIEW,				1 ),
 	ASSERT_ENUM_STRING( MRB_FILL_DEPTH_BUFFER,				2 ),
-	ASSERT_ENUM_STRING( MRB_AMBIENT_PASS,					3 ), // RB
-	ASSERT_ENUM_STRING( MRB_DRAW_INTERACTIONS,				4 ),
-	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES,				5 ),
-	ASSERT_ENUM_STRING( MRB_FOG_ALL_LIGHTS,					6 ),
-	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES_POST,		7 ),
-	ASSERT_ENUM_STRING( MRB_DRAW_DEBUG_TOOLS,				8 ),
-	ASSERT_ENUM_STRING( MRB_CAPTURE_COLORBUFFER,			9 ),
-	ASSERT_ENUM_STRING( MRB_POSTPROCESS,					10 ),
-	ASSERT_ENUM_STRING( MRB_GPU_SYNC,						11 ),
-	ASSERT_ENUM_STRING( MRB_END_FRAME,						12 ),
-	ASSERT_ENUM_STRING( MRB_BINK_FRAME,						13 ),
-	ASSERT_ENUM_STRING( MRB_BINK_NEXT_FRAME,				14 ),
-	ASSERT_ENUM_STRING( MRB_TOTAL,							15 ),
-	ASSERT_ENUM_STRING( MRB_MAX,							16 )
+	ASSERT_ENUM_STRING( MRB_FILL_GEOMETRY_BUFFER,			3 ), // RB
+	ASSERT_ENUM_STRING( MRB_SSAO_PASS,						4 ), // RB
+	ASSERT_ENUM_STRING( MRB_AMBIENT_PASS,					5 ), // RB
+	ASSERT_ENUM_STRING( MRB_DRAW_INTERACTIONS,				6 ),
+	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES,				7 ),
+	ASSERT_ENUM_STRING( MRB_FOG_ALL_LIGHTS,					8 ),
+	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES_POST,		9 ),
+	ASSERT_ENUM_STRING( MRB_DRAW_DEBUG_TOOLS,				10 ),
+	ASSERT_ENUM_STRING( MRB_CAPTURE_COLORBUFFER,			11 ),
+	ASSERT_ENUM_STRING( MRB_POSTPROCESS,					12 ),
+	ASSERT_ENUM_STRING( MRB_TOTAL,							13 )
 };
+
+#if defined( USE_VULKAN )
+	compile_time_assert( NUM_TIMESTAMP_QUERIES >= ( MRB_TOTAL_QUERIES ) );
+#endif
 
 extern uint64 Sys_Microseconds();
 /*
@@ -87,13 +88,13 @@ struct pixEvent_t
 
 idCVar r_pix( "r_pix", "0", CVAR_INTEGER, "print GPU/CPU event timing" );
 
-#if !defined(USE_VULKAN)
-static const int	MAX_PIX_EVENTS = 256;
-// defer allocation of this until needed, so we don't waste lots of memory
-pixEvent_t* 		pixEvents;	// [MAX_PIX_EVENTS]
-int					numPixEvents;
-int					numPixLevels;
-static GLuint		timeQueryIds[MAX_PIX_EVENTS];
+#if !defined( USE_VULKAN )
+	static const int	MAX_PIX_EVENTS = 256;
+	// defer allocation of this until needed, so we don't waste lots of memory
+	pixEvent_t* 		pixEvents;	// [MAX_PIX_EVENTS]
+	int					numPixEvents;
+	int					numPixLevels;
+	static GLuint		timeQueryIds[MAX_PIX_EVENTS];
 #endif
 
 /*
@@ -103,8 +104,45 @@ PC_BeginNamedEvent
 FIXME: this is not thread safe on the PC
 ========================
 */
-void PC_BeginNamedEvent( const char* szName, ... )
+void PC_BeginNamedEvent( const char* szName, const idVec4& color )
 {
+#if defined( USE_VULKAN )
+
+	// start an annotated group of calls under the this name
+	if( vkcontext.debugMarkerSupportAvailable )
+	{
+		VkDebugMarkerMarkerInfoEXT  label = {};
+		label.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+		label.pMarkerName = szName;
+		label.color[0] = color.x;
+		label.color[1] = color.y;
+		label.color[2] = color.z;
+		label.color[3] = color.w;
+
+		qvkCmdDebugMarkerBeginEXT( vkcontext.commandBuffer[ vkcontext.frameParity ], &label );
+	}
+	else if( vkcontext.debugUtilsSupportAvailable )
+	{
+		VkDebugUtilsLabelEXT label = {};
+		label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+		label.pLabelName = szName;
+		label.color[0] = color.x;
+		label.color[1] = color.y;
+		label.color[2] = color.z;
+		label.color[3] = color.w;
+
+		qvkCmdBeginDebugUtilsLabelEXT( vkcontext.commandBuffer[ vkcontext.frameParity ], &label );
+	}
+#else
+	// RB: colors are not supported in OpenGL
+
+	// only do this if RBDOOM-3-BFG was started by RenderDoc or some similar tool
+	if( glConfig.gremedyStringMarkerAvailable && glConfig.khronosDebugAvailable )
+	{
+		glPushDebugGroup( GL_DEBUG_SOURCE_APPLICATION_ARB, 0, GLsizei( strlen( szName ) ), szName );
+	}
+#endif
+
 #if 0
 	if( !r_pix.GetBool() )
 	{
@@ -127,7 +165,7 @@ void PC_BeginNamedEvent( const char* szName, ... )
 	{
 		return;
 	}
-	
+
 	GL_CheckErrors();
 	if( timeQueryIds[0] == 0 )
 	{
@@ -136,7 +174,7 @@ void PC_BeginNamedEvent( const char* szName, ... )
 	glFinish();
 	glBeginQuery( GL_TIME_ELAPSED_EXT, timeQueryIds[numPixEvents] );
 	GL_CheckErrors();
-	
+
 	pixEvent_t* ev = &pixEvents[numPixEvents++];
 	strncpy( ev->name, szName, sizeof( ev->name ) - 1 );
 	ev->cpuTime = Sys_Microseconds();
@@ -150,6 +188,23 @@ PC_EndNamedEvent
 */
 void PC_EndNamedEvent()
 {
+#if defined( USE_VULKAN )
+	if( vkcontext.debugMarkerSupportAvailable )
+	{
+		qvkCmdDebugMarkerEndEXT( vkcontext.commandBuffer[ vkcontext.frameParity ] );
+	}
+	else if( vkcontext.debugUtilsSupportAvailable )
+	{
+		qvkCmdEndDebugUtilsLabelEXT( vkcontext.commandBuffer[ vkcontext.frameParity ] );
+	}
+#else
+	// only do this if RBDOOM-3-BFG was started by RenderDoc or some similar tool
+	if( glConfig.gremedyStringMarkerAvailable && glConfig.khronosDebugAvailable )
+	{
+		glPopDebugGroup();
+	}
+#endif
+
 #if 0
 	if( !r_pix.GetBool() )
 	{
@@ -168,10 +223,10 @@ void PC_EndNamedEvent()
 	{
 		return;
 	}
-	
+
 	pixEvent_t* ev = &pixEvents[numPixEvents - 1];
 	ev->cpuTime = Sys_Microseconds() - ev->cpuTime;
-	
+
 	GL_CheckErrors();
 	glEndQuery( GL_TIME_ELAPSED_EXT );
 	GL_CheckErrors();
@@ -190,26 +245,26 @@ void PC_EndFrame()
 	{
 		return;
 	}
-	
+
 	int64 totalGPU = 0;
 	int64 totalCPU = 0;
-	
+
 	idLib::Printf( "----- GPU Events -----\n" );
 	for( int i = 0 ; i < numPixEvents ; i++ )
 	{
 		pixEvent_t* ev = &pixEvents[i];
-		
+
 		int64 gpuTime = 0;
 		glGetQueryObjectui64vEXT( timeQueryIds[i], GL_QUERY_RESULT, ( GLuint64EXT* )&gpuTime );
 		ev->gpuTime = gpuTime;
-		
+
 		idLib::Printf( "%2d: %1.2f (GPU) %1.3f (CPU) = %s\n", i, ev->gpuTime / 1000000.0f, ev->cpuTime / 1000.0f, ev->name );
 		totalGPU += ev->gpuTime;
 		totalCPU += ev->cpuTime;
 	}
 	idLib::Printf( "%2d: %1.2f (GPU) %1.3f (CPU) = total\n", numPixEvents, totalGPU / 1000000.0f, totalCPU / 1000.0f );
 	memset( pixEvents, 0, numPixLevels * sizeof( pixEvents[0] ) );
-	
+
 	numPixEvents = 0;
 	numPixLevels = 0;
 #endif
@@ -256,18 +311,18 @@ void idRenderLog::StartFrame()
 	{
 		return;
 	}
-	
+
 	// open a new logfile
 	indentLevel = 0;
 	indentString[0] = '\0';
 	activeLevel = r_logLevel.GetInteger();
-	
+
 	/*
 	struct tm*		newtime;
 	time_t			aclock;
-	
+
 	char ospath[ MAX_OSPATH ];
-	
+
 	char qpath[128];
 	sprintf( qpath, "renderlogPC_%04i.txt", r_logFile.GetInteger() );
 	//idStr finalPath = fileSystem->RelativePathToOSPath( qpath );
@@ -284,16 +339,16 @@ void idRenderLog::StartFrame()
 		}
 	}
 	*/
-	
+
 	common->SetRefreshOnPrint( false );	// problems are caused if this print causes a refresh...
-	
+
 	/*
 	if( logFile != NULL )
 	{
 		fileSystem->CloseFile( logFile );
 		logFile = NULL;
 	}
-	
+
 	logFile = fileSystem->OpenFileWrite( ospath );
 	if( logFile == NULL )
 	{
@@ -301,7 +356,7 @@ void idRenderLog::StartFrame()
 		return;
 	}
 	idLib::Printf( "Opened logfile %s\n", ospath );
-	
+
 	// write the time out to the top of the file
 	time( &aclock );
 	newtime = localtime( &aclock );
@@ -309,7 +364,7 @@ void idRenderLog::StartFrame()
 	logFile->Printf( "// %s", str );
 	logFile->Printf( "// %s\n\n", com_version.GetString() );
 	*/
-	
+
 	frameStartTime = Sys_Microseconds();
 	closeBlockTime = frameStartTime;
 	OpenBlock( "Frame" );
@@ -323,7 +378,7 @@ idRenderLog::EndFrame
 void idRenderLog::EndFrame()
 {
 	PC_EndFrame();
-	
+
 	//if( logFile != NULL )
 	if( r_logFile.GetInteger() != 0 )
 	{
@@ -383,7 +438,7 @@ void idRenderLog::OpenBlock( const char* label )
 {
 	// Allow the PIX functionality even when logFile is not running.
 	PC_BeginNamedEvent( label );
-	
+
 	//if( logFile != NULL )
 	if( r_logFile.GetInteger() != 0 )
 	{
@@ -399,7 +454,7 @@ idRenderLog::CloseBlock
 void idRenderLog::CloseBlock()
 {
 	PC_EndNamedEvent();
-	
+
 	//if( logFile != NULL )
 	if( r_logFile.GetInteger() != 0 )
 	{
@@ -419,34 +474,34 @@ void idRenderLog::Printf( const char* fmt, ... )
 	{
 		return;
 	}
-	
+
 	//if( logFile == NULL )
 	if( r_logFile.GetInteger() == 0 || !glConfig.gremedyStringMarkerAvailable )
 	{
 		return;
 	}
-	
+
 	va_list		marker;
 	char		msg[4096];
-	
+
 	idStr		out = indentString;
-	
+
 	va_start( marker, fmt );
 	idStr::vsnPrintf( msg, sizeof( msg ), fmt, marker );
 	va_end( marker );
-	
+
 	msg[sizeof( msg ) - 1] = '\0';
-	
+
 	out.Append( msg );
-	
+
 	glStringMarkerGREMEDY( out.Length(), out.c_str() );
-	
+
 	//logFile->Printf( "%s", indentString );
 	//va_start( marker, fmt );
 	//logFile->VPrintf( fmt, marker );
 	//va_end( marker );
-	
-	
+
+
 //	logFile->Flush();		this makes it take waaaay too long
 #endif
 }
@@ -459,7 +514,7 @@ idRenderLog::LogOpenBlock
 void idRenderLog::LogOpenBlock( renderLogIndentLabel_t label, const char* fmt, ... )
 {
 	uint64 now = Sys_Microseconds();
-	
+
 	//if( logFile != NULL )
 	if( r_logFile.GetInteger() != 0 )
 	{
@@ -467,44 +522,44 @@ void idRenderLog::LogOpenBlock( renderLogIndentLabel_t label, const char* fmt, .
 		//{
 		//logFile->Printf( "%s%1.1f msec gap from last closeblock\n", indentString, ( now - closeBlockTime ) * ( 1.0f / 1000.0f ) );
 		//}
-		
+
 #if !defined(USE_VULKAN)
 		if( glConfig.gremedyStringMarkerAvailable )
 		{
 			//Printf( fmt, args );
 			//Printf( " {\n" );
-			
+
 			//logFile->Printf( "%s", indentString );
 			//logFile->VPrintf( fmt, args );
 			//logFile->Printf( " {\n" );
-			
+
 			va_list		marker;
 			char		msg[4096];
-			
+
 			idStr		out = indentString;
-			
+
 			va_start( marker, fmt );
 			idStr::vsnPrintf( msg, sizeof( msg ), fmt, marker );
 			va_end( marker );
-			
+
 			msg[sizeof( msg ) - 1] = '\0';
-			
+
 			out.Append( msg );
 			out += " {";
-			
+
 			glStringMarkerGREMEDY( out.Length(), out.c_str() );
 		}
 #endif
 	}
-	
+
 	Indent( label );
-	
+
 	if( logLevel >= MAX_LOG_LEVELS )
 	{
 		idLib::Warning( "logLevel %d >= MAX_LOG_LEVELS", logLevel );
 	}
-	
-	
+
+
 	logLevel++;
 }
 
@@ -516,12 +571,12 @@ idRenderLog::LogCloseBlock
 void idRenderLog::LogCloseBlock( renderLogIndentLabel_t label )
 {
 	closeBlockTime = Sys_Microseconds();
-	
+
 	//assert( logLevel > 0 );
 	logLevel--;
-	
+
 	Outdent( label );
-	
+
 	//if( logFile != NULL )
 	//{
 	//}
@@ -529,14 +584,94 @@ void idRenderLog::LogCloseBlock( renderLogIndentLabel_t label )
 
 #else	// !STUB_RENDER_LOG
 
+// RB begin
+/*
+========================
+idRenderLog::idRenderLog
+========================
+*/
+idRenderLog::idRenderLog()
+{
+}
+
+#if 1
+
+/*
+========================
+idRenderLog::OpenMainBlock
+========================
+*/
+void idRenderLog::OpenMainBlock( renderLogMainBlock_t block )
+{
+	mainBlock = block;
+
+#if defined( USE_VULKAN )
+	if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
+	{
+		return;
+	}
+
+	VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
+	VkQueryPool queryPool = vkcontext.queryPools[ vkcontext.frameParity ];
+
+	uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 0 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
+	vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, queryIndex );
+
+#else
+
+	if( glConfig.timerQueryAvailable )
+	{
+		if( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ block * 2 ] == 0 )
+		{
+			glCreateQueries( GL_TIMESTAMP, 2, &glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ block * 2 ] );
+		}
+
+		glQueryCounter( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ block * 2 + 0 ], GL_TIMESTAMP );
+		glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ][ block * 2 + 0 ]++;
+	}
+#endif
+}
+
+/*
+========================
+idRenderLog::CloseMainBlock
+========================
+*/
+void idRenderLog::CloseMainBlock()
+{
+#if defined( USE_VULKAN )
+
+	if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
+	{
+		return;
+	}
+
+	VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
+	VkQueryPool queryPool = vkcontext.queryPools[ vkcontext.frameParity ];
+
+	uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 1 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
+	vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, queryIndex );
+
+#else
+
+	if( glConfig.timerQueryAvailable )
+	{
+		glQueryCounter( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ], GL_TIMESTAMP );
+		glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ][ mainBlock * 2 + 1 ]++;
+	}
+#endif
+}
+
+#endif
+
 /*
 ========================
 idRenderLog::OpenBlock
 ========================
 */
-void idRenderLog::OpenBlock( const char* label )
+void idRenderLog::OpenBlock( const char* label, const idVec4& color )
 {
-	PC_BeginNamedEvent( label );
+	PC_BeginNamedEvent( label, color );
 }
 
 /*
@@ -548,5 +683,6 @@ void idRenderLog::CloseBlock()
 {
 	PC_EndNamedEvent();
 }
+// RB end
 
 #endif // !STUB_RENDER_LOG

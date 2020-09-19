@@ -44,6 +44,7 @@ public:
 
 	TextBufferHandle createTextBuffer(uint32_t _type, BufferType::Enum _bufferType);
 	void destroyTextBuffer(TextBufferHandle _handle);
+	void deformSprite(TextBufferHandle _handle, const float modelMatrix[16], const idMat3& viewAxis);
 	void submitTextBuffer(TextBufferHandle _handle, int32_t _depth = 0);
 
 	void setStyle(TextBufferHandle _handle, uint32_t _flags = STYLE_NORMAL);
@@ -71,6 +72,22 @@ public:
 private:
 	struct BufferCache
 	{
+		BufferCache()
+			: vertexBufferHandle()
+			, indexBufferHandle()
+			, textBuffer(nullptr)
+			, bufferType(BufferType::Dynamic)
+			, fontType(0)
+		{}
+
+		~BufferCache()
+		{
+			if (textBuffer)
+			{
+				delete textBuffer;
+			}
+		}
+
 		vertCacheHandle_t vertexBufferHandle;
 		vertCacheHandle_t indexBufferHandle;
 		TextBuffer* textBuffer;

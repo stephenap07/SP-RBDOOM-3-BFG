@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 BFG Edition GPL Source Code
-Copyright (C) 2014 Robert Beckebans
+Copyright (C) 2014-2020 Robert Beckebans
 
-This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").  
+This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
 Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ half Distribution_GGX( half hdotN, half alpha )
 	float a2 = alpha * alpha;
 	//float tmp = ( hdotN * hdotN ) * ( a2 - 1.0 ) + 1.0;
 	float tmp = ( hdotN * a2 - hdotN ) * hdotN + 1.0;
-	
+
 	return ( a2 / ( PI * tmp * tmp ) );
 }
 
@@ -43,7 +43,7 @@ half Distribution_GGX_Disney( half hdotN, half alphaG )
 	float a2 = alphaG * alphaG;
 	float tmp = ( hdotN * hdotN ) * ( a2 - 1.0 ) + 1.0;
 	//tmp *= tmp;
-	
+
 	return ( a2 / ( PI * tmp ) );
 }
 
@@ -55,9 +55,23 @@ half Distribution_GGX_1886( half hdotN, half alpha )
 
 // Fresnel term F( v, h )
 // Fnone( v, h ) = F(0°) = specularColor
-half3 Fresnel_Schlick( half3 specularColor, half vdotH )
+half3 Fresnel_Schlick( half3 specularColor, half vDotN )
 {
-	return specularColor + ( 1.0 - specularColor ) * pow( 1.0 - vdotH, 5.0 );
+	return specularColor + ( 1.0 - specularColor ) * pow( 1.0 - vDotN, 5.0 );
+}
+
+// Fresnel term that takes roughness into account so rough non-metal surfaces aren't too shiny [Lagarde11]
+half3 Fresnel_SchlickRoughness( half3 specularColor, half vDotN, half roughness )
+{
+	return specularColor + ( max( half3( 1.0  - roughness ), specularColor ) - specularColor ) * pow( 1.0 - vDotN, 5.0 );
+}
+
+// Sébastien Lagarde proposes an empirical approach to derive the specular occlusion term from the diffuse occlusion term in [Lagarde14].
+// The result does not have any physical basis but produces visually pleasant results.
+// See Sébastien Lagarde and Charles de Rousiers. 2014. Moving Frostbite to PBR.
+float ComputeSpecularAO( float vDotN, float ao, float roughness )
+{
+	return clamp( pow( vDotN + ao, exp2( -16.0 * roughness - 1.0 ) ) - 1.0 + ao, 0.0, 1.0 );
 }
 
 // Visibility term G( l, v, h )
@@ -65,10 +79,10 @@ half3 Fresnel_Schlick( half3 specularColor, half vdotH )
 float Visibility_Schlick( half vdotN, half ldotN, float alpha )
 {
 	float k = alpha * 0.5;
-	
+
 	float schlickL = ( ldotN * ( 1.0 - k ) + k );
 	float schlickV = ( vdotN * ( 1.0 - k ) + k );
-	
+
 	return ( 0.25 / ( schlickL * schlickV ) );
 	//return ( ( schlickL * schlickV ) / ( 4.0 * vdotN * ldotN ) );
 }
@@ -82,7 +96,7 @@ float Visibility_SmithGGX( half vdotN, half ldotN, float alpha )
 
 	float V1 = ldotN + sqrt( alpha + ( 1.0 - alpha ) * ldotN * ldotN );
 	float V2 = vdotN + sqrt( alpha + ( 1.0 - alpha ) * vdotN * vdotN );
-	
+
 	// RB: avoid too bright spots
 	return ( 1.0 / max( V1 * V2, 0.15 ) );
 }
@@ -113,7 +127,7 @@ float3 EnvironmentBRDF( half g, half vdotN, float3 rf0 )
 	t += float4( 0.0, 0.0, ( 0.015 - 0.75 * 0.04 ) / 0.96, 0.75 );
 	half a0 = t.x * min( t.y, exp2( -9.28 * vdotN ) ) + t.z;
 	half a1 = t.w;
-	
+
 	return saturate( a0 + rf0 * ( a1 - a0 ) );
 }
 

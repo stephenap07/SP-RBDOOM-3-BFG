@@ -3,8 +3,6 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2014-2016 Robert Beckebans
-Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -102,15 +100,15 @@ idSWFDictionaryEntry* idSWF::AddDictionaryEntry( int characterID, swfDictType_t 
 	{
 		dictionary.SetNum( characterID + 1 );
 	}
-	
+
 	if( dictionary[ characterID ].type != SWF_DICT_NULL )
 	{
 		idLib::Warning( "%s: Duplicate character %d", filename.c_str(), characterID );
 		return NULL;
 	}
-	
+
 	dictionary[ characterID ].type = type;
-	
+
 	if( ( type == SWF_DICT_SHAPE ) || ( type == SWF_DICT_MORPH ) )
 	{
 		dictionary[ characterID ].shape = new( TAG_SWF ) idSWFShape;
@@ -131,7 +129,7 @@ idSWFDictionaryEntry* idSWF::AddDictionaryEntry( int characterID, swfDictType_t 
 	{
 		dictionary[ characterID ].edittext = new( TAG_SWF ) idSWFEditText;
 	}
-	
+
 	return &dictionary[ characterID ];
 }
 
@@ -148,13 +146,13 @@ idSWFDictionaryEntry* idSWF::FindDictionaryEntry( int characterID, swfDictType_t
 		idLib::Warning( "%s: Could not find character %d", filename.c_str(), characterID );
 		return NULL;
 	}
-	
+
 	if( dictionary[ characterID ].type != type )
 	{
 		idLib::Warning( "%s: Character %d is the wrong type", filename.c_str(), characterID );
 		return NULL;
 	}
-	
+
 	return &dictionary[ characterID ];
 }
 
@@ -172,6 +170,6 @@ idSWFDictionaryEntry* idSWF::FindDictionaryEntry( int characterID )
 		idLib::Warning( "%s: Could not find character %d", filename.c_str(), characterID );
 		return NULL;
 	}
-	
+
 	return &dictionary[ characterID ];
 }

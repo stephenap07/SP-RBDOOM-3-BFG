@@ -7,6 +7,7 @@
 
 #include "CubeAtlas.h"
 #include "GuiModel.h"
+#include <renderer\GLMatrix.h>
 
 
 #define MAX_BUFFERED_CHARACTERS (8192 - 5)
@@ -114,11 +115,6 @@ public:
 		return m_rectangle;
 	}
 
-	const idMaterial* getMaterial() const
-	{
-		return m_material;
-	}
-
 private:
 	void appendGlyph(FontHandle _handle, CodePoint _codePoint);
 	void verticalCenterLastLine(float _txtDecalY, float _top, float _bottom);
@@ -146,6 +142,9 @@ private:
 	float m_penX;
 	float m_penY;
 
+	float m_oldPenX;
+	float m_oldPenY;
+
 	float m_originX;
 	float m_originY;
 
@@ -155,13 +154,13 @@ private:
 
 	TextRectangle m_rectangle;
 	FontManager* m_fontManager;
-	const idMaterial* m_material;
 
 	void setVertex(uint32_t _i, float _x, float _y, uint32_t _rgba, uint8_t _style = STYLE_NORMAL)
 	{
 		m_styleBuffer[_i] = _style;
-		m_vertexBuffer[_i].xyz[0] = _x;
-		m_vertexBuffer[_i].xyz[1] = _y;
+		m_vertexBuffer[_i].xyz.x = _x;
+		m_vertexBuffer[_i].xyz.y = _y;
+		m_vertexBuffer[_i].xyz.z = 0;
 		m_vertexBuffer[_i].SetColor(_rgba);
 	}
 
@@ -183,13 +182,15 @@ TextBuffer::TextBuffer(FontManager* _fontManager)
 	, m_strikeThroughColor(0xffffffff)
 	, m_penX(0)
 	, m_penY(0)
+	, m_oldPenX(0)
+	, m_oldPenY(0)
 	, m_originX(0)
 	, m_originY(0)
 	, m_lineAscender(0)
 	, m_lineDescender(0)
 	, m_lineGap(0)
 	, m_fontManager(_fontManager)
-	, m_material(nullptr)
+	// TODO(Stephen): Use some kind of pooling system. Heap allocs slows down dynamic text.
 	, m_vertexBuffer(new idDrawVert[MAX_BUFFERED_CHARACTERS * 4])
 	, m_indexBuffer(new triIndex_t[MAX_BUFFERED_CHARACTERS * 6])
 	, m_styleBuffer(new uint8_t[MAX_BUFFERED_CHARACTERS * 4])
@@ -222,6 +223,8 @@ void TextBuffer::appendText(FontHandle _fontHandle, const idStr& aString)
 	CodePoint codepoint = 0;
 	uint32_t state = 0;
 
+	int startVertex = m_vertexCount;
+
 	for (int i = 0; i < aString.Length(); ++i)
 	{
 		int d = i;
@@ -243,11 +246,6 @@ void TextBuffer::appendAtlasFace(uint16_t _faceIndex)
 
 	m_fontManager->getAtlas()->packFaceLayerUV(_faceIndex, &m_vertexBuffer[m_vertexCount]);
 
-	//setVertex(m_vertexCount + 0, x0, y0, m_backgroundColor);
-	//setVertex(m_vertexCount + 1, x1, y0, m_backgroundColor);
-	//setVertex(m_vertexCount + 2, x1, y1, m_backgroundColor);
-	//setVertex(m_vertexCount + 3, x0, y1, m_backgroundColor);
-
 	setVertex(m_vertexCount + 0, x0, y0, m_backgroundColor);
 	setVertex(m_vertexCount + 1, x1, y0, m_backgroundColor);
 	setVertex(m_vertexCount + 2, x1, y1, m_backgroundColor);
@@ -267,6 +265,8 @@ void TextBuffer::clearTextBuffer()
 {
 	m_penX = 0;
 	m_penY = 0;
+	m_oldPenX = 0;
+	m_oldPenY = 0;
 	m_originX = 0;
 	m_originY = 0;
 
@@ -314,6 +314,8 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 
 	if (_codePoint == L'\n')
 	{
+		m_oldPenX = m_penX;
+		m_oldPenY = m_penY;
 		m_penX = m_originX;
 		m_penY += m_lineGap + m_lineAscender - m_lineDescender;
 		m_lineGap = font.lineGap;
@@ -451,6 +453,11 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 	float x1 = (x0 + glyph->width);
 	float y1 = (y0 + glyph->height);
 
+	for (int i = m_vertexCount; i < (m_vertexCount + 4); i++)
+	{
+		m_vertexBuffer[i].Clear();
+	}
+
 	atlas->packUV(glyph->regionIndex, &m_vertexBuffer[m_vertexCount]);
 
 	setVertex(m_vertexCount + 0, x0, y0, m_textColor);
@@ -466,6 +473,8 @@ void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 	m_indexBuffer[m_indexCount + 5] = m_vertexCount + 1;
 	m_vertexCount += 4;
 	m_indexCount += 6;
+
+	m_oldPenX = m_penX;
 
 	m_penX += glyph->advance_x;
 	if (m_penX > m_rectangle.width)
@@ -523,11 +532,14 @@ TextBufferHandle TextBufferManager::createTextBuffer(uint32_t _type, BufferType:
 	uint16_t textIdx = m_textBufferHandles.alloc();
 	BufferCache& bc = m_textBuffers[textIdx];
 
-	bc.textBuffer = new TextBuffer(m_fontManager);
-	bc.fontType = _type;
-	bc.bufferType = _bufferType;
-	bc.indexBufferHandle = 0;
-	bc.vertexBufferHandle = 0;
+	if (!bc.textBuffer)
+	{
+		bc.textBuffer = new TextBuffer(m_fontManager);
+		bc.fontType = _type;
+		bc.bufferType = _bufferType;
+		bc.indexBufferHandle = 0;
+		bc.vertexBufferHandle = 0;
+	}
 
 	TextBufferHandle ret = { textIdx };
 	return ret;
@@ -539,8 +551,47 @@ void TextBufferManager::destroyTextBuffer(TextBufferHandle _handle)
 
 	BufferCache& bc = m_textBuffers[_handle._id];
 	m_textBufferHandles.free(_handle._id);
-	delete bc.textBuffer;
-	bc.textBuffer = nullptr;
+	bc.textBuffer->clearTextBuffer();
+	//delete bc.textBuffer;
+	//bc.textBuffer = nullptr;
+}
+
+void TextBufferManager::deformSprite(TextBufferHandle _handle, const float modelMatrix[16], const idMat3& viewAxis)
+{
+	assert(_handle._id != kInvalidHandle && "Invalid handle used");
+
+	BufferCache& bc = m_textBuffers[_handle._id];
+
+	idDrawVert* vert = (idDrawVert*)bc.textBuffer->getVertexBuffer();
+	triIndex_t* indexes = (triIndex_t*)bc.textBuffer->getIndexBuffer();
+
+	idVec3 leftDir;
+	idVec3 upDir;
+	R_GlobalVectorToLocal((float*)modelMatrix, viewAxis[1], leftDir);
+	R_GlobalVectorToLocal((float*)modelMatrix, viewAxis[2], upDir);
+
+	for (int i = 0; i < bc.textBuffer->getVertexCount(); i+=4)
+	{
+		idVec3 mid;
+		mid[0] = 0.25f * (vert[i + 0].xyz[0] + vert[i + 1].xyz[0] + vert[i + 2].xyz[0] + vert[i + 3].xyz[0]);
+		mid[1] = 0.25f * (vert[i + 0].xyz[1] + vert[i + 1].xyz[1] + vert[i + 2].xyz[1] + vert[i + 3].xyz[1]);
+		mid[2] = 0.25f * (vert[i + 0].xyz[2] + vert[i + 1].xyz[2] + vert[i + 2].xyz[2] + vert[i + 3].xyz[2]);
+
+		const idVec3 delta = vert[i + 0].xyz - mid;
+		const float radius = delta.Length() * idMath::SQRT_1OVER2;
+
+		const idVec3 left = leftDir * radius;
+		const idVec3 up = upDir * radius;
+
+		vert[i + 0].xyz = mid + left + up;
+		//vert[i + 0].SetTexCoord(0, 0);
+		vert[i + 1].xyz = mid - left + up;
+		//vert[i + 1].SetTexCoord(1, 0);
+		vert[i + 2].xyz = mid - left - up;
+		//vert[i + 2].SetTexCoord(1, 1);
+		vert[i + 3].xyz = mid + left - up;
+		//vert[i + 3].SetTexCoord(0, 1);
+	}
 }
 
 void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _depth)
@@ -566,6 +617,16 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 		STEREO_DEPTH_TYPE_NONE);
 
 	WriteDrawVerts16(verts, (idDrawVert*)bc.textBuffer->getVertexBuffer(), bc.textBuffer->getVertexCount());
+
+	// Scale the vertices to virtual space.
+		const idVec2 scaleToVirtual((float)renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
+			(float)renderSystem->GetVirtualHeight() / renderSystem->GetHeight());
+
+		for (int i = 0; i < bc.textBuffer->getVertexCount(); i++)
+		{
+			verts[i].xyz.x *= scaleToVirtual.x;
+			verts[i].xyz.y *= scaleToVirtual.y;
+		}
 }
 
 void TextBufferManager::setStyle(TextBufferHandle _handle, uint32_t _flags)

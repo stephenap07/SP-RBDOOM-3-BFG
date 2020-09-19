@@ -56,6 +56,8 @@ public:
 	Atlas(uint16_t _textureSize, const uint8_t* _textureBuffer, uint16_t _regionCount, const uint8_t* _regionBuffer, uint16_t _maxRegionsCount = 4096);
 	~Atlas();
 
+	void init();
+
 	/// add a region to the atlas, and copy the content of mem to the underlying texture
 	uint16_t addRegion(uint16_t _width, uint16_t _height, const uint8_t* _bitmapBuffer, AtlasRegion::Type _type = AtlasRegion::TYPE_RGBA8, uint16_t outline = 0);
 
@@ -114,7 +116,7 @@ public:
 	/// retrieve the byte size of the texture
 	uint32_t getTextureBufferSize() const
 	{
-		return 6 * m_textureSize * m_textureSize * 4;
+		return m_textureSize * m_textureSize * 4;
 	}
 
 	/// retrieve the mirrored texture buffer (to serialize it)
@@ -124,7 +126,6 @@ public:
 	}
 
 private:
-	void init();
 
 	struct PackedLayer;
 	/// @owns

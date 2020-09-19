@@ -150,13 +150,13 @@ void idCommonLocal::StartMenu(bool playIntro)
 		return;
 	}
 
-	if (readDemo)
+	if( readDemo )
 	{
 		// if we're playing a demo, esc kills it
 		UnloadMap();
 	}
 
-	if (game)
+	if( game )
 	{
 		game->Shell_Show(true);
 		game->Shell_SyncWithSession();
@@ -213,12 +213,12 @@ bool idCommonLocal::MenuEvent(const sysEvent_t* event)
 		return true;
 	}
 
-	if (game && game->Shell_IsActive())
+	if( game && game->Shell_IsActive() )
 	{
 		return game->Shell_HandleGuiEvent(event);
 	}
 
-	if (game)
+	if( game )
 	{
 		return game->HandlePlayerGuiEvent(event);
 	}

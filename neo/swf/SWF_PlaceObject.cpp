@@ -3,8 +3,6 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2014-2016 Robert Beckebans
-Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -33,23 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 int c_PlaceObject2;
 int c_PlaceObject3;
 
-#define PlaceFlagHasClipActions		BIT( 7 )
-#define PlaceFlagHasClipDepth		BIT( 6 )
-#define PlaceFlagHasName			BIT( 5 )
-#define PlaceFlagHasRatio			BIT( 4 )
-#define PlaceFlagHasColorTransform	BIT( 3 )
-#define PlaceFlagHasMatrix			BIT( 2 )
-#define PlaceFlagHasCharacter		BIT( 1 )
-#define PlaceFlagMove				BIT( 0 )
 
-#define PlaceFlagPad0				BIT( 7 )
-#define PlaceFlagPad1				BIT( 6 )
-#define PlaceFlagPad2				BIT( 5 )
-#define PlaceFlagHasImage			BIT( 4 )
-#define PlaceFlagHasClassName		BIT( 3 )
-#define PlaceFlagCacheAsBitmap		BIT( 2 )
-#define PlaceFlagHasBlendMode		BIT( 1 )
-#define PlaceFlagHasFilterList		BIT( 0 )
 
 /*
 ========================
@@ -59,18 +41,18 @@ idSWFSpriteInstance::PlaceObject2
 void idSWFSpriteInstance::PlaceObject2( idSWFBitStream& bitstream )
 {
 	c_PlaceObject2++;
-	
+
 	uint64 flags = bitstream.ReadU8();
 	int depth = bitstream.ReadU16();
-	
+
 	int characterID = -1;
 	if( ( flags & PlaceFlagHasCharacter ) != 0 )
 	{
 		characterID = bitstream.ReadU16();
 	}
-	
+
 	swfDisplayEntry_t* display = NULL;
-	
+
 	if( ( flags & PlaceFlagMove ) != 0 )
 	{
 		// modify an existing entry
@@ -159,24 +141,24 @@ idSWFSpriteInstance::PlaceObject3
 void idSWFSpriteInstance::PlaceObject3( idSWFBitStream& bitstream )
 {
 	c_PlaceObject3++;
-	
+
 	uint64 flags1 = bitstream.ReadU8();
 	uint64 flags2 = bitstream.ReadU8();
 	uint16 depth = bitstream.ReadU16();
-	
+
 	if( ( flags2 & PlaceFlagHasClassName ) != 0 || ( ( ( flags2 & PlaceFlagHasImage ) != 0 ) && ( ( flags1 & PlaceFlagHasCharacter ) != 0 ) ) )
 	{
 		bitstream.ReadString(); // ignored
 	}
-	
+
 	int characterID = -1;
 	if( ( flags1 & PlaceFlagHasCharacter ) != 0 )
 	{
 		characterID = bitstream.ReadU16();
 	}
-	
+
 	swfDisplayEntry_t* display = NULL;
-	
+
 	if( ( flags1 & PlaceFlagMove ) != 0 )
 	{
 		// modify an existing entry

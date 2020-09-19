@@ -32,13 +32,31 @@ If you have questions concerning this license or the applicable additional terms
 
 #if defined( USE_VULKAN )
 
-#define VK_USE_PLATFORM_WIN32_KHR
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+	#include <Windows.h>
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+	#include <xcb/xcb.h>
+	#include <dlfcn.h>
+	#include <cstdlib>
+
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+	#include <X11/Xlib.h>
+	#include <X11/Xutil.h>
+	#include <dlfcn.h>
+	#include <cstdlib>
+#endif
+
 #define USE_AMD_ALLOCATOR
 
 #include <vulkan/vulkan.h>
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+	#include <xcb/xcb.h>
+	#include <dlfcn.h>
+#endif
+
 #if defined( USE_AMD_ALLOCATOR )
-#include "vma.h"
+	#include "vma.h"
 #endif
 
 #define ID_VK_CHECK( x ) { \
@@ -60,7 +78,21 @@ static const int MAX_DESC_SET_WRITES		= 32;
 static const int MAX_DESC_SET_UNIFORMS		= 48;
 static const int MAX_IMAGE_PARMS			= 16;
 static const int MAX_UBO_PARMS				= 2;
+static const int NUM_TIMESTAMP_QUERIES		= 32;
 
+// VK_EXT_debug_marker
+extern PFN_vkDebugMarkerSetObjectTagEXT		qvkDebugMarkerSetObjectTagEXT;
+extern PFN_vkDebugMarkerSetObjectNameEXT	qvkDebugMarkerSetObjectNameEXT;
+extern PFN_vkCmdDebugMarkerBeginEXT			qvkCmdDebugMarkerBeginEXT;
+extern PFN_vkCmdDebugMarkerEndEXT			qvkCmdDebugMarkerEndEXT;
+extern PFN_vkCmdDebugMarkerInsertEXT		qvkCmdDebugMarkerInsertEXT;
+
+// VK_EXT_debug_utils
+extern PFN_vkQueueBeginDebugUtilsLabelEXT	qvkQueueBeginDebugUtilsLabelEXT;
+extern PFN_vkQueueEndDebugUtilsLabelEXT		qvkQueueEndDebugUtilsLabelEXT;
+extern PFN_vkCmdBeginDebugUtilsLabelEXT		qvkCmdBeginDebugUtilsLabelEXT;
+extern PFN_vkCmdEndDebugUtilsLabelEXT		qvkCmdEndDebugUtilsLabelEXT;
+extern PFN_vkCmdInsertDebugUtilsLabelEXT	qvkCmdInsertDebugUtilsLabelEXT;
 
 #endif
 

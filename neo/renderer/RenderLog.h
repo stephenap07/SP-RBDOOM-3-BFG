@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2013-2020 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -34,15 +35,18 @@ Contains the RenderLog declaration.
 ================================================================================================
 */
 
-#if defined(ID_RETAIL) && !defined(ID_RETAIL_INTERNAL)
-#define STUB_RENDER_LOG
+#if 1 //defined(ID_RETAIL) && !defined(ID_RETAIL_INTERNAL)
+	#define STUB_RENDER_LOG
 #endif
 
 enum renderLogMainBlock_t
 {
-	MRB_NONE,
+	// each block will require to allocate 2 GPU query timestamps
+	MRB_GPU_TIME,
 	MRB_BEGIN_DRAWING_VIEW,
 	MRB_FILL_DEPTH_BUFFER,
+	MRB_FILL_GEOMETRY_BUFFER,
+	MRB_SSAO_PASS,
 	MRB_AMBIENT_PASS,
 	MRB_DRAW_INTERACTIONS,
 	MRB_DRAW_SHADER_PASSES,
@@ -51,12 +55,9 @@ enum renderLogMainBlock_t
 	MRB_DRAW_DEBUG_TOOLS,
 	MRB_CAPTURE_COLORBUFFER,
 	MRB_POSTPROCESS,
-	MRB_GPU_SYNC,
-	MRB_END_FRAME,
-	MRB_BINK_FRAME,
-	MRB_BINK_NEXT_FRAME,
 	MRB_TOTAL,
-	MRB_MAX
+
+	MRB_TOTAL_QUERIES = MRB_TOTAL * 2,
 };
 
 // these are used to make sure each Indent() is properly paired with an Outdent()
@@ -83,7 +84,7 @@ class idRenderLog
 {
 public:
 	idRenderLog();
-	
+
 	void		StartFrame();
 	void		EndFrame();
 	void		Close();
@@ -91,21 +92,21 @@ public:
 	{
 		return activeLevel;    // returns greater than 1 for more detailed logging
 	}
-	
+
 	// The label must be a constant string literal and may not point to a temporary.
 	void		OpenMainBlock( renderLogMainBlock_t block );
 	void		CloseMainBlock();
-	
+
 	void		OpenBlock( const char* label );
 	void		CloseBlock();
-	
+
 	void		Indent( renderLogIndentLabel_t label = RENDER_LOG_INDENT_DEFAULT );
 	void		Outdent( renderLogIndentLabel_t label = RENDER_LOG_INDENT_DEFAULT );
-	
+
 	void		Printf( VERIFY_FORMAT_STRING const char* fmt, ... );
-	
+
 	static const int		MAX_LOG_LEVELS = 20;
-	
+
 	int						activeLevel;
 	renderLogIndentLabel_t	indentLabel[MAX_LOG_LEVELS];
 	char					indentString[MAX_LOG_LEVELS * 4];
@@ -120,12 +121,12 @@ public:
 		int		startDraws;
 		int		startIndexes;
 	};
-	
+
 	uint64					frameStartTime;
 	uint64					closeBlockTime;
 	logStats_t				logStats[MAX_LOG_LEVELS];
 	int						logLevel;
-	
+
 	void					LogOpenBlock( renderLogIndentLabel_t label, const char* fmt, ... );
 	void					LogCloseBlock( renderLogIndentLabel_t label );
 };
@@ -172,13 +173,19 @@ ID_INLINE void idRenderLog::Outdent( renderLogIndentLabel_t label )
 ================================================
 idRenderLog stubbed version for the SPUs and high
 performance rendering in retail builds.
+
+// Performance Events abstraction layer for OpenGL, Vulkan, DX12
+// see https://devblogs.nvidia.com/best-practices-gpu-performance-events/
 ================================================
 */
 class idRenderLog
 {
+private:
+	renderLogMainBlock_t mainBlock;
+
 public:
-	idRenderLog() {}
-	
+	idRenderLog();
+
 	void		StartFrame() {}
 	void		EndFrame() {}
 	void		Close() {}
@@ -186,16 +193,16 @@ public:
 	{
 		return 0;
 	}
-	
-	void		OpenBlock( const char* label );
+
+	void		OpenBlock( const char* label, const idVec4& color = colorBlack );
 	void		CloseBlock();
-	void		OpenMainBlock( renderLogMainBlock_t block ) {}
-	void		CloseMainBlock() {}
+	void		OpenMainBlock( renderLogMainBlock_t block );// {}
+	void		CloseMainBlock();// {}
 	void		Indent( renderLogIndentLabel_t label = RENDER_LOG_INDENT_DEFAULT ) {}
 	void		Outdent( renderLogIndentLabel_t label = RENDER_LOG_INDENT_DEFAULT ) {}
-	
+
 	void		Printf( VERIFY_FORMAT_STRING const char* fmt, ... ) {}
-	
+
 	int			activeLevel;
 };
 

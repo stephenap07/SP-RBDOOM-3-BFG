@@ -35,8 +35,8 @@ If you have questions concerning this license or the applicable additional terms
 
 idResolutionScale	resolutionScale;
 
-static const float MINIMUM_RESOLUTION_SCALE = 0.5f;
-static const float MAXIMUM_RESOLUTION_SCALE = 1.0f;
+static const float MINIMUM_RESOLUTION_SCALE = 0.5;
+static const float MAXIMUM_RESOLUTION_SCALE = 1.0;
 
 // RB: turned this off. It is only useful on mobile devices or consoles
 idCVar rs_enable( "rs_enable", "0", CVAR_INTEGER, "Enable dynamic resolution scaling, 0 - off, 1 - horz only, 2 - vert only, 3 - both" );
@@ -93,10 +93,9 @@ idResolutionScale::GetCurrentResolutionScale
 */
 void idResolutionScale::GetCurrentResolutionScale( float& x, float& y )
 {
-	// TODO(Stephen): This asserts when the window is minimized or in the backtrack for while.
-	assert( (currentResolution + 0.0001) >= MINIMUM_RESOLUTION_SCALE );
-	assert( (currentResolution - 0.0001) <= MAXIMUM_RESOLUTION_SCALE );
-	
+	assert( currentResolution >= MINIMUM_RESOLUTION_SCALE );
+	assert( currentResolution <= MAXIMUM_RESOLUTION_SCALE );
+
 	x = MAXIMUM_RESOLUTION_SCALE;
 	y = MAXIMUM_RESOLUTION_SCALE;
 	switch( rs_enable.GetInteger() )
@@ -147,7 +146,7 @@ void idResolutionScale::SetCurrentGPUFrameTime( int microseconds )
 {
 	float old = currentResolution;
 	float milliseconds = microseconds * 0.001f;
-	
+
 	if( milliseconds > dropMilliseconds )
 	{
 		// We missed our target, so drop the resolution.
@@ -183,7 +182,7 @@ void idResolutionScale::SetCurrentGPUFrameTime( int microseconds )
 		// we are inside the target range
 		framesAboveRaise = 0;
 	}
-	
+
 	if( rs_showResolutionChanges.GetInteger() > 1 ||
 			( rs_showResolutionChanges.GetInteger() == 1 && currentResolution != old ) )
 	{

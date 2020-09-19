@@ -62,40 +62,40 @@ void R_SurfaceToTextureAxis( const srfTriangles_t* tri, idVec3& origin, idVec3 a
 		boundsMin.y = Min( uv.y, boundsMin.y );
 		boundsMax.y = Max( uv.y, boundsMax.y );
 	}
-	
+
 	// use the floor of the midpoint as the origin of the
 	// surface, which will prevent a slight misalignment
 	// from throwing it an entire cycle off
 	const idVec2 boundsOrg( floor( ( boundsMin.x + boundsMax.x ) * 0.5f ), floor( ( boundsMin.y + boundsMax.y ) * 0.5f ) );
-	
+
 	// determine the world S and T vectors from the first drawSurf triangle
-	
+
 	// RB: added check wether GPU skinning is available at all
 	const idJointMat* joints = ( tri->staticModelWithJoints != NULL && r_useGPUSkinning.GetBool() && glConfig.gpuSkinningAvailable ) ? tri->staticModelWithJoints->jointsInverted : NULL;
 	// RB end
-	
+
 	const idVec3 aXYZ = idDrawVert::GetSkinnedDrawVertPosition( tri->verts[ tri->indexes[0] ], joints );
 	const idVec3 bXYZ = idDrawVert::GetSkinnedDrawVertPosition( tri->verts[ tri->indexes[1] ], joints );
 	const idVec3 cXYZ = idDrawVert::GetSkinnedDrawVertPosition( tri->verts[ tri->indexes[2] ], joints );
-	
+
 	const idVec2 aST = tri->verts[ tri->indexes[0] ].GetTexCoord();
 	const idVec2 bST = tri->verts[ tri->indexes[1] ].GetTexCoord();
 	const idVec2 cST = tri->verts[ tri->indexes[2] ].GetTexCoord();
-	
+
 	float d0[5];
 	d0[0] = bXYZ[0] - aXYZ[0];
 	d0[1] = bXYZ[1] - aXYZ[1];
 	d0[2] = bXYZ[2] - aXYZ[2];
 	d0[3] = bST.x - aST.x;
 	d0[4] = bST.y - aST.y;
-	
+
 	float d1[5];
 	d1[0] = cXYZ[0] - aXYZ[0];
 	d1[1] = cXYZ[1] - aXYZ[1];
 	d1[2] = cXYZ[2] - aXYZ[2];
 	d1[3] = cST.x - aST.x;
 	d1[4] = cST.y - aST.y;
-	
+
 	const float area = d0[3] * d1[4] - d0[4] * d1[3];
 	if( area == 0.0f )
 	{
@@ -105,21 +105,21 @@ void R_SurfaceToTextureAxis( const srfTriangles_t* tri, idVec3& origin, idVec3 a
 		return;	// degenerate
 	}
 	const float inva = 1.0f / area;
-	
+
 	axis[0][0] = ( d0[0] * d1[4] - d0[4] * d1[0] ) * inva;
 	axis[0][1] = ( d0[1] * d1[4] - d0[4] * d1[1] ) * inva;
 	axis[0][2] = ( d0[2] * d1[4] - d0[4] * d1[2] ) * inva;
-	
+
 	axis[1][0] = ( d0[3] * d1[0] - d0[0] * d1[3] ) * inva;
 	axis[1][1] = ( d0[3] * d1[1] - d0[1] * d1[3] ) * inva;
 	axis[1][2] = ( d0[3] * d1[2] - d0[2] * d1[3] ) * inva;
-	
+
 	idPlane plane;
 	plane.FromPoints( aXYZ, bXYZ, cXYZ );
 	axis[2][0] = plane[0];
 	axis[2][1] = plane[1];
 	axis[2][2] = plane[2];
-	
+
 	// take point 0 and project the vectors to the texture origin
 	VectorMA( aXYZ, boundsOrg.x - aST.x, axis[0], origin );
 	VectorMA( origin, boundsOrg.y - aST.y, axis[1], origin );
@@ -136,25 +136,25 @@ call the GUI generator to create quads for it.
 static void R_RenderGuiSurf( idUserInterface* gui, const drawSurf_t* drawSurf )
 {
 	SCOPED_PROFILE_EVENT( "R_RenderGuiSurf" );
-	
+
 	// for testing the performance hit
 	if( r_skipGuiShaders.GetInteger() == 1 )
 	{
 		return;
 	}
-	
+
 	// don't allow an infinite recursion loop
 	if( tr.guiRecursionLevel == 4 )
 	{
 		return;
 	}
-	
+
 	tr.pc.c_guiSurfs++;
-	
+
 	// create the new matrix to draw on this surface
 	idVec3 origin, axis[3];
 	R_SurfaceToTextureAxis( drawSurf->frontEndGeo, origin, axis );
-	
+
 	float guiModelMatrix[16];
 	float modelMatrix[16];
 	
@@ -170,24 +170,25 @@ static void R_RenderGuiSurf( idUserInterface* gui, const drawSurf_t* drawSurf )
 	
 	guiModelMatrix[0 * 4 + 2] = axis[0][2] * ( 1.0f / SCREEN_WIDTH);
 	guiModelMatrix[1 * 4 + 2] = axis[1][2] * ( 1.0f / SCREEN_HEIGHT);
+
 	guiModelMatrix[2 * 4 + 2] = axis[2][2];
 	guiModelMatrix[3 * 4 + 2] = origin[2];
-	
+
 	guiModelMatrix[0 * 4 + 3] = 0.0f;
 	guiModelMatrix[1 * 4 + 3] = 0.0f;
 	guiModelMatrix[2 * 4 + 3] = 0.0f;
 	guiModelMatrix[3 * 4 + 3] = 1.0f;
-	
+
 	R_MatrixMultiply( guiModelMatrix, drawSurf->space->modelMatrix, modelMatrix );
-	
+
 	tr.guiRecursionLevel++;
-	
+
 	// call the gui, which will call the 2D drawing functions
 	tr.guiModel->Clear();
 	gui->Redraw( tr.viewDef->renderView.time[0] );
 	tr.guiModel->EmitToCurrentView( modelMatrix, drawSurf->space->weaponDepthHack );
 	tr.guiModel->Clear();
-	
+
 	tr.guiRecursionLevel--;
 }
 
@@ -199,34 +200,108 @@ R_AddInGameGuis
 void R_AddInGameGuis( const drawSurf_t* const drawSurfs[], const int numDrawSurfs )
 {
 	SCOPED_PROFILE_EVENT( "R_AddInGameGuis" );
-	
+
 	// check for gui surfaces
 	for( int i = 0; i < numDrawSurfs; i++ )
 	{
 		const drawSurf_t* drawSurf = drawSurfs[i];
-		
-		idUserInterface*	gui = drawSurf->material->GlobalGui();
-		
-		int guiNum = drawSurf->material->GetEntityGui() - 1;
-		if( guiNum >= 0 && guiNum < MAX_RENDERENTITY_GUI )
+
+		const idRenderEntityLocal* edef = drawSurf->space->entityDef;
+		if (edef &&
+			edef->parms.entityNum > 0)
 		{
-			if( drawSurf->space->entityDef != NULL )
+			tr.guiModel->Clear();
+
+			auto man = renderSystem->GetTextBufferManager();
+			auto textHandle = man->createTextBuffer(0, BufferType::Dynamic);
+			man->setPenPosition(textHandle, 0, 0);
+			man->appendText(textHandle, renderSystem->GetDefaultFontHandle(), edef->parms.hModel->Name());
+
+			if (edef->IsDirectlyVisible())
 			{
-				gui = drawSurf->space->entityDef->parms.gui[ guiNum ];
+				man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(idStr::ColorForIndex(C_COLOR_CYAN)));
+			}
+			else
+			{
+				man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(idStr::ColorForIndex(C_COLOR_RED)));
+			}
+			
+
+			/*
+			float modelMatrix[16];
+
+			memcpy(modelMatrix, drawSurf->space->entityDef->modelMatrix, sizeof(float) * 16);
+			// Move the text 10 units above the model in world space.
+			modelMatrix[14] += 10.0f;
+
+			// Scale the model smaller.
+			modelMatrix[0] = 0.2f;
+			modelMatrix[5] = 0.2f;
+			modelMatrix[10] = 0.2f;
+			*/
+
+			// create the new matrix to draw on this surface
+			idVec3 origin, axis[3];
+			R_SurfaceToTextureAxis(drawSurf->frontEndGeo, origin, axis);
+
+			float guiModelMatrix[16];
+			float modelMatrix[16];
+
+			TextRectangle rect = man->getRectangle(textHandle);
+
+			guiModelMatrix[0 * 4 + 0] = axis[0][0] * 2.0f/rect.width;
+			guiModelMatrix[1 * 4 + 0] = axis[1][0] * 2.0f/rect.height;
+			guiModelMatrix[2 * 4 + 0] = axis[2][0];
+			guiModelMatrix[3 * 4 + 0] = origin[0];
+
+			guiModelMatrix[0 * 4 + 1] = axis[0][1] * 2.0f/rect.width;
+			guiModelMatrix[1 * 4 + 1] = axis[1][1] * 2.0f/rect.height;
+			guiModelMatrix[2 * 4 + 1] = axis[2][1];
+			guiModelMatrix[3 * 4 + 1] = origin[1];
+
+			guiModelMatrix[0 * 4 + 2] = axis[0][2] * 2.0f/rect.width;
+			guiModelMatrix[1 * 4 + 2] = axis[1][2] * 2.0f/rect.height;
+
+			guiModelMatrix[2 * 4 + 2] = axis[2][2];
+			guiModelMatrix[3 * 4 + 2] = origin[2];
+
+			guiModelMatrix[0 * 4 + 3] = 0.0f;
+			guiModelMatrix[1 * 4 + 3] = 0.0f;
+			guiModelMatrix[2 * 4 + 3] = 0.0f;
+			guiModelMatrix[3 * 4 + 3] = 1.0f;
+
+			R_MatrixMultiply(guiModelMatrix, drawSurf->space->modelMatrix, modelMatrix);
+
+			//man->deformSprite(textHandle, modelMatrix, tr.viewDef->renderView.viewaxis);
+			man->submitTextBuffer(textHandle);
+			man->destroyTextBuffer(textHandle);
+
+			tr.guiModel->EmitToCurrentView(modelMatrix, false);
+			tr.guiModel->Clear();
+		}
+
+		idUserInterface* gui = drawSurf->material->GlobalGui();
+
+		int guiNum = drawSurf->material->GetEntityGui() - 1;
+		if (guiNum >= 0 && guiNum < MAX_RENDERENTITY_GUI)
+		{
+			if (drawSurf->space->entityDef != NULL)
+			{
+				gui = drawSurf->space->entityDef->parms.gui[guiNum];
 			}
 		}
-		
-		if( gui == NULL )
+
+		if (gui == NULL)
 		{
 			continue;
 		}
-		
+
 		idBounds ndcBounds;
-		if( !R_PreciseCullSurface( drawSurf, ndcBounds ) )
+		if (!R_PreciseCullSurface(drawSurf, ndcBounds))
 		{
 			// did we ever use this to forward an entity color to a gui that didn't set color?
 			//	memcpy( tr.guiShaderParms, shaderParms, sizeof( tr.guiShaderParms ) );
-			R_RenderGuiSurf( gui, drawSurf );
+			R_RenderGuiSurf(gui, drawSurf);
 		}
 	}
 }
@@ -245,7 +320,7 @@ Should we also reload the map models?
 void R_ReloadGuis_f( const idCmdArgs& args )
 {
 	bool all;
-	
+
 	if( !idStr::Icmp( args.Argv( 1 ), "all" ) )
 	{
 		all = true;
@@ -256,7 +331,7 @@ void R_ReloadGuis_f( const idCmdArgs& args )
 		all = false;
 		common->Printf( "Checking for changed gui files...\n" );
 	}
-	
+
 	uiManager->Reload( all );
 }
 

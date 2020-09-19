@@ -2,10 +2,10 @@
 ===========================================================================
 
 Doom 3 BFG Edition GPL Source Code
-Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company. 
-Copyright (C) 2013-2016 Robert Beckebans
+Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2013-2020 Robert Beckebans
 
-This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").  
+This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
 Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
+// *INDENT-OFF*
 uniform float4 rpScreenCorrectionFactor	:	register(c0);
 uniform float4 rpWindowCoord			:	register(c1);
 uniform float4 rpDiffuseModifier		:	register(c2);
@@ -119,54 +120,92 @@ static float dot3( float4 a, float4 b ) { return dot( a.xyz, b.xyz ); }
 static float dot4( float4 a, float4 b ) { return dot( a, b ); }
 static float dot4( float2 a, float4 b ) { return dot( float4( a, 0, 1 ), b ); }
 
+// *INDENT-ON*
+
 // RB begin
 #ifndef PI
-#define PI	3.14159265358979323846
+	#define PI	3.14159265358979323846
 #endif
 
 #define DEG2RAD( a )				( ( a ) * PI / 180.0f )
 #define RAD2DEG( a )				( ( a ) * 180.0f / PI )
 
+
 // ----------------------
 // sRGB <-> Linear RGB Color Conversion
 // ----------------------
 
-half3 sRGBToLinearRGB( half3 rgb )
+float Linear1( float c )
+{
+	return ( c <= 0.04045 ) ? c / 12.92 : pow( ( c + 0.055 ) / 1.055, 2.4 );
+}
+
+float3 Linear3( float3 c )
+{
+	return float3( Linear1( c.r ), Linear1( c.g ), Linear1( c.b ) );
+}
+
+float Srgb1( float c )
+{
+	return ( c < 0.0031308 ? c * 12.92 : 1.055 * pow( c, 0.41666 ) - 0.055 );
+}
+
+float3 Srgb3( float3 c )
+{
+	return float3( Srgb1( c.r ), Srgb1( c.g ), Srgb1( c.b ) );
+}
+
+static const float3 photoLuma = float3( 0.2126, 0.7152, 0.0722 );
+float PhotoLuma( float3 c )
+{
+	return dot( c, photoLuma );
+}
+
+float3 sRGBToLinearRGB( float3 c )
 {
 #if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
-	return max( pow( rgb, half3( 2.2 ) ), half3( 0.0 ) );
+	c = clamp( c, 0.0, 1.0 );
+
+	return Linear3( c );
 #else
-	return rgb;
+	return c;
 #endif
 }
 
-half4 sRGBAToLinearRGBA( half4 rgba )
+float4 sRGBAToLinearRGBA( float4 c )
 {
 #if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
-	return float4( max( pow( rgba.rgb, half3( 2.2 ) ), half3( 0.0 ) ), rgba.a );
+	c = clamp( c, 0.0, 1.0 );
+
+	return float4( Linear1( c.r ), Linear1( c.g ), Linear1( c.b ), Linear1( c.a ) );
 #else
-	return rgba;
+	return c;
 #endif
 }
 
-half3 LinearRGBToSRGB( half3 rgb )
+float3 LinearRGBToSRGB( float3 c )
 {
 #if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
-	return pow( rgb, half3( 1.0 ) / half3( 2.2 ) );
+	c = clamp( c, 0.0, 1.0 );
+
+	return Srgb3( c );
 #else
-	return rgb;
+	return c;
 #endif
 }
 
-half4 LinearRGBToSRGB( half4 rgba )
+float4 LinearRGBToSRGB( float4 c )
 {
 #if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
-	rgba.rgb = pow( rgba.rgb, half3( 1.0 ) / half3( 2.2 ) );
-	return rgba; //pow( rgba, half4( 1.0 ) / half4( 2.2 ) );
+	c = clamp( c, 0.0, 1.0 );
+
+	return float4( Srgb1( c.r ), Srgb1( c.g ), Srgb1( c.b ), c.a );
 #else
-	return rgba;
+	return c;
 #endif
 }
+
+
 
 
 // RB end
@@ -174,16 +213,17 @@ half4 LinearRGBToSRGB( half4 rgba )
 // ----------------------
 // YCoCg Color Conversion
 // ----------------------
-static const half4 matrixRGB1toCoCg1YX = half4(  0.50,  0.0, -0.50, 0.50196078 );	// Co
+static const half4 matrixRGB1toCoCg1YX = half4( 0.50,  0.0, -0.50, 0.50196078 );	// Co
 static const half4 matrixRGB1toCoCg1YY = half4( -0.25,  0.5, -0.25, 0.50196078 );	// Cg
-static const half4 matrixRGB1toCoCg1YZ = half4(  0.0,   0.0,  0.0,  1.0 );			// 1.0
-static const half4 matrixRGB1toCoCg1YW = half4(  0.25,  0.5,  0.25, 0.0 );			// Y
+static const half4 matrixRGB1toCoCg1YZ = half4( 0.0,   0.0,  0.0,  1.0 );			// 1.0
+static const half4 matrixRGB1toCoCg1YW = half4( 0.25,  0.5,  0.25, 0.0 );			// Y
 
-static const half4 matrixCoCg1YtoRGB1X = half4(  1.0, -1.0,  0.0,        1.0 );
-static const half4 matrixCoCg1YtoRGB1Y = half4(  0.0,  1.0, -0.50196078, 1.0 ); // -0.5 * 256.0 / 255.0
+static const half4 matrixCoCg1YtoRGB1X = half4( 1.0, -1.0,  0.0,        1.0 );
+static const half4 matrixCoCg1YtoRGB1Y = half4( 0.0,  1.0, -0.50196078, 1.0 );  // -0.5 * 256.0 / 255.0
 static const half4 matrixCoCg1YtoRGB1Z = half4( -1.0, -1.0,  1.00392156, 1.0 ); // +1.0 * 256.0 / 255.0
 
-static half3 ConvertYCoCgToRGB( half4 YCoCg ) {
+static half3 ConvertYCoCgToRGB( half4 YCoCg )
+{
 	half3 rgbColor;
 
 	YCoCg.z = ( YCoCg.z * 31.875 ) + 1.0;			//z = z * 255.0/8.0 + 1.0
@@ -195,7 +235,8 @@ static half3 ConvertYCoCgToRGB( half4 YCoCg ) {
 	return rgbColor;
 }
 
-static float2 CenterScale( float2 inTC, float2 centerScale ) {
+static float2 CenterScale( float2 inTC, float2 centerScale )
+{
 	float scaleX = centerScale.x;
 	float scaleY = centerScale.y;
 	float4 tc0 = float4( scaleX, 0, 0, 0.5 - ( 0.5f * scaleX ) );
@@ -207,7 +248,8 @@ static float2 CenterScale( float2 inTC, float2 centerScale ) {
 	return finalTC;
 }
 
-static float2 Rotate2D( float2 inTC, float2 cs ) {
+static float2 Rotate2D( float2 inTC, float2 cs )
+{
 	float sinValue = cs.y;
 	float cosValue = cs.x;
 
@@ -221,8 +263,9 @@ static float2 Rotate2D( float2 inTC, float2 cs ) {
 }
 
 // better noise function available at https://github.com/ashima/webgl-noise
-float rand( float2 co ) {
-    return frac( sin( dot( co.xy, float2( 12.9898, 78.233 ) ) ) * 43758.5453 );
+float rand( float2 co )
+{
+	return frac( sin( dot( co.xy, float2( 12.9898, 78.233 ) ) ) * 43758.5453 );
 }
 
 #define square( x )		( x * x )
@@ -238,13 +281,141 @@ static const half4 LUMINANCE_LINEAR = half4( 0.299, 0.587, 0.144, 0.0 );
 #define _float4( x )	float4( x )
 
 #define VPOS WPOS
-static float4 idtex2Dproj( sampler2D samp, float4 texCoords ) { return tex2Dproj( samp, texCoords.xyw ); }
-static float4 swizzleColor( float4 c )
-{ 
-	return c;
-	//return sRGBAToLinearRGBA( c ); 
+static float4 idtex2Dproj( sampler2D samp, float4 texCoords )
+{
+	return tex2Dproj( samp, texCoords.xyw );
 }
-static float2 vposToScreenPosTexCoord( float2 vpos ) { return vpos.xy * rpWindowCoord.xy; }
+static float4 swizzleColor( float4 c )
+{
+	return c;
+	//return sRGBAToLinearRGBA( c );
+}
+static float2 vposToScreenPosTexCoord( float2 vpos )
+{
+	return vpos.xy * rpWindowCoord.xy;
+}
 
 #define BRANCH
 #define IFANY
+
+
+//note: works for structured patterns too
+// [0;1[
+float RemapNoiseTriErp( const float v )
+{
+	float r2 = 0.5 * v;
+	float f1 = sqrt( r2 );
+	float f2 = 1.0 - sqrt( r2 - 0.25 );
+	return ( v < 0.5 ) ? f1 : f2;
+}
+
+//note: returns [-intensity;intensity[, magnitude of 2x intensity
+//note: from "NEXT GENERATION POST PROCESSING IN CALL OF DUTY: ADVANCED WARFARE"
+//      http://advances.realtimerendering.com/s2014/index.html
+float InterleavedGradientNoise( float2 uv )
+{
+	const float3 magic = float3( 0.06711056, 0.00583715, 52.9829189 );
+	float rnd = fract( magic.z * fract( dot( uv, magic.xy ) ) );
+
+	return rnd;
+}
+
+// this noise, including the 5.58... scrolling constant are from Jorge Jimenez
+float InterleavedGradientNoiseAnim( float2 uv, float frameIndex )
+{
+	uv += ( frameIndex * 5.588238f );
+
+	const float3 magic = float3( 0.06711056, 0.00583715, 52.9829189 );
+	float rnd = fract( magic.z * fract( dot( uv, magic.xy ) ) );
+
+	return rnd;
+}
+
+// RB: the golden ratio is useful to animate Blue noise
+const float c_goldenRatioConjugate = 0.61803398875;
+
+
+// RB: very efficient white noise without sine https://www.shadertoy.com/view/4djSRW
+#define HASHSCALE3 float3(443.897, 441.423, 437.195)
+
+float3 Hash33( float3 p3 )
+{
+	p3 = fract( p3 * HASHSCALE3 );
+	p3 += dot( p3, p3.yxz + 19.19 );
+	return fract( ( p3.xxy + p3.yxx ) * p3.zyx );
+}
+
+static float3 ditherRGB( float3 color, float2 uvSeed, float quantSteps )
+{
+	// uniform noise
+	//float3 noise = Hash33( float3( uvSeed, rpJitterTexOffset.w ) );
+
+	//float3 noise = float3( InterleavedGradientNoise( uvSeed ) );
+	float3 noise = float3( InterleavedGradientNoiseAnim( uvSeed, rpJitterTexOffset.w ) );
+
+
+	// triangular noise [-0.5;1.5[
+
+#if 1
+	noise.x = RemapNoiseTriErp( noise.x );
+	noise = noise * 2.0 - 0.5;
+#endif
+
+	noise = float3( noise.x );
+
+
+	// quantize/truncate color and dither the result
+	//float scale = exp2( float( TARGET_BITS ) ) - 1.0;
+
+	// lets assume 2^3 bits = 8
+	//float scale = 7.0;
+	//const float quantSteps = 8.0;
+	float scale = quantSteps - 1.0;
+
+	// apply dither
+	color += noise / ( quantSteps );
+
+	color = floor( color * scale ) / scale;
+
+	//float3 color = c + whiteNoise / 255.0;
+
+#if defined( USE_LINEAR_RGB )
+
+#endif
+
+	return color;
+}
+
+static float3 ditherChromaticBlueNoise( float3 color, float2 n, sampler2D blueTex )
+{
+	// uniform noise
+	//float3 noise = Hash33( float3( n, rpJitterTexOffset.w ) );
+
+	//float3 noise = float3( InterleavedGradientNoise( n ) );
+	//float3 noise = float3( InterleavedGradientNoiseAnim( n, rpJitterTexOffset.w ) );
+
+	// uv is screen position / sizeof blue noise image
+	float2 uv = n.xy * rpJitterTexOffset.xy;
+	float3 noise = tex2D( blueTex, uv ).rgb;
+
+	// rpJitterTexOffset.w is frameTime % 64
+	noise = fract( noise + c_goldenRatioConjugate * rpJitterTexOffset.w );
+
+	// triangular noise [-0.5;1.5[
+	noise.x = RemapNoiseTriErp( noise.x );
+	noise = noise * 2.0 - 0.5;
+
+	//noise = float3( noise.x );
+
+	// quantize/truncate color and dither the result
+	//float scale = exp2( float( TARGET_BITS ) ) - 1.0;
+
+	// lets assume 2^3 bits = 8
+	float quantSteps = 255.0;
+
+	//float3 color = floor( c * scale + noise ) / scale;
+
+	color = floor( 0.5 + color * quantSteps - 0.5 + noise ) * ( 1.0 / ( quantSteps - 1.0 ) );
+
+	return color;
+}

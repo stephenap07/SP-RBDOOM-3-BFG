@@ -99,6 +99,8 @@ public:
 
 	~FontManager();
 
+	void init();
+
 	/// Retrieve the atlas used by the font manager (e.g. to add stuff to it)
 	const Atlas* getAtlas() const
 	{
@@ -155,7 +157,6 @@ private:
 		uint32_t bufferSize;
 	};
 
-	void init();
 	bool addBitmap(GlyphInfo& _glyphInfo, const uint8_t* _data);
 
 	bool m_ownAtlas;
