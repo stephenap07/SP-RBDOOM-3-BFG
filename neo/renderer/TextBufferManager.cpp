@@ -215,6 +215,7 @@ TextBuffer::TextBuffer(FontManager* _fontManager)
 	, m_lineDescender(0)
 	, m_lineGap(0)
 	, m_scale(1.0f, 1.0f)
+	, m_glState(0)
 	, m_fontManager(_fontManager)
 	, m_vertexBuffer(new idDrawVert[MAX_BUFFERED_CHARACTERS * 4])
 	, m_indexBuffer(new triIndex_t[MAX_BUFFERED_CHARACTERS * 6])
@@ -304,6 +305,7 @@ void TextBuffer::clearTextBuffer()
 	m_rectangle.width = 0;
 	m_rectangle.height = 0;
 	m_scale = idVec2(1.0f, 1.0f);
+	m_glState = 0;
 	m_textColor = VectorUtil::Vec4ToColorInt(colorWhite);
 }
 
