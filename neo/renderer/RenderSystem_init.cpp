@@ -1997,6 +1997,8 @@ void idRenderSystemLocal::Init()
 
 	renderModelManager->Init();
 
+	RenderDebug::Get().Init();
+
 	// set the identity space
 	identitySpace.modelMatrix[0 * 4 + 0] = 1.0f;
 	identitySpace.modelMatrix[1 * 4 + 1] = 1.0f;
@@ -2068,6 +2070,8 @@ void idRenderSystemLocal::Shutdown()
 
 	delete textBufferManager;
 	delete fontManager;
+
+	RenderDebug::Get().Shutdown();
 	
 	if( IsInitialized() )
 	{
@@ -2233,24 +2237,21 @@ FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName, int aSize)
 		}
 	}
 
-	idFile* fd = fileSystem->OpenFileRead(fontName);
+	std::unique_ptr<idFile> fd(fileSystem->OpenFileRead(fontName));
 	if (fd == nullptr)
 	{
+		common->Error("Failed to load font %s", fontName);
 		return FontHandle();
 	}
 
 	const int len = fd->Length();
 
 	idTempArray<byte> buffer(len);
-
 	if ((int)fd->Read(buffer.Ptr(), len) != len)
 	{
 		// Couldn't open this file. Cleanup and return an invalid handle.
-		delete fd;
 		return FontHandle();
 	}
-	
-	delete fd;
 
 	NewFontData data;
 	data.ttfHandle = fontManager->createTtf(buffer.Ptr(), len);
@@ -2259,7 +2260,7 @@ FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName, int aSize)
 	data.size = aSize;
 	newFonts.Append(data);
 
-	fontManager->preloadGlyph(data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,! \n");
+	fontManager->preloadGlyph(data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!_/ \n");
 
 	return data.fontHandle;
 }

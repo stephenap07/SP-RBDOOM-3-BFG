@@ -523,6 +523,8 @@ void R_RenderView( viewDef_t* parms )
 	// build up the GUIs on world surfaces
 	R_AddInGameGuis( tr.viewDef->drawSurfs, tr.viewDef->numDrawSurfs );
 
+	tr.primaryWorld->DebugDrawSubmitToCurrentView();
+
 	// any viewLight that didn't have visible surfaces can have it's shadows removed
 	R_OptimizeViewLightsList();
 

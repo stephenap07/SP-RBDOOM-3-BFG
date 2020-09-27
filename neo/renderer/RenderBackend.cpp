@@ -4052,16 +4052,8 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 						{
 							if( viewDef->is2Dgui )
 							{
-								if (pStage->texture.isCubeMap)
-								{
-									// SP: Added a cube map font texture atlas for rendering character glyphs.
-									renderProgManager.BindShader_TextureCubeVertexColor_sRGB();
-								}
-								else
-								{
-									// RB: 2D fullscreen drawing like warp or damage blend effects
-									renderProgManager.BindShader_TextureVertexColor_sRGB();
-								}
+								// RB: 2D fullscreen drawing like warp or damage blend effects
+								renderProgManager.BindShader_TextureVertexColor_sRGB();
 							}
 							else
 							{

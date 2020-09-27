@@ -1311,7 +1311,7 @@ void idAI::Think()
 	}
 	/*	this still draws in retail builds.. not sure why.. don't care at this point.
 		if ( !aas && developer.GetBool() && !fl.hidden && !num_cinematics ) {
-			gameRenderWorld->DrawText( "No AAS", physicsObj.GetAbsBounds().GetCenter(), 0.1f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1, 1 );
+			gameRenderWorld->DebugText( "No AAS", physicsObj.GetAbsBounds().GetCenter(), 0.1f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1, 1 );
 		}
 	*/
 
@@ -1325,7 +1325,7 @@ void idAI::Think()
 	if( ai_showHealth.GetBool() )
 	{
 		idVec3 aboveHead( 0, 0, 20 );
-		gameRenderWorld->DrawText( va( "%d", ( int )health ), this->GetEyePosition() + aboveHead, 0.5f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3() );
+		gameRenderWorld->DebugText( va( "%d", ( int )health ), this->GetEyePosition() + aboveHead, 0.5f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3() );
 	}
 }
 
@@ -1667,7 +1667,7 @@ float idAI::TravelDistance( const idVec3& start, const idVec3& end ) const
 		if( ai_debugMove.GetBool() )
 		{
 			gameRenderWorld->DebugLine( colorBlue, start, end, 1, false );
-			gameRenderWorld->DrawText( va( "%d", ( int )dist ), ( start + end ) * 0.5f, 0.1f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3() );
+			gameRenderWorld->DebugText( va( "%d", ( int )dist ), ( start + end ) * 0.5f, 0.1f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3() );
 		}
 
 		return dist;
@@ -1691,7 +1691,7 @@ float idAI::TravelDistance( const idVec3& start, const idVec3& end ) const
 		if( ai_debugMove.GetBool() )
 		{
 			gameRenderWorld->DebugLine( colorBlue, start, end, 1, false );
-			gameRenderWorld->DrawText( va( "%d", ( int )dist ), ( start + end ) * 0.5f, 0.1f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3() );
+			gameRenderWorld->DebugText( va( "%d", ( int )dist ), ( start + end ) * 0.5f, 0.1f, colorWhite, gameLocal.GetLocalPlayer()->viewAngles.ToMat3() );
 		}
 
 		return dist;

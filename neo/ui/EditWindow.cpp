@@ -205,7 +205,7 @@ void idEditWindow::Draw( int time, float x, float y )
 		color = hoverColor;
 	}
 
-	dc->DrawText( buffer, scale, 0, color, rect, wrap, ( flags & WIN_FOCUS ) ? cursorPos : -1 );
+	dc->DebugText( buffer, scale, 0, color, rect, wrap, ( flags & WIN_FOCUS ) ? cursorPos : -1 );
 }
 
 /*
@@ -656,7 +656,7 @@ void idEditWindow::EnsureCursorVisible()
 		breaks.Clear();
 		idRectangle rect = textRect;
 		rect.w -= sizeBias;
-		dc->DrawText( text, textScale, textAlign, colorWhite, rect, true, ( flags & WIN_FOCUS ) ? cursorPos : -1, true, &breaks );
+		dc->DebugText( text, textScale, textAlign, colorWhite, rect, true, ( flags & WIN_FOCUS ) ? cursorPos : -1, true, &breaks );
 
 		int fit = textRect.h / ( GetMaxCharHeight() + 5 );
 		if( fit < breaks.Num() + 1 )

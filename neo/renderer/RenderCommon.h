@@ -1603,6 +1603,7 @@ void RB_SetVertexColorParms( stageVertexColor_t svc );
 #include "BufferObject.h"
 #include "RenderProgs.h"
 #include "RenderWorld_local.h"
+#include "RenderDebug.h"
 #include "GuiModel.h"
 #include "VertexCache.h"
 

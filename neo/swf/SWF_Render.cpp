@@ -485,8 +485,8 @@ void idSWF::RenderSprite( idRenderSystem* gui, idSWFSpriteInstance* spriteInstan
 			//str = display.spriteInstance->name.c_str();
 			sprintf( str, "%s\n%s", spriteInstance->name.c_str(), GetName() );
 
-			DrawText( gui, str, 0.35f, 0, color, swfRect_t( rect.tl.x, rect.tl.y, 300, 40 ), false );
-			//DrawText( gui, str, 0.25 * 2, 0, colorWhite, swfRect_t( rect.tl.x, rect.tl.y, 300, 40 ), false );
+			DebugText( gui, str, 0.35f, 0, color, swfRect_t( rect.tl.x, rect.tl.y, 300, 40 ), false );
+			//DebugText( gui, str, 0.25 * 2, 0, colorWhite, swfRect_t( rect.tl.x, rect.tl.y, 300, 40 ), false );
 		}
 	}
 	// RB end
@@ -2026,13 +2026,13 @@ void idSWF::DrawRect( idRenderSystem* gui, const swfRect_t& rect, const idVec4& 
 }
 
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
-int idSWF::DrawText( idRenderSystem* gui, float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style )
+int idSWF::DebugText( idRenderSystem* gui, float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style )
 {
 	/*
 	if( !matIsIdentity || cursor != -1 )
 	{
 		// fallback to old code
-		return idDeviceContext::DrawText( x, y, scale, color, text, adjust, limit, style, cursor );
+		return idDeviceContext::DebugText( x, y, scale, color, text, adjust, limit, style, cursor );
 	}
 	*/
 
@@ -2142,7 +2142,7 @@ int idSWF::DrawText( idRenderSystem* gui, float x, float y, float scale, idVec4 
 	return drawText.Length();
 }
 
-int idSWF::DrawText( idRenderSystem* gui, const char* text, float textScale, int textAlign, idVec4 color, const swfRect_t& rectDraw, bool wrap, int cursor, bool calcOnly, idList<int>* breaks, int limit )
+int idSWF::DebugText( idRenderSystem* gui, const char* text, float textScale, int textAlign, idVec4 color, const swfRect_t& rectDraw, bool wrap, int cursor, bool calcOnly, idList<int>* breaks, int limit )
 {
 	int			count = 0;
 	int			charIndex = 0;
@@ -2270,12 +2270,12 @@ int idSWF::DrawText( idRenderSystem* gui, const char* text, float textScale, int
 			{
 				if( lastBreak > 0 )
 				{
-					count += DrawText( gui, x, y, textScale, color, textBuffer.Left( lastBreak ).c_str(), 0, 0, 0 );
+					count += DebugText( gui, x, y, textScale, color, textBuffer.Left( lastBreak ).c_str(), 0, 0, 0 );
 					textBuffer = textBuffer.Right( textBuffer.Length() - lastBreak );
 				}
 				else
 				{
-					count += DrawText( gui, x, y, textScale, color, textBuffer.c_str(), 0, 0, 0 );
+					count += DebugText( gui, x, y, textScale, color, textBuffer.c_str(), 0, 0, 0 );
 					textBuffer.Clear();
 				}
 			}

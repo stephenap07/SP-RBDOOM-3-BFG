@@ -552,7 +552,7 @@ void idSoundWorldLocal::Update()
 			// draw the index
 			idVec3 textPos = emitter->origin;
 			textPos.z -= 8;
-			renderWorld->DrawText( va( "%i", e ), textPos, 0.1f, idVec4( 1, 0, 0, 1 ), listener.axis, 1, lifetime );
+			renderWorld->DebugText( va( "%i", e ), textPos, 0.1f, idVec4( 1, 0, 0, 1 ), listener.axis, 1, lifetime );
 			textPos.z += 8;
 
 			// run through all the channels
@@ -564,7 +564,7 @@ void idSoundWorldLocal::Update()
 				const char* defaulted = chan->leadinSample->IsDefault() ? " *DEFAULTED*" : "";
 				idStr text;
 				text.Format( "%s (%i %i/%i)%s", chan->soundShader->GetName(), idMath::Ftoi( emitter->spatializedDistance ), idMath::Ftoi( min ), idMath::Ftoi( max ), defaulted );
-				renderWorld->DrawText( text, textPos, 0.1f, idVec4( 1, 0, 0, 1 ), listener.axis, 1, lifetime );
+				renderWorld->DebugText( text, textPos, 0.1f, idVec4( 1, 0, 0, 1 ), listener.axis, 1, lifetime );
 				textPos.z += 8;
 			}
 		}

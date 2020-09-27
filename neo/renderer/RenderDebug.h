@@ -26,87 +26,30 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
-#include "precompiled.h"
-
-#include "DeviceContext.h"
-#include "Window.h"
-#include "UserInterfaceLocal.h"
-#include "FieldWindow.h"
+#ifndef __RENDERDEBUG_H__
+#define __RENDERDEBUG_H__
 
 
-void idFieldWindow::CommonInit()
+class RenderDebug
 {
-	cursorPos = 0;
-	lastTextLength = 0;
-	lastCursorPos = 0;
-	paintOffset = 0;
-	showCursor = false;
-}
+public:
+	virtual ~RenderDebug();
 
-idFieldWindow::idFieldWindow( idUserInterfaceLocal* g ) : idWindow( g )
-{
-	gui = g;
-	CommonInit();
-}
+	static RenderDebug& Get();
 
-idFieldWindow::~idFieldWindow()
-{
+	virtual void Init() = 0;
+	virtual void Shutdown() = 0;
 
-}
+	// Submit draw primitives to the front end for rendering.
+	virtual void SubmitForDrawing() = 0;
 
-bool idFieldWindow::ParseInternalVar( const char* _name, idTokenParser* src )
-{
-	if( idStr::Icmp( _name, "cursorvar" ) == 0 )
-	{
-		ParseString( src, cursorVar );
-		return true;
-	}
-	if( idStr::Icmp( _name, "showcursor" ) == 0 )
-	{
-		showCursor = src->ParseBool();
-		return true;
-	}
-	return idWindow::ParseInternalVar( _name, src );
-}
+	// Debug visualization methods. This is all done in worldspace.
+	virtual void DebugText(const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align = 1, const int lifetime = 0, bool depthTest = false) = 0;
+	virtual void DebugLine(const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime = 0, const bool depthTest = false) = 0;
 
+private:
 
-void idFieldWindow::CalcPaintOffset( int len )
-{
-	lastCursorPos = cursorPos;
-	lastTextLength = len;
-	paintOffset = 0;
-	int tw = dc->TextWidth( text, textScale, -1 );
-	if( tw < textRect.w )
-	{
-		return;
-	}
-	while( tw > textRect.w && len > 0 )
-	{
-		tw = dc->TextWidth( text, textScale, --len );
-		paintOffset++;
-	}
-}
+	static RenderDebug* instance;
+};
 
-
-void idFieldWindow::Draw( int time, float x, float y )
-{
-	float scale = textScale;
-	int len = text.Length();
-	cursorPos = gui->State().GetInt( cursorVar );
-	if( len != lastTextLength || cursorPos != lastCursorPos )
-	{
-		CalcPaintOffset( len );
-	}
-	idRectangle rect = textRect;
-	if( paintOffset >= len )
-	{
-		paintOffset = 0;
-	}
-	if( cursorPos > len )
-	{
-		cursorPos = len;
-	}
-	dc->DebugText( &text[paintOffset], scale, 0, foreColor, rect, false, ( ( flags & WIN_FOCUS ) || showCursor ) ? cursorPos - paintOffset : -1 );
-}
-
+#endif

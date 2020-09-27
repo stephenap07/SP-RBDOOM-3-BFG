@@ -345,15 +345,15 @@ void idWindow::Draw( int time, float x, float y )
 		shadowRect.x += textShadow;
 		shadowRect.y += textShadow;
 
-		dc->DrawText( shadowText, textScale, textAlign, colorBlack, shadowRect, !( flags & WIN_NOWRAP ), -1 );
+		dc->DebugText( shadowText, textScale, textAlign, colorBlack, shadowRect, !( flags & WIN_NOWRAP ), -1 );
 	}
-	dc->DrawText( text, textScale, textAlign, foreColor, textRect, !( flags & WIN_NOWRAP ), -1 );
+	dc->DebugText( text, textScale, textAlign, foreColor, textRect, !( flags & WIN_NOWRAP ), -1 );
 
 	if( gui_edit.GetBool() )
 	{
 		dc->EnableClipping( false );
-		dc->DrawText( va( "x: %i  y: %i", ( int )rect.x(), ( int )rect.y() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x(), rect.y() - 15, 100, 20 ), false );
-		dc->DrawText( va( "w: %i  h: %i", ( int )rect.w(), ( int )rect.h() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x() + rect.w(), rect.w() + rect.h() + 5, 100, 20 ), false );
+		dc->DebugText( va( "x: %i  y: %i", ( int )rect.x(), ( int )rect.y() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x(), rect.y() - 15, 100, 20 ), false );
+		dc->DebugText( va( "w: %i  h: %i", ( int )rect.w(), ( int )rect.h() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x() + rect.w(), rect.w() + rect.h() + 5, 100, 20 ), false );
 		dc->EnableClipping( true );
 	}
 
@@ -1154,7 +1154,7 @@ void idWindow::DebugDraw( int time, float x, float y )
 			//idRectangle tempRect = textRect;
 			//tempRect.x += offsetX;
 			//drawRect.y += offsetY;
-			dc->DrawText( buff, textScale, textAlign, foreColor, textRect, true );
+			dc->DebugText( buff, textScale, textAlign, foreColor, textRect, true );
 		}
 		dc->EnableClipping( true );
 	}
@@ -1436,14 +1436,14 @@ void idWindow::Redraw( float x, float y, bool hud )
 
 	if( flags & WIN_SHOWTIME )
 	{
-		dc->DrawText( va( " %0.1f seconds\n%s", ( float )( time - timeLine ) / 1000, gui->State().GetString( "name" ) ), 0.35f, 0, dc->colorWhite, idRectangle( 100, 0, 80, 80 ), false );
+		dc->DebugText( va( " %0.1f seconds\n%s", ( float )( time - timeLine ) / 1000, gui->State().GetString( "name" ) ), 0.35f, 0, dc->colorWhite, idRectangle( 100, 0, 80, 80 ), false );
 	}
 
 	if( flags & WIN_SHOWCOORDS )
 	{
 		dc->EnableClipping( false );
 		sprintf( str, "x: %i y: %i  cursorx: %i cursory: %i", ( int )rect.x(), ( int )rect.y(), ( int )gui->CursorX(), ( int )gui->CursorY() );
-		dc->DrawText( str, 0.25f, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
+		dc->DebugText( str, 0.25f, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
 		dc->EnableClipping( true );
 	}
 
@@ -1531,8 +1531,8 @@ void idWindow::Redraw( float x, float y, bool hud )
 	{
 		dc->EnableClipping( false );
 		sprintf( str, "x: %1.f y: %1.f",  gui->CursorX(), gui->CursorY() );
-		dc->DrawText( str, 0.25, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
-		dc->DrawText( gui->GetSourceFile(), 0.25, 0, dc->colorWhite, idRectangle( 0, 20, 300, 20 ), false );
+		dc->DebugText( str, 0.25, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
+		dc->DebugText( gui->GetSourceFile(), 0.25, 0, dc->colorWhite, idRectangle( 0, 20, 300, 20 ), false );
 		dc->EnableClipping( true );
 	}
 

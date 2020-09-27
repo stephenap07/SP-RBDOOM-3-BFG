@@ -7,7 +7,7 @@ struct TextBufferHandle
 	uint16_t _id = kInvalidHandle;
 };
 
-#define MAX_TEXT_BUFFER_COUNT 64
+#define MAX_TEXT_BUFFER_COUNT 512
 
 /// type of vertex and index buffer to use with a TextBuffer
 struct BufferType
@@ -44,18 +44,22 @@ public:
 
 	TextBufferHandle createTextBuffer(uint32_t _type, BufferType::Enum _bufferType);
 	void destroyTextBuffer(TextBufferHandle _handle);
-	void deformSprite(TextBufferHandle _handle, const float modelMatrix[16], const idMat3& viewAxis);
+	void deformSprite(TextBufferHandle _handle, const idMat3& viewAxis);
+	void scale(TextBufferHandle _handle, idVec2 _scale);
 	void submitTextBuffer(TextBufferHandle _handle, int32_t _depth = 0);
 
 	void setStyle(TextBufferHandle _handle, uint32_t _flags = STYLE_NORMAL);
 	void setTextColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
 	void setBackgroundColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
+	void setGlState(TextBufferHandle _handle, uint64_t _glState);
 
 	void setOverlineColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
 	void setUnderlineColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
 	void setStrikeThroughColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
 
 	void setPenPosition(TextBufferHandle _handle, float _x, float _y);
+	
+	void setScale(TextBufferHandle _handle, float _x, float _y);
 
 	/// Append an ASCII/utf-8 string to the buffer using current pen position and color.
 	void appendText(TextBufferHandle _handle, FontHandle _fontHandle, const idStr& aString);

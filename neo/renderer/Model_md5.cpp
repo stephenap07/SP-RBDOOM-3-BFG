@@ -1215,7 +1215,7 @@ void idRenderModelMD5::DrawJoints( const renderEntity_t* ent, const viewDef_t* v
 		for( i = 0; i < num; i++, joint++ )
 		{
 			pos = ent->origin + joint->ToVec3() * ent->axis;
-			common->RW()->DrawText( joints[ i ].name, pos + offset, scale, colorWhite, view->renderView.viewaxis, 1 );
+			common->RW()->DebugText( joints[ i ].name, pos + offset, scale, colorWhite, view->renderView.viewaxis, 1 );
 		}
 	}
 }

@@ -58,6 +58,17 @@ public:
 		m_penX = _x; m_penY = _y;
 	}
 
+	void setScale(float _x, float _y)
+	{
+		m_scale.x = _x;
+		m_scale.y = _y;
+	}
+
+	void setGlState(uint64 _glState)
+	{
+		m_glState = _glState;
+	}
+
 	/// Append an ASCII/utf-8 string to the buffer using current pen
 	/// position and color.
 	void appendText(FontHandle _fontHandle, const idStr& aString);
@@ -115,6 +126,16 @@ public:
 		return m_rectangle;
 	}
 
+	idVec2 getScale() const
+	{
+		return m_scale;
+	}
+
+	uint64 getGlState() const
+	{
+		return m_glState;
+	}
+
 private:
 	void appendGlyph(FontHandle _handle, CodePoint _codePoint);
 	void verticalCenterLastLine(float _txtDecalY, float _top, float _bottom);
@@ -151,6 +172,10 @@ private:
 	float m_lineAscender;
 	float m_lineDescender;
 	float m_lineGap;
+
+	idVec2 m_scale;
+
+	uint64 m_glState;
 
 	TextRectangle m_rectangle;
 	FontManager* m_fontManager;
@@ -189,8 +214,8 @@ TextBuffer::TextBuffer(FontManager* _fontManager)
 	, m_lineAscender(0)
 	, m_lineDescender(0)
 	, m_lineGap(0)
+	, m_scale(1.0f, 1.0f)
 	, m_fontManager(_fontManager)
-	// TODO(Stephen): Use some kind of pooling system. Heap allocs slows down dynamic text.
 	, m_vertexBuffer(new idDrawVert[MAX_BUFFERED_CHARACTERS * 4])
 	, m_indexBuffer(new triIndex_t[MAX_BUFFERED_CHARACTERS * 6])
 	, m_styleBuffer(new uint8_t[MAX_BUFFERED_CHARACTERS * 4])
@@ -278,6 +303,8 @@ void TextBuffer::clearTextBuffer()
 	m_lineGap = 0;
 	m_rectangle.width = 0;
 	m_rectangle.height = 0;
+	m_scale = idVec2(1.0f, 1.0f);
+	m_textColor = VectorUtil::Vec4ToColorInt(colorWhite);
 }
 
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
@@ -556,7 +583,7 @@ void TextBufferManager::destroyTextBuffer(TextBufferHandle _handle)
 	//bc.textBuffer = nullptr;
 }
 
-void TextBufferManager::deformSprite(TextBufferHandle _handle, const float modelMatrix[16], const idMat3& viewAxis)
+void TextBufferManager::deformSprite(TextBufferHandle _handle, const idMat3& viewAxis)
 {
 	assert(_handle._id != kInvalidHandle && "Invalid handle used");
 
@@ -565,33 +592,35 @@ void TextBufferManager::deformSprite(TextBufferHandle _handle, const float model
 	idDrawVert* vert = (idDrawVert*)bc.textBuffer->getVertexBuffer();
 	triIndex_t* indexes = (triIndex_t*)bc.textBuffer->getIndexBuffer();
 
-	idVec3 leftDir;
-	idVec3 upDir;
-	R_GlobalVectorToLocal((float*)modelMatrix, viewAxis[1], leftDir);
-	R_GlobalVectorToLocal((float*)modelMatrix, viewAxis[2], upDir);
+	// Determine the midpoint
+	idDrawVert* first = &vert[0];
+	idDrawVert* second = &vert[bc.textBuffer->getVertexCount() - 3];
+	idDrawVert* third = &vert[bc.textBuffer->getVertexCount() - 2];
+	idDrawVert* fourth = &vert[3];
 
-	for (int i = 0; i < bc.textBuffer->getVertexCount(); i+=4)
+	idVec3 leftDir(viewAxis[1]);
+	idVec3 upDir(viewAxis[2]);
+
+	idVec3 mid(0.0f);
+	mid = mid + leftDir * (first->xyz.x + second->xyz.x + third->xyz.x + fourth->xyz.x);
+	mid = mid + upDir * (first->xyz.y + second->xyz.y + third->xyz.y + fourth->xyz.y);
+	mid *= 0.25f;
+
+	// Make this into a view-fixed billboard
+	for (int i = 0; i < bc.textBuffer->getVertexCount(); i++)
 	{
-		idVec3 mid;
-		mid[0] = 0.25f * (vert[i + 0].xyz[0] + vert[i + 1].xyz[0] + vert[i + 2].xyz[0] + vert[i + 3].xyz[0]);
-		mid[1] = 0.25f * (vert[i + 0].xyz[1] + vert[i + 1].xyz[1] + vert[i + 2].xyz[1] + vert[i + 3].xyz[1]);
-		mid[2] = 0.25f * (vert[i + 0].xyz[2] + vert[i + 1].xyz[2] + vert[i + 2].xyz[2] + vert[i + 3].xyz[2]);
-
-		const idVec3 delta = vert[i + 0].xyz - mid;
-		const float radius = delta.Length() * idMath::SQRT_1OVER2;
-
-		const idVec3 left = leftDir * radius;
-		const idVec3 up = upDir * radius;
-
-		vert[i + 0].xyz = mid + left + up;
-		//vert[i + 0].SetTexCoord(0, 0);
-		vert[i + 1].xyz = mid - left + up;
-		//vert[i + 1].SetTexCoord(1, 0);
-		vert[i + 2].xyz = mid - left - up;
-		//vert[i + 2].SetTexCoord(1, 1);
-		vert[i + 3].xyz = mid + left - up;
-		//vert[i + 3].SetTexCoord(0, 1);
+		const idVec3 left = -leftDir * vert[i].xyz.x;
+		const idVec3 up = -upDir * vert[i].xyz.y;
+		vert[i].xyz = mid + left + up;
 	}
+}
+
+void TextBufferManager::scale(TextBufferHandle _handle, idVec2 _scale)
+{
+	assert(_handle._id != kInvalidHandle && "Invalid handle used");
+
+	BufferCache& bc = m_textBuffers[_handle._id];
+	bc.textBuffer->setScale(_scale.x, _scale.y);
 }
 
 void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _depth)
@@ -613,20 +642,16 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 		bc.textBuffer->getIndexBuffer(),
 		bc.textBuffer->getIndexCount(),
 		m_fontMaterial,
-		0,
+		bc.textBuffer->getGlState(),
 		STEREO_DEPTH_TYPE_NONE);
 
 	WriteDrawVerts16(verts, (idDrawVert*)bc.textBuffer->getVertexBuffer(), bc.textBuffer->getVertexCount());
 
-	// Scale the vertices to virtual space.
-		const idVec2 scaleToVirtual((float)renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-			(float)renderSystem->GetVirtualHeight() / renderSystem->GetHeight());
-
-		for (int i = 0; i < bc.textBuffer->getVertexCount(); i++)
-		{
-			verts[i].xyz.x *= scaleToVirtual.x;
-			verts[i].xyz.y *= scaleToVirtual.y;
-		}
+	for (int i = 0; i < bc.textBuffer->getVertexCount(); i++)
+	{
+		verts[i].xyz.x *= bc.textBuffer->getScale().x;
+		verts[i].xyz.y *= bc.textBuffer->getScale().y;
+	}
 }
 
 void TextBufferManager::setStyle(TextBufferHandle _handle, uint32_t _flags)
@@ -648,6 +673,13 @@ void TextBufferManager::setBackgroundColor(TextBufferHandle _handle, uint32_t _r
 	assert(_handle._id != kInvalidHandle && "Invalid handle used");
 	BufferCache& bc = m_textBuffers[_handle._id];
 	bc.textBuffer->setBackgroundColor(_rgba);
+}
+
+void TextBufferManager::setGlState(TextBufferHandle _handle, uint64 _glState)
+{
+	assert(_handle._id != kInvalidHandle && "Invalid handle used");
+	BufferCache& bc = m_textBuffers[_handle._id];
+	bc.textBuffer->setGlState(_glState);
 }
 
 void TextBufferManager::setOverlineColor(TextBufferHandle _handle, uint32_t _rgba)
@@ -676,6 +708,13 @@ void TextBufferManager::setPenPosition(TextBufferHandle _handle, float _x, float
 	assert(_handle._id != kInvalidHandle && "Invalid handle used");
 	BufferCache& bc = m_textBuffers[_handle._id];
 	bc.textBuffer->setPenPosition(_x, _y);
+}
+
+void TextBufferManager::setScale(TextBufferHandle _handle, float _x, float _y)
+{
+	assert(_handle._id != kInvalidHandle && "Invalid handle used");
+	BufferCache& bc = m_textBuffers[_handle._id];
+	bc.textBuffer->setScale(_x, _y);
 }
 
 void TextBufferManager::appendText(TextBufferHandle _handle, FontHandle _fontHandle, const idStr& aString)

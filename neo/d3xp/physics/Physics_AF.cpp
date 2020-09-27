@@ -7373,7 +7373,7 @@ void idPhysics_AF::DebugDraw()
 		for( i = 0; i < bodies.Num(); i++ )
 		{
 			body = bodies[i];
-			gameRenderWorld->DrawText( body->GetName().c_str(), body->GetWorldOrigin(), 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
+			gameRenderWorld->DebugText( body->GetName().c_str(), body->GetWorldOrigin(), 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
 		}
 	}
 
@@ -7382,14 +7382,14 @@ void idPhysics_AF::DebugDraw()
 		for( i = 0; i < bodies.Num(); i++ )
 		{
 			body = bodies[i];
-			gameRenderWorld->DrawText( va( "\n%1.2f", 1.0f / body->GetInverseMass() ), body->GetWorldOrigin(), 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
+			gameRenderWorld->DebugText( va( "\n%1.2f", 1.0f / body->GetInverseMass() ), body->GetWorldOrigin(), 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
 		}
 	}
 
 	if( af_showTotalMass.GetBool() )
 	{
 		axis = gameLocal.GetLocalPlayer()->viewAngles.ToMat3();
-		gameRenderWorld->DrawText( va( "\n%1.2f", totalMass ), bodies[0]->GetWorldOrigin() + axis[2] * 8.0f, 0.15f, colorCyan, axis, 1 );
+		gameRenderWorld->DebugText( va( "\n%1.2f", totalMass ), bodies[0]->GetWorldOrigin() + axis[2] * 8.0f, 0.15f, colorCyan, axis, 1 );
 	}
 
 	if( af_showInertia.GetBool() )
@@ -7398,7 +7398,7 @@ void idPhysics_AF::DebugDraw()
 		{
 			body = bodies[i];
 			idMat3& I = body->inertiaTensor;
-			gameRenderWorld->DrawText( va( "\n\n\n( %.1f %.1f %.1f )\n( %.1f %.1f %.1f )\n( %.1f %.1f %.1f )",
+			gameRenderWorld->DebugText( va( "\n\n\n( %.1f %.1f %.1f )\n( %.1f %.1f %.1f )\n( %.1f %.1f %.1f )",
 										   I[0].x, I[0].y, I[0].z,
 										   I[1].x, I[1].y, I[1].z,
 										   I[2].x, I[2].y, I[2].z ),
@@ -7437,7 +7437,7 @@ void idPhysics_AF::DebugDraw()
 		{
 			constraint = primaryConstraints[i];
 			constraint->GetCenter( center );
-			gameRenderWorld->DrawText( constraint->GetName().c_str(), center, 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
+			gameRenderWorld->DebugText( constraint->GetName().c_str(), center, 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
 		}
 		if( !af_showPrimaryOnly.GetBool() )
 		{
@@ -7445,7 +7445,7 @@ void idPhysics_AF::DebugDraw()
 			{
 				constraint = auxiliaryConstraints[i];
 				constraint->GetCenter( center );
-				gameRenderWorld->DrawText( constraint->GetName().c_str(), center, 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
+				gameRenderWorld->DebugText( constraint->GetName().c_str(), center, 0.08f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
 			}
 		}
 	}

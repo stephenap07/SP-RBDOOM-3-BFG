@@ -137,7 +137,7 @@ void idBindWindow::Draw( int time, float x, float y )
 		hover = false;
 	}
 
-	dc->DrawText( str, textScale, textAlign, color, textRect, false, -1 );
+	dc->DebugText( str, textScale, textAlign, color, textRect, false, -1 );
 }
 
 void idBindWindow::Activate( bool activate, idStr& act )

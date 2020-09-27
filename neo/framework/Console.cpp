@@ -1480,12 +1480,16 @@ void idConsoleLocal::DrawSolidConsole( float frac )
 
 	idVec2 virtualToReal(renderSystem->GetWidth() / (float)renderSystem->GetVirtualWidth(),
 		renderSystem->GetHeight() / (float)renderSystem->GetVirtualHeight());
+
+	const idVec2 scaleToVirtual((float)renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
+		(float)renderSystem->GetVirtualHeight() / renderSystem->GetHeight());
 	
 	auto myX = std::max<int>(0, renderSystem->GetWidth() - textSize.width - 5.0f);
 	auto myY = (lines * virtualToReal.y) - (textSize.height + textSize.height / 4);
 	man->setPenPosition(textHandle, myX, myY);
 	man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(idStr::ColorForIndex(C_COLOR_CYAN)));
 	man->appendText(textHandle, renderSystem->GetDefaultFontHandle(), version);
+	man->scale(textHandle, scaleToVirtual);
 	man->submitTextBuffer(textHandle);
 	man->destroyTextBuffer(textHandle);
 	
