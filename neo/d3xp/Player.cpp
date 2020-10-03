@@ -1499,6 +1499,8 @@ idPlayer::idPlayer():
 	pdaVideoMat				= NULL;
 	mpMessages				= NULL;
 
+	inventoryManager = new(TAG_SWF) idMenuHandler_Inventory();
+
 	mountedObject			= NULL;
 	enviroSuitLight			= NULL;
 
@@ -1664,6 +1666,10 @@ idPlayer::idPlayer():
 
 	playedTimeSecs			= 0;
 	playedTimeResidual		= 0;
+
+	// SP begin
+	newInventoryOpen = false;
+	// SP end
 
 	ResetControllerShake();
 
@@ -2070,6 +2076,13 @@ void idPlayer::Spawn()
 			pdaMenu->Initialize( "pda", common->SW() );
 		}
 		objectiveSystemOpen = false;
+
+		// load inventory gui
+		if (inventoryManager)
+		{
+			inventoryManager->Initialize("inventory", common->SW());
+			// Show right away as a test. TODO: Should only show once the user hits impulse 19.
+		}
 	}
 
 	if( common->IsMultiplayer() && mpMessages == NULL )
@@ -2313,6 +2326,9 @@ idPlayer::~idPlayer()
 
 	delete mpMessages;
 	mpMessages = NULL;
+
+	delete inventoryManager;
+	inventoryManager = nullptr;
 }
 
 /*
@@ -3598,6 +3614,12 @@ void idPlayer::DrawHUD( idMenuHandler_HUD* _hudManager )
 	if( _hudManager )
 	{
 		_hudManager->Update();
+	}
+
+	if (inventoryManager)
+	{
+		// TODO(Stephen): Move this somewhere else.
+		inventoryManager->Update();
 	}
 
 	weapon.GetEntity()->UpdateGUI();
@@ -7433,7 +7455,6 @@ idPlayer::TogglePDA
 */
 void idPlayer::TogglePDA()
 {
-
 	if( inventory.pdas.Num() == 0 )
 	{
 		ShowTip( spawnArgs.GetString( "text_infoTitle" ), spawnArgs.GetString( "text_noPDA" ), true );
@@ -7638,14 +7659,20 @@ void idPlayer::PerformImpulse( int impulse )
 				if( !common->KeyState( 56 ) )  		// don't toggle PDA when LEFT ALT is down
 				{
 #endif
-					if( objectiveSystemOpen )
-					{
-						TogglePDA();
-					}
-					else if( weapon_pda >= 0 )
-					{
-						SelectWeapon( weapon_pda, true );
-					}
+					// TODO: SP Add toggle inventory here.F
+					newInventoryOpen = !newInventoryOpen;
+					inventoryManager->ActivateMenu(newInventoryOpen);
+
+					//TogglePDA();
+
+					//if( objectiveSystemOpen )
+					//{
+					//	TogglePDA();
+					//}
+					//else if( weapon_pda >= 0 )
+					//{
+					//	SelectWeapon( weapon_pda, true );
+					//}
 #if !defined(ID_RETAIL) && !defined(ID_RETAIL_INTERNAL)
 				}
 #endif
@@ -8761,6 +8788,11 @@ bool idPlayer::HandleGuiEvents( const sysEvent_t* ev )
 	if( pdaMenu != NULL && pdaMenu->IsActive() )
 	{
 		handled = pdaMenu->HandleGuiEvent( ev );
+	}
+
+	if (inventoryManager != nullptr && inventoryManager->IsActive())
+	{
+		handled = inventoryManager->HandleGuiEvent(ev);
 	}
 
 	return handled;

@@ -117,6 +117,13 @@ enum scoreboardHandlerWidgets_t
 	SCOREBOARD_WIDGET_CMD_BAR,
 };
 
+enum inventoryArea_t
+{
+	INVENTORY_AREA_INVALID = -1,
+	INVENTORY_AREA_PLAYING,
+	INVENTORY_NUM_AREAS
+};
+
 enum menuSounds_t
 {
 	GUI_SOUND_MUSIC,
@@ -618,6 +625,32 @@ protected:
 	idList< scoreboardInfo_t, TAG_IDLIB_LIST_MENU>		blueInfo;
 
 };
+
+
+/*
+================================================
+idMenuHandler_Inventory
+================================================
+*/
+class idMenuHandler_Inventory : public idMenuHandler
+{
+public:
+
+	idMenuHandler_Inventory()
+	{
+	}
+
+	virtual void			Update();
+	virtual void			ActivateMenu(bool show);
+	virtual void			Initialize(const char* swfFile, idSoundWorld* sw);
+	virtual idMenuScreen*   GetMenuScreen(int index);
+
+	idMenuScreen_Inventory* GetInventory();
+
+protected:
+
+};
+
 
 
 #endif //__MENUDATA_H__

@@ -14,6 +14,23 @@
 
 extern idGuiModel* tr_guiModel;
 
+TextBufferManager::BufferCache::BufferCache()
+	: vertexBufferHandle()
+	, indexBufferHandle()
+	, textBuffer(nullptr)
+	, bufferType(BufferType::Dynamic)
+	, fontType(0)
+{
+}
+
+TextBufferManager::BufferCache::~BufferCache()
+{
+	if (textBuffer)
+	{
+		delete textBuffer;
+	}
+}
+
 class TextBuffer
 {
 public:
@@ -309,8 +326,6 @@ void TextBuffer::clearTextBuffer()
 	m_textColor = VectorUtil::Vec4ToColorInt(colorWhite);
 }
 
-static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
-
 void TextBuffer::appendGlyph(FontHandle _handle, CodePoint _codePoint)
 {
 	if (_codePoint == L'\t')
@@ -591,6 +606,12 @@ void TextBufferManager::deformSprite(TextBufferHandle _handle, const idMat3& vie
 
 	BufferCache& bc = m_textBuffers[_handle._id];
 
+	if (bc.textBuffer->getVertexCount() < 4)
+	{
+		// Assuming that there's at least one quad to deform.
+		return;
+	}
+
 	idDrawVert* vert = (idDrawVert*)bc.textBuffer->getVertexBuffer();
 	triIndex_t* indexes = (triIndex_t*)bc.textBuffer->getIndexBuffer();
 
@@ -609,7 +630,7 @@ void TextBufferManager::deformSprite(TextBufferHandle _handle, const idMat3& vie
 	mid *= 0.25f;
 
 	// Make this into a view-fixed billboard
-	for (int i = 0; i < bc.textBuffer->getVertexCount(); i++)
+	for (uint32_t i = 0; i < bc.textBuffer->getVertexCount(); i++)
 	{
 		const idVec3 left = -leftDir * vert[i].xyz.x;
 		const idVec3 up = -upDir * vert[i].xyz.y;
@@ -649,7 +670,7 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 
 	WriteDrawVerts16(verts, (idDrawVert*)bc.textBuffer->getVertexBuffer(), bc.textBuffer->getVertexCount());
 
-	for (int i = 0; i < bc.textBuffer->getVertexCount(); i++)
+	for (uint32_t i = 0; i < bc.textBuffer->getVertexCount(); i++)
 	{
 		verts[i].xyz.x *= bc.textBuffer->getScale().x;
 		verts[i].xyz.y *= bc.textBuffer->getScale().y;

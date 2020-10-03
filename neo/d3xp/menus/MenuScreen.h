@@ -1832,6 +1832,32 @@ public:
 
 
 /*
+================================================
+idMenuScreen_Inventory
+================================================
+*/
+class idMenuScreen_Inventory : public idMenuScreen
+{
+public:
+
+	idMenuScreen_Inventory();
+	virtual ~idMenuScreen_Inventory();
+
+	virtual void				Initialize(idMenuHandler* data);
+	virtual void				Update();
+	virtual void				ShowScreen(const mainMenuTransition_t transitionType);
+	virtual void				HideScreen(const mainMenuTransition_t transitionType);
+	virtual bool				HandleAction(idWidgetAction& action, const idWidgetEvent& event, idMenuWidget* widget, bool forceHandled = false);
+
+	virtual void				UpdateCmds();
+	virtual void				HandleMenu(const mainMenuTransition_t type);
+
+private:
+
+	idMenuWidget_Button* testButton;
+};
+
+/*
 ========================
 InvitePartyOrFriends
 

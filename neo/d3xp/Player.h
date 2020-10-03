@@ -41,6 +41,7 @@ If you have questions concerning this license or the applicable additional terms
 
 class idMenuHandler_PDA;
 class idMenuHandler_HUD;
+class idMenuHandler_Inventory;
 class idMenuScreen_HUD;
 class idTarget_SetPrimaryObjective;
 
@@ -247,6 +248,19 @@ private:
 	idArray< idPredictedValue< int >, MAX_WEAPONS >			clip;
 };
 
+
+// TODO(STEPHEN): Add save game functionality.
+// Put this in a separate class in a separate file.
+struct idNewInventory
+{
+	idNewInventory()
+		: items()
+	{
+	}
+
+	idList<idDict*>		items;
+};
+
 typedef struct
 {
 	int		time;
@@ -335,18 +349,21 @@ public:
 
 	// inventory
 	idInventory				inventory;
+	idNewInventory          newInventory;
+	bool                    newInventoryOpen;
 	idTarget_SetPrimaryObjective* primaryObjective;
 
 	int						flashlightBattery;
 	idEntityPtr<idWeapon>	flashlight;
 
-	idEntityPtr<idWeapon>	weapon;
-	idMenuHandler_HUD* 		hudManager;
-	idMenuScreen_HUD* 		hud;
-	idMenuHandler_PDA* 		pdaMenu;
-	idSWF* 					mpMessages;
-	bool					objectiveSystemOpen;
-	int						quickSlot[ NUM_QUICK_SLOTS ];
+	idEntityPtr<idWeapon>	 weapon;
+	idMenuHandler_HUD* 		 hudManager;
+	idMenuScreen_HUD* 		 hud;
+	idMenuHandler_PDA* 		 pdaMenu;
+	idMenuHandler_Inventory* inventoryManager;
+	idSWF* 					 mpMessages;
+	bool					 objectiveSystemOpen;
+	int						 quickSlot[ NUM_QUICK_SLOTS ];
 
 	int						weapon_soulcube;
 	int						weapon_pda;

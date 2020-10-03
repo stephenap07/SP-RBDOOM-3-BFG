@@ -97,6 +97,11 @@ void idMenuWidget_PDA_AudioFiles::Update()
 		return;
 	}
 
+	if (player->GetInventory().pdas.Num() < 1)
+	{
+		return;
+	}
+
 	const idDeclPDA* pda = player->GetInventory().pdas[ pdaIndex ];
 
 	idSWFScriptObject* dataObj = GetSprite()->GetScriptObject()->GetNestedObj( "info" );

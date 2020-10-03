@@ -46,12 +46,13 @@ idPlayerView::idPlayerView()
 	memset( screenBlobs, 0, sizeof( screenBlobs ) );
 	memset( &view, 0, sizeof( view ) );
 	player = NULL;
-	tunnelMaterial = declManager->FindMaterial( "textures/decals/tunnel" );
-	armorMaterial = declManager->FindMaterial( "armorViewEffect" );
-	berserkMaterial = declManager->FindMaterial( "textures/decals/berserk" );
-	irGogglesMaterial = declManager->FindMaterial( "textures/decals/irblend" );
-	bloodSprayMaterial = declManager->FindMaterial( "textures/decals/bloodspray" );
-	bfgMaterial = declManager->FindMaterial( "textures/decals/bfgvision" );
+	// SP: Comment these out to avoid warnings
+	//tunnelMaterial = declManager->FindMaterial( "textures/decals/tunnel" );
+	//armorMaterial = declManager->FindMaterial( "armorViewEffect" );
+	//berserkMaterial = declManager->FindMaterial( "textures/decals/berserk" );
+	//irGogglesMaterial = declManager->FindMaterial( "textures/decals/irblend" );
+	//bloodSprayMaterial = declManager->FindMaterial( "textures/decals/bloodspray" );
+	//bfgMaterial = declManager->FindMaterial( "textures/decals/bfgvision" );
 	bfgVision = false;
 	dvFinishTime = 0;
 	kickFinishTime = 0;
@@ -115,12 +116,13 @@ void idPlayerView::Save( idSaveGame* savefile ) const
 	savefile->WriteAngles( kickAngles );
 	savefile->WriteBool( bfgVision );
 
-	savefile->WriteMaterial( tunnelMaterial );
-	savefile->WriteMaterial( armorMaterial );
-	savefile->WriteMaterial( berserkMaterial );
-	savefile->WriteMaterial( irGogglesMaterial );
-	savefile->WriteMaterial( bloodSprayMaterial );
-	savefile->WriteMaterial( bfgMaterial );
+	// Comment these out because we don't need it.
+	//savefile->WriteMaterial( tunnelMaterial );
+	//savefile->WriteMaterial( armorMaterial );
+	//savefile->WriteMaterial( berserkMaterial );
+	//savefile->WriteMaterial( irGogglesMaterial );
+	//savefile->WriteMaterial( bloodSprayMaterial );
+	//savefile->WriteMaterial( bfgMaterial );
 	savefile->WriteFloat( lastDamageTime );
 
 	savefile->WriteVec4( fadeColor );
@@ -172,12 +174,13 @@ void idPlayerView::Restore( idRestoreGame* savefile )
 	savefile->ReadAngles( kickAngles );
 	savefile->ReadBool( bfgVision );
 
-	savefile->ReadMaterial( tunnelMaterial );
-	savefile->ReadMaterial( armorMaterial );
-	savefile->ReadMaterial( berserkMaterial );
-	savefile->ReadMaterial( irGogglesMaterial );
-	savefile->ReadMaterial( bloodSprayMaterial );
-	savefile->ReadMaterial( bfgMaterial );
+	// Comment these out because we don't need them.
+	//savefile->ReadMaterial( tunnelMaterial );
+	//savefile->ReadMaterial( armorMaterial );
+	//savefile->ReadMaterial( berserkMaterial );
+	//savefile->ReadMaterial( irGogglesMaterial );
+	//savefile->ReadMaterial( bloodSprayMaterial );
+	//savefile->ReadMaterial( bfgMaterial );
 	savefile->ReadFloat( lastDamageTime );
 
 	savefile->ReadVec4( fadeColor );
@@ -442,14 +445,20 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 	// place the sound origin for the player
 	gameSoundWorld->PlaceListener( view->vieworg, view->viewaxis, player->entityNumber + 1 );
 
+	// SP: Overriding the regular PDA
 	// if the objective system is up, don't do normal drawing
-	if( player->objectiveSystemOpen )
+	//if( player->objectiveSystemOpen )
+	//{
+	//	if( player->pdaMenu != NULL )
+	//	{
+	//		player->pdaMenu->Update();
+	//	}
+	//	return;
+	//}
+
+	if( player->pdaMenu != NULL )
 	{
-		if( player->pdaMenu != NULL )
-		{
-			player->pdaMenu->Update();
-		}
-		return;
+		player->pdaMenu->Update();
 	}
 
 	// hack the shake in at the very last moment, so it can't cause any consistency problems

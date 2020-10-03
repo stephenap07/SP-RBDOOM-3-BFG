@@ -76,21 +76,8 @@ public:
 private:
 	struct BufferCache
 	{
-		BufferCache()
-			: vertexBufferHandle()
-			, indexBufferHandle()
-			, textBuffer(nullptr)
-			, bufferType(BufferType::Dynamic)
-			, fontType(0)
-		{}
-
-		~BufferCache()
-		{
-			if (textBuffer)
-			{
-				delete textBuffer;
-			}
-		}
+		BufferCache();
+		~BufferCache();
 
 		vertCacheHandle_t vertexBufferHandle;
 		vertCacheHandle_t indexBufferHandle;

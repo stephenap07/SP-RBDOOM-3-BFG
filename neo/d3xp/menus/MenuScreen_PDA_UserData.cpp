@@ -147,19 +147,12 @@ idMenuScreen_PDA_UserData::ShowScreen
 */
 void idMenuScreen_PDA_UserData::ShowScreen( const mainMenuTransition_t transitionType )
 {
-
 	if( menuGUI != NULL && menuData != NULL )
 	{
 		idSWFScriptObject& root = menuGUI->GetRootObject();
-		idSWFSpriteInstance* pdaSprite = root.GetNestedSprite( "pda_persons" );
-		if( pdaSprite != NULL && menuData != NULL && menuData->ActiveScreen() != PDA_AREA_USER_EMAIL )
-		{
-			pdaSprite->SetVisible( true );
-			pdaSprite->PlayFrame( "rollOn" );
-		}
 
 		idSWFSpriteInstance* navBar = root.GetNestedSprite( "navBar" );
-		if( navBar != NULL && menuData != NULL && menuData->ActiveScreen() == PDA_AREA_INVALID )
+		if( navBar && menuData && menuData->ActiveScreen() == INVENTORY_AREA_INVALID )
 		{
 			navBar->PlayFrame( "rollOn" );
 		}

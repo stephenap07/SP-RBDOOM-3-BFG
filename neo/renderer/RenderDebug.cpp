@@ -52,7 +52,9 @@ private:
 
 
 RenderDebug_local::RenderDebug_local()
+	: shaderParms()
 {
+	memset(shaderParms, 0, sizeof(float) * 12);
 }
 
 RenderDebug_local::~RenderDebug_local()
