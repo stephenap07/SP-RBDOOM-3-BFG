@@ -683,7 +683,6 @@ file(GLOB UI_SOURCES ui/*.cpp)
 file(GLOB SWF_INCLUDES swf/*.h)
 file(GLOB SWF_SOURCES swf/*.cpp)
 
-
 set(GAMED3XP_INCLUDES
 	d3xp/Achievements.h
 	d3xp/Actor.h
@@ -1542,7 +1541,7 @@ if(MSVC)
 	#			   COMMAND nmake ARGS /f Makefile.vc6 CFG=release
 	#			   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/libs/curl/lib
     #               COMMENT "Compiling libcURL")
-		
+
 	add_dependencies(RBDoom3BFG idlib)
 	target_link_libraries(RBDoom3BFG
 		idlib

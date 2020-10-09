@@ -70,15 +70,16 @@ bool ReleaseMouseForTools()
 	return AreEditorsActive() && releaseMouse;
 }
 
+static bool showToolWindows = true;
+static bool showParticlesEditor = true;
+
 void DrawToolWindows()
 {
-#if 0
 	ImGui::Begin( "Show Ingame Editors", &showToolWindows, 0 );
 
 	ImGui::Checkbox( "Light", &LightEditor::showIt );
 	ImGui::SameLine();
 	ImGui::Checkbox( "Particle", &showParticlesEditor );
-#endif // 0
 
 	if( LightEditor::showIt )
 	{
@@ -86,7 +87,7 @@ void DrawToolWindows()
 	}
 
 	// TODO: other editor windows..
-	//ImGui::End();
+	ImGui::End();
 }
 
 void LightEditorInit( const idDict* dict, idEntity* ent )

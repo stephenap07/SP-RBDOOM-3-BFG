@@ -370,7 +370,13 @@ void idGuiModel::EmitImGui( ImDrawData* drawData )
 
 			//const idMaterial* material = declManager->FindMaterial( texture name of pcmd->TextureId );
 
-			idDrawVert* verts = renderSystem->AllocTris( numVerts, indexBufferOffset, numIndexes, tr.imgGuiMaterial, STEREO_DEPTH_TYPE_NONE );
+			const idMaterial* mat = tr.imgGuiMaterial;
+			if (pcmd->TextureId)
+			{
+				mat = (const idMaterial*)pcmd->TextureId;
+			}
+
+			idDrawVert* verts = renderSystem->AllocTris( numVerts, indexBufferOffset, numIndexes, mat, STEREO_DEPTH_TYPE_NONE );
 			if( verts == NULL )
 			{
 				continue;

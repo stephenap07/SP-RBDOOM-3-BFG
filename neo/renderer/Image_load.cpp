@@ -175,7 +175,7 @@ ID_INLINE void idImage::DeriveOpts()
 				// RB: TODO check binary format version
 				// D3 BFG assets require RGB565 but it introduces color banding
 				// mods would prefer FMT_RGBA8
-				opts.format = FMT_RGB565; //FMT_RGBA8;
+				opts.format = FMT_RGBA8;// FMT_RGB565; //FMT_RGBA8;
 				opts.gammaMips = true;
 				break;
 			case TD_LOOKUP_TABLE_MONO:

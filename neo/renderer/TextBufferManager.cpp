@@ -660,6 +660,14 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 		return;
 	}
 
+	idDrawVert* vert = (idDrawVert*)(bc.textBuffer->getVertexBuffer());
+
+	for (uint32_t i = 0; i < bc.textBuffer->getVertexCount(); i++)
+	{
+		vert[i].xyz.x *= bc.textBuffer->getScale().x;
+		vert[i].xyz.y *= bc.textBuffer->getScale().y;
+	}
+
 	idDrawVert* verts = tr_guiModel->AllocTris(
 		bc.textBuffer->getVertexCount(),
 		bc.textBuffer->getIndexBuffer(),
@@ -669,12 +677,6 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, int32_t _dept
 		STEREO_DEPTH_TYPE_NONE);
 
 	WriteDrawVerts16(verts, (idDrawVert*)bc.textBuffer->getVertexBuffer(), bc.textBuffer->getVertexCount());
-
-	for (uint32_t i = 0; i < bc.textBuffer->getVertexCount(); i++)
-	{
-		verts[i].xyz.x *= bc.textBuffer->getScale().x;
-		verts[i].xyz.y *= bc.textBuffer->getScale().y;
-	}
 }
 
 void TextBufferManager::setStyle(TextBufferHandle _handle, uint32_t _flags)

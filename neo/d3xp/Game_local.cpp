@@ -5618,6 +5618,11 @@ bool idGameLocal::IsPDAOpen() const
 	return GetLocalPlayer() && GetLocalPlayer()->objectiveSystemOpen;
 }
 
+bool idGameLocal::IsInventoryOpen() const
+{
+	return GetLocalPlayer() && GetLocalPlayer()->newInventoryOpen;
+}
+
 /*
 ========================
 idGameLocal::IsPlayerChatting
@@ -5635,7 +5640,7 @@ idGameLocal::InhibitControls
 */
 bool idGameLocal::InhibitControls()
 {
-	return ( Shell_IsActive() || IsPDAOpen() || IsPlayerChatting() || ( common->IsMultiplayer() && mpGame.IsScoreboardActive() ) );
+	return ( Shell_IsActive() || IsPDAOpen() || IsPlayerChatting() || ( common->IsMultiplayer() && mpGame.IsScoreboardActive() ) || IsInventoryOpen() );
 }
 
 /*

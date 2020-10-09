@@ -348,6 +348,7 @@ void LightEditor::Reset()
 	lightEntity = NULL;
 	currentTextureIndex = 0;
 	currentTexture = NULL;
+	currentMaterial = nullptr;
 }
 
 namespace
@@ -409,6 +410,7 @@ void LightEditor::LoadCurrentTexture()
 		if( mat != NULL )
 		{
 			currentTexture = mat->GetEditorImage();
+			currentMaterial = mat;
 		}
 	}
 }
@@ -581,10 +583,10 @@ void LightEditor::DrawWindow()
 			LoadCurrentTexture();
 		}
 
-		if( currentTexture != NULL )
+		if( currentMaterial != NULL )
 		{
 			ImVec2 size( currentTexture->GetUploadWidth(), currentTexture->GetUploadHeight() );
-			ImGui::Image( currentTexture->GetImGuiTextureID(), size, ImVec2( 0, 0 ), ImVec2( 1, 1 ),
+			ImGui::Image( (void*)currentMaterial, size, ImVec2( 0, 0 ), ImVec2( 1, 1 ),
 						  ImColor( 255, 255, 255, 255 ), ImColor( 255, 255, 255, 128 ) );
 		}
 

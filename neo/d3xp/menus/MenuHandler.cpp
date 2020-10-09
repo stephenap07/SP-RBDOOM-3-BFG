@@ -350,7 +350,6 @@ idMenuHandler::Update
 */
 bool idMenuHandler::HandleGuiEvent( const sysEvent_t* sev )
 {
-
 	if( gui != NULL && activeScreen != -1 )
 	{
 		return gui->HandleEvent( sev );

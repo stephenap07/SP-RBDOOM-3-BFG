@@ -640,15 +640,19 @@ public:
 	{
 	}
 
+	virtual ~idMenuHandler_Inventory();
+
 	virtual void			Update();
 	virtual void			ActivateMenu(bool show);
 	virtual void			Initialize(const char* swfFile, idSoundWorld* sw);
+	virtual bool			HandleAction(idWidgetAction& action, const idWidgetEvent& event, idMenuWidget* widget, bool forceHandled = false);
 	virtual idMenuScreen*   GetMenuScreen(int index);
 
 	idMenuScreen_Inventory* GetInventory();
 
-protected:
-
+private:
+	idMenuWidget_CommandBar commandBarWidget;
+	idMenuWidget_NavBar navBar;
 };
 
 

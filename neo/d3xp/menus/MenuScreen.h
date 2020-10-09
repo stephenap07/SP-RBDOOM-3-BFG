@@ -1849,7 +1849,6 @@ public:
 	virtual void				HideScreen(const mainMenuTransition_t transitionType);
 	virtual bool				HandleAction(idWidgetAction& action, const idWidgetEvent& event, idMenuWidget* widget, bool forceHandled = false);
 
-	virtual void				UpdateCmds();
 	virtual void				HandleMenu(const mainMenuTransition_t type);
 
 private:

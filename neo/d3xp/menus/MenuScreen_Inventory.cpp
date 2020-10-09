@@ -52,14 +52,41 @@ void idMenuScreen_Inventory::Initialize(idMenuHandler* data)
 	}
 
 	SetSpritePath("menuItems");
-
-	testButton = new idMenuWidget_Button();
-	testButton->SetSpritePath(GetSpritePath(), "myBtn");
-	AddChild(testButton);
 }
 
 void idMenuScreen_Inventory::Update()
 {
+	idPlayer* player = gameLocal.GetLocalPlayer();
+	if (player == NULL)
+	{
+		idMenuScreen::Update();
+		return;
+	}
+
+	if (menuData != NULL)
+	{
+		idMenuWidget_CommandBar* cmdBar = dynamic_cast<idMenuWidget_CommandBar* const>(menuData->GetChildFromIndex(0));
+		if (cmdBar != NULL)
+		{
+			cmdBar->ClearAllButtons();
+			idMenuWidget_CommandBar::buttonInfo_t* buttonInfo;
+			buttonInfo = cmdBar->GetButton(idMenuWidget_CommandBar::BUTTON_JOY2);
+			if (menuData->GetPlatform() != 2)
+			{
+				buttonInfo->label = "#str_01345";
+			}
+			buttonInfo->action.Set(WIDGET_ACTION_GO_BACK);
+
+			buttonInfo = cmdBar->GetButton(idMenuWidget_CommandBar::BUTTON_JOY3);
+			buttonInfo->label = "#str_SWF_EQUIP";
+			buttonInfo->action.Set(WIDGET_ACTION_JOY3_ON_PRESS);
+
+			buttonInfo = cmdBar->GetButton(idMenuWidget_CommandBar::BUTTON_TAB);
+			buttonInfo->label = "";
+			buttonInfo->action.Set(WIDGET_ACTION_GO_BACK);
+		}
+	}
+
 	idMenuScreen::Update();
 }
 
@@ -110,12 +137,44 @@ void idMenuScreen_Inventory::HideScreen(const mainMenuTransition_t transitionTyp
 
 bool idMenuScreen_Inventory::HandleAction(idWidgetAction& action, const idWidgetEvent& event, idMenuWidget* widget, bool forceHandled)
 {
-	return idMenuScreen::HandleAction(action, event, widget, forceHandled);
-}
 
-void idMenuScreen_Inventory::UpdateCmds()
-{
-	idMenuScreen::UpdateCmds();
+	if (menuData == NULL)
+	{
+		return true;
+	}
+
+	if (menuData->ActiveScreen() != INVENTORY_AREA_PLAYING)
+	{
+		return false;
+	}
+
+	widgetAction_t actionType = action.GetType();
+	const idSWFParmList& parms = action.GetParms();
+
+	switch (actionType)
+	{
+	case WIDGET_ACTION_JOY3_ON_PRESS:
+	{
+		menuData->SetNextScreen(PDA_AREA_INVALID, MENU_TRANSITION_ADVANCE);
+		return true;
+	}
+	case WIDGET_ACTION_GO_BACK:
+	{
+		menuData->SetNextScreen(PDA_AREA_INVALID, MENU_TRANSITION_ADVANCE);
+		return true;
+	}
+	case WIDGET_ACTION_START_REPEATER:
+	{
+		idWidgetAction repeatAction;
+		widgetAction_t repeatActionType = static_cast<widgetAction_t>(parms[0].ToInteger());
+		assert(parms.Num() == 2);
+		repeatAction.Set(repeatActionType, parms[1]);
+		menuData->StartWidgetActionRepeater(widget, repeatAction, event);
+		return true;
+	}
+	}
+
+	return idMenuWidget::HandleAction(action, event, widget, forceHandled);
 }
 
 void idMenuScreen_Inventory::HandleMenu(const mainMenuTransition_t type)

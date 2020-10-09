@@ -95,6 +95,7 @@ class LightEditor
 	idList<idStr> textureNames;
 	int currentTextureIndex;
 	idImage* currentTexture;
+	const idMaterial* currentMaterial;
 
 	void Init( const idDict* dict, idEntity* light );
 	void Reset();

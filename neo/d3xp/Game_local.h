@@ -581,6 +581,7 @@ public:
 
 	virtual bool				InhibitControls();
 	virtual bool				IsPDAOpen() const;
+	virtual bool                IsInventoryOpen() const;
 	virtual bool				IsPlayerChatting() const;
 
 	// Creates leaderboards for each map/mode defined.

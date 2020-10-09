@@ -4015,11 +4015,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				// Force gui surfaces to always be SVC_MODULATE
 				svc = SVC_MODULATE;
 
-				if (idStr::Icmp(shader->GetName(), "_fontatlas") == 0)
-				{
-					svc = pStage->vertexColor;
-				}
-
 				// use special shaders for bink cinematics
 				if( pStage->texture.cinematic )
 				{
@@ -6131,7 +6126,7 @@ void idRenderBackend::PostProcess( const void* data )
 		GL_SelectTexture( 0 );
 		globalImages->smaaInputImage->Bind();
 
-		GL_SelectTexture( 1 );
+		GL_SelectTexture( 1 ); 
 		globalImages->smaaBlendImage->Bind();
 
 		renderProgManager.BindShader_SMAA_NeighborhoodBlending();
