@@ -1,0 +1,36 @@
+Inbox:
+
+1. Generating bimage file paths are too long. Make then shorter somehow.The generated images for combineRgba doesn't work at all.
+2. Envprobe only applies to the current area num the player is in. Envprobes should only apply to the current area the probe is in.
+I don't think this is a screen space technique, so I should be able to get the surfaces the probes affect just like with lights.
+
+
+Improving the tools
+1. Make it so that the mouse clicks work and that imgui stuff eats up the mouse clicks that intersect the imgui windows.
+2. Add back debug text that render within the world. I want to see information for entities within the actual world instead of being displayed through the console.
+
+Adding In-World Text Rendering for Debug and Gameplay
+
+
+# How is the world rendered?
+The RenderWorld contains the "scene graph"
+- AddEntityRef adds an entity to the world. This creates all the rendering stuff to draw it. Vertices and stuff.
+- Dynamic vertices are generated on the front end every frame unless it is optionally cached.
+
+
+---
+
+# Add Debug Text
+
+## Purpose
+Add back debug text that render within the world. I want to see information for entities within the actual world instead of being displayed through the console.
+
+## Design
+Add a Model_text to allocate vertices and set the material. This is already done in TextBufferManager.
+
+Add a new debug_add_text method in the front-end that loops through the surfaces and then add our new geometry above an entity.
+
+GuiModel::EmitToCurrentView can probably be used.
+
+Can possibly use idRenderBackend::DBG_RenderDrawSurfListWithFunction to add these debug text vertices to the draw calls.
+Seems a little hacky, but whatever?
