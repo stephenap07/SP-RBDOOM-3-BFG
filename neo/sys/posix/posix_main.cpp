@@ -104,7 +104,15 @@ const char* Sys_DefaultSavePath()
 		SDL_free( base_path );
 	}
 #else
-	sprintf( savepath, "%s/.rbdoom3bfg", getenv( "HOME" ) );
+	const char* xdg_data_home = getenv( "XDG_DATA_HOME" );
+	if( xdg_data_home != NULL )
+	{
+		sprintf( savepath, "%s/rbdoom3bfg", xdg_data_home );
+	}
+	else
+	{
+		sprintf( savepath, "%s/.local/share/rbdoom3bfg", getenv( "HOME" ) );
+	}
 #endif
 
 	return savepath.c_str();
@@ -253,16 +261,20 @@ double Sys_GetClockTicks()
 		"pop %%ebx\n"
 		: "=r"( lo ), "=r"( hi ) );
 	return ( double ) lo + ( double ) 0xFFFFFFFF * hi;
-#else
-//#error unsupported CPU
 // RB begin
+#elif defined( __x86_64__ )
+	uint32_t lo, hi;
+	__asm__ __volatile__( "rdtsc" : "=a"( lo ), "=d"( hi ) );
+	return ( ( ( uint64_t )hi ) << 32 ) | lo;
+#else
+	//#error unsupported CPU
 	struct timespec now;
 
 	clock_gettime( CLOCK_MONOTONIC, &now );
 
 	return now.tv_sec * 1000000000LL + now.tv_nsec;
-// RB end
 #endif
+// RB end
 }
 
 /*

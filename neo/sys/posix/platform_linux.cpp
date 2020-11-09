@@ -45,6 +45,11 @@ static const char** cmdargv = NULL;
 static int cmdargc = 0;
 // DG end
 
+// RB begin
+#include <stdio.h> // needed for sysconf()
+#include <cstring>
+// RB end
+
 #ifdef ID_MCHECK
 	#include <mcheck.h>
 #endif
@@ -107,53 +112,11 @@ double Sys_ClockTicksPerSecond()
 	static bool		init = false;
 	static double	ret;
 
-	int		fd, len, pos, end;
-	char	buf[ 4096 ];
-
 	if( init )
 	{
 		return ret;
 	}
 
-	fd = open( "/proc/cpuinfo", O_RDONLY );
-	if( fd == -1 )
-	{
-		common->Printf( "couldn't read /proc/cpuinfo\n" );
-		ret = MeasureClockTicks();
-		init = true;
-		common->Printf( "measured CPU frequency: %g MHz\n", ret / 1000000.0 );
-		return ret;
-	}
-	len = read( fd, buf, 4096 );
-	close( fd );
-	pos = 0;
-	while( pos < len )
-	{
-		if( !idStr::Cmpn( buf + pos, "cpu MHz", 7 ) )
-		{
-			pos = strchr( buf + pos, ':' ) - buf + 2;
-			end = strchr( buf + pos, '\n' ) - buf;
-			if( pos < len && end < len )
-			{
-				buf[end] = '\0';
-				ret = atof( buf + pos );
-			}
-			else
-			{
-				common->Printf( "failed parsing /proc/cpuinfo\n" );
-				ret = MeasureClockTicks();
-				init = true;
-				common->Printf( "measured CPU frequency: %g MHz\n", ret / 1000000.0 );
-				return ret;
-			}
-			common->Printf( "/proc/cpuinfo CPU frequency: %g MHz\n", ret );
-			ret *= 1000000;
-			init = true;
-			return ret;
-		}
-		pos = strchr( buf + pos, '\n' ) - buf + 1;
-	}
-	common->Printf( "failed parsing /proc/cpuinfo\n" );
 	ret = MeasureClockTicks();
 	init = true;
 	common->Printf( "measured CPU frequency: %g MHz\n", ret / 1000000.0 );
@@ -164,8 +127,8 @@ double Sys_ClockTicksPerSecond()
 ========================
 Sys_CPUCount
 
-numLogicalCPUCores	- the number of logical CPU per core
-numPhysicalCPUCores	- the total number of cores per package
+numLogicalCPUCores	- the total number of logical CPU cores (equal to the total number of threads from all CPU)
+numPhysicalCPUCores	- the total number of physical CPU cores
 numCPUPackages		- the total number of packages (physical processors)
 ========================
 */
@@ -173,6 +136,8 @@ numCPUPackages		- the total number of packages (physical processors)
 void Sys_CPUCount( int& numLogicalCPUCores, int& numPhysicalCPUCores, int& numCPUPackages )
 {
 	static bool		init = false;
+	static bool		CPUCoresIsFound = false; // needed for sysconf()
+	static bool		SiblingsIsFound = false; // needed for sysconf()
 	static double	ret;
 
 	static int		s_numLogicalCPUCores;
@@ -217,11 +182,13 @@ void Sys_CPUCount( int& numLogicalCPUCores, int& numPhysicalCPUCores, int& numCP
 					if( ( processor ) > s_numPhysicalCPUCores )
 					{
 						s_numPhysicalCPUCores = processor;
+						CPUCoresIsFound = true;
 					}
 				}
 				else
 				{
 					common->Printf( "failed parsing /proc/cpuinfo\n" );
+					CPUCoresIsFound = false;
 					break;
 				}
 			}
@@ -240,17 +207,37 @@ void Sys_CPUCount( int& numLogicalCPUCores, int& numPhysicalCPUCores, int& numCP
 					if( ( coreId ) > s_numLogicalCPUCores )
 					{
 						s_numLogicalCPUCores = coreId;
+						SiblingsIsFound = true;
 					}
 				}
 				else
 				{
 					common->Printf( "failed parsing /proc/cpuinfo\n" );
+					SiblingsIsFound = false;
 					break;
 				}
 			}
 
 			pos = strchr( buf + pos, '\n' ) - buf + 1;
 		}
+		if( CPUCoresIsFound == false && SiblingsIsFound == false )
+		{
+			common->Printf( "failed parsing /proc/cpuinfo\n" );
+			common->Printf( "alternative method used\n" );
+			s_numPhysicalCPUCores = sysconf( _SC_NPROCESSORS_CONF ); // _SC_NPROCESSORS_ONLN may not be reliable on Android
+			s_numLogicalCPUCores = s_numPhysicalCPUCores; // hack for CPU without Hyper-Threading (HT) technology
+		}
+		else if( CPUCoresIsFound == true && SiblingsIsFound == false )
+		{
+			s_numLogicalCPUCores = s_numPhysicalCPUCores; // hack for CPU without Hyper-Threading (HT) technology
+		}
+	}
+	else
+	{
+		common->Printf( "failed to read /proc/cpuinfo\n" );
+		common->Printf( "alternative method used\n" );
+		s_numPhysicalCPUCores = sysconf( _SC_NPROCESSORS_CONF ); // _SC_NPROCESSORS_ONLN may not be reliable on Android
+		s_numLogicalCPUCores = s_numPhysicalCPUCores; // hack for CPU without Hyper-Threading (HT) technology
 	}
 
 	common->Printf( "/proc/cpuinfo CPU processors: %d\n", s_numPhysicalCPUCores );
