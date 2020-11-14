@@ -1,0 +1,17 @@
+entityDef environment_probe
+{
+    // Global
+    "spawnclass"    "EnvironmentProbe"
+
+    // Used by the Editor
+    "editor_color"      ".3 .3 1"
+    "editor_mins"       "-16 -16 0"
+    "editor_maxs"       "16 16 32"
+    "editor_usage"      "Environment Probe"
+    "editor_rotatable"  "1"
+
+    // Environment probe variables
+    "levels"            "1"
+    "start_off"         "0"
+    "_color"            "1 1 1"
+}

@@ -1,0 +1,66 @@
+
+textures/particles/spark_01
+{
+    noSelfShadow
+    translucent
+    noShadows
+
+    qer_editorimage textures/particles/spark_01
+
+    {
+        maskcolor
+        map makealpha(textures/particles/spark_01.png)
+    }
+
+    {
+        blend       gl_dst_alpha, gl_one
+        map         textures/particles/spark_01.png
+        vertexColor
+    }
+}
+
+textures/particles/spark_02
+{
+    noSelfShadow
+    translucent
+    noShadows
+    noshadows
+    translucent
+    discrete
+    twosided
+    nonsolid
+    noimpact
+
+    qer_editorimage textures/particles/spark_02
+
+    {
+        maskcolor
+        map makealpha(textures/particles/spark_02.png)
+    }
+
+    {
+        blend       gl_dst_alpha, gl_one_minus_dst_alpha
+        map         textures/particles/spark_02.png
+        vertexColor
+    }
+}
+
+textures/particles/spark_03
+{
+    noSelfShadow
+    translucent
+    noShadows
+
+    qer_editorimage textures/particles/spark_03
+
+    {
+        maskcolor
+        map makealpha(textures/particles/spark_03.png)
+    }
+
+    {
+        blend       gl_dst_alpha, gl_one_minus_dst_alpha
+        map         textures/particles/spark_03.png
+        vertexColor
+    }
+}

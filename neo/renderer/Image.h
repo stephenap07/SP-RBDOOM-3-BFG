@@ -85,6 +85,8 @@ enum textureFormat_t
 
 	FMT_DEPTH,			// 24 bpp
 
+	FMT_DEPTH_STENCIL,  // 32 bpp
+
 	//------------------------
 	//
 	//------------------------
@@ -217,6 +219,7 @@ typedef enum
 	TD_COVERAGE,			// coverage map for fill depth pass when YCoCG is used
 	TD_DEPTH,				// depth buffer copy for motion blur
 	// RB begin
+	TD_DEPTH_STENCIL,       // depth buffer and stencil buffer
 	TD_SPECULAR_PBR_RMAO,	// may be compressed, and always zeros the alpha channel, linear RGB R = roughness, G = metal, B = ambient occlusion
 	TD_SPECULAR_PBR_RMAOD,	// may be compressed, alpha channel contains displacement map
 	TD_HIGHQUALITY_CUBE,	// motorsep - Uncompressed cubemap texture (RGB colorspace)

@@ -1,5 +1,42 @@
+textures/walls/dev512
+{
+    diffusemap textures/walls/dev512
+    stone
+}
+
 textures/walls/dev64
 {
 	diffusemap textures/walls/dev64	
+    stone
+}
+
+textures/walls/wright_tile
+{
+	diffusemap textures/walls/dev64	
+    {
+        blend bumpmap
+        map addnormals( textures/walls/wright_tile_normal, heightmap(textures/walls/tile_height, 6 ))
+    }
+    stone
+}
+
+textures/walls/wright_tile_plaster
+{
+    qer_editorimage textures/white_plaster/white_plaster_baseColor
+	diffusemap    textures/white_plaster/white_plaster_baseColor
+    specularmap   textures/white_plaster/white_plaster_specularlevel
+
+    {
+        blend rmaomap 
+        map combineRgba(textures/white_plaster/white_plaster_roughness,
+                        textures/white_plaster/white_plaster_specularlevel,
+                        _black)
+    }
+
+    {
+        blend bumpmap
+        map addnormals(textures/white_plaster/white_plaster_normal, heightmap(textures/white_plaster/white_plaster_height, 6 ))
+    }
+
     stone
 }

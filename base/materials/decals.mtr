@@ -1,0 +1,40 @@
+
+textures/decals/bullet
+{
+    DECAL_MACRO
+    decalInfo 10 1 ( 1 1 1 1 ) ( 0 0 0 0 )
+    {       
+        blend       gl_zero, gl_one_minus_src_color
+        map         textures/decals/bullet
+        clamp       // we don't want it to tile if the projection extends past the bounds
+        vertexColor // oblique projections will be slightly faded down
+    }
+}
+
+textures/decals/lightning
+{
+    noSelfShadow
+    translucent
+    noShadows
+
+    qer_editorimage textures/decals/lightning
+
+    {
+        blend       gl_dst_alpha, gl_one
+        map         textures/decals/lightning.tga
+        vertexColor
+    }
+}
+
+textures/decals/bottom_dirt1
+{
+    DECAL_MACRO
+    nonsolid
+    decalInfo 5 1 ( 1 1 1 1 ) ( 0 0 0 0 )
+
+    {       
+        blend       add
+        map         textures/decals/bottom_dirt.png
+        forceHighQuality
+    }
+}

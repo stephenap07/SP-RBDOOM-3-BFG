@@ -226,7 +226,7 @@ static void R_DepthImage( idImage* image )
 #else
 	int msaaSamples = 0;
 #endif
-	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_DEPTH );//, msaaSamples );
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_DEPTH_STENCIL );//, msaaSamples );
 	// RB end
 }
 

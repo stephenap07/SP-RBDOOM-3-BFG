@@ -1,19 +1,33 @@
-entityDef player_doommarine
+entityDef player_base
 {
-	"spawnclass"   					"idPlayer"
-	"scriptobject" 					"player"
+        "spawnclass"                    "idPlayer"
+    "scriptobject"                  "player"
   
-	"def_weapon0"					"weapon_unarmed" 
-	"weapon0_allowempty"			"0"
+    "def_weapon0"                   "weapon_unarmed" 
+    "weapon0_allowempty"            "0"
 
-	"def_weapon1"					"weapon_arm2" 
-	"weapon1_allowempty"			"1"
+    "def_weapon1"                   "weapon_arm2" 
+    "weapon0_best"                  "1"
+    "weapon1_cycle"                 "1"
+    "weapon1_allowempty"            "1"
 
-	"def_weapon2"					"weapon_keycard" 
-	"weapon2_allowempty"			"1"
+    "def_weapon2"                   "weapon_keycard" 
+    "weapon2_allowempty"            "1"
 
-	"weapon"						"weapon_unarmed"
-	"current_weapon"				"0"   
+    "def_weapon3"                   "weapon_tazer" 
+    "weapon3_best"                  "0"
+    "weapon3_cycle"                 "1"
+    "weapon3_toggle"                "0"
+    "weapon3_allowempty"            "1"
+
+    "def_weapon18"                   "weapon_pda" 
+    "weapon18_best"                  "0"
+    "weapon18_cycle"                 "1"
+    "weapon18_toggle"                "0"
+    "weapon18_allowempty"            "1"
+
+    "weapon"                        "weapon_unarmed"
+    "current_weapon"                "0"   
 
     "snd_footstep"                  "player_sounds_footstep"
 
@@ -42,6 +56,16 @@ entityDef player_doommarine
     "pm_crouchbob"                  "0.2"
     "pm_walkbob"                    "0.2"
     "pm_runbob"                     "0.4"
+}
+
+entityDef player_doommarine
+{
+    "inherit"                       "player_base"
+
+    "text_infoTitle"                    "#str_02908"
+    "text_noPDA"                        "#str_02034"
+    "text_PDANeeded"                    "#str_02909"
+    "text_firstPDA"                     "#str_02035"
 }
 
 entityDef player_doommarine_mp

@@ -1,0 +1,71 @@
+windowDef Desktop
+{ 
+    rect      0, 0, 1280,720
+    backcolor 0, 1, 0, 0.5
+    menugui   1
+   
+    onESC
+    {
+      set "cmd" "close" ;
+    }   
+    
+    windowDef text
+    {
+        rect        0,100,1280,60
+        visible     1
+        text        "*PAUSED*"
+        shadow      1
+        textalign   1
+        textscale   2
+    }
+
+    windowDef startButton
+    {
+        rect        500,300,120,40
+        visible     1
+        text        "start"
+        textalign    1
+        textscale    0.7
+        backcolor    0,.5,1,1
+        
+        onMouseEnter
+        {
+            set "startButton::backcolor"    "1 .6 0 1";
+        }
+        
+        onMouseExit
+        {
+            set "startButton::backcolor"    "0 .5 1 1";
+        }        
+        
+        onAction
+        {
+            set "cmd" "startgame level1";
+        }
+    }
+
+    windowDef quitButton
+    {
+        rect        30,300,120,40
+        visible     1
+        text        "quit"
+        textalign    1
+        textscale    0.7
+        backcolor    0,.5,1,1
+        
+        onMouseEnter
+        {
+            set "quitButton::backcolor"    "1 .6 0 1";
+        }
+        
+        onMouseExit
+        {
+            set "quitButton::backcolor"    "0 .5 1 1";
+        }        
+        
+        onAction
+        {
+            set "cmd" "quit";
+        }
+    }
+}

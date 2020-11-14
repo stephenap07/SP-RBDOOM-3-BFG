@@ -517,6 +517,11 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 			return;
 		}
 
+		if (player->GetInventoryOpen())
+		{
+			player->DrawInventory();
+		}
+
 		// armor impulse feedback
 		float armorPulse = ( gameLocal.fast.time - player->lastArmorPulse ) / 250.0f;
 

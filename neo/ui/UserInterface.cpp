@@ -185,6 +185,7 @@ void idUserInterfaceManagerLocal::Reload( bool all )
 {
 	ID_TIME_T ts;
 
+	bool cleared = false;
 	int c = guis.Num();
 	for( int i = 0; i < c; i++ )
 	{
@@ -195,6 +196,16 @@ void idUserInterfaceManagerLocal::Reload( bool all )
 			{
 				continue;
 			}
+		}
+
+		if (!cleared)
+		{
+			// clear just once
+			// TODO(Stephen): I had to clear the parser because it was preventing the guis
+			// from reloading from the source file. This clears all tokens from the parser,
+			// is there a more specific  
+			uiManagerLocal.GetBinaryParser().Clear();
+			cleared = true;
 		}
 
 		guis[i]->InitFromFile( guis[i]->GetSourceFile() );
@@ -475,7 +486,7 @@ const char* idUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int _tim
 
 	time = _time;
 
-	if( bindHandler && event->evType == SE_KEY && event->evValue2 == 1 )
+	if( bindHandler && event->IsKeyEvent() && event->IsKeyDown() )
 	{
 		const char* ret = bindHandler->HandleEvent( event, updateVisuals );
 		bindHandler = NULL;
@@ -519,6 +530,8 @@ void idUserInterfaceLocal::Redraw( int _time, bool hud )
 	if( !loading && desktop )
 	{
 		time = _time;
+		// Stephen: Commenting the clip rect due to it being 640x480.
+		// I want screen resolution independent gui stuff.
 		dc->PushClipRect( uiManagerLocal.screenRect );
 		desktop->Redraw( 0, 0, hud );
 		dc->PopClipRect();
@@ -527,13 +540,29 @@ void idUserInterfaceLocal::Redraw( int _time, bool hud )
 
 void idUserInterfaceLocal::DrawCursor()
 {
-	if( !desktop || desktop->GetFlags() & WIN_MENUGUI )
+	// Stephen: The cursor is bounded to the gui's rect.
+	// Before, it was bound to the virtual width and height regardless
+	// of gui size.
+	idVec2 bounds;
+	if (desktop &&
+		desktop->scaleToRenderWindow)
 	{
-		dc->DrawCursor( &cursorX, &cursorY, 32.0f );
+		bounds.x = renderSystem->GetWidth();
+		bounds.y = renderSystem->GetHeight();
 	}
 	else
 	{
-		dc->DrawCursor( &cursorX, &cursorY, 56.0f );
+		bounds.x = VIRTUAL_WIDTH;
+		bounds.y = VIRTUAL_HEIGHT;
+	}
+
+	if( !desktop || desktop->GetFlags() & WIN_MENUGUI )
+	{
+		dc->DrawCursor( &cursorX, &cursorY, 32.0f, bounds);
+	}
+	else
+	{
+		dc->DrawCursor( &cursorX, &cursorY, 56.0f, bounds );
 	}
 }
 

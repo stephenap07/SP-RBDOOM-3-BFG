@@ -1,0 +1,16 @@
+
+textures/skies/cloudy_sky
+{
+    qer_editorimage textures/editor/test_skybox
+	noFragment
+	noshadows
+	nooverlays
+	forceOpaque  // so transparent windows can draw on top of it
+    {
+        blend         add
+        cubeMapSingle env/skybox_texture
+        cubeMapSize   512
+        texgen        skybox
+        //texgen        wobblesky .1 .1 .1
+    }
+}

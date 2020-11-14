@@ -1,9 +1,30 @@
+
+// Tables
+table muzzleflashtable { clamp { 0.45, 1, 0.65, 0.88, 0.55, 0.88, 0.55, 1.0, 1.0, 1, 0.88, 0.75, 0.55, 0.30, 0 } }
+table muzzleflashrandom { { 1.1, 0.9, 0.85, 1.2, 0.7, 1.02, 0.94 } }
+
 textures/weapons/arm2/arm2
 {
     diffusemap "textures/weapons/arm2/arm2.tga"
 }
 
-textures/items/keycard
+textures/weapons/tazer
 {
-    diffusemap "textures/items/keycard.tga"
+    diffusemap "textures/weapons/tazer/tazer_color.png"
+}
+
+muzzleflash
+{
+		noshadows
+	{
+		//map	_spotlight
+		map lights/round
+		zeroClamp
+		colored 
+	
+
+		red 	muzzleflashrandom[ time * 3.33 ] * muzzleflashtable[ (time + parm4) * 4 * Parm3 ] * Parm0
+		green 	muzzleflashrandom[ time * 3.33 ] * muzzleflashtable[ (time + parm4) * 4 * Parm3 ] * Parm1
+		blue 	muzzleflashrandom[ time * 3.33 ] * muzzleflashtable[ (time + parm4) * 4 * Parm3 ] * Parm2
+	}
 }

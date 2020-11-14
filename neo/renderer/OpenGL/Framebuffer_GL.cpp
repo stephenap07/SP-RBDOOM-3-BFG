@@ -436,7 +436,7 @@ void Framebuffer::AddDepthBuffer( int format, int multiSamples )
 
 	if( notCreatedYet )
 	{
-		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer );
+		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer );
 	}
 
 	GL_CheckErrors();
@@ -467,7 +467,7 @@ void Framebuffer::AttachImageDepth( int target, const idImage* image )
 		return;
 	}
 
-	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, target, image->texnum, 0 );
+	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, target, image->texnum, 0 );
 }
 
 void Framebuffer::AttachImageDepthLayer( const idImage* image, int layer )

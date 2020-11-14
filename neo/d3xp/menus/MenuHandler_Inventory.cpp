@@ -141,11 +141,6 @@ void idMenuHandler_Inventory::Initialize(const char* swfFile, idSoundWorld* sw)
 	public:
 		idSWFScriptVar Call(idSWFScriptObject* thisObject, const idSWFParmList& parms)
 		{
-			idPlayer* player = gameLocal.GetLocalPlayer();
-			if (player)
-			{
-				player->newInventoryOpen = false;
-			}
 			return idSWFScriptVar();
 		}
 	};

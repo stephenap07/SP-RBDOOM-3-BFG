@@ -1,4 +1,4 @@
 textures/items/keycard
 {
-    diffusemap textures/items/keycard.png
+    diffusemap textures/items/keycard
 }

@@ -1,0 +1,24 @@
+windowDef Desktop {
+    rect        0, 0, 1920, 1080
+    backcolor   0, 0, 0, 0
+    visible     1
+    nocursor    1
+
+    windowDef CameraAperature {
+        rect        0, 0, 640, 480 
+        background "textures/guis/aperature"
+        bordersize  1
+        text        "equipped weapon 0"
+        textalign   1
+        visible     ("gui::weapon0" != 0)
+    }
+
+    windowDef PlayerHealth {
+        rect        91, 438, 39, 32
+        backcolor   0.5, 0.6, 0.6, 0.3
+        bordercolor 0.5, 0.6, 0.6, 1
+        bordersize  1
+        text        ("gui::player_health")
+        textalign   1
+    }
+}

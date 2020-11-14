@@ -495,6 +495,11 @@ static void R_ReloadSurface_f( const idCmdArgs& args )
 	modelTrace_t mt;
 	idVec3 start, end;
 
+	if (!tr.primaryView)
+	{
+		return;
+	}
+
 	// start far enough away that we don't hit the player model
 	start = tr.primaryView->renderView.vieworg + tr.primaryView->renderView.viewaxis[0] * 16;
 	end = start + tr.primaryView->renderView.viewaxis[0] * 1000.0f;

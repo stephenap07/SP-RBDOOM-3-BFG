@@ -4239,12 +4239,6 @@ bool idEntity::HandleGuiCommands( idEntity* entityGui, const char* cmds )
 				continue;
 			}
 
-			if( token.Icmp( "close" ) == 0 )
-			{
-				ret = true;
-				continue;
-			}
-
 			if( !token.Icmp( "turkeyscore" ) )
 			{
 				if( src.ReadToken( &token2 ) && entityGui->renderEntity.gui[0] )

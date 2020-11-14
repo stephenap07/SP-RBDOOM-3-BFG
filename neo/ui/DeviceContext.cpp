@@ -574,16 +574,16 @@ void idDeviceContext::SetCursor( int n )
 	}
 }
 
-void idDeviceContext::DrawCursor( float* x, float* y, float size )
+void idDeviceContext::DrawCursor( float* x, float* y, float size, idVec2 bounds )
 {
 	if( *x < 0 )
 	{
 		*x = 0;
 	}
 
-	if( *x >= VIRTUAL_WIDTH )
+	if( *x >= bounds.x )
 	{
-		*x = VIRTUAL_WIDTH;
+		*x = bounds.x;
 	}
 
 	if( *y < 0 )
@@ -591,9 +591,9 @@ void idDeviceContext::DrawCursor( float* x, float* y, float size )
 		*y = 0;
 	}
 
-	if( *y >= VIRTUAL_HEIGHT )
+	if( *y >= bounds.y )
 	{
-		*y = VIRTUAL_HEIGHT;
+		*y = bounds.y;
 	}
 
 	renderSystem->SetColor( colorWhite );
@@ -1078,7 +1078,10 @@ static const idRectangle baseScreenRect( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
 
 void idDeviceContextOptimized::PushClipRect( idRectangle r )
 {
-	const idRectangle& prev = ( clipRects.Num() == 0 ) ? baseScreenRect : clipRects[clipRects.Num() - 1];
+	// Stephen: I updated the clip rect to default to the render window size. Before, it
+	// was using the virtual width and height.
+	const idRectangle& prev = (clipRects.Num() == 0) ? baseScreenRect : clipRects[clipRects.Num() - 1];
+	//const idRectangle& prev = (clipRects.Num() == 0) ? idRectangle(0, 0, renderSystem->GetWidth(), renderSystem->GetHeight()) : clipRects[clipRects.Num() - 1];
 
 	// instead of storing the rect, store the intersection of the rect
 	// with the previous rect, so ClippedCoords() only has to test against one rect

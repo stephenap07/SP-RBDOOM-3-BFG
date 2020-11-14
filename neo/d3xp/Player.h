@@ -349,8 +349,6 @@ public:
 
 	// inventory
 	idInventory				inventory;
-	idNewInventory          newInventory;
-	bool                    newInventoryOpen;
 	idTarget_SetPrimaryObjective* primaryObjective;
 
 	int						flashlightBattery;
@@ -359,9 +357,11 @@ public:
 	idEntityPtr<idWeapon>	 weapon;
 	idMenuHandler_HUD* 		 hudManager;
 	idMenuScreen_HUD* 		 hud;
-	idMenuHandler_PDA* 		 pdaMenu;
-	idMenuHandler_Inventory* inventoryManager;
+	idMenuHandler_PDA*       pdaMenu;
 	idSWF* 					 mpMessages;
+	idUserInterface*         inventoryGui;
+	bool                     inventoryOpen;
+	bool                     initializedInventoryThisFrame;
 	bool					 objectiveSystemOpen;
 	int						 quickSlot[ NUM_QUICK_SLOTS ];
 
@@ -540,6 +540,8 @@ public:
 
 	void					DrawHUD( idMenuHandler_HUD* hudManager );
 
+	void                    DrawInventory();
+
 	void					WeaponFireFeedback( const idDict* weaponDef );
 
 	float					DefaultFov() const;
@@ -641,12 +643,17 @@ public:
 	void					PerformImpulse( int impulse );
 	void					Spectate( bool spectate, bool force = false );
 	void					TogglePDA();
+	void                    ToggleInventory();
 	void					RouteGuiMouse( idUserInterface* gui );
 	void					UpdateHud();
 	const idDeclPDA* 		GetPDA() const;
 	bool					GetPDAOpen() const
 	{
 		return objectiveSystemOpen;
+	}
+	bool                    GetInventoryOpen() const
+	{
+		return inventoryOpen;
 	}
 	const idDeclVideo* 		GetVideo( int index );
 	void					SetInfluenceFov( float fov );

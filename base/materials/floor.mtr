@@ -1,0 +1,19 @@
+textures/floor/diamond_plate
+{
+    noselfShadow
+    qer_editorimage textures/floor/diamond_plate/DiamondPlate001_2K_Color
+    diffusemap      textures/floor/diamond_plate/DiamondPlate001_2K_Color
+    metal
+
+    {
+        blend rmaomap 
+        map combineRgba(textures/floor/diamond_plate/DiamondPlate001_2K_Roughness,
+                        textures/floor/diamond_plate/DiamondPlate001_2K_Metalness,
+                        _black)
+    }
+
+    {
+        blend bumpmap
+        map addnormals( textures/floor/diamond_plate/DiamondPlate001_2K_Normal, heightmap(textures/floor/diamond_plate/DiamondPlate001_2K_Displacement, 6 ))
+    }
+}

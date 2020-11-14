@@ -850,6 +850,7 @@ public:
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
 	virtual void			TakeScreenshot( int width, int height, const char* fileName, int downSample, renderView_t* ref, int exten );
 	virtual void			CropRenderSize( int width, int height );
+	virtual void            CropRenderSize(int x, int y, int width, int height);
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false );
 	virtual void			CaptureRenderToFile( const char* fileName, bool fixAlpha );
 	virtual void			UnCrop();

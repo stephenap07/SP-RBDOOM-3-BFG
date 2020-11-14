@@ -138,6 +138,7 @@ extern idPlane plane_origin;
 #define plane_zero plane_origin
 
 ID_INLINE idPlane::idPlane()
+	: a(0.0f), b(0.0f), c(0.0f), d(0.0f)
 {
 }
 

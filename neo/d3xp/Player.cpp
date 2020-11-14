@@ -1499,7 +1499,9 @@ idPlayer::idPlayer():
 	pdaVideoMat				= NULL;
 	mpMessages				= NULL;
 
-	inventoryManager = new(TAG_SWF) idMenuHandler_Inventory();
+	inventoryGui                  = uiManager->FindGui("guis/test.gui", true, false, true);
+	inventoryOpen                 = false;
+	initializedInventoryThisFrame = false;
 
 	mountedObject			= NULL;
 	enviroSuitLight			= NULL;
@@ -1666,10 +1668,6 @@ idPlayer::idPlayer():
 
 	playedTimeSecs			= 0;
 	playedTimeResidual		= 0;
-
-	// SP begin
-	newInventoryOpen = false;
-	// SP end
 
 	ResetControllerShake();
 
@@ -2061,6 +2059,15 @@ void idPlayer::Spawn()
 			hud = hudManager->GetHud();
 		}
 
+		if (inventoryGui != nullptr)
+		{
+			sysEvent_t ev;
+			memset(&ev, 0, sizeof(ev));
+			ev.evType = SE_NONE;
+			inventoryGui->HandleEvent(&ev, Sys_Milliseconds());
+			inventoryGui->Activate(true, Sys_Milliseconds());
+		}
+
 		// load cursor
 		if( spawnArgs.GetString( "cursor", "", temp ) )
 		{
@@ -2076,13 +2083,6 @@ void idPlayer::Spawn()
 			pdaMenu->Initialize( "pda", common->SW() );
 		}
 		objectiveSystemOpen = false;
-
-		// load inventory gui
-		if (inventoryManager)
-		{
-			inventoryManager->Initialize("inventory", common->SW());
-			// Show right away as a test. TODO: Should only show once the user hits impulse 19.
-		}
 	}
 
 	if( common->IsMultiplayer() && mpMessages == NULL )
@@ -2326,9 +2326,6 @@ idPlayer::~idPlayer()
 
 	delete mpMessages;
 	mpMessages = NULL;
-
-	delete inventoryManager;
-	inventoryManager = nullptr;
 }
 
 /*
@@ -3616,12 +3613,6 @@ void idPlayer::DrawHUD( idMenuHandler_HUD* _hudManager )
 		_hudManager->Update();
 	}
 
-	if (inventoryManager)
-	{
-		// TODO(Stephen): Move this somewhere else.
-		inventoryManager->Update();
-	}
-
 	weapon.GetEntity()->UpdateGUI();
 
 	// weapon targeting crosshair
@@ -3663,6 +3654,14 @@ void idPlayer::DrawHUD( idMenuHandler_HUD* _hudManager )
 
 		hud->SetCursorState( this, CURSOR_NONE, 1 );
 		hud->UpdateCursorState();
+	}
+}
+
+void idPlayer::DrawInventory()
+{
+	if (inventoryGui)
+	{
+		inventoryGui->Redraw(Sys_Milliseconds(), true);
 	}
 }
 
@@ -5560,6 +5559,8 @@ idUserInterface* idPlayer::ActiveGui()
 		return NULL;
 	}
 
+	// TODO(Stephen): check if inventory is open and return null?
+
 	return focusUI;
 }
 
@@ -6263,6 +6264,16 @@ bool idPlayer::HandleSingleGuiCommand( idEntity* entityGui, idLexer* src )
 		}
 		return true;
 	}
+
+	if (token.Icmp("close") == 0)
+	{
+		if (inventoryOpen)
+		{
+			ToggleInventory();
+		}
+		return true;
+	}
+
 	src->UnreadToken( &token );
 	return false;
 }
@@ -7478,6 +7489,19 @@ void idPlayer::TogglePDA()
 
 /*
 ==============
+idPlayer::ToggleInventory
+==============
+*/
+void idPlayer::ToggleInventory()
+{
+	if (inventoryGui)
+	{
+		inventoryOpen = !inventoryOpen;
+	}
+}
+
+/*
+==============
 idPlayer::Spectate
 ==============
 */
@@ -7659,9 +7683,9 @@ void idPlayer::PerformImpulse( int impulse )
 				if( !common->KeyState( 56 ) )  		// don't toggle PDA when LEFT ALT is down
 				{
 #endif
-					// TODO: SP Add toggle inventory here.F
-					newInventoryOpen = !newInventoryOpen;
-					inventoryManager->ActivateMenu(newInventoryOpen);
+					// TODO(Stephen): Add gui stuff here.
+					ToggleInventory();
+					initializedInventoryThisFrame = true;
 
 					//TogglePDA();
 
@@ -8777,7 +8801,6 @@ idPlayer::HandleGuiEvents
 */
 bool idPlayer::HandleGuiEvents( const sysEvent_t* ev )
 {
-
 	bool handled = false;
 
 	if( hudManager != NULL && hudManager->IsActive() )
@@ -8790,9 +8813,15 @@ bool idPlayer::HandleGuiEvents( const sysEvent_t* ev )
 		handled = pdaMenu->HandleGuiEvent( ev );
 	}
 
-	if (inventoryManager != nullptr && inventoryManager->IsActive())
+	if (inventoryGui != nullptr && inventoryOpen)
 	{
-		handled = inventoryManager->HandleGuiEvent(ev);
+		const char* command = inventoryGui->HandleEvent(ev, Sys_Milliseconds());
+
+		if (!initializedInventoryThisFrame)
+		{
+			// Let the player think once before calling the handle gui commands method.
+			HandleGuiCommands(this, command);
+		}
 	}
 
 	return handled;
@@ -8871,6 +8900,9 @@ void idPlayer::Think()
 	playedTimeSecs += playedTimeResidual / 1000;
 	playedTimeResidual = playedTimeResidual % 1000;
 
+	// Stephen: This indicates that the inventory wasn't opened up in this frame.
+	initializedInventoryThisFrame = false;
+
 	aimAssist.Update();
 
 	UpdatePlayerIcons();
@@ -8899,7 +8931,7 @@ void idPlayer::Think()
 		usercmd.buttons &= ~( BUTTON_JUMP | BUTTON_CROUCH );
 	}
 
-	if( objectiveSystemOpen || gameLocal.inCinematic || influenceActive )
+	if( objectiveSystemOpen || gameLocal.inCinematic || influenceActive || inventoryOpen )
 	{
 		if( objectiveSystemOpen && AI_PAIN )
 		{
@@ -11385,7 +11417,7 @@ void idPlayer::ClientThink( const int curTime, const float fraction, const bool 
 		usercmd.buttons &= ~( BUTTON_JUMP | BUTTON_CROUCH );
 	}
 
-	if( objectiveSystemOpen )
+	if( objectiveSystemOpen || inventoryOpen )
 	{
 		usercmd.forwardmove = 0;
 		usercmd.rightmove = 0;

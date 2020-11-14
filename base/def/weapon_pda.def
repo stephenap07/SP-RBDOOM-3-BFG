@@ -1,0 +1,19 @@
+entityDef weapon_pda {
+	//"inherit"					"item_default"
+
+	"size"						"32 32 32"
+
+	"inv_name"					"PDA"
+	"inv_weapon"				"weapon_pda"
+	"inv_item"					"1"
+	"snd_acquire"				"guisounds_compup"
+	
+	"hide_time"					"0"								// time to hide weapon when talking to npcs or looking at guis
+	"hide_distance"				"0"								// distance to offset weapon when talking to npcs or looking at guis
+
+	"weapon_scriptobject"		"item_pda"
+
+	"spawnclass"				"idItem"
+	"ammoRequired"				"0"
+	"clipSize"					"0"
+}

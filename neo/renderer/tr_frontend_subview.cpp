@@ -273,6 +273,62 @@ static viewDef_t* R_MirrorViewBySurface( const drawSurf_t* drawSurf )
 
 /*
 ========================
+R_PortalViewBySurface
+========================
+*/
+static viewDef_t* R_PortalViewBySurface(const drawSurf_t* surf)
+{
+	if (!surf->space->entityDef->parms.remoteRenderView)
+	{
+		return nullptr;
+	}
+
+	// copy the viewport size from the original
+	viewDef_t* parms = (viewDef_t*)R_FrameAlloc(sizeof(*parms));
+	*parms = *tr.viewDef;
+
+	if (1)
+	{
+		idMat3 viewaxis = parms->renderView.viewaxis;
+		idMat3 remoteViewAxis = surf->space->entityDef->parms.remoteRenderView->viewaxis;
+		const idVec3 orig = parms->renderView.vieworg;
+		float fov_x = parms->renderView.fov_x;
+		float fov_y = parms->renderView.fov_y;
+
+		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
+		parms->renderView.fov_x = fov_x;
+		parms->renderView.fov_y = fov_y;
+
+		// direction vector in camera space.
+		idVec3 dirToPortal = surf->space->entityDef->parms.origin - orig;
+		dirToPortal.z = -dirToPortal.z;
+
+		parms->renderView.vieworg += dirToPortal;
+
+		idAngles ang = viewaxis.ToAngles();
+		ang.yaw -= 180;
+		ang.Normalize180();
+		parms->renderView.viewaxis = ang.ToMat3();
+
+		//idPlane eye, clip;
+		//R_TransformModelToClip(parms->renderView.vieworg, surf->space->modelViewMatrix, tr.viewDef->projectionMatrix, eye, clip);
+		//parms->renderView.clipPlane = eye;
+	}
+	else
+	{
+		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
+	}
+
+	parms->renderView.viewID = 0;	// clear to allow player bodies to show up, and suppress view weapons
+	parms->initialViewAreaOrigin = parms->renderView.vieworg;
+	parms->isSubview = true;
+	parms->isMirror = false;
+
+	return parms;
+}
+
+/*
+========================
 R_XrayViewBySurface
 ========================
 */
@@ -315,7 +371,37 @@ static void R_RemoteRender( const drawSurf_t* surf, textureStage_t* stage )
 	viewDef_t* parms = ( viewDef_t* )R_FrameAlloc( sizeof( *parms ) );
 	*parms = *tr.viewDef;
 
-	parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
+	if (0)
+	{
+		idMat3 viewaxis = parms->renderView.viewaxis;
+		idMat3 remoteViewAxis = surf->space->entityDef->parms.remoteRenderView->viewaxis;
+		const idVec3 orig = parms->renderView.vieworg;
+		float fov_x = parms->renderView.fov_x;
+		float fov_y = parms->renderView.fov_y;
+
+		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
+		parms->renderView.fov_x = fov_x;
+		parms->renderView.fov_y = fov_y;
+
+		// direction vector in camera space.
+		idVec3 dirToPortal = surf->space->entityDef->parms.origin - orig;
+
+		/*parms->renderView.vieworg += dirToPortal;
+
+		idAngles ang = viewaxis.ToAngles();
+		ang.yaw -= 180;
+		ang.Normalize180();
+		parms->renderView.viewaxis = ang.ToMat3();*/
+
+		//idPlane eye, clip;
+		//R_TransformModelToClip(parms->renderView.vieworg, surf->space->modelViewMatrix, tr.viewDef->projectionMatrix, eye, clip);
+		//parms->renderView.clipPlane = eye;
+	}
+	else
+	{
+		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
+	}
+
 	parms->renderView.viewID = 0;	// clear to allow player bodies to show up, and suppress view weapons
 	parms->initialViewAreaOrigin = parms->renderView.vieworg;
 	parms->isSubview = true;
@@ -524,24 +610,45 @@ bool R_GenerateSurfaceSubview( const drawSurf_t* drawSurf )
 		return true;
 	}
 
-	// issue a new view command
-	parms = R_MirrorViewBySurface( drawSurf );
-	if( parms == NULL )
+	if (shader->IsMirrorSubView())
 	{
-		return false;
+		// issue a new view command
+		parms = R_MirrorViewBySurface(drawSurf);
+		if (parms == NULL)
+		{
+			return false;
+		}
+
+		parms->scissor = scissor;
+		parms->superView = tr.viewDef;
+		parms->subviewSurface = drawSurf;
+
+		// triangle culling order changes with mirroring
+		parms->isMirror = (((int)parms->isMirror ^ (int)tr.viewDef->isMirror) != 0);
+
+		// generate render commands for it
+		R_RenderView(parms);
+
+		return true;
+	}
+	else if (shader->IsPortalSubView())
+	{
+		parms = R_PortalViewBySurface(drawSurf);
+		if (parms == nullptr)
+		{
+			return false;
+		}
+
+		parms->scissor = scissor;
+		parms->superView = tr.viewDef;
+		parms->subviewSurface = drawSurf;
+
+		R_RenderView(parms);
+
+		return true;
 	}
 
-	parms->scissor = scissor;
-	parms->superView = tr.viewDef;
-	parms->subviewSurface = drawSurf;
-
-	// triangle culling order changes with mirroring
-	parms->isMirror = ( ( ( int )parms->isMirror ^ ( int )tr.viewDef->isMirror ) != 0 );
-
-	// generate render commands for it
-	R_RenderView( parms );
-
-	return true;
+	return false;
 }
 
 /*

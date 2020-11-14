@@ -1,0 +1,159 @@
+entityDef weapon_tazer
+{
+	"editor_color"				".3 .3 1"
+	"editor_mins"				"-16 -16 0"
+	"editor_maxs"				"16 16 32"
+	"editor_usage"				"Tazer Weapon"
+	"editor_rotatable"		    "1"
+
+	"spawnclass"				"idItem"
+	"size"						"32 32 32"
+	"model_view" 				"viewmodel_tazer"
+    "model"                     "models/static/tazer.dae"
+	"model_world" 				"worldmodel_tazer"
+	"joint_attach"				"PISTOL_ATTACHER"
+	"def_dropItem"				"moveable_item_tazer"
+	"def_projectile"			"projectile_tazer_prong"
+
+	"inv_name"					"tazer"
+	"inv_weapon"				"weapon_tazer"
+	"inv_item"					"1"
+	"display_name"				"Tazer"
+	"inv_desc"					"I can taze fools"
+
+	"mtr_flashShader"			"muzzleflash"
+	"flashColor"				"1 0.8 0.4"
+	"flashRadius"				"120"
+	"silent_fire"				"0"
+	"recoilTime"				"125"
+	"recoilAngles"				"-1 0 0"
+
+	"weaponAngleOffsetAverages" "10"
+	"weaponAngleOffsetScale" 	".25"
+	"weaponAngleOffsetMax"		"10"
+	"weaponOffsetTime"			"400"
+	"weaponOffsetScale"			"0.005"
+
+	"weapon_scriptobject"		"weapon_tazer"
+
+	"snd_acquire"				"sound_weapon_acquire"
+	"snd_respawn"				"sound_weapon_respawn"
+
+    "spread"                    "0"
+}
+
+model viewmodel_tazer
+{
+	mesh						models/md5/weapons/tazer/tazer.md5mesh
+	//offset						( 12 0 -63 )
+	offset						( 2.4 -2.0 -61.0 )
+	
+	anim turnleft               models/md5/weapons/tazer/turnleft.md5anim
+	anim idle                   models/md5/weapons/tazer/idle.md5anim
+	anim fire                   models/md5/weapons/tazer/fire.md5anim {
+		frame 1					sound_weapon sound_weapon_acquire
+	}
+}
+
+model worldmodel_tazer
+{
+	mesh						models/md5/weapons/tazer/tazer.md5mesh
+
+	anim turnleft               models/md5/weapons/tazer/turnleft.md5anim
+	anim idle                   models/md5/weapons/tazer/idle.md5anim
+}
+
+entityDef moveable_item_tazer
+{
+	"inherit"					"weapon_tazer"
+	"spawnclass"				"idMoveableItem"
+	"density"					"0.05"
+	"friction"					"0.2"
+	"bouncyness"				"0"
+	"snd_bounce"				"smallbox"
+}
+
+entityDef projectile_tazer_prong
+{
+    "spawnclass"				"idProjectile"
+    "mins"						"-1 -1 -1"
+    "maxs"						"1 1 1"
+    "cone"						"3"
+    "scale"						"0.1"
+    "noshadows"					"1"
+
+    "def_damage"				"damage_bullet_tazer"
+
+    "launchFromBarrel"			"0"
+    "health"					"0"
+    "velocity"					"7200 0 0"
+    "angular_velocity"			"0 0 0"
+    "thrust"					"0"
+    "thrust_start"				"0"
+    "thrust_end"				"0"
+    "linear_friction"			"0"
+    "angular_friction"			"0"
+    "contact_friction"			"0"
+    "bounce"					"0.6"
+    "mass"						"2"
+    "gravity"					"0"
+    "fuse"						"4"
+
+	"detonate_on_fuse"			"0"
+	"detonate_on_death"			"0"
+	"detonate_on_world"			"1"
+	"detonate_on_actor"			"1"
+
+	"impact_damage_effect"		"1"
+    "impact_gib"				"1"
+
+    "mtr_detonate"				"textures/decals/bullet"
+    "mtr_detonate_glass"		"textures/decals/testbulletglass1"
+    "decal_size"				"4"
+
+    "model_smokespark"			"tazer_impact.prt"
+    "model_ricochet"			"bulletricochet.prt"
+
+
+    // played on collision with non-damagable entities
+    "snd_plastic"				"bullet_impact_plastic"
+    "snd_cardboard"				"bullet_impact_cardboard"
+    "snd_flesh"					"bullet_impact_flesh"
+    "snd_metal"					"bullet_impact_metal"
+    "snd_stone"					"bullet_impact_stone"
+    "snd_wood"					"bullet_impact_wood"
+    "snd_glass"					"bullet_impact_glass"
+    "snd_liquid"				"bullet_impact_liquid"
+    "snd_ricochet"				"bullet_ricochet"
+    //"snd_impact"				"bullet_impact_metal"
+
+    "mtr_light_shader"			"lights/blinkingRoundLight"
+    "light_color"				"0 0.1 0.8"
+    "light_radius"				"12"
+    "light_offset"				"0 0 -1"
+
+    "mtr_explode_light_shader"	""
+    "explode_light_color"		"0 0 0"
+    "explode_light_radius"		"0"
+    "explode_light_fadetime"	"0"
+}
+
+entityDef	damage_bullet_tazer
+{
+	"damage"			"14"
+	"kickDir"			"1 0 0"
+
+	"mtr_blob"			"genericDamage"
+	"blob_time"			"300"
+	"blob_size"			"400"
+	"blob_offset_x"		"400"
+
+	"knockback"			"1"
+
+	"gib"				"1"
+
+	"kick_time"			"400"
+	"kick_amplitude"	"1"
+
+	"dv_time"			"100"
+}

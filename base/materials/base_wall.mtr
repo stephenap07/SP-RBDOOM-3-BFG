@@ -1,0 +1,8 @@
+
+table senetable { { .9, .5, .8, .6, .6, .3, .8, .7} }
+table senetable2 { { 0, 1, 0, 0 } }
+table senetable3 { { 1, .9, .5, .8, .4, 1, .5, 1, 0, .5, 1, .4, .9, 0 } }
+table bfgguy_Vtable { { .35, 1 } }
+table senescrollightable2 { { .25, 1, 0, 0 } }
+table flickertable { { 1, .75 } }
+table mattyzaptable  {{0, 0, 0,0, 0, 0,0, 0, 0, 0,1,1  } }

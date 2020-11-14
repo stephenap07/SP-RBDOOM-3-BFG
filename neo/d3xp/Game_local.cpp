@@ -5620,7 +5620,8 @@ bool idGameLocal::IsPDAOpen() const
 
 bool idGameLocal::IsInventoryOpen() const
 {
-	return GetLocalPlayer() && GetLocalPlayer()->newInventoryOpen;
+	const idPlayer* player = GetLocalPlayer();
+	return player && player->GetInventoryOpen();
 }
 
 /*

@@ -12,8 +12,8 @@ model monster_mannequin
 
 entityDef item_mannequin
 {
-    "inherit"       "monster_default"
     "scriptobject"  "monster_mannequin" 
+    "spawnclass"    "idItem"
     "model"         "monster_mannequin"
     "health"        "30"
     "anim"          "push_ups"

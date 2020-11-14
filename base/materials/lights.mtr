@@ -1,10 +1,25 @@
+table blinktable { { 0, 1 } }
+
 lights/defaultPointLight
 {
-	lightFalloffImage	makeintensity( lights/square_light_simple_falloff.tga )
+	lightFalloffImage	_noFalloff
 	{
 		forceHighQuality
-		map lights/square_light_simple.tga
+		map lights/round.tga
 		colored
+		zeroClamp
+	}
+}
+
+lights/blinkingRoundLight
+{
+	lightFalloffImage	makeintensity( lights/round_light_simple_falloff.tga )
+	{
+		forceHighQuality
+		map lights/round.tga
+		red 		( blinktable [Parm4 + (time * (6 * Parm3)) ]) * Parm0
+		green 		( blinktable [Parm4 + (time * (6 * Parm3)) ]) * Parm1
+		blue 		( blinktable [Parm4 + (time * (6 * Parm3)) ]) * Parm2
 		zeroClamp
 	}
 }

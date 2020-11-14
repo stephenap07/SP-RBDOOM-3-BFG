@@ -189,6 +189,7 @@ public:
 		ON_ACTIVATE,
 		ON_DEACTIVATE,
 		ON_ESC,
+		ON_TAB,
 		ON_FRAME,
 		ON_TRIGGER,
 		ON_ACTIONRELEASE,
@@ -419,6 +420,7 @@ protected:
 	float yOffset;
 	float forceAspectWidth;
 	float forceAspectHeight;
+	bool scaleToRenderWindow;
 	float matScalex;
 	float matScaley;
 	float borderSize;

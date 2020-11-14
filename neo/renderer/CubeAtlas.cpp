@@ -400,13 +400,13 @@ void Atlas::updateRegion(const AtlasRegion& _region, const uint8_t* _bitmapBuffe
 		if (_region.getType() == AtlasRegion::TYPE_RGBA8)
 		{
 			const uint8_t* inLineBuffer = _bitmapBuffer;
-			uint8_t* outLineBuffer = m_textureBuffer + _region.getFaceIndex() * (m_textureSize * m_textureSize * 4) + (((_region._y * m_textureSize) + _region._x) * 4);
+			uint8_t* outLineBuffer = m_textureBuffer + (uintptr_t)_region.getFaceIndex() * ((int32_t)m_textureSize * (int32_t)m_textureSize * 4) + ((((int32_t)_region._y * (int32_t)m_textureSize) + (int32_t)_region._x) * 4);
 
 			for (int yy = 0; yy < _region._height; ++yy)
 			{
-				memcpy(outLineBuffer, inLineBuffer, _region._width * 4);
-				inLineBuffer += _region._width * 4;
-				outLineBuffer += m_textureSize * 4;
+				memcpy(outLineBuffer, inLineBuffer, (size_t)_region._width * 4);
+				inLineBuffer += (size_t)_region._width * 4;
+				outLineBuffer += (size_t)m_textureSize * 4;
 			}
 
 			memcpy((void*)mem, _bitmapBuffer, size);
@@ -415,7 +415,7 @@ void Atlas::updateRegion(const AtlasRegion& _region, const uint8_t* _bitmapBuffe
 		{
 			uint32_t layer = _region.getComponentIndex();
 			const uint8_t* inLineBuffer = _bitmapBuffer;
-			uint8_t* outLineBuffer = (m_textureBuffer + _region.getFaceIndex() * (m_textureSize * m_textureSize * 4) + (((_region._y * m_textureSize) + _region._x) * 4));
+			uint8_t* outLineBuffer = (m_textureBuffer + (uintptr_t)_region.getFaceIndex() * ((int32_t)m_textureSize * (int32_t)m_textureSize * 4) + ((((int32_t)_region._y * (int32_t)m_textureSize) + (int32_t)_region._x) * 4));
 
 			for (int yy = 0; yy < _region._height; ++yy)
 			{
@@ -433,13 +433,13 @@ void Atlas::updateRegion(const AtlasRegion& _region, const uint8_t* _bitmapBuffe
 					outLineBuffer[(xx * 4) + layer + 3] = inLineBuffer[xx];
 				}
 
-				memcpy((void*)(mem + yy * _region._width * 4), outLineBuffer, _region._width * 4);
+				memcpy((void*)(mem + yy * (int32_t)_region._width * 4), outLineBuffer, (int32_t)_region._width * 4);
 				inLineBuffer += _region._width;
-				outLineBuffer += m_textureSize * 4;
+				outLineBuffer += (int32_t)m_textureSize * 4;
 			}
 		}
 
-		m_image->SubImageUpload(0, _region._x, _region._y, 0, _region._width, _region._height, mem);
+		//m_image->SubImageUpload(0, _region._x, _region._y, 0, _region._width, _region._height, mem);
 		Mem_Free((void*)mem);
 	}
 }

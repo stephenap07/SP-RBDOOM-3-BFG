@@ -112,6 +112,12 @@ ID_INLINE void idImage::DeriveOpts()
 				opts.format = FMT_DEPTH;
 				break;
 
+			// sp begin
+			case TD_DEPTH_STENCIL:
+				opts.format = FMT_DEPTH_STENCIL;
+				break;
+			// sp end
+
 			case TD_SHADOW_ARRAY:
 				opts.format = FMT_SHADOW_ARRAY;
 				break;
@@ -175,7 +181,7 @@ ID_INLINE void idImage::DeriveOpts()
 				// RB: TODO check binary format version
 				// D3 BFG assets require RGB565 but it introduces color banding
 				// mods would prefer FMT_RGBA8
-				opts.format = FMT_RGBA8;// FMT_RGB565; //FMT_RGBA8;
+				opts.format = FMT_RGBA8;// FMT_RGB565;
 				opts.gammaMips = true;
 				break;
 			case TD_LOOKUP_TABLE_MONO:

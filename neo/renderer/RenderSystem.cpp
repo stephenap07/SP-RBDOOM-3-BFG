@@ -1032,6 +1032,53 @@ void idRenderSystemLocal::CropRenderSize( int width, int height )
 
 /*
 ================
+idRenderSystemLocal::CropRenderSize
+================
+*/
+void idRenderSystemLocal::CropRenderSize(int x, int y, int width, int height)
+{
+	if (!IsInitialized())
+	{
+		return;
+	}
+
+	// close any gui drawing before changing the size
+	guiModel->EmitFullScreen();
+	guiModel->Clear();
+
+
+	if (width < 1 || height < 1)
+	{
+		common->Error("CropRenderSize: bad sizes");
+	}
+
+	if (common->WriteDemo())
+	{
+		common->WriteDemo()->WriteInt(DS_RENDER);
+		common->WriteDemo()->WriteInt(DC_CROP_RENDER);
+		common->WriteDemo()->WriteInt(width);
+		common->WriteDemo()->WriteInt(height);
+
+		if (r_showDemo.GetBool())
+		{
+			common->Printf("write DC_CROP_RENDER\n");
+		}
+	}
+
+	idScreenRect& previous = renderCrops[currentRenderCrop];
+
+	currentRenderCrop++;
+
+	idScreenRect& current = renderCrops[currentRenderCrop];
+
+	current.x1 = x;
+	current.x2 = previous.x1 + width - 1;
+	current.y1 = y;
+	current.y2 = previous.y2;
+}
+
+/*
+================
 idRenderSystemLocal::UnCrop
 ================
 */

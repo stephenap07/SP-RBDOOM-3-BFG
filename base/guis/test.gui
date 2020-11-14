@@ -1,0 +1,52 @@
+windowDef Desktop {
+    rect        0, 0, 640, 480
+    backcolor   0, 0, 0, 0
+    visible     1
+    nocursor    0
+
+    windowDef Test2 {
+        rect        100, 350, 300, 130
+        backcolor   .29, 0.29, 0.28, .8
+        bordercolor 0.5, 0.6, 0.6, 1
+        bordersize  1
+        text        "Test Inventory"
+        textalign   1
+        shadow      2
+
+        onMouseEnter
+        {
+            set "Test2::text"         "Mouse Over Inventory"
+            set "Test2::backcolor"    "1, .6, 0, 1";
+        }
+
+        onMouseExit
+        {
+            set "Test2::backcolor"    ".29, 0.29, 0.28, .8";
+        } 
+    }
+
+    windowDef Test3 {
+        rect        600, 350, 128/4, 400/4
+        background  "guis/assets/icons/simplekey"
+        bordercolor 0.5, 0.6, 0.6, 1
+    }
+
+    choiceDef Mychoice {
+        rect        100, 20, 100, 30
+        backcolor   .29, 0.29, 0.28, .8
+        bordercolor 0.5, 0.6, 0.6, 1
+        text        "Choices"
+        choices     McGee;N;O;P
+        values      1;2;3;4
+
+        onMouseEnter
+        {
+            set "Mychoice::backcolor"    "1 .6 0 1";
+        }
+     
+        onMouseExit
+        {
+            set "Mychoice::backcolor"    ".29, 0.29, 0.28, .8";
+        } 
+    }
+}

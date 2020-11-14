@@ -79,7 +79,7 @@ public:
 
 	const idMaterial* 	GetScrollBarImage( int index );
 
-	void				DrawCursor( float* x, float* y, float size );
+	void				DrawCursor( float* x, float* y, float size, idVec2 bounds );
 	void				SetCursor( int n );
 
 	// clipping rects

@@ -6,7 +6,7 @@ textures/bigchars
 		colored
 		nopicmip
 		linear
-		map textures/conchars.tga
+		map textures/bigchars.tga
 	}
 }
 

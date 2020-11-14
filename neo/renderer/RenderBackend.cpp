@@ -3914,6 +3914,52 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				continue;
 			}
 
+			if (pStage->stencilStage != nullptr)
+			{
+				switch (pStage->stencilStage->comp)
+				{
+				case STENCIL_COMP_ALWAYS:
+					stageGLState |= GLS_STENCIL_FUNC_ALWAYS;
+					break;
+				case STENCIL_COMP_EQUAL:
+					stageGLState |= GLS_STENCIL_FUNC_EQUAL;
+					break;
+				};
+
+				switch (pStage->stencilStage->pass)
+				{
+				case STENCIL_OP_REPLACE:
+					stageGLState |= GLS_STENCIL_OP_PASS_REPLACE;
+					break;
+				case STENCIL_OP_KEEP:
+					stageGLState |= GLS_STENCIL_OP_PASS_KEEP;
+					break;
+				case STENCIL_OP_DECRWRAP:
+					stageGLState |= GLS_STENCIL_OP_PASS_DECR_WRAP;
+					break;
+				};
+
+				switch (pStage->stencilStage->zFail)
+				{
+				case STENCIL_OP_DECRWRAP:
+					stageGLState |= GLS_STENCIL_OP_ZFAIL_DECR_WRAP;
+					break;
+				case STENCIL_OP_KEEP:
+					stageGLState |= GLS_STENCIL_OP_ZFAIL_KEEP;
+					break;
+				};
+
+				switch (pStage->stencilStage->fail)
+				{
+				case STENCIL_OP_KEEP:
+					stageGLState |= GLS_STENCIL_OP_FAIL_KEEP;
+					break;
+				};
+
+				stageGLState |= GLS_STENCIL_MAKE_REF(pStage->stencilStage->ref)
+							  | GLS_STENCIL_MAKE_MASK(pStage->stencilStage->writeMask);
+			}
+
 			// see if we are a new-style stage
 			newShaderStage_t* newStage = pStage->newStage;
 			if( newStage != NULL )

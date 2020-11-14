@@ -180,6 +180,7 @@ public:
 	int						numPortalAreas;
 	int						connectedAreaNum;		// incremented every time a door portal state changes
 
+	idScreenRect            sceneScreenRect;
 	idScreenRect* 			areaScreenRect;
 
 	doublePortal_t* 		doublePortals;

@@ -1,0 +1,76 @@
+
+particle tazer_impact { 
+	{
+		count 				18
+		material 			textures/particles/spark_01
+		time 				0.100
+		cycles 				0.000
+		timeOffset 			0.100
+		bunching 			1.000
+		distribution 		cylinder 8.000 8.000 8.000 10.000
+		direction 			outward 0.000
+		orientation 		view
+		customPath 			helix 15.000 8.000 5.000 0.000 0.000
+		speed 				"180.000"
+		size 				"5.000"
+		aspect 				"1.000"
+		rotation 			"0.000"
+		randomDistribution 	1
+		boundsExpansion 	0.200
+		fadeIn 				0.000
+		fadeOut 			0.020
+		fadeIndex 			0.000
+		color 				0.220 0.300 0.500 1.000
+		fadeColor 			0.000 0.000 0.000 0.000
+		offset 				0.000 0.000 0.000
+		gravity 			0.000
+	}
+	{
+		count 				100
+		material 			textures/particles/spark_02
+		time 				1.500
+		cycles 				0.000
+		timeOffset 			0.000
+		bunching 			1.000
+		distribution 		rect 8.000 8.000 8.000
+		direction 			cone 90.000
+		orientation 		view
+		speed 				"150.000"
+		size 				"4.000"
+		aspect 				"1.000"
+		rotation 			"0.000"
+		randomDistribution 	1
+		boundsExpansion 	0.000
+		fadeIn 				0.120
+		fadeOut 			0.250
+		fadeIndex 			0.000
+		color 				0.220 0.300 0.500 1.000
+		fadeColor 			0.000 0.000 0.000 0.000
+		offset 				0.000 0.000 0.000
+		gravity 			1.000
+	}
+	{
+		count 				100
+		material 			textures/particles/spark_03
+		time 				1.500
+		cycles 				0.000
+		timeOffset 			0.000
+		bunching 			1.000
+		distribution 		rect 8.000 8.000 8.000
+		direction 			cone 90.000
+		orientation 		view
+		speed 				"150.000"
+		size 				"4.000"
+		aspect 				"1.000"
+		rotation 			"0.000"
+		randomDistribution 	1
+		boundsExpansion 	0.000
+		fadeIn 				0.100
+		fadeOut 			0.250
+		fadeIndex 			0.000
+		color 				0.220 0.300 0.500 1.000
+		fadeColor 			0.000 0.000 0.000 0.000
+		offset 				0.000 0.000 0.000
+		gravity 			1.000
+	}
+}

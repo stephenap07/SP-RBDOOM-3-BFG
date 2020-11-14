@@ -10,7 +10,7 @@ entityDef weapon_keycard
 	"size"						"32 32 32"
 	"model_view" 				"viewmodel_keycard"
     "model"                     "models/static/toilet_paper.dae"
-	"joint_attach"				"SOUL_ATTACHER"
+	"joint_attach"				"PISTOL_ATTACHER"
 
 	"inv_name"					"keycard"
 	"inv_weapon"				"weapon_keycard"
@@ -27,4 +27,28 @@ model viewmodel_keycard
 	offset						( 1.5 2.0 -62.0 )
 	
 	anim idle 					models/md5/items/keycard/keycard_idle.md5anim
+}
+
+
+entityDef item_pda {
+	"inherit"				"item_default"
+	"size"					"32 32 32"
+
+	"editor_usage"			"PDA"
+	"editor_usage1"			"PDA's contain vidoes, audio, e-mail, and security clearances."
+	"editor_var inv_name"	"This name is used on trigger requires. It does not need to match the name as defined in the .pda file"
+	"editor_var	pda_name"	"name of pda as defined in the .pda file"
+
+	"inv_name"				"PDA"
+	"inv_carry"				"1"
+	"inv_pda"				"1"
+	"inv_item"				"1"
+	"snd_acquire"			"guisounds_compup"
+
+	"editor_color"			".0 .3 1"
+	"editor_mins"			"-16 -16 0"
+	"editor_maxs"			"16 16 32"
+	"spawnclass"			"idPDAItem"
+
+	"dropToFloor"			"1"
 }
