@@ -1,6 +1,6 @@
 textures/walls/dev512
 {
-    diffusemap textures/walls/dev512
+    diffusemap textures/walls/dev512.png
     stone
 }
 
@@ -8,6 +8,11 @@ textures/walls/dev64
 {
 	diffusemap textures/walls/dev64	
     stone
+}
+
+textures/walls/devOrange512
+{
+    diffusemap textures/walls/devOrange512.png
 }
 
 textures/walls/wright_tile

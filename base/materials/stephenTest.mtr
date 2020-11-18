@@ -1,0 +1,100 @@
+stephenTest/stencilWrite
+{
+	sort far
+
+    // stencil writing stage
+	{
+		Stencil
+		{
+			Ref 2
+			Comp Always
+			Pass Replace
+		}
+
+		blend add
+		map textures/common/red
+		maskDepth
+		maskColor
+		maskAlpha
+	}
+}
+
+stephenTest/red
+{
+	sort medium
+    // stencil writing stage
+	{
+		Stencil
+		{
+			Ref 1
+			Comp Always
+			Pass Replace
+		}
+
+		blend add
+		map textures/common/red
+	}
+}
+
+stephenTest/green
+{
+	sort medium
+	
+	// stencil testing stage
+	{
+		Stencil
+		{
+			Ref 2
+			Comp equal
+			Pass keep
+			ZFail decrWrap
+		}
+
+		blend add
+		map textures/common/green
+	}
+}
+
+stephenTest/blue
+{
+	sort close
+	
+	// second stencil testing stage 
+	{
+		Stencil
+		{
+			Ref 1
+			Comp equal
+		}
+
+		blend add
+		map textures/common/blue
+	}
+}
+
+stephenTest/stencilPortal
+{
+	// sub view sorting
+	qer_editorimage textures/editor/stencilportal
+	discrete
+	noShadows
+	directPortal
+	{
+		blend gl_dst_color,gl_zero
+		map _white
+	}
+}
+
+stephenTest/mirrorTest
+{
+	discrete
+	//translucent
+	//twosided
+	noshadows
+	{
+		blend gl_dst_color,gl_zero
+		map _white
+	}
+	solid
+	mirror
+}

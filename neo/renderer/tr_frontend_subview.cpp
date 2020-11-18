@@ -299,20 +299,47 @@ static viewDef_t* R_PortalViewBySurface(const drawSurf_t* surf)
 		parms->renderView.fov_x = fov_x;
 		parms->renderView.fov_y = fov_y;
 
-		// direction vector in camera space.
-		idVec3 dirToPortal = surf->space->entityDef->parms.origin - orig;
-		dirToPortal.z = -dirToPortal.z;
-
-		parms->renderView.vieworg += dirToPortal;
-
 		idAngles ang = viewaxis.ToAngles();
-		ang.yaw -= 180;
-		ang.Normalize180();
-		parms->renderView.viewaxis = ang.ToMat3();
+		idAngles angleDiff;
 
-		//idPlane eye, clip;
-		//R_TransformModelToClip(parms->renderView.vieworg, surf->space->modelViewMatrix, tr.viewDef->projectionMatrix, eye, clip);
-		//parms->renderView.clipPlane = eye;
+		idMat3 surfViewAxis;
+
+		// difference in view axis
+		{
+			idPlane originalPlane, plane;
+			R_PlaneForSurface(surf->frontEndGeo, originalPlane);
+			R_LocalPlaneToGlobal(surf->space->modelMatrix, originalPlane, plane);
+
+			orientation_t surface;
+			surface.origin = plane.Normal() * -plane[3];
+			surface.axis[0] = plane.Normal();
+			surface.axis[0].NormalVectors(surface.axis[1], surface.axis[2]);
+			surface.axis[2] = -surface.axis[2];
+
+			surfViewAxis = surface.axis;
+			idAngles surfAng = surfViewAxis.ToAngles();
+
+			angleDiff = surfAng - ang;
+		}
+
+		idAngles origAngle = parms->renderView.viewaxis.ToAngles();
+		origAngle = origAngle - angleDiff;
+		origAngle.yaw -= 180;
+		origAngle.Normalize180();
+
+		parms->renderView.viewaxis = origAngle.ToMat3();
+
+		// direction vector in camera space.
+		const idMat3 inverseSurfView = surfViewAxis.Inverse();
+		idVec3 dirToPortal = (surf->space->entityDef->parms.origin - orig) * inverseSurfView;
+		dirToPortal.z = -dirToPortal.z;
+		parms->renderView.vieworg += dirToPortal * remoteViewAxis;
+
+		idPlane cameraSpace, clip;
+		R_TransformModelToClip(parms->renderView.vieworg, (const float*)(&parms->renderView.viewaxis), tr.viewDef->projectionMatrix, cameraSpace, clip);
+
+		// This plane should be in camera space.
+		parms->renderView.clipPlane = cameraSpace;
 	}
 	else
 	{
@@ -385,17 +412,6 @@ static void R_RemoteRender( const drawSurf_t* surf, textureStage_t* stage )
 
 		// direction vector in camera space.
 		idVec3 dirToPortal = surf->space->entityDef->parms.origin - orig;
-
-		/*parms->renderView.vieworg += dirToPortal;
-
-		idAngles ang = viewaxis.ToAngles();
-		ang.yaw -= 180;
-		ang.Normalize180();
-		parms->renderView.viewaxis = ang.ToMat3();*/
-
-		//idPlane eye, clip;
-		//R_TransformModelToClip(parms->renderView.vieworg, surf->space->modelViewMatrix, tr.viewDef->projectionMatrix, eye, clip);
-		//parms->renderView.clipPlane = eye;
 	}
 	else
 	{

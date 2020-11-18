@@ -1,0 +1,55 @@
+material shaderDemos/remoteCamera
+{	
+	qer_editorimage	textures/editor/camera.tga
+	noshadows
+	guiSurf	entity
+	discrete
+	translucent
+	sort "-2"
+
+	{
+		rgba 0
+		remoteRenderMap	512 256	// width / height of render image
+		map textures/dynamic/camera1.tga
+		scale 1 , -1		// the render view ars upside down otherwise
+		translate 0, -1
+	}
+
+}
+
+textures/cameraImg1
+{	
+	qer_editorimage	textures/editor/cameragui.tga
+	noshadows
+	guiSurf	entity
+	discrete
+	translucent
+	sort "-3"
+	{
+		rgba 0
+		remoteRenderMap	256 512	// width / height of render image
+		map textures/dynamic/camera1.tga
+		scale 1 , -1		// the render view ars upside down otherwise
+		translate 0, 0
+	}
+}
+
+textures/cameraView1
+{	
+	qer_editorimage	textures/editor/camera.tga
+	translucent			// everything used on a guisurf should be translucent
+	noshadows
+	discrete
+	sort "-2"
+	{
+		blend add
+		map textures/dynamic/camera1.tga
+		scale 1 , -1		// the render view ars upside down otherwise
+		translate 0, -1
+	}
+}
+
+textures/cameragui
+{
+    "guisurf" "guis/camera.gui"
+}

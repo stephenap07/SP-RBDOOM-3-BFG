@@ -15,7 +15,7 @@ textures/weapons/tazer
 
 muzzleflash
 {
-		noshadows
+	noshadows
 	{
 		//map	_spotlight
 		map lights/round
