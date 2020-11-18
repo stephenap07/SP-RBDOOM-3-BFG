@@ -339,7 +339,7 @@ static viewDef_t* R_PortalViewBySurface(const drawSurf_t* surf)
 		R_TransformModelToClip(parms->renderView.vieworg, (const float*)(&parms->renderView.viewaxis), tr.viewDef->projectionMatrix, cameraSpace, clip);
 
 		// This plane should be in camera space.
-		parms->renderView.clipPlane = cameraSpace;
+		//parms->renderView.clipPlane = cameraSpace;
 	}
 	else
 	{
