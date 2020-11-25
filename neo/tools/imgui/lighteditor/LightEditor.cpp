@@ -583,7 +583,7 @@ void LightEditor::DrawWindow()
 			LoadCurrentTexture();
 		}
 
-		if( currentMaterial != NULL )
+		if( currentMaterial != nullptr && currentTexture != nullptr )
 		{
 			ImVec2 size( currentTexture->GetUploadWidth(), currentTexture->GetUploadHeight() );
 			ImGui::Image( (void*)currentMaterial, size, ImVec2( 0, 0 ), ImVec2( 1, 1 ),
