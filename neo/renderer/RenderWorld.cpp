@@ -1115,6 +1115,7 @@ void idRenderWorldLocal::RenderScene( const renderView_t* renderView )
 	parms->scissor.y2 = parms->viewport.y2 - parms->viewport.y1;
 
 	parms->isSubview = false;
+	parms->isObliqueProjection = false;
 	parms->initialViewAreaOrigin = renderView->vieworg;
 	parms->renderWorld = this;
 

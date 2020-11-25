@@ -526,6 +526,8 @@ public:
 	// use exitEntityNum to specify a teleport with private camera view and delayed exit
 	virtual void			Teleport( const idVec3& origin, const idAngles& angles, idEntity* destination );
 
+	//virtual void            PortalSelf(const idVec3& origin, const idAngles& angles, );
+
 	void					Kill( bool delayRespawn, bool nodamage );
 	virtual void			Killed( idEntity* inflictor, idEntity* attacker, int damage, const idVec3& dir, int location );
 	void					StartFxOnBone( const char* fx, const char* bone );

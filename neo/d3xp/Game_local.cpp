@@ -2850,7 +2850,6 @@ void idGameLocal::RunSingleUserCmd( usercmd_t& cmd, idPlayer& player )
 		const float clientEngineHz = 1000.0f / usercmdMillisecondDelta;
 
 		// Force to 60 or 120, those are the only values allowed in multiplayer.
-		// TODO(Stephen): Maybe want to change this later to support higher client fps since many monitors allow for 144hz.
 		const float forcedClientEngineHz = ( clientEngineHz < 90.0f ) ? 60.0f : 120.0f;
 		SetScriptFPS( forcedClientEngineHz );
 	}

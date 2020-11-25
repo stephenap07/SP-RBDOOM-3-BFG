@@ -908,6 +908,7 @@ const int	CINEMATIC_SKIP_DELAY	= SEC2MS( 2.0f );
 #include "EnvironmentProbe.h"
 #include "WorldSpawn.h"
 #include "Item.h"
+#include "GamePortal.h"
 #include "PlayerView.h"
 #include "PlayerIcon.h"
 #include "Achievements.h"

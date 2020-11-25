@@ -272,6 +272,38 @@ static viewDef_t* R_MirrorViewBySurface( const drawSurf_t* drawSurf )
 }
 
 /*
+=====================
+R_ObliqueProjection - adjust near plane of previously set projection matrix to perform an oblique projection
+credits to motorsep: https://github.com/motorsep/StormEngine2/blob/743a0f9581a10837a91cb296ff5a1114535e8d4e/neo/renderer/tr_frontend_subview.cpp#L225
+=====================
+*/
+static void R_ObliqueProjection(viewDef_t* parms)
+{
+	float mvt[16];	//model view transpose
+	idPlane pB = parms->clipPlanes[0];
+	idPlane cp;
+	R_MatrixTranspose(parms->worldSpace.modelViewMatrix, mvt);
+	R_GlobalPlaneToLocal(mvt, pB, cp);	//transform plane (which is set to the surface we're mirroring about's plane) to camera space
+
+	//oblique projection adjustment code
+	idVec4 clipPlane(cp[0], cp[1], cp[2], cp[3]);
+	idVec4 q;
+	q[0] = ((clipPlane[0] < 0.0f ? -1.0f : clipPlane[0] > 0.0f ? 1.0f : 0.0f) + parms->projectionMatrix[8]) / parms->projectionMatrix[0];
+	q[1] = ((clipPlane[1] < 0.0f ? -1.0f : clipPlane[1] > 0.0f ? 1.0f : 0.0f) + parms->projectionMatrix[9]) / parms->projectionMatrix[5];
+	q[2] = -1.0f;
+	q[3] = (1.0f + parms->projectionMatrix[10]) / parms->projectionMatrix[14];
+
+	// scaled plane vector
+	float d = 2.0f / (clipPlane * q);
+
+	// Replace the third row of the projection matrix
+	parms->projectionMatrix[2] = clipPlane[0] * d;
+	parms->projectionMatrix[6] = clipPlane[1] * d;
+	parms->projectionMatrix[10] = clipPlane[2] * d + 1.0f;
+	parms->projectionMatrix[14] = clipPlane[3] * d;
+}
+
+/*
 ========================
 R_PortalViewBySurface
 ========================
@@ -287,64 +319,70 @@ static viewDef_t* R_PortalViewBySurface(const drawSurf_t* surf)
 	viewDef_t* parms = (viewDef_t*)R_FrameAlloc(sizeof(*parms));
 	*parms = *tr.viewDef;
 
-	if (1)
+	idMat3 viewaxis = parms->renderView.viewaxis;
+	idMat3 remoteViewAxis = surf->space->entityDef->parms.remoteRenderView->viewaxis;
+	const idVec3 orig = parms->renderView.vieworg;
+	float fov_x = parms->renderView.fov_x;
+	float fov_y = parms->renderView.fov_y;
+
+	parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
+	parms->renderView.fov_x = fov_x;
+	parms->renderView.fov_y = fov_y;
+
+	idAngles ang = viewaxis.ToAngles();
+	idAngles angleDiff;
+
+	idMat3 surfViewAxis;
+
+	// Difference in view axis
+	idPlane originalPlane, plane;
+	R_PlaneForSurface(surf->frontEndGeo, originalPlane);
+	R_LocalPlaneToGlobal(surf->space->modelMatrix, originalPlane, plane);
+
+	orientation_t surface;
+	surface.origin = plane.Normal() * -plane[3];
+	surface.axis[0] = plane.Normal();
+	surface.axis[0].NormalVectors(surface.axis[1], surface.axis[2]);
+	surface.axis[2] = -surface.axis[2];
+
+	surfViewAxis = surface.axis;
+	idAngles surfAng = surfViewAxis.ToAngles();
+	angleDiff = surfAng - ang;
+
+	idAngles origAngle = parms->renderView.viewaxis.ToAngles();
+	origAngle = origAngle - angleDiff;
+	origAngle.yaw -= 180;
+	origAngle.Normalize180();
+
+	parms->renderView.viewaxis = origAngle.ToMat3();
+
+	// Direction vector in camera space.
+	const idMat3 inverseSurfView = surfViewAxis.Transpose();
+	idVec3 dirToPortal = (surf->space->entityDef->parms.origin - orig) * inverseSurfView;
+	dirToPortal.z = -dirToPortal.z;
+	parms->renderView.vieworg += dirToPortal * remoteViewAxis;
+
+	// Set up oblique view clipping plane
+	parms->numClipPlanes = 1;
+	parms->clipPlanes[0] = surface.axis[0];
+	parms->clipPlanes[0][3] = -(surf->space->entityDef->parms.remoteRenderView->vieworg * parms->clipPlanes[0].Normal());
+	float dist = parms->clipPlanes[0].Dist();
+	float viewdist = parms->renderView.vieworg * parms->clipPlanes[0].Normal();
+	float fDist = -dist + viewdist;
+	static const float fudge = 2.f;	//fudge avoids depth precision artifacts when performing oblique projection
+	if (fDist > fudge || fDist < -fudge)
 	{
-		idMat3 viewaxis = parms->renderView.viewaxis;
-		idMat3 remoteViewAxis = surf->space->entityDef->parms.remoteRenderView->viewaxis;
-		const idVec3 orig = parms->renderView.vieworg;
-		float fov_x = parms->renderView.fov_x;
-		float fov_y = parms->renderView.fov_y;
-
-		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
-		parms->renderView.fov_x = fov_x;
-		parms->renderView.fov_y = fov_y;
-
-		idAngles ang = viewaxis.ToAngles();
-		idAngles angleDiff;
-
-		idMat3 surfViewAxis;
-
-		// difference in view axis
-		{
-			idPlane originalPlane, plane;
-			R_PlaneForSurface(surf->frontEndGeo, originalPlane);
-			R_LocalPlaneToGlobal(surf->space->modelMatrix, originalPlane, plane);
-
-			orientation_t surface;
-			surface.origin = plane.Normal() * -plane[3];
-			surface.axis[0] = plane.Normal();
-			surface.axis[0].NormalVectors(surface.axis[1], surface.axis[2]);
-			surface.axis[2] = -surface.axis[2];
-
-			surfViewAxis = surface.axis;
-			idAngles surfAng = surfViewAxis.ToAngles();
-
-			angleDiff = surfAng - ang;
-		}
-
-		idAngles origAngle = parms->renderView.viewaxis.ToAngles();
-		origAngle = origAngle - angleDiff;
-		origAngle.yaw -= 180;
-		origAngle.Normalize180();
-
-		parms->renderView.viewaxis = origAngle.ToMat3();
-
-		// direction vector in camera space.
-		const idMat3 inverseSurfView = surfViewAxis.Inverse();
-		idVec3 dirToPortal = (surf->space->entityDef->parms.origin - orig) * inverseSurfView;
-		dirToPortal.z = -dirToPortal.z;
-		parms->renderView.vieworg += dirToPortal * remoteViewAxis;
-
-		idPlane cameraSpace, clip;
-		R_TransformModelToClip(parms->renderView.vieworg, (const float*)(&parms->renderView.viewaxis), tr.viewDef->projectionMatrix, cameraSpace, clip);
-
-		// This plane should be in camera space.
-		//parms->renderView.clipPlane = cameraSpace;
+		if (fDist < 0.f)
+			fDist += fudge;
+		else
+			fDist -= fudge;
 	}
-	else
-	{
-		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
-	}
+	parms->clipPlanes[0][3] = fDist;
+
+	parms->isObliqueProjection = true;
+	R_SetupViewMatrix(parms);
+	R_SetupProjectionMatrix(parms);
+	R_ObliqueProjection(parms);
 
 	parms->renderView.viewID = 0;	// clear to allow player bodies to show up, and suppress view weapons
 	parms->initialViewAreaOrigin = parms->renderView.vieworg;
