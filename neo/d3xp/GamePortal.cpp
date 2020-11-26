@@ -81,13 +81,6 @@ void spGamePortal::CheckPlayerDistances(void)
 {
 }
 
-#define NEAR_CLIP 0
-
-constexpr float kDistanceToPlayer = 256.0f;
-
-idCVar g_portalOffset("g_portalOffset", "-31.0f", CVAR_FLOAT, "");
-idCVar g_portalExtrusion("g_portalExtrusion", "24.0f", CVAR_FLOAT, "");
-
 void PortalRotate(idVec3& vec, const idMat3& sourceTranspose, const idMat3& dest, const bool flipX) {
 	vec *= sourceTranspose;
 	vec.y *= -1;
@@ -114,6 +107,7 @@ void spGamePortal::Think(void)
 	}
 
 	idBounds bounds = GetPhysics()->GetClipModel()->GetBounds();
+	bounds.RotateSelf(GetPhysics()->GetAxis());
 	bounds.TranslateSelf(GetPhysics()->GetOrigin());
 	bounds.ExpandSelf(1.0f);
 

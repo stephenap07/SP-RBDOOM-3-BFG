@@ -364,7 +364,7 @@ static viewDef_t* R_PortalViewBySurface(const drawSurf_t* surf)
 
 	// Set up oblique view clipping plane
 	parms->numClipPlanes = 1;
-	parms->clipPlanes[0] = surface.axis[0];
+	parms->clipPlanes[0] = remoteViewAxis[0];
 	parms->clipPlanes[0][3] = -(surf->space->entityDef->parms.remoteRenderView->vieworg * parms->clipPlanes[0].Normal());
 	float dist = parms->clipPlanes[0].Dist();
 	float viewdist = parms->renderView.vieworg * parms->clipPlanes[0].Normal();
