@@ -420,6 +420,7 @@ endif (RAPIDJSON_FOUND)
 
 	
 add_subdirectory(idlib)
+add_subdirectory(libs/lua-5.4.1)
 
 file(GLOB AAS_INCLUDES aas/*.h)
 file(GLOB AAS_SOURCES aas/*.cpp)
@@ -697,6 +698,7 @@ set(GAMED3XP_INCLUDES
 	d3xp/Fx.h
 	d3xp/Game.h
 	d3xp/GameEdit.h
+	d3xp/GamePortal.h
 	d3xp/Game_local.h
 	d3xp/Grabber.h
 	d3xp/IK.h
@@ -734,6 +736,7 @@ set(GAMED3XP_SOURCES
 	d3xp/EnvironmentProbe.cpp
 	d3xp/Fx.cpp
 	d3xp/GameEdit.cpp
+	d3xp/GamePortal.cpp
 	d3xp/Game_local.cpp
 	d3xp/Game_network.cpp
 	d3xp/Grabber.cpp
@@ -1277,6 +1280,7 @@ set(RBDOOM3_INCLUDES
 			${DOOMCLASSIC_INCLUDES}
 			${TIMIDITY_INCLUDES}
 			${SDF_INCLUDE}
+			${LUA_LIB_HEADERS}
 			
 			${COMPILER_INCLUDES}
 			${COMPILER_AAS_INCLUDES} ${COMPILER_AAS_SOURCES}
@@ -1543,8 +1547,11 @@ if(MSVC)
     #               COMMENT "Compiling libcURL")
 
 	add_dependencies(RBDoom3BFG idlib)
+	add_dependencies(RBDoom3BFG lua_static)
+
 	target_link_libraries(RBDoom3BFG
 		idlib
+		lua_static
 		${DirectX_LIBRARIES}
 		dbghelp
 		#eaxguid

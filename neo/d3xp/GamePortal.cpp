@@ -3,6 +3,9 @@
 
 #include "Game_local.h"
 
+#include <lua.hpp>
+#include <luaconf.h>
+
 const idEventDef EV_Opened("<portalopened>", NULL);
 const idEventDef EV_Closed("<portalclosed>", NULL);
 const idEventDef EV_PortalSpark("<portalSpark>", NULL);
@@ -26,6 +29,25 @@ spGamePortal::spGamePortal()
 
 spGamePortal::~spGamePortal()
 {
+}
+
+static void* l_alloc(void* ud, void* ptr, size_t osize,
+	size_t nsize) {
+	(void)ud;  (void)osize;  /* not used */
+	if (nsize == 0) {
+		free(ptr);
+		return NULL;
+	}
+	else
+		return realloc(ptr, nsize);
+}
+
+static int l_commonPrintf(lua_State* L)
+{
+	// get argument
+	const char* str = lua_tostring(L, -1);
+	common->Printf(str);
+	return 0;
 }
 
 void spGamePortal::Spawn()
@@ -62,6 +84,40 @@ void spGamePortal::Spawn()
 	fl.networkSync = true; //rww
 
 	proximityEntities.Clear(); // Clear the list of potential entities to be portalled
+
+	// Set up the lua stuff.
+	const char* luaScript = spawnArgs.GetString("lua_script");
+
+	if (luaScript)
+	{
+		char* src;
+		if (fileSystem->ReadFile(luaScript, (void**)&src, NULL) < 0)
+		{
+			gameLocal.Error("Couldn't load %s\n", luaScript);
+		}
+		else
+		{
+			lua_State* L = lua_newstate(l_alloc, nullptr);
+			luaL_openlibs(L);
+			int sz = fileSystem->GetFileLength(luaScript);
+			if (luaL_loadbuffer(L, src, sz, luaScript) != LUA_OK || lua_pcall(L, 0, 0, 0))
+			{
+				common->Error("Failed to load lua script %s : %s\n", luaScript, lua_tostring(L, -1));
+				lua_pop(L, -1);
+			}
+			fileSystem->FreeFile(src);
+			lua_pushcfunction(L, l_commonPrintf);
+			lua_setglobal(L, "comPrintf");
+			// call main
+			lua_getglobal(L, "main");
+			if (lua_pcall(L, 0, 0, 0) != LUA_OK)
+			{
+				common->Error("Error running function 'main': %s\n", lua_tostring(L, -1));
+				lua_pop(L, -1);
+			}
+			lua_close(L);
+		}
+	}
 }
 
 void spGamePortal::Save(idSaveGame* savefile) const
