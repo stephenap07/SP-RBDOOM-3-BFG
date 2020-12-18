@@ -3,16 +3,21 @@
 
 #include "RenderCommon.h"
 
+// Globals
+extern idCVar r_debugLineWidth;
+extern idCVar stereoRender_defaultGuiDepth;
 
+
+// Constants
 constexpr int kMaxDebugTextModels = 512;
 constexpr int kMaxDebugLineModels = 16384;
+
 
 struct DebugTextModel
 {
 	TextBufferHandle handle;
 	idRenderMatrix modelMatrix;
 };
-
 
 struct DebugLineModel
 {
@@ -28,104 +33,137 @@ class RenderDebug_local : public RenderDebug
 public:
 	RenderDebug_local();
 
-	virtual ~RenderDebug_local() override;
+	~RenderDebug_local() override = default;
 
-	virtual void Init() override;
-	virtual void Shutdown() override;
+	void Init() override;
+	void Shutdown() override;
 
-	virtual void SubmitForDrawing() override;
-	virtual void DebugText(const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align = 1, const int lifetime = 0, bool depthTest = false) override;
-	virtual void DebugLine(const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime = 0, const bool depthTest = false) override;
+	void SubmitForDrawing() override;
+	void DebugText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align = 1, const int lifetime = 0, bool depthTest = false ) override;
+	void DebugLine( const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime = 0, const bool depthTest = false ) override;
 
 private:
 
-	idArray<DebugTextModel, kMaxDebugTextModels> debugText;
-	int numActiveDebugText = 0;
+	/// Submits line drawing primitives to the front-end.
+	void SubmitDebugLines();
 
-	idArray<DebugLineModel, kMaxDebugLineModels> debugLine;
-	int numActiveDebugLine = 0;
+	/// Submits text drawing primitives to the front-end.
+	void SubmitDebugText();
 
-	float shaderParms[MAX_ENTITY_SHADER_PARMS];
+	/// Clears all debug drawing models.
+	void ClearAll();
 
-	const idMaterial* whiteMaterial = nullptr;
+	idArray<DebugTextModel, kMaxDebugTextModels> _debugText;
+	int _numActiveDebugText = 0;
+
+	idArray<DebugLineModel, kMaxDebugLineModels> _debugLine;
+	int _numActiveDebugLine = 0;
+
+	float _shaderParms[MAX_ENTITY_SHADER_PARMS];
+
+	const idMaterial* _whiteMaterial = nullptr;
 };
 
 
 RenderDebug_local::RenderDebug_local()
-	: shaderParms()
+	: _shaderParms()
 {
-	memset(shaderParms, 0, sizeof(float) * 12);
-}
-
-RenderDebug_local::~RenderDebug_local()
-{
+	memset( _shaderParms, 0, sizeof( float ) * MAX_ENTITY_SHADER_PARMS );
 }
 
 void RenderDebug_local::Init()
 {
-	for (int i = 0; i < MAX_ENTITY_SHADER_PARMS; i++)
+	for( int i = 0; i < MAX_ENTITY_SHADER_PARMS; i++ )
 	{
-		shaderParms[i] = 1.0f;
+		_shaderParms[i] = 1.0f;
 	}
 
-	whiteMaterial = declManager->FindMaterial("_white");
+	_whiteMaterial = declManager->FindMaterial( "_white" );
 }
 
 void RenderDebug_local::Shutdown()
 {
 }
 
-extern idCVar r_debugLineWidth;
-
-extern idCVar stereoRender_defaultGuiDepth;
-
 void RenderDebug_local::SubmitForDrawing()
 {
-	// Each debug like will have 4 vertices.
-	vertCacheHandle_t vertexHandle = vertexCache.AllocVertex(NULL, 4 * (numActiveDebugLine + 1));
-	vertCacheHandle_t indexHandle = vertexCache.AllocIndex(NULL, 6 * (numActiveDebugLine + 1));
+	SubmitDebugLines();
+	SubmitDebugText();
+	ClearAll();
+}
 
-	idDrawVert* vertexPtr = (idDrawVert*)vertexCache.MappedVertexBuffer(vertexHandle);
-	triIndex_t* indexPointer = (triIndex_t*)vertexCache.MappedIndexBuffer(indexHandle);
+void RenderDebug_local::DebugText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align, const int lifetime, bool depthTest )
+{
+	auto man = renderSystem->GetTextBufferManager();
+	auto textHandle = man->createTextBuffer( 0, BufferType::Dynamic );
+	man->setPenPosition( textHandle, 0, 0 );
+	man->appendText( textHandle, renderSystem->GetDefaultFontHandle(), text );
+	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( color ) );
+	man->setGlState( textHandle, GLS_DEPTHFUNC_ALWAYS );
+	man->deformSprite( textHandle, viewAxis );
+
+	float guiModelMatrix[16];
+	// Scale is adjusted per font right now. Will need to setting on a nicer font. Preferably monospace.
+	idMat3 axis = mat3_identity * scale * 0.5f;
+	R_AxisToModelMatrix( axis, origin, guiModelMatrix );
+
+	_debugText[_numActiveDebugText] = { textHandle, *reinterpret_cast<idRenderMatrix*>( guiModelMatrix ) };
+	_numActiveDebugText++;
+}
+
+void RenderDebug_local::DebugLine( const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime, const bool depthTest )
+{
+	_debugLine[_numActiveDebugLine] = { color, start, end, depthTest, lifetime };
+	++_numActiveDebugLine;
+}
+
+void RenderDebug_local::SubmitDebugLines()
+{
+	// Each debug line will have 4 vertices.
+	vertCacheHandle_t vertexHandle = vertexCache.AllocVertex( nullptr, 4 * ( _numActiveDebugLine + 1 ) );
+	vertCacheHandle_t indexHandle = vertexCache.AllocIndex( nullptr, 6 * ( _numActiveDebugLine + 1 ) );
+
+	idDrawVert* vertexPtr = ( idDrawVert* )vertexCache.MappedVertexBuffer( vertexHandle );
+	triIndex_t* indexPointer = ( triIndex_t* )vertexCache.MappedIndexBuffer( indexHandle );
 
 	int numVerts = 0;
 	int numIndexes = 0;
 
-	const float lineWidth = std::max(1.0f, (float)r_debugLineWidth.GetInteger());
+	const float lineWidth = std::max( 1.0f, ( float )r_debugLineWidth.GetInteger() );
 
-	for (int i = 0; i < numActiveDebugLine; i++)
+	for( int i = 0; i < _numActiveDebugLine; i++ )
 	{
-		const auto& line = debugLine[i];
+		const auto& line = _debugLine[i];
 
 		// we need the view direction to project the minor axis of the quad
 		// as the view changes
 		idVec3	localView, localTarget;
 		float	modelMatrix[16];
-		R_AxisToModelMatrix(mat3_identity, line.start, modelMatrix);
-		R_GlobalPointToLocal(modelMatrix, tr.viewDef->renderView.vieworg, localView);
-		R_GlobalPointToLocal(modelMatrix, line.end, localTarget);
+		R_AxisToModelMatrix( mat3_identity, line.start, modelMatrix );
+		R_GlobalPointToLocal( modelMatrix, tr.viewDef->renderView.vieworg, localView );
+		R_GlobalPointToLocal( modelMatrix, line.end, localTarget );
 
 		idVec3	major = localTarget;
 		idVec3	minor;
 
 		idVec3	mid = 0.5f * localTarget;
 		idVec3	dir = mid - localView;
-		minor.Cross(major, dir);
+		minor.Cross( major, dir );
 		minor.Normalize();
 
-		minor *= (lineWidth * 0.2f);
+		minor *= ( lineWidth * 0.2f );
 
 		vertexPtr[numVerts + 0].xyz = line.start - minor;
-		vertexPtr[numVerts + 0].SetColor(PackColor(line.rgb));
+		vertexPtr[numVerts + 0].SetColor( PackColor( line.rgb ) );
 
 		vertexPtr[numVerts + 1].xyz = line.end - minor;
-		vertexPtr[numVerts + 1].SetColor(PackColor(line.rgb));
+		vertexPtr[numVerts + 1].SetColor( PackColor( line.rgb ) );
 
 		vertexPtr[numVerts + 2].xyz = line.end + minor;
-		vertexPtr[numVerts + 2].SetColor(PackColor(line.rgb));
+		vertexPtr[numVerts + 2].SetColor( PackColor( line.rgb ) );
 
 		vertexPtr[numVerts + 3].xyz = line.start + minor;
-		vertexPtr[numVerts + 3].SetColor(PackColor(line.rgb));
+		vertexPtr[numVerts + 3].SetColor( PackColor( line.rgb ) );
 
 		indexPointer[numIndexes + 0] = numVerts + 3;
 		indexPointer[numIndexes + 1] = numVerts + 0;
@@ -139,17 +177,17 @@ void RenderDebug_local::SubmitForDrawing()
 	}
 
 	// Create the view
-	if (whiteMaterial)
+	if( _whiteMaterial )
 	{
-		viewEntity_t* space = (viewEntity_t*)R_ClearedFrameAlloc(sizeof(*space), FRAME_ALLOC_VIEW_ENTITY);
-		memcpy(space->modelMatrix, reinterpret_cast<float*>(&mat4_identity), sizeof(space->modelMatrix));
-		R_MatrixMultiply(space->modelMatrix, tr.viewDef->worldSpace.modelViewMatrix, space->modelViewMatrix);
+		viewEntity_t* space = ( viewEntity_t* )R_ClearedFrameAlloc( sizeof( *space ), FRAME_ALLOC_VIEW_ENTITY );
+		memcpy( space->modelMatrix, reinterpret_cast<float*>( &mat4_identity ), sizeof( space->modelMatrix ) );
+		R_MatrixMultiply( space->modelMatrix, tr.viewDef->worldSpace.modelViewMatrix, space->modelViewMatrix );
 		space->weaponDepthHack = false;
 		space->isGuiSurface = true;
 
 		// If this is an in-game gui, we need to be able to find the matrix again for head mounted
 		// display bypass matrix fixup.
-		if (true) // link as entity
+		if( true ) // link as entity
 		{
 			space->next = tr.viewDef->viewEntitys;
 			tr.viewDef->viewEntitys = space;
@@ -159,11 +197,11 @@ void RenderDebug_local::SubmitForDrawing()
 		// make a tech5 renderMatrix
 		//---------------------------
 		idRenderMatrix viewMat;
-		idRenderMatrix::Transpose(*(idRenderMatrix*)space->modelViewMatrix, viewMat);
-		idRenderMatrix::Multiply(tr.viewDef->projectionRenderMatrix, viewMat, space->mvp);
-		if (false)
+		idRenderMatrix::Transpose( *( idRenderMatrix* )space->modelViewMatrix, viewMat );
+		idRenderMatrix::Multiply( tr.viewDef->projectionRenderMatrix, viewMat, space->mvp );
+		if( false )
 		{
-			idRenderMatrix::ApplyDepthHack(space->mvp);
+			idRenderMatrix::ApplyDepthHack( space->mvp );
 		}
 
 		// to allow 3D-TV effects in the menu system, we define surface flags to set
@@ -174,8 +212,8 @@ void RenderDebug_local::SubmitForDrawing()
 		float defaultStereoDepth = stereoRender_defaultGuiDepth.GetFloat();	// default to at-screen
 
 		// add the surfaces to this view
-		const idMaterial* shader = whiteMaterial;
-		drawSurf_t* drawSurf = (drawSurf_t*)R_FrameAlloc(sizeof(*drawSurf), FRAME_ALLOC_DRAW_SURFACE);
+		const idMaterial* shader = _whiteMaterial;
+		drawSurf_t* drawSurf = ( drawSurf_t* )R_FrameAlloc( sizeof( *drawSurf ), FRAME_ALLOC_DRAW_SURFACE );
 
 		drawSurf->numIndexes = numIndexes;
 		drawSurf->ambientCache = vertexHandle;
@@ -191,63 +229,40 @@ void RenderDebug_local::SubmitForDrawing()
 		drawSurf->renderZFail = 0;
 		// process the shader expressions for conditionals / color / texcoords
 		const float* constRegs = shader->ConstantRegisters();
-		if (constRegs)
+		if( constRegs )
 		{
 			// shader only uses constant values
 			drawSurf->shaderRegisters = constRegs;
 		}
 		else
 		{
-			float* regs = (float*)R_FrameAlloc(shader->GetNumRegisters() * sizeof(float), FRAME_ALLOC_SHADER_REGISTER);
+			float* regs = ( float* )R_FrameAlloc( shader->GetNumRegisters() * sizeof( float ), FRAME_ALLOC_SHADER_REGISTER );
 			drawSurf->shaderRegisters = regs;
-			shader->EvaluateRegisters(regs, shaderParms, tr.viewDef->renderView.shaderParms, tr.viewDef->renderView.time[1] * 0.001f, NULL);
+			shader->EvaluateRegisters( regs, _shaderParms, tr.viewDef->renderView.shaderParms, tr.viewDef->renderView.time[1] * 0.001f, NULL );
 		}
 
-		R_LinkDrawSurfToView(drawSurf, tr.viewDef);
+		R_LinkDrawSurfToView( drawSurf, tr.viewDef );
 	}
+}
 
-	numActiveDebugLine = 0;
-
-	// Debug text draw
+void RenderDebug_local::SubmitDebugText()
+{
 	TextBufferManager* man = renderSystem->GetTextBufferManager();
 
-	for (int i = 0; i < numActiveDebugText; i++)
+	for( int i = 0; i < _numActiveDebugText; i++ )
 	{
 		tr.guiModel->Clear();
-		man->submitTextBuffer(debugText[i].handle);
-		man->destroyTextBuffer(debugText[i].handle);
-		tr.guiModel->EmitToCurrentView((float*)&debugText[i].modelMatrix, false);
+		man->submitTextBuffer( _debugText[i].handle );
+		man->destroyTextBuffer( _debugText[i].handle );
+		tr.guiModel->EmitToCurrentView( ( float* )&_debugText[i].modelMatrix, false );
 		tr.guiModel->Clear();
 	}
-
-	// Debug line draw
-	numActiveDebugText = 0;
-
 }
 
-void RenderDebug_local::DebugText(const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align, const int lifetime, bool depthTest)
+void RenderDebug_local::ClearAll()
 {
-	auto man = renderSystem->GetTextBufferManager();
-	auto textHandle = man->createTextBuffer(0, BufferType::Dynamic);
-	man->setPenPosition(textHandle, 0, 0);
-	man->appendText(textHandle, renderSystem->GetDefaultFontHandle(), text);
-	man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(color));
-	man->setGlState(textHandle, GLS_DEPTHFUNC_ALWAYS);
-	man->deformSprite(textHandle, viewAxis);
-
-	float guiModelMatrix[16];
-	// Scale is adjusted per font right now. Will need to setting on a nicer font. Preferably monospace.
-	idMat3 axis = mat3_identity * scale * 0.5f;
-	R_AxisToModelMatrix(axis, origin, guiModelMatrix);
-
-	debugText[numActiveDebugText] = { textHandle, *reinterpret_cast<idRenderMatrix*>(guiModelMatrix) };
-	numActiveDebugText++;
-}
-
-void RenderDebug_local::DebugLine(const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime, const bool depthTest)
-{
-	debugLine[numActiveDebugLine] = { color, start, end, depthTest, lifetime };
-	++numActiveDebugLine;
+	_numActiveDebugLine = 0;
+	_numActiveDebugText = 0;
 }
 
 
@@ -258,7 +273,7 @@ RenderDebug* RenderDebug::instance = nullptr;
 
 RenderDebug::~RenderDebug()
 {
-	if (instance)
+	if( instance )
 	{
 		delete instance;
 	}
@@ -266,7 +281,7 @@ RenderDebug::~RenderDebug()
 
 RenderDebug& RenderDebug::Get()
 {
-	if (instance)
+	if( instance )
 	{
 		return *instance;
 	}

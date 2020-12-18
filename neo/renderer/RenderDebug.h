@@ -44,8 +44,8 @@ public:
 	virtual void SubmitForDrawing() = 0;
 
 	// Debug visualization methods. This is all done in worldspace.
-	virtual void DebugText(const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align = 1, const int lifetime = 0, bool depthTest = false) = 0;
-	virtual void DebugLine(const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime = 0, const bool depthTest = false) = 0;
+	virtual void DebugText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align = 1, const int lifetime = 0, bool depthTest = false ) = 0;
+	virtual void DebugLine( const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime = 0, const bool depthTest = false ) = 0;
 
 private:
 
