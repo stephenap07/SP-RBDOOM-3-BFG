@@ -604,13 +604,13 @@ idBinaryImage::GetGeneratedFileName
 void idBinaryImage::GetGeneratedFileName( idStr& gfn, const char* name )
 {
 	idStr copyStr = name;
-	copyStr.Replace("/", "_");
-	copyStr.Replace(",", "_");
-	copyStr.Replace(")", "");
+	copyStr.Replace( "/", "_" );
+	copyStr.Replace( ",", "_" );
+	copyStr.Replace( ")", "" );
 
-	if (copyStr.Find("combine") != -1)
+	if( copyStr.Find( "combine" ) != -1 )
 	{
-		common->Printf("Called combine with %s", name);
+		common->Printf( "Called combine with %s", name );
 	}
 
 	gfn.Format( "generated/images/%s.bimage", copyStr.c_str() );
