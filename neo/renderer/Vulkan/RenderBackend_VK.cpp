@@ -83,7 +83,7 @@ static const char* g_debugInstanceExtensions[ g_numDebugInstanceExtensions ] =
 static const int g_numValidationLayers = 1;
 static const char* g_validationLayers[ g_numValidationLayers ] =
 {
-	"VK_LAYER_LUNARG_standard_validation"
+	"VK_LAYER_KHRONOS_validation"
 };
 
 #define ID_VK_ERROR_STRING( x ) case static_cast< int >( x ): return #x
@@ -121,8 +121,8 @@ const char* VK_ErrorToString( VkResult result )
 			ID_VK_ERROR_STRING( VK_ERROR_INCOMPATIBLE_DISPLAY_KHR );
 			ID_VK_ERROR_STRING( VK_ERROR_VALIDATION_FAILED_EXT );
 			ID_VK_ERROR_STRING( VK_ERROR_INVALID_SHADER_NV );
-			ID_VK_ERROR_STRING( VK_RESULT_BEGIN_RANGE );
-			ID_VK_ERROR_STRING( VK_RESULT_RANGE_SIZE );
+		//ID_VK_ERROR_STRING( VK_RESULT_BEGIN_RANGE );
+		//ID_VK_ERROR_STRING( VK_RESULT_RANGE_SIZE );
 		default:
 			return "UNKNOWN";
 	};

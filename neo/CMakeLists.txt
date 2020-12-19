@@ -66,7 +66,11 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
 	set(CPU_OPTIMIZATION "-mmmx -msse -msse2" CACHE STRING "Which CPU specific optimitations should be used beside the compiler's default?")
 endif()
 
-option(USE_INTRINSICS "Compile using intrinsics (e.g mmx, sse, msse2)" ON)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(powerpc|ppc)64le")
+	option(USE_INTRINSICS "Compile using intrinsics (e.g mmx, sse, msse2)" OFF)
+else()
+	option(USE_INTRINSICS "Compile using intrinsics (e.g mmx, sse, msse2)" ON)
+endif()
 
 if(FFMPEG AND BINKDEC)
 	message(FATAL_ERROR "Only one of FFMPEG and BINKDEC (or neither) can be enabled at a time")
@@ -321,6 +325,45 @@ macro(SET_OPTION option value)
 endmacro()
 
 if(USE_VULKAN)
+
+	# RB: moved this above the general Vulkan part so glslang does not include Vulkan SDK headers
+	# which causes all kinds of weird segmentation faults because struct sizes don't match
+
+	if(SPIRV_SHADERC)
+		add_definitions(-DSPIRV_SHADERC)
+
+		if(CMAKE_CL_64)
+			link_directories($ENV{VULKAN_SDK}/Lib)
+		else()
+			link_directories($ENV{VULKAN_SDK}/Lib32)
+		endif()
+
+	else()
+		# override Glslang build options
+		
+		# options required by November 2018 release
+		SET_OPTION(ENABLE_SPVREMAPPER ON)
+		SET_OPTION(ENABLE_GLSLANG_BINARIES OFF)
+		SET_OPTION(ENABLE_HLSL OFF)
+		SET_OPTION(ENABLE_OPT ON)
+		SET_OPTION(SPIRV_SKIP_EXECUTABLES ON)
+		
+		# options required by July 2020 release
+		SET_OPTION(ENABLE_PCH OFF)
+		SET_OPTION(ENABLE_CTEST OFF)
+		SET_OPTION(BUILD_EXTERNAL OFF)
+		SET_OPTION(SKIP_GLSLANG_INSTALL ON)
+
+		#add_definitions(-DGLSLANG_MINOR_VERSION=13)
+	
+		set(GLSLANG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/glslang)
+		add_subdirectory(${GLSLANG_DIR})
+	
+		include_directories(${GLSLANG_DIR}/glslang)
+		
+		#link_directories($ENV{VULKAN_SDK}/Lib)
+	endif()
+
 	# Use FindVulkan module added with CMAKE 3.7
 	if(NOT CMAKE_VERSION VERSION_LESS 3.7.0)
 		message( STATUS "Using module to find Vulkan" )
@@ -349,36 +392,7 @@ if(USE_VULKAN)
 		add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 	endif()
 
-	if(SPIRV_SHADERC)
-		add_definitions(-DSPIRV_SHADERC)
-
-		if(CMAKE_CL_64)
-			link_directories($ENV{VULKAN_SDK}/Lib)
-		else()
-			link_directories($ENV{VULKAN_SDK}/Lib32)
-		endif()
-
-	else()
-		# override Glslang build options
-		
-		# options required by November 2018 release
-		SET_OPTION(ENABLE_SPVREMAPPER OFF)
-		SET_OPTION(ENABLE_GLSLANG_BINARIES OFF)
-		SET_OPTION(ENABLE_HLSL OFF)
-		SET_OPTION(ENABLE_OPT ON)
-		SET_OPTION(SPIRV_SKIP_EXECUTABLES ON)
-		
-		# options required by November 2019 release
-		#SET_OPTION(ENABLE_PCH OFF)
-		#SET_OPTION(ENABLE_CTEST OFF)
-		#SET_OPTION(BUILD_EXTERNAL OFF)
-		#SET_OPTION(SKIP_GLSLANG_INSTALL ON)
-
-		set(GLSLANG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/glslang)
-		add_subdirectory(${GLSLANG_DIR})
 	
-		include_directories(${GLSLANG_DIR}/glslang)
-	endif()
 
 else()
 
@@ -1273,7 +1287,6 @@ set(RBDOOM3_INCLUDES
 			${IMGUI_INCLUDES}
 			${STB_INCLUDES}
 			${MIKKTSPACE_INCLUDES}
-			${MIKKTSPACE_SOURCES}
 			${JPEG_INCLUDES}
 			${PNG_INCLUDES}
 			${ZLIB_INCLUDES}
@@ -1317,6 +1330,7 @@ set(RBDOOM3_SOURCES
 			${IRRXML_SOURCES}
 			${FRAMEWORK_IMGUI_SOURCES}
 			${IMGUI_SOURCES}
+			${MIKKTSPACE_SOURCES}
 			${JPEG_SOURCES}
 			${PNG_SOURCES}
 			${ZLIB_SOURCES}
@@ -1519,7 +1533,7 @@ if(MSVC)
 	
 	if(USE_PRECOMPILED_HEADERS) 
 		set(RBDOOM3_PRECOMPILED_SOURCES ${RBDOOM3_SOURCES})
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES})
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES})
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib/minizip/ioapi.c)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTDecoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder.cpp)
