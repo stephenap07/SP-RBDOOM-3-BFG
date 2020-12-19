@@ -1080,7 +1080,7 @@ void idDeviceContextOptimized::PushClipRect( idRectangle r )
 {
 	// Stephen: I updated the clip rect to default to the render window size. Before, it
 	// was using the virtual width and height.
-	const idRectangle& prev = (clipRects.Num() == 0) ? baseScreenRect : clipRects[clipRects.Num() - 1];
+	const idRectangle& prev = ( clipRects.Num() == 0 ) ? baseScreenRect : clipRects[clipRects.Num() - 1];
 	//const idRectangle& prev = (clipRects.Num() == 0) ? idRectangle(0, 0, renderSystem->GetWidth(), renderSystem->GetHeight()) : clipRects[clipRects.Num() - 1];
 
 	// instead of storing the rect, store the intersection of the rect

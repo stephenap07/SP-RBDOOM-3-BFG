@@ -133,7 +133,7 @@ void idUserInterfaceManagerLocal::BeginLevelLoad()
 {
 	for( int i = 0; i < guis.Num(); i++ )
 	{
-		if ((guis[i]->GetDesktop()->GetFlags() & WIN_MENUGUI) == 0)
+		if( ( guis[i]->GetDesktop()->GetFlags() & WIN_MENUGUI ) == 0 )
 		{
 			guis[i]->ClearRefs();
 		}
@@ -198,12 +198,12 @@ void idUserInterfaceManagerLocal::Reload( bool all )
 			}
 		}
 
-		if (!cleared)
+		if( !cleared )
 		{
 			// clear just once
 			// TODO(Stephen): I had to clear the parser because it was preventing the guis
 			// from reloading from the source file. This clears all tokens from the parser,
-			// is there a more specific  
+			// is there a more specific
 			uiManagerLocal.GetBinaryParser().Clear();
 			cleared = true;
 		}
@@ -544,8 +544,8 @@ void idUserInterfaceLocal::DrawCursor()
 	// Before, it was bound to the virtual width and height regardless
 	// of gui size.
 	idVec2 bounds;
-	if (desktop &&
-		desktop->scaleToRenderWindow)
+	if( desktop &&
+			desktop->scaleToRenderWindow )
 	{
 		bounds.x = renderSystem->GetWidth();
 		bounds.y = renderSystem->GetHeight();
@@ -558,7 +558,7 @@ void idUserInterfaceLocal::DrawCursor()
 
 	if( !desktop || desktop->GetFlags() & WIN_MENUGUI )
 	{
-		dc->DrawCursor( &cursorX, &cursorY, 32.0f, bounds);
+		dc->DrawCursor( &cursorX, &cursorY, 32.0f, bounds );
 	}
 	else
 	{

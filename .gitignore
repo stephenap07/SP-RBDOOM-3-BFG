@@ -238,3 +238,4 @@ neo/cmake-build-*/
 *.swd
 /preybase
 /renderdoc.cap
+/.vs

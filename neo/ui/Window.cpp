@@ -1027,7 +1027,7 @@ const char* idWindow::HandleEvent( const sysEvent_t* event, bool* updateVisuals 
 								parent = NULL;
 								child = NULL;
 							}
-							RunScript(ON_TAB); // Stephen: I want to base this on an impulse instead of a specific key
+							RunScript( ON_TAB ); // Stephen: I want to base this on an impulse instead of a specific key
 						}
 					}
 				}
@@ -1462,23 +1462,23 @@ void idWindow::Redraw( float x, float y, bool hud )
 	float customAspectWidth = forceAspectWidth;
 	float customAspectHeight = forceAspectHeight;
 
-	if (scaleToRenderWindow)
+	if( scaleToRenderWindow )
 	{
 		customAspectWidth = renderSystem->GetWidth();
 		customAspectHeight = renderSystem->GetHeight();
 	}
 
-	if (hud)
+	if( hud )
 	{
 		float tileSafeOffset = hud_titlesafe.GetFloat();
-		float tileSafeScale = 1.0f / (1.0f - hud_titlesafe.GetFloat() * 2.0f);
-		dc->SetSize(customAspectWidth * tileSafeScale, customAspectHeight * tileSafeScale);
-		dc->SetOffset(customAspectHeight * tileSafeOffset, customAspectHeight * tileSafeOffset);
+		float tileSafeScale = 1.0f / ( 1.0f - hud_titlesafe.GetFloat() * 2.0f );
+		dc->SetSize( customAspectWidth * tileSafeScale, customAspectHeight * tileSafeScale );
+		dc->SetOffset( customAspectHeight * tileSafeOffset, customAspectHeight * tileSafeOffset );
 	}
 	else
 	{
-		dc->SetSize(customAspectWidth, customAspectHeight);
-		dc->SetOffset(0.0f, 0.0f);
+		dc->SetSize( customAspectWidth, customAspectHeight );
+		dc->SetOffset( 0.0f, 0.0f );
 	}
 
 	//FIXME: go to screen coord tracking
@@ -2321,7 +2321,7 @@ bool idWindow::ParseInternalVar( const char* _name, idTokenParser* src )
 		forceAspectWidth = src->ParseFloat();
 		return true;
 	}
-	if ( idStr::Icmp(_name, "scaletorenderwindow") == 0 )
+	if( idStr::Icmp( _name, "scaletorenderwindow" ) == 0 )
 	{
 		scaleToRenderWindow = src->ParseBool();
 		return true;
@@ -3993,7 +3993,7 @@ void idWindow::WriteToSaveGame( idFile* savefile )
 	savefile->Write( &cursor, sizeof( cursor ) );
 	savefile->Write( &forceAspectWidth, sizeof( forceAspectWidth ) );
 	savefile->Write( &forceAspectHeight, sizeof( forceAspectHeight ) );
-	savefile->Write( &scaleToRenderWindow, sizeof(scaleToRenderWindow) );
+	savefile->Write( &scaleToRenderWindow, sizeof( scaleToRenderWindow ) );
 	savefile->Write( &matScalex, sizeof( matScalex ) );
 	savefile->Write( &matScaley, sizeof( matScaley ) );
 	savefile->Write( &borderSize, sizeof( borderSize ) );
@@ -4170,7 +4170,7 @@ void idWindow::ReadFromSaveGame( idFile* savefile )
 	savefile->Read( &cursor, sizeof( cursor ) );
 	savefile->Read( &forceAspectWidth, sizeof( forceAspectWidth ) );
 	savefile->Read( &forceAspectHeight, sizeof( forceAspectHeight ) );
-	savefile->Read( &scaleToRenderWindow, sizeof(scaleToRenderWindow) );
+	savefile->Read( &scaleToRenderWindow, sizeof( scaleToRenderWindow ) );
 	savefile->Read( &matScalex, sizeof( matScalex ) );
 	savefile->Read( &matScaley, sizeof( matScaley ) );
 	savefile->Read( &borderSize, sizeof( borderSize ) );
