@@ -320,7 +320,7 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 			opts.textureType = TT_2D_ARRAY;
 		}
 		if( cubeFiles != CF_2D )
-		{ 
+		{
 			opts.textureType = TT_CUBIC;
 			repeat = TR_CLAMP;
 			R_LoadCubeImages( GetName(), cubeFiles, NULL, NULL, &sourceFileTime, cubeMapSize );
@@ -438,7 +438,7 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		}
 		//else if( toolUsage )
 		//	binarizeReason = va( "binarize: tool usage '%s'", generatedName.c_str() );
-		
+
 		if( cubeFiles != CF_2D )
 		{
 			int size;

@@ -1094,16 +1094,16 @@ void idRenderWorldLocal::RenderScene( const renderView_t* renderView )
 	// Stephen: I want to add back support for renderDef in the gui scripts.
 	// There seems to be some issues around setting the viewport for one, the
 	// other problem is that the gui isn't being rendered if the render world
-	// is being 
+	// is being
 	//if (renderView->x2 > 0.0f || renderView->y2 > 0.0f)
 	//{
 	//	windowWidth = renderView->x2 - renderView->x1;
 	//	windowHeight = renderView->y2 - renderView->y2;
 	//}
-	
+
 	//tr.CropRenderSize( renderView->x1, renderView->y1, windowWidth, windowHeight );
 
-	tr.CropRenderSize(windowWidth, windowHeight);
+	tr.CropRenderSize( windowWidth, windowHeight );
 	tr.GetCroppedViewport( &parms->viewport );
 
 	// the scissor bounds may be shrunk in subviews even if
@@ -2229,7 +2229,7 @@ idRenderWorldLocal::DebugLine
 void idRenderWorldLocal::DebugLine( const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime, const bool depthTest )
 {
 	//RB_AddDebugLine( color, start, end, lifetime, depthTest );
-	RenderDebug::Get().DebugLine(color, start, end, lifetime, depthTest);
+	RenderDebug::Get().DebugLine( color, start, end, lifetime, depthTest );
 }
 
 /*
@@ -2577,7 +2577,7 @@ idRenderWorldLocal::DebugText
 */
 void idRenderWorldLocal::DebugText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align, const int lifetime, const bool depthTest )
 {
-	RenderDebug::Get().DebugText(text, origin, scale, color, viewAxis, align, lifetime, depthTest);
+	RenderDebug::Get().DebugText( text, origin, scale, color, viewAxis, align, lifetime, depthTest );
 }
 
 void idRenderWorldLocal::DebugDrawSubmitToCurrentView()

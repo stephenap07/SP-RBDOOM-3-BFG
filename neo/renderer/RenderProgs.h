@@ -335,12 +335,12 @@ public:
 	{
 		BindShader_Builtin( BUILTIN_TEXTURE_VERTEXCOLOR_SRGB );
 	}
-	
+
 	void	BindShader_TextureVertexColorSkinned()
 	{
 		BindShader_Builtin( BUILTIN_TEXTURE_VERTEXCOLOR_SKINNED );
 	}
-	
+
 	void	BindShader_TextureTexGenVertexColor()
 	{
 		BindShader_Builtin( BUILTIN_TEXTURE_TEXGEN_VERTEXCOLOR );

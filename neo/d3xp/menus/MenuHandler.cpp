@@ -38,7 +38,7 @@ idMenuHandler::~idMenuHandler
 ================================================
 */
 idMenuHandler::idMenuHandler()
-	: isInitialized(false)
+	: isInitialized( false )
 {
 	scrollingMenu = false;
 	scrollCounter = 0;

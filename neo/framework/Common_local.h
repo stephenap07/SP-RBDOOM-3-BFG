@@ -91,7 +91,7 @@ private:
 	virtual int	Run();
 
 	virtual void Shutdown();
-	
+
 	int				gameTime;
 	int				drawTime;
 	int				threadTime;					// total time : game time + foreground render time
@@ -149,7 +149,7 @@ public:
 	idCommonLocal();
 
 	virtual                    ~idCommonLocal();
-	
+
 	virtual void				Init( int argc, const char* const* argv, const char* cmdline );
 	virtual void				Shutdown();
 	virtual	void				CreateMainMenu();
@@ -706,9 +706,9 @@ private:
 #endif
 	// RB end
 
-	void SetGui(idUserInterface* gui);
+	void SetGui( idUserInterface* gui );
 
-	void HandleMainMenuCommands(const char* menuCommand);
+	void HandleMainMenuCommands( const char* menuCommand );
 
 	idUserInterface* guiLoading = nullptr;
 	idUserInterface* guiActive = nullptr;

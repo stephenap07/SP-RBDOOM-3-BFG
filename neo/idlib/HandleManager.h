@@ -7,9 +7,9 @@ constexpr uint16_t kInvalidHandle = UINT16_MAX;
 class HandleManager
 {
 public:
-	HandleManager(uint16_t aMaxHandles)
-		: m_numHandles(0)
-		, m_maxHandles(aMaxHandles)
+	HandleManager( uint16_t aMaxHandles )
+		: m_numHandles( 0 )
+		, m_maxHandles( aMaxHandles )
 	{
 		reset();
 	}
@@ -20,10 +20,10 @@ public:
 
 	const uint16_t* getHandles() const
 	{
-		return (const uint16_t*)getDensePtr();
+		return ( const uint16_t* )getDensePtr();
 	}
 
-	uint16_t getHandleAt(uint16_t aAt) const
+	uint16_t getHandleAt( uint16_t aAt ) const
 	{
 		return getDensePtr()[aAt];
 	}
@@ -40,7 +40,7 @@ public:
 
 	uint16_t alloc()
 	{
-		if (m_numHandles < m_maxHandles)
+		if( m_numHandles < m_maxHandles )
 		{
 			uint16_t index = m_numHandles;
 			++m_numHandles;
@@ -55,7 +55,7 @@ public:
 		return kInvalidHandle;
 	}
 
-	bool isValid(uint16_t aHandle) const
+	bool isValid( uint16_t aHandle ) const
 	{
 		uint16_t* dense = getDensePtr();
 		uint16_t* sparse = getSparsePtr();
@@ -64,7 +64,7 @@ public:
 		return index < m_numHandles && dense[index] == aHandle;
 	}
 
-	void free(uint16_t aHandle)
+	void free( uint16_t aHandle )
 	{
 		uint16_t* dense = getDensePtr();
 		uint16_t* sparse = getSparsePtr();
@@ -80,7 +80,7 @@ public:
 	{
 		m_numHandles = 0;
 		uint16_t* dense = getDensePtr();
-		for (uint16_t i = 0, num = m_maxHandles; i < num; ++i)
+		for( uint16_t i = 0, num = m_maxHandles; i < num; ++i )
 		{
 			dense[i] = i;
 		}
@@ -91,8 +91,8 @@ private:
 
 	uint16_t* getDensePtr() const
 	{
-		const uint8_t* ptr = reinterpret_cast<const uint8_t*>(this);
-		return (uint16_t*)&ptr[sizeof(HandleManager)];
+		const uint8_t* ptr = reinterpret_cast<const uint8_t*>( this );
+		return ( uint16_t* )&ptr[sizeof( HandleManager )];
 	}
 
 	uint16_t* getSparsePtr() const
@@ -109,7 +109,7 @@ class HandleManagerT : public HandleManager
 {
 public:
 	HandleManagerT()
-	: HandleManager(MaxHandlesT)
+		: HandleManager( MaxHandlesT )
 	{
 	}
 

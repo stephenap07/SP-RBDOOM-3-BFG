@@ -69,6 +69,10 @@ class idEditEntities;
 class idLocationEntity;
 class idMenuHandler_Shell;
 
+// SP Begin
+struct lua_State;
+// SP End
+
 const int MAX_CLIENTS			= MAX_PLAYERS;
 const int MAX_CLIENTS_IN_PVS	= MAX_CLIENTS >> 3;
 const int GENTITYNUM_BITS		= 12;
@@ -89,6 +93,8 @@ void gameError( const char* fmt, ... );
 #include "gamesys/SaveGame.h"
 
 #include "script/Script_Program.h"
+
+#include "lua/ScriptManager.h"
 
 #include "anim/Anim.h"
 
@@ -316,6 +322,10 @@ public:
 
 	idProgram				program;				// currently loaded script and data space
 	idThread* 				frameCommandThread;
+
+	// SP Begin
+	ScriptManager           scriptManager;
+	// SP End
 
 	idClip					clip;					// collision detection
 	idPush					push;					// geometric pushing

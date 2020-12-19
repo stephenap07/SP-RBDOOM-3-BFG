@@ -921,7 +921,7 @@ static void R_CreateImGuiFontImage( idImage* image )
 
 	// Store our identifier
 	//io.Fonts->TexID = ( void* )( intptr_t )image->GetImGuiTextureID();
-	io.Fonts->TexID = (void*)(intptr_t)declManager->FindMaterial("_imguiFont");
+	io.Fonts->TexID = ( void* )( intptr_t )declManager->FindMaterial( "_imguiFont" );
 
 	// Cleanup (don't clear the input data if you want to append new fonts later)
 	//io.Fonts->ClearInputData();

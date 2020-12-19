@@ -39,39 +39,39 @@ class TextBuffer;
 class TextBufferManager
 {
 public:
-	TextBufferManager(FontManager* _fontManager);
+	TextBufferManager( FontManager* _fontManager );
 	~TextBufferManager();
 
-	TextBufferHandle createTextBuffer(uint32_t _type, BufferType::Enum _bufferType);
-	void destroyTextBuffer(TextBufferHandle _handle);
-	void deformSprite(TextBufferHandle _handle, const idMat3& viewAxis);
-	void scale(TextBufferHandle _handle, idVec2 _scale);
-	void submitTextBuffer(TextBufferHandle _handle, int32_t _depth = 0);
+	TextBufferHandle createTextBuffer( uint32_t _type, BufferType::Enum _bufferType );
+	void destroyTextBuffer( TextBufferHandle _handle );
+	void deformSprite( TextBufferHandle _handle, const idMat3& viewAxis );
+	void scale( TextBufferHandle _handle, idVec2 _scale );
+	void submitTextBuffer( TextBufferHandle _handle, int32_t _depth = 0 );
 
-	void setStyle(TextBufferHandle _handle, uint32_t _flags = STYLE_NORMAL);
-	void setTextColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
-	void setBackgroundColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
-	void setGlState(TextBufferHandle _handle, uint64_t _glState);
+	void setStyle( TextBufferHandle _handle, uint32_t _flags = STYLE_NORMAL );
+	void setTextColor( TextBufferHandle _handle, uint32_t _rgba = 0x000000FF );
+	void setBackgroundColor( TextBufferHandle _handle, uint32_t _rgba = 0x000000FF );
+	void setGlState( TextBufferHandle _handle, uint64_t _glState );
 
-	void setOverlineColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
-	void setUnderlineColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
-	void setStrikeThroughColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000FF);
+	void setOverlineColor( TextBufferHandle _handle, uint32_t _rgba = 0x000000FF );
+	void setUnderlineColor( TextBufferHandle _handle, uint32_t _rgba = 0x000000FF );
+	void setStrikeThroughColor( TextBufferHandle _handle, uint32_t _rgba = 0x000000FF );
 
-	void setPenPosition(TextBufferHandle _handle, float _x, float _y);
-	
-	void setScale(TextBufferHandle _handle, float _x, float _y);
+	void setPenPosition( TextBufferHandle _handle, float _x, float _y );
+
+	void setScale( TextBufferHandle _handle, float _x, float _y );
 
 	/// Append an ASCII/utf-8 string to the buffer using current pen position and color.
-	void appendText(TextBufferHandle _handle, FontHandle _fontHandle, const idStr& aString);
+	void appendText( TextBufferHandle _handle, FontHandle _fontHandle, const idStr& aString );
 
 	/// Append a whole face of the atlas cube, mostly used for debugging and visualizing atlas.
-	void appendAtlasFace(TextBufferHandle _handle, uint16_t _faceIndex);
+	void appendAtlasFace( TextBufferHandle _handle, uint16_t _faceIndex );
 
 	/// Clear the text buffer and reset its state (pen/color).
-	void clearTextBuffer(TextBufferHandle _handle);
+	void clearTextBuffer( TextBufferHandle _handle );
 
 	/// Return the rectangular size of the current text buffer (including all its content).
-	TextRectangle getRectangle(TextBufferHandle _handle) const;
+	TextRectangle getRectangle( TextBufferHandle _handle ) const;
 
 private:
 	struct BufferCache

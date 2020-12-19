@@ -291,7 +291,7 @@ void NotifyDisplaySizeChanged( int width, int height )
 			byte* pixels = NULL;
 			io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
 
-			io.Fonts->TexID = (void*)image;
+			io.Fonts->TexID = ( void* )image;
 		}
 	}
 }

@@ -4041,10 +4041,10 @@ void idAnimator::FreeData()
 	}
 
 	jointMods.DeleteContents( true );
-	
-	if (joints)
+
+	if( joints )
 	{
-		Mem_Free16(joints);
+		Mem_Free16( joints );
 	}
 
 	joints = NULL;

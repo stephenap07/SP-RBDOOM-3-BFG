@@ -59,7 +59,7 @@ void idMenuWidget_PDA_UserData::Update()
 		return;
 	}
 
-	if (player->GetInventory().pdas.Num() < 1)
+	if( player->GetInventory().pdas.Num() < 1 )
 	{
 		return;
 	}

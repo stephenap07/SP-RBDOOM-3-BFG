@@ -342,8 +342,8 @@ public:
 
 	// font support
 	virtual class idFont* 	RegisterFont( const char* fontName ) = 0;
-	virtual FontHandle      RegisterFont2(const char* aFontName, int aSize) = 0;
-	virtual void            FreeFont(FontHandle aHandle) = 0;
+	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize ) = 0;
+	virtual void            FreeFont( FontHandle aHandle ) = 0;
 	virtual void			ResetFonts() = 0;
 
 	virtual void			SetColor( const idVec4& rgba ) = 0;
@@ -367,7 +367,7 @@ public:
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE ) = 0;
 
 	virtual void			PrintMemInfo( MemInfo_t* mi ) = 0;
-	
+
 	virtual FontHandle         GetDefaultFontHandle() = 0;
 	virtual TextBufferManager* GetTextBufferManager() = 0;
 	virtual FontManager*       GetFontManager() = 0;
@@ -375,7 +375,7 @@ public:
 	virtual void		   	   DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
 	virtual void			   DrawBigChar( int x, int y, int ch ) = 0;
 	virtual void			   DrawBigStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
-	virtual void			   DrawBigStringExt2(int x, int y, const char* string, const idVec4& setColor, bool forceColor) = 0;
+	virtual void			   DrawBigStringExt2( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
 
 	// dump all 2D drawing so far this frame to the demo file
 	virtual void			WriteDemoPics() = 0;
@@ -425,7 +425,7 @@ public:
 	// then perform all desired rendering, then capture to an image
 	// if the specified physical dimensions are larger than the current cropped region, they will be cut down to fit
 	virtual void			CropRenderSize( int width, int height ) = 0;
-	virtual void            CropRenderSize(int x, int y, int width, int height) = 0;
+	virtual void            CropRenderSize( int x, int y, int width, int height ) = 0;
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false ) = 0;
 	// fixAlpha will set all the alpha channel values to 0xff, which allows screen captures
 	// to use the default tga loading code without having dimmed down areas in many places

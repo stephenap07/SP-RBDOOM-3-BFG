@@ -33,7 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 
 // _D3XP : rename all gameLocal.time to gameLocal.slow.time for merge!
 
-idCVar  testString("testString", "Hello, World!", CVAR_RENDERER, "Render a string to the screen");
+idCVar  testString( "testString", "Hello, World!", CVAR_RENDERER, "Render a string to the screen" );
 
 const int IMPULSE_DELAY = 150;
 /*
@@ -517,7 +517,7 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 			return;
 		}
 
-		if (player->GetInventoryOpen())
+		if( player->GetInventoryOpen() )
 		{
 			player->DrawInventory();
 		}

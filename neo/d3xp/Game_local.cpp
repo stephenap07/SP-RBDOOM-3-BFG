@@ -355,6 +355,10 @@ void idGameLocal::Init()
 	// load default scripts
 	program.Startup( SCRIPT_DEFAULT );
 
+	// SP Begin
+	scriptManager.Init();
+	// SP End
+
 	smokeParticles = new( TAG_PARTICLE ) idSmokeParticles;
 
 	// set up the aas
@@ -426,6 +430,10 @@ void idGameLocal::Shutdown()
 
 	// free the program data
 	program.FreeData();
+
+	// SP Begin
+	scriptManager.Shutdown();
+	// SP end
 
 	// delete the .map file
 	delete mapFile;

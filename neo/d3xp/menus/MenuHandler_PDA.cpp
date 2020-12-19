@@ -693,7 +693,7 @@ void idMenuHandler_PDA::Cleanup()
 	idMenuHandler::Cleanup();
 	for( int index = 0; index < MAX_SCREEN_AREAS; ++index )
 	{
-		if (menuScreens[index])
+		if( menuScreens[index] )
 		{
 			delete menuScreens[index];
 			menuScreens[index] = NULL;

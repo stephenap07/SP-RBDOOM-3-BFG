@@ -1367,9 +1367,9 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		GL_SelectTexture( INTERACTION_TEXUNIT_AMBIENT_CUBE1 );
 		if( viewDef->irradianceImage )
 		{
-			if (!viewDef->irradianceImage->IsLoaded())
+			if( !viewDef->irradianceImage->IsLoaded() )
 			{
-				viewDef->irradianceImage->ActuallyLoadImage(true);
+				viewDef->irradianceImage->ActuallyLoadImage( true );
 			}
 
 			viewDef->irradianceImage->Bind();
@@ -1382,9 +1382,9 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		GL_SelectTexture( INTERACTION_TEXUNIT_SPECULAR_CUBE1 );
 		if( viewDef->radianceImage )
 		{
-			if (!viewDef->radianceImage->IsLoaded())
+			if( !viewDef->radianceImage->IsLoaded() )
 			{
-				viewDef->radianceImage->ActuallyLoadImage(true);
+				viewDef->radianceImage->ActuallyLoadImage( true );
 			}
 
 			viewDef->radianceImage->Bind();
@@ -2089,7 +2089,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		return;
 	}
 
-	if (!drawSurfs)
+	if( !drawSurfs )
 	{
 		return;
 	}
@@ -3914,50 +3914,50 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				continue;
 			}
 
-			if (pStage->stencilStage != nullptr)
+			if( pStage->stencilStage != nullptr )
 			{
-				switch (pStage->stencilStage->comp)
+				switch( pStage->stencilStage->comp )
 				{
-				case STENCIL_COMP_ALWAYS:
-					stageGLState |= GLS_STENCIL_FUNC_ALWAYS;
-					break;
-				case STENCIL_COMP_EQUAL:
-					stageGLState |= GLS_STENCIL_FUNC_EQUAL;
-					break;
+					case STENCIL_COMP_ALWAYS:
+						stageGLState |= GLS_STENCIL_FUNC_ALWAYS;
+						break;
+					case STENCIL_COMP_EQUAL:
+						stageGLState |= GLS_STENCIL_FUNC_EQUAL;
+						break;
 				};
 
-				switch (pStage->stencilStage->pass)
+				switch( pStage->stencilStage->pass )
 				{
-				case STENCIL_OP_REPLACE:
-					stageGLState |= GLS_STENCIL_OP_PASS_REPLACE;
-					break;
-				case STENCIL_OP_KEEP:
-					stageGLState |= GLS_STENCIL_OP_PASS_KEEP;
-					break;
-				case STENCIL_OP_DECRWRAP:
-					stageGLState |= GLS_STENCIL_OP_PASS_DECR_WRAP;
-					break;
+					case STENCIL_OP_REPLACE:
+						stageGLState |= GLS_STENCIL_OP_PASS_REPLACE;
+						break;
+					case STENCIL_OP_KEEP:
+						stageGLState |= GLS_STENCIL_OP_PASS_KEEP;
+						break;
+					case STENCIL_OP_DECRWRAP:
+						stageGLState |= GLS_STENCIL_OP_PASS_DECR_WRAP;
+						break;
 				};
 
-				switch (pStage->stencilStage->zFail)
+				switch( pStage->stencilStage->zFail )
 				{
-				case STENCIL_OP_DECRWRAP:
-					stageGLState |= GLS_STENCIL_OP_ZFAIL_DECR_WRAP;
-					break;
-				case STENCIL_OP_KEEP:
-					stageGLState |= GLS_STENCIL_OP_ZFAIL_KEEP;
-					break;
+					case STENCIL_OP_DECRWRAP:
+						stageGLState |= GLS_STENCIL_OP_ZFAIL_DECR_WRAP;
+						break;
+					case STENCIL_OP_KEEP:
+						stageGLState |= GLS_STENCIL_OP_ZFAIL_KEEP;
+						break;
 				};
 
-				switch (pStage->stencilStage->fail)
+				switch( pStage->stencilStage->fail )
 				{
-				case STENCIL_OP_KEEP:
-					stageGLState |= GLS_STENCIL_OP_FAIL_KEEP;
-					break;
+					case STENCIL_OP_KEEP:
+						stageGLState |= GLS_STENCIL_OP_FAIL_KEEP;
+						break;
 				};
 
-				stageGLState |= GLS_STENCIL_MAKE_REF(pStage->stencilStage->ref)
-							  | GLS_STENCIL_MAKE_MASK(pStage->stencilStage->writeMask);
+				stageGLState |= GLS_STENCIL_MAKE_REF( pStage->stencilStage->ref )
+								| GLS_STENCIL_MAKE_MASK( pStage->stencilStage->writeMask );
 			}
 
 			// see if we are a new-style stage
@@ -4856,7 +4856,7 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef, bool downModulateScreen )
 {
 #if !defined(USE_VULKAN)
-	if( !_viewDef->viewEntitys || _viewDef->is2Dgui)
+	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
 	{
 		// 3D views only
 		return;
@@ -5524,11 +5524,11 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	}
 
 	DrawFlickerBox();
-	
+
 	// RB
 	// Stephen: This submits front-end render calls. This shouldn't be here, I think.
 	//ImGuiHook::Render();
-	
+
 	GL_EndFrame();
 
 	// stop rendering on this thread
@@ -5537,7 +5537,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 	if( r_debugRenderToTexture.GetInteger() == 1 )
 	{
-		common->Printf("3d: %i, 2d: %i, SetBuf: %i, CpyRenders: %i, CpyFrameBuf: %i\n", c_draw3d, c_draw2d, c_setBuffers, c_copyRenders, pc.c_copyFrameBuffer);
+		common->Printf( "3d: %i, 2d: %i, SetBuf: %i, CpyRenders: %i, CpyFrameBuf: %i\n", c_draw3d, c_draw2d, c_setBuffers, c_copyRenders, pc.c_copyFrameBuffer );
 		pc.c_copyFrameBuffer = 0;
 	}
 
@@ -6172,7 +6172,7 @@ void idRenderBackend::PostProcess( const void* data )
 		GL_SelectTexture( 0 );
 		globalImages->smaaInputImage->Bind();
 
-		GL_SelectTexture( 1 ); 
+		GL_SelectTexture( 1 );
 		globalImages->smaaBlendImage->Bind();
 
 		renderProgManager.BindShader_SMAA_NeighborhoodBlending();

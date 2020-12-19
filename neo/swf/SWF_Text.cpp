@@ -51,14 +51,14 @@ void idSWF::DefineFont2( idSWFBitStream& bitstream )
 	memcpy( fontName, bitstream.ReadData( fontNameLength ), fontNameLength );
 	fontName[ fontNameLength ] = 0;
 
-	entry->font->fontID = renderSystem->RegisterFont(fontName);
+	entry->font->fontID = renderSystem->RegisterFont( fontName );
 
 	uint16 numGlyphs = bitstream.ReadU16();
 	entry->font->glyphs.SetNum( numGlyphs );
 
-	if (numGlyphs == 0)
+	if( numGlyphs == 0 )
 	{
-		common->Warning("Invalid font in swf %s", fontName);
+		common->Warning( "Invalid font in swf %s", fontName );
 		return;
 	}
 

@@ -1047,18 +1047,18 @@ LoadHDR
 Loads an HDR file.
 =======================
 */
-static void LoadHDR(const char* filename, unsigned char** pic, int* width, int* height, ID_TIME_T* timestamp)
+static void LoadHDR( const char* filename, unsigned char** pic, int* width, int* height, ID_TIME_T* timestamp )
 {
-	idFile* theFile = fileSystem->OpenFileRead(filename);
+	idFile* theFile = fileSystem->OpenFileRead( filename );
 
-	if (!theFile)
+	if( !theFile )
 	{
 		return;
 	}
 
 	*timestamp = theFile->Timestamp();
 
-	if (!pic)
+	if( !pic )
 	{
 		return;
 	}
@@ -1066,26 +1066,29 @@ static void LoadHDR(const char* filename, unsigned char** pic, int* width, int* 
 	*pic = nullptr;
 
 	stbi_io_callbacks callbacks;
-	
-	callbacks.read = [](void* user, char* data, int size) -> int {
-		idFile* theFile = reinterpret_cast<idFile*>(user);
-		return theFile->Read((void*)data, size);
+
+	callbacks.read = []( void* user, char* data, int size ) -> int
+	{
+		idFile* theFile = reinterpret_cast<idFile*>( user );
+		return theFile->Read( ( void* )data, size );
 	};
-	callbacks.skip = [](void* user, int n) {
-		idFile* theFile = reinterpret_cast<idFile*>(user);
-		theFile->Seek(n, fsOrigin_t::FS_SEEK_SET);
+	callbacks.skip = []( void* user, int n )
+	{
+		idFile* theFile = reinterpret_cast<idFile*>( user );
+		theFile->Seek( n, fsOrigin_t::FS_SEEK_SET );
 	};
-	callbacks.eof = [](void* user) -> int {
-		idFile* theFile = reinterpret_cast<idFile*>(user);
+	callbacks.eof = []( void* user ) -> int
+	{
+		idFile* theFile = reinterpret_cast<idFile*>( user );
 		return theFile->Tell() == fsOrigin_t::FS_SEEK_END;
 	};
 
 	int numChannels = 0;
-	stbi_uc* data = stbi_load_from_callbacks(&callbacks, theFile, width, height, &numChannels, 0);
+	stbi_uc* data = stbi_load_from_callbacks( &callbacks, theFile, width, height, &numChannels, 0 );
 
-	if (data)
+	if( data )
 	{
-		*pic = (unsigned char*)data;
+		*pic = ( unsigned char* )data;
 	}
 }
 // SP end
@@ -1104,7 +1107,7 @@ static imageExtToLoader_t imageLoaders[] =
 	{"png", LoadPNG},
 	{"tga", LoadTGA},
 	{"jpg", LoadJPG},
-    {"hdr", LoadHDR},
+	{"hdr", LoadHDR},
 };
 
 static const int numImageLoaders = sizeof( imageLoaders ) / sizeof( imageLoaders[0] );
@@ -1323,71 +1326,71 @@ bool R_LoadCubeImages( const char* imgName, cubeFiles_t extensions, byte* pics[6
 		*timestamp = 0;
 	}
 
-	if (extensions == CF_SINGLE && cubeMapSize != 0)
+	if( extensions == CF_SINGLE && cubeMapSize != 0 )
 	{
 		ID_TIME_T thisTime;
 		byte* thisPic[1];
 		thisPic[0] = nullptr;
 
-		if (pics)
+		if( pics )
 		{
-			R_LoadImageProgram(imgName, thisPic, &width, &height, &thisTime);
+			R_LoadImageProgram( imgName, thisPic, &width, &height, &thisTime );
 		}
 		else
 		{
 			// load just the timestamps
-			R_LoadImageProgram(imgName, nullptr, &width, &height, &thisTime);
+			R_LoadImageProgram( imgName, nullptr, &width, &height, &thisTime );
 		}
-		
 
-		if (thisTime == FILE_NOT_FOUND_TIMESTAMP)
+
+		if( thisTime == FILE_NOT_FOUND_TIMESTAMP )
 		{
 			return false;
 		}
-		
-		if (timestamp)
+
+		if( timestamp )
 		{
-			if (thisTime > *timestamp)
+			if( thisTime > *timestamp )
 			{
 				*timestamp = thisTime;
 			}
 		}
 
-		if (pics)
+		if( pics )
 		{
-			common->Printf("Got here");
+			common->Printf( "Got here" );
 
 			*outSize = cubeMapSize;
 
-			for (int i = 0; i < 6; i++)
+			for( int i = 0; i < 6; i++ )
 			{
-				pics[i] = R_GenerateCubeMapSideFromSingleImage(thisPic[0], width, height, cubeMapSize, i);
-				switch (i)
+				pics[i] = R_GenerateCubeMapSideFromSingleImage( thisPic[0], width, height, cubeMapSize, i );
+				switch( i )
 				{
-				case 0:	// forward
-					R_RotatePic(pics[i], cubeMapSize);
-					break;
-				case 1:	// back
-					R_RotatePic(pics[i], cubeMapSize);
-					R_HorizontalFlip(pics[i], cubeMapSize, cubeMapSize);
-					R_VerticalFlip(pics[i], cubeMapSize, cubeMapSize);
-					break;
-				case 2:	// left
-					R_VerticalFlip(pics[i], cubeMapSize, cubeMapSize);
-					break;
-				case 3:	// right
-					R_HorizontalFlip(pics[i], cubeMapSize, cubeMapSize);
-					break;
-				case 4:	// up
-					R_RotatePic(pics[i], cubeMapSize);
-					break;
-				case 5: // down
-					R_RotatePic(pics[i], cubeMapSize);
-					break;
+					case 0:	// forward
+						R_RotatePic( pics[i], cubeMapSize );
+						break;
+					case 1:	// back
+						R_RotatePic( pics[i], cubeMapSize );
+						R_HorizontalFlip( pics[i], cubeMapSize, cubeMapSize );
+						R_VerticalFlip( pics[i], cubeMapSize, cubeMapSize );
+						break;
+					case 2:	// left
+						R_VerticalFlip( pics[i], cubeMapSize, cubeMapSize );
+						break;
+					case 3:	// right
+						R_HorizontalFlip( pics[i], cubeMapSize, cubeMapSize );
+						break;
+					case 4:	// up
+						R_RotatePic( pics[i], cubeMapSize );
+						break;
+					case 5: // down
+						R_RotatePic( pics[i], cubeMapSize );
+						break;
 				}
 			}
 
-			R_StaticFree(thisPic[0]);
+			R_StaticFree( thisPic[0] );
 		}
 
 		return true;

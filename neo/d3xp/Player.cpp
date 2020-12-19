@@ -1499,7 +1499,7 @@ idPlayer::idPlayer():
 	pdaVideoMat				= NULL;
 	mpMessages				= NULL;
 
-	inventoryGui                  = uiManager->FindGui("guis/test.gui", true, false, true);
+	inventoryGui                  = uiManager->FindGui( "guis/test.gui", true, false, true );
 	inventoryOpen                 = false;
 	initializedInventoryThisFrame = false;
 
@@ -1769,7 +1769,7 @@ void idPlayer::Init()
 	weapon_pda				= SlotForWeapon( "weapon_pda" );
 	weapon_fists			= SlotForWeapon( "weapon_fists" );
 	weapon_unarmed          = SlotForWeapon( "weapon_unarmed" );
-	weapon_arm2             = SlotForWeapon("weapon_arm2");
+	weapon_arm2             = SlotForWeapon( "weapon_arm2" );
 	weapon_flashlight		= SlotForWeapon( "weapon_flashlight" );
 	weapon_chainsaw			= SlotForWeapon( "weapon_chainsaw" );
 	weapon_bloodstone		= SlotForWeapon( "weapon_bloodstone_passive" );
@@ -1922,7 +1922,7 @@ void idPlayer::Init()
 		SetSkin( skin );
 		renderEntity.shaderParms[6] = 0.0f;
 	}
-	
+
 	/*
 	value = spawnArgs.GetString( "bone_hips", "" );
 	hipJoint = animator.GetJointHandle( value );
@@ -2059,13 +2059,13 @@ void idPlayer::Spawn()
 			hud = hudManager->GetHud();
 		}
 
-		if (inventoryGui != nullptr)
+		if( inventoryGui != nullptr )
 		{
 			sysEvent_t ev;
-			memset(&ev, 0, sizeof(ev));
+			memset( &ev, 0, sizeof( ev ) );
 			ev.evType = SE_NONE;
-			inventoryGui->HandleEvent(&ev, Sys_Milliseconds());
-			inventoryGui->Activate(true, Sys_Milliseconds());
+			inventoryGui->HandleEvent( &ev, Sys_Milliseconds() );
+			inventoryGui->Activate( true, Sys_Milliseconds() );
 		}
 
 		// load cursor
@@ -3659,9 +3659,9 @@ void idPlayer::DrawHUD( idMenuHandler_HUD* _hudManager )
 
 void idPlayer::DrawInventory()
 {
-	if (inventoryGui)
+	if( inventoryGui )
 	{
-		inventoryGui->Redraw(Sys_Milliseconds(), true);
+		inventoryGui->Redraw( Sys_Milliseconds(), true );
 	}
 }
 
@@ -5571,7 +5571,7 @@ idPlayer::Weapon_Combat
 */
 void idPlayer::Weapon_Combat()
 {
-	if (influenceActive || !weaponEnabled || gameLocal.inCinematic || privateCameraView)
+	if( influenceActive || !weaponEnabled || gameLocal.inCinematic || privateCameraView )
 	{
 		return;
 	}
@@ -5887,7 +5887,7 @@ void idPlayer::UpdateWeapon()
 		// gui handling overrides weapon use
 		Weapon_GUI();
 	}
-	else 	if( focusCharacter && ( focusCharacter->health > 0 ) )
+	else if( focusCharacter && ( focusCharacter->health > 0 ) )
 	{
 		Weapon_NPC();
 	}
@@ -6265,9 +6265,9 @@ bool idPlayer::HandleSingleGuiCommand( idEntity* entityGui, idLexer* src )
 		return true;
 	}
 
-	if (token.Icmp("close") == 0)
+	if( token.Icmp( "close" ) == 0 )
 	{
-		if (inventoryOpen)
+		if( inventoryOpen )
 		{
 			ToggleInventory();
 		}
@@ -7284,9 +7284,9 @@ void idPlayer::SetCurrentHeartRate()
 			soundShaderParms_t	parms;
 			memset( &parms, 0, sizeof( parms ) );
 			parms.volume = pct;
-			if (refSound.referenceSound)
+			if( refSound.referenceSound )
 			{
-				refSound.referenceSound->ModifySound(SND_CHANNEL_HEART, &parms);
+				refSound.referenceSound->ModifySound( SND_CHANNEL_HEART, &parms );
 			}
 		}
 
@@ -7494,7 +7494,7 @@ idPlayer::ToggleInventory
 */
 void idPlayer::ToggleInventory()
 {
-	if (inventoryGui)
+	if( inventoryGui )
 	{
 		inventoryOpen = !inventoryOpen;
 	}
@@ -8813,14 +8813,14 @@ bool idPlayer::HandleGuiEvents( const sysEvent_t* ev )
 		handled = pdaMenu->HandleGuiEvent( ev );
 	}
 
-	if (inventoryGui != nullptr && inventoryOpen)
+	if( inventoryGui != nullptr && inventoryOpen )
 	{
-		const char* command = inventoryGui->HandleEvent(ev, Sys_Milliseconds());
+		const char* command = inventoryGui->HandleEvent( ev, Sys_Milliseconds() );
 
-		if (!initializedInventoryThisFrame)
+		if( !initializedInventoryThisFrame )
 		{
 			// Let the player think once before calling the handle gui commands method.
-			HandleGuiCommands(this, command);
+			HandleGuiCommands( this, command );
 		}
 	}
 
@@ -9074,7 +9074,7 @@ void idPlayer::Think()
 	{
 		UpdateWeapon();
 	}
-	
+
 	// TODO(Stephen): Set up the new flashlight
 	//UpdateFlashlight();
 

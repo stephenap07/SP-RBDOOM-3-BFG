@@ -231,7 +231,7 @@ typedef struct
 	byte ref = 0;
 
 	// An 8 bit mask as an 0–255 integer, used when comparing the reference value with the contents of the buffer
-	// (referenceValue & readMask) comparisonFunction (stencilBufferValue & readMask). 
+	// (referenceValue & readMask) comparisonFunction (stencilBufferValue & readMask).
 	byte readMask = 255;
 
 	// An 8 bit mask as an 0–255 integer, used when writing to the buffer.Note that, like other write masks,
@@ -241,13 +241,13 @@ typedef struct
 
 	// Function used to compare the reference value to the current contents of the buffer.
 	stencilComp_t comp = STENCIL_COMP_ALWAYS;
-	
+
 	// What to do with the contents of the buffer if the stencil test(and the depth test) passes.
 	stencilOperation_t pass = STENCIL_OP_KEEP;
-	
+
 	// What to do with the contents of the buffer if the stencil test fails.
 	stencilOperation_t fail = STENCIL_OP_KEEP;
-	
+
 	// What to do with the contents of the buffer if the stencil test passes, but the depth test fails.
 	stencilOperation_t zFail = STENCIL_OP_KEEP;
 } stencilStage_t;
@@ -903,9 +903,9 @@ private:
 	void				ParseVertexParm( idLexer& src, newShaderStage_t* newStage );
 	void				ParseVertexParm2( idLexer& src, newShaderStage_t* newStage );
 	void				ParseFragmentMap( idLexer& src, newShaderStage_t* newStage );
-	void                ParseStencilCompare(const idToken& token, stencilComp_t* stencilComp);
-	void                ParseStencilOperation(const idToken& token, stencilOperation_t* stencilOp);
-	void                ParseStencil(idLexer& src, stencilStage_t* stencilStage);
+	void                ParseStencilCompare( const idToken& token, stencilComp_t* stencilComp );
+	void                ParseStencilOperation( const idToken& token, stencilOperation_t* stencilOp );
+	void                ParseStencil( idLexer& src, stencilStage_t* stencilStage );
 	void				ParseStage( idLexer& src, const textureRepeat_t trpDefault = TR_REPEAT );
 	void				ParseDeform( idLexer& src );
 	void				ParseDecalInfo( idLexer& src );

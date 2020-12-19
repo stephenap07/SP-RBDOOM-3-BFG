@@ -375,24 +375,24 @@ static void R_ImageAdd( byte* data1, int width1, int height1, byte* data2, int w
 // SP begin
 static void R_CombineRgba( byte* data1, int width1, int height1, byte* data2, int width2, int height2, byte* data3, int width3, int height3 )
 {
-	assert(width1 == width2);
+	assert( width1 == width2 );
 	//assert(width2 == width3);
-	assert(height1 == height2);
+	assert( height1 == height2 );
 
-	for (int j = 0; j < 4*height1; j+=4)
+	for( int j = 0; j < 4 * height1; j += 4 )
 	{
-		for (int i = 0; i < 4*width1; i+=4)
+		for( int i = 0; i < 4 * width1; i += 4 )
 		{
-			byte r = ((int)data1[i + j * width1] + (int)data1[1 + i + j * width1] + (int)data1[2 + i + j * width1]) / 255;
+			byte r = ( ( int )data1[i + j * width1] + ( int )data1[1 + i + j * width1] + ( int )data1[2 + i + j * width1] ) / 255;
 
-			byte g = ((int)data2[i + j * width1] + (int)data2[1 + i + j * width1] + (int)data2[2 + i + j * width1]) / 255;
-			
+			byte g = ( ( int )data2[i + j * width1] + ( int )data2[1 + i + j * width1] + ( int )data2[2 + i + j * width1] ) / 255;
+
 			byte b = 255;
 
-			if (data3 &&
-				width1 == width3)
+			if( data3 &&
+					width1 == width3 )
 			{
-				b = ((int)data3[i + j * width1] + (int)data3[1 + i + j * width1] + (int)data3[2 + i + j * width1]) / 255;
+				b = ( ( int )data3[i + j * width1] + ( int )data3[1 + i + j * width1] + ( int )data3[2 + i + j * width1] ) / 255;
 			}
 
 			byte a = 255;
@@ -710,53 +710,53 @@ static bool R_ParseImageProgram_r( idLexer& src, byte** pic, int* width, int* he
 		return true;
 	}
 
-	if (!token.Icmp("combineRgba"))
+	if( !token.Icmp( "combineRgba" ) )
 	{
 		byte* pic2 = nullptr;
 		byte* pic3 = nullptr;
 		int	width2, height2;
 		int width3, height3;
 
-		MatchAndAppendToken(src, "(");
+		MatchAndAppendToken( src, "(" );
 
-		if (!R_ParseImageProgram_r(src, pic, width, height, timestamps, usage))
+		if( !R_ParseImageProgram_r( src, pic, width, height, timestamps, usage ) )
 		{
 			return false;
 		}
 
-		MatchAndAppendToken(src, ",");
+		MatchAndAppendToken( src, "," );
 
-		if (!R_ParseImageProgram_r(src, pic ? &pic2 : NULL, &width2, &height2, timestamps, usage))
+		if( !R_ParseImageProgram_r( src, pic ? &pic2 : NULL, &width2, &height2, timestamps, usage ) )
 		{
-			if (pic)
+			if( pic )
 			{
-				R_StaticFree(*pic);
+				R_StaticFree( *pic );
 				*pic = NULL;
 			}
 			return false;
 		}
 
-		MatchAndAppendToken(src, ",");
+		MatchAndAppendToken( src, "," );
 
-		if (!R_ParseImageProgram_r(src, pic2 ? &pic3 : NULL, &width3, &height3, timestamps, usage))
+		if( !R_ParseImageProgram_r( src, pic2 ? &pic3 : NULL, &width3, &height3, timestamps, usage ) )
 		{
-			if (pic)
+			if( pic )
 			{
-				R_StaticFree(*pic);
+				R_StaticFree( *pic );
 				*pic = NULL;
 			}
 			return false;
 		}
 
 		// process it
-		if (pic)
+		if( pic )
 		{
-			R_CombineRgba(*pic, *width, *height, pic2, width2, height2, pic3, width3, height3);
-			R_StaticFree(pic2);
-			R_StaticFree(pic3);
+			R_CombineRgba( *pic, *width, *height, pic2, width2, height2, pic3, width3, height3 );
+			R_StaticFree( pic2 );
+			R_StaticFree( pic3 );
 		}
 
-		MatchAndAppendToken(src, ")");
+		MatchAndAppendToken( src, ")" );
 		return true;
 	}
 

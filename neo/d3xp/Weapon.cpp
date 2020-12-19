@@ -361,13 +361,13 @@ void idWeapon::Save( idSaveGame* savefile ) const
 	savefile->WriteVec3( pushVelocity );
 
 	// TODO(Stephen): Figure out why weaponDef is null.
-	if (!weaponDef)
+	if( !weaponDef )
 	{
-		savefile->WriteString("");
+		savefile->WriteString( "" );
 	}
 	else
 	{
-		savefile->WriteString(weaponDef->GetName());
+		savefile->WriteString( weaponDef->GetName() );
 	}
 
 	savefile->WriteFloat( meleeDistance );
@@ -4100,7 +4100,7 @@ void idWeapon::Event_LaunchProjectiles( int num_projectiles, float spread, float
 		owner->AddProjectilesFired( num_projectiles );
 
 		float spreadRad = DEG2RAD( spread );
-		
+
 		projectileDict = projectileDef->dict;
 
 		for( i = 0; i < num_projectiles; i++ )

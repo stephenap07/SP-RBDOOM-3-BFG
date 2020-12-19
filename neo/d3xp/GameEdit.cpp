@@ -194,7 +194,6 @@ void idDragEntity::Update( idPlayer* player )
 
 		if( player->usercmd.buttons & BUTTON_ATTACK )
 		{
-
 			gameLocal.clip.TracePoint( trace, viewPoint, viewPoint + viewAxis[0] * MAX_DRAG_TRACE_DISTANCE, ( CONTENTS_SOLID | CONTENTS_RENDERMODEL | CONTENTS_BODY ), player );
 			if( trace.fraction < 1.0f )
 			{
@@ -298,6 +297,10 @@ void idDragEntity::Update( idPlayer* player )
 		cursor->SetAxis( viewAxis );
 
 		cursor->drag.SetDragPosition( cursor->GetPhysics()->GetOrigin() );
+
+		// SP Begin Actually drag the entity
+		drag->SetOrigin( cursor->GetPhysics()->GetOrigin() );
+		// SP End
 
 		renderEntity_t* renderEntity = drag->GetRenderEntity();
 		idAnimator* dragAnimator = drag->GetAnimator();
@@ -486,7 +489,7 @@ bool idEditEntities::SelectEntity( const idVec3& origin, const idVec3& dir, cons
 		return true;
 	}
 	nextSelectTime = gameLocal.time + 300;
-	
+
 	const idVec3 start = origin + dir * 10.0f;
 
 	end = origin + dir * 4096.0f;
@@ -500,7 +503,7 @@ bool idEditEntities::SelectEntity( const idVec3& origin, const idVec3& dir, cons
 			break;
 		}
 	}
-	if (ent)
+	if( ent )
 	{
 		ClearSelectedEntities();
 		if( EntityIsSelectable( ent ) )
@@ -565,7 +568,7 @@ bool idEditEntities::EntityIsSelectable( idEntity* ent, idVec4* color, idStr* te
 {
 	for( int i = 0; i < selectableEntityClasses.Num(); i++ )
 	{
-		if( ent->GetType() == selectableEntityClasses[i].typeInfo)
+		if( ent->GetType() == selectableEntityClasses[i].typeInfo )
 		{
 			if( text )
 			{
@@ -652,7 +655,10 @@ void idEditEntities::DisplayEntities()
 
 			// SP: Hack to edit items
 			sit.typeInfo = &idItem::Type;
-			selectableEntityClasses.Append(sit);
+			selectableEntityClasses.Append( sit );
+
+			sit.typeInfo = &idStaticEntity::Type;
+			selectableEntityClasses.Append( sit );
 
 			break;
 		case 7:

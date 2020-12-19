@@ -120,8 +120,8 @@ void RenderDebug_local::DebugLine( const idVec4& color, const idVec3& start, con
 void RenderDebug_local::SubmitDebugLines()
 {
 	// Each debug line will have 4 vertices.
-	vertCacheHandle_t vertexHandle = vertexCache.AllocVertex( nullptr, 4 * ( _numActiveDebugLine + 1 ) );
-	vertCacheHandle_t indexHandle = vertexCache.AllocIndex( nullptr, 6 * ( _numActiveDebugLine + 1 ) );
+	vertCacheHandle_t vertexHandle = vertexCache.AllocVertex( nullptr, 2 * ( _numActiveDebugLine + 1 ) );
+	vertCacheHandle_t indexHandle = vertexCache.AllocIndex( nullptr, 2 * ( _numActiveDebugLine + 1 ) );
 
 	idDrawVert* vertexPtr = ( idDrawVert* )vertexCache.MappedVertexBuffer( vertexHandle );
 	triIndex_t* indexPointer = ( triIndex_t* )vertexCache.MappedIndexBuffer( indexHandle );
@@ -135,45 +135,17 @@ void RenderDebug_local::SubmitDebugLines()
 	{
 		const auto& line = _debugLine[i];
 
-		// we need the view direction to project the minor axis of the quad
-		// as the view changes
-		idVec3	localView, localTarget;
-		float	modelMatrix[16];
-		R_AxisToModelMatrix( mat3_identity, line.start, modelMatrix );
-		R_GlobalPointToLocal( modelMatrix, tr.viewDef->renderView.vieworg, localView );
-		R_GlobalPointToLocal( modelMatrix, line.end, localTarget );
-
-		idVec3	major = localTarget;
-		idVec3	minor;
-
-		idVec3	mid = 0.5f * localTarget;
-		idVec3	dir = mid - localView;
-		minor.Cross( major, dir );
-		minor.Normalize();
-
-		minor *= ( lineWidth * 0.2f );
-
-		vertexPtr[numVerts + 0].xyz = line.start - minor;
+		vertexPtr[numVerts + 0].xyz = line.start;
 		vertexPtr[numVerts + 0].SetColor( PackColor( line.rgb ) );
 
-		vertexPtr[numVerts + 1].xyz = line.end - minor;
+		vertexPtr[numVerts + 1].xyz = line.end;
 		vertexPtr[numVerts + 1].SetColor( PackColor( line.rgb ) );
 
-		vertexPtr[numVerts + 2].xyz = line.end + minor;
-		vertexPtr[numVerts + 2].SetColor( PackColor( line.rgb ) );
+		indexPointer[numIndexes + 0] = numVerts + 0;
+		indexPointer[numIndexes + 1] = numVerts + 1;
 
-		vertexPtr[numVerts + 3].xyz = line.start + minor;
-		vertexPtr[numVerts + 3].SetColor( PackColor( line.rgb ) );
-
-		indexPointer[numIndexes + 0] = numVerts + 3;
-		indexPointer[numIndexes + 1] = numVerts + 0;
-		indexPointer[numIndexes + 2] = numVerts + 2;
-		indexPointer[numIndexes + 3] = numVerts + 2;
-		indexPointer[numIndexes + 4] = numVerts + 0;
-		indexPointer[numIndexes + 5] = numVerts + 1;
-
-		numVerts += 4;
-		numIndexes += 6;
+		numVerts += 2;
+		numIndexes += 2;
 	}
 
 	// Create the view
@@ -223,7 +195,7 @@ void RenderDebug_local::SubmitDebugLines()
 		drawSurf->frontEndGeo = NULL;
 		drawSurf->space = space;
 		drawSurf->material = shader;
-		drawSurf->extraGLState = GLS_DEPTHFUNC_ALWAYS;
+		drawSurf->extraGLState = GLS_DEPTHFUNC_ALWAYS | GLS_POLYMODE_LINE;
 		drawSurf->scissorRect = tr.viewDef->scissor;
 		drawSurf->sort = shader->GetSort();
 		drawSurf->renderZFail = 0;

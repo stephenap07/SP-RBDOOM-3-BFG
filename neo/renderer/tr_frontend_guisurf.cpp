@@ -157,19 +157,19 @@ static void R_RenderGuiSurf( idUserInterface* gui, const drawSurf_t* drawSurf )
 
 	float guiModelMatrix[16];
 	float modelMatrix[16];
-	
+
 	guiModelMatrix[0 * 4 + 0] = axis[0][0] * ( 1.0f / SCREEN_WIDTH );
 	guiModelMatrix[1 * 4 + 0] = axis[1][0] * ( 1.0f / SCREEN_HEIGHT );
 	guiModelMatrix[2 * 4 + 0] = axis[2][0];
 	guiModelMatrix[3 * 4 + 0] = origin[0];
-	
-	guiModelMatrix[0 * 4 + 1] = axis[0][1] * ( 1.0f / SCREEN_WIDTH);
-	guiModelMatrix[1 * 4 + 1] = axis[1][1] * ( 1.0f / SCREEN_HEIGHT);
+
+	guiModelMatrix[0 * 4 + 1] = axis[0][1] * ( 1.0f / SCREEN_WIDTH );
+	guiModelMatrix[1 * 4 + 1] = axis[1][1] * ( 1.0f / SCREEN_HEIGHT );
 	guiModelMatrix[2 * 4 + 1] = axis[2][1];
 	guiModelMatrix[3 * 4 + 1] = origin[1];
-	
-	guiModelMatrix[0 * 4 + 2] = axis[0][2] * ( 1.0f / SCREEN_WIDTH);
-	guiModelMatrix[1 * 4 + 2] = axis[1][2] * ( 1.0f / SCREEN_HEIGHT);
+
+	guiModelMatrix[0 * 4 + 2] = axis[0][2] * ( 1.0f / SCREEN_WIDTH );
+	guiModelMatrix[1 * 4 + 2] = axis[1][2] * ( 1.0f / SCREEN_HEIGHT );
 
 	guiModelMatrix[2 * 4 + 2] = axis[2][2];
 	guiModelMatrix[3 * 4 + 2] = origin[2];
@@ -208,25 +208,25 @@ void R_AddInGameGuis( const drawSurf_t* const drawSurfs[], const int numDrawSurf
 		idUserInterface* gui = drawSurf->material->GlobalGui();
 
 		int guiNum = drawSurf->material->GetEntityGui() - 1;
-		if (guiNum >= 0 && guiNum < MAX_RENDERENTITY_GUI)
+		if( guiNum >= 0 && guiNum < MAX_RENDERENTITY_GUI )
 		{
-			if (drawSurf->space->entityDef != NULL)
+			if( drawSurf->space->entityDef != NULL )
 			{
 				gui = drawSurf->space->entityDef->parms.gui[guiNum];
 			}
 		}
 
-		if (gui == NULL)
+		if( gui == NULL )
 		{
 			continue;
 		}
 
 		idBounds ndcBounds;
-		if (!R_PreciseCullSurface(drawSurf, ndcBounds))
+		if( !R_PreciseCullSurface( drawSurf, ndcBounds ) )
 		{
 			// did we ever use this to forward an entity color to a gui that didn't set color?
 			//	memcpy( tr.guiShaderParms, shaderParms, sizeof( tr.guiShaderParms ) );
-			R_RenderGuiSurf(gui, drawSurf);
+			R_RenderGuiSurf( gui, drawSurf );
 		}
 	}
 }

@@ -522,7 +522,6 @@ ID_INLINE void idList<_type_, _tag_>::AssureSize( int newSize )
 
 	if( newSize > size )
 	{
-
 		if( granularity == 0 )  	// this is a hack to fix our memset classes
 		{
 			granularity = 16;
@@ -531,9 +530,9 @@ ID_INLINE void idList<_type_, _tag_>::AssureSize( int newSize )
 		newSize += granularity - 1;
 		newSize -= newSize % granularity;
 		Resize( newSize );
-	}
 
-	num = newNum;
+		num = newNum;
+	}
 }
 
 /*

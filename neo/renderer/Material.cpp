@@ -186,9 +186,9 @@ void idMaterial::FreeData()
 				Mem_Free( stages[i].newStage );
 				stages[i].newStage = NULL;
 			}
-			if (stages[i].stencilStage != nullptr)
+			if( stages[i].stencilStage != nullptr )
 			{
-				Mem_Free(stages[i].stencilStage);
+				Mem_Free( stages[i].stencilStage );
 				stages[i].stencilStage = nullptr;
 			}
 		}
@@ -1068,7 +1068,7 @@ void idMaterial::ParseBlend( idLexer& src, shaderStage_t* stage )
 		stage->lighting = SL_SPECULAR;
 		return;
 	}
-	if ( !token.Icmp( "rmaomap" ) )
+	if( !token.Icmp( "rmaomap" ) )
 	{
 		stage->lighting = SL_RMAO;
 		return;
@@ -1235,7 +1235,7 @@ void idMaterial::ParseFragmentMap( idLexer& src, newShaderStage_t* newStage )
 			cubeMap = CF_CAMERA;
 			continue;
 		}
-		if ( !token.Icmp( "cubeMapSingle" ) )
+		if( !token.Icmp( "cubeMapSingle" ) )
 		{
 			cubeMap = CF_SINGLE;
 			continue;
@@ -1306,57 +1306,57 @@ void idMaterial::ParseFragmentMap( idLexer& src, newShaderStage_t* newStage )
 idMaterial::ParseStencilCompare
 ===============
 */
-void idMaterial::ParseStencilCompare(const idToken& token, stencilComp_t* stencilComp)
+void idMaterial::ParseStencilCompare( const idToken& token, stencilComp_t* stencilComp )
 {
-	if (!token.Icmp("Greater"))
+	if( !token.Icmp( "Greater" ) )
 	{
 		*stencilComp = STENCIL_COMP_GREATER;
 		return;
 	}
 
-	if (!token.Icmp("GEqual"))
+	if( !token.Icmp( "GEqual" ) )
 	{
 		*stencilComp = STENCIL_COMP_GEQUAL;
 		return;
 	}
 
-	if (!token.Icmp("Less"))
+	if( !token.Icmp( "Less" ) )
 	{
 		*stencilComp = STENCIL_COMP_LESS;
 		return;
 	}
 
-	if (!token.Icmp("LEqual"))
+	if( !token.Icmp( "LEqual" ) )
 	{
 		*stencilComp = STENCIL_COMP_LEQUAL;
 		return;
 	}
 
-	if (!token.Icmp("Equal"))
+	if( !token.Icmp( "Equal" ) )
 	{
 		*stencilComp = STENCIL_COMP_EQUAL;
 		return;
 	}
 
-	if (!token.Icmp("NotEqual"))
+	if( !token.Icmp( "NotEqual" ) )
 	{
 		*stencilComp = STENCIL_COMP_NOTEQUAL;
 		return;
 	}
 
-	if (!token.Icmp("Always"))
+	if( !token.Icmp( "Always" ) )
 	{
 		*stencilComp = STENCIL_COMP_ALWAYS;
 		return;
 	}
 
-	if (!token.Icmp("Never"))
+	if( !token.Icmp( "Never" ) )
 	{
 		*stencilComp = STENCIL_COMP_NEVER;
 		return;
 	}
 
-	common->Warning("Material %s expected a valid stencil comparison function. Got %s", GetName(), token.c_str());
+	common->Warning( "Material %s expected a valid stencil comparison function. Got %s", GetName(), token.c_str() );
 }
 
 /*
@@ -1364,57 +1364,57 @@ void idMaterial::ParseStencilCompare(const idToken& token, stencilComp_t* stenci
 idMaterial::ParseStencilOperation
 ===============
 */
-void idMaterial::ParseStencilOperation(const idToken& token, stencilOperation_t* stencilOp)
+void idMaterial::ParseStencilOperation( const idToken& token, stencilOperation_t* stencilOp )
 {
-	if (!token.Icmp("Keep"))
+	if( !token.Icmp( "Keep" ) )
 	{
 		*stencilOp = STENCIL_OP_KEEP;
 		return;
 	}
 
-	if (!token.Icmp("Zero"))
+	if( !token.Icmp( "Zero" ) )
 	{
 		*stencilOp = STENCIL_OP_ZERO;
 		return;
 	}
 
-	if (!token.Icmp("Replace"))
+	if( !token.Icmp( "Replace" ) )
 	{
 		*stencilOp = STENCIL_OP_REPLACE;
 		return;
 	}
 
-	if (!token.Icmp("IncrSat"))
+	if( !token.Icmp( "IncrSat" ) )
 	{
 		*stencilOp = STENCIL_OP_INCRSAT;
 		return;
 	}
 
-	if (!token.Icmp("DecrSat"))
+	if( !token.Icmp( "DecrSat" ) )
 	{
 		*stencilOp = STENCIL_OP_DECRSAT;
 		return;
 	}
 
-	if (!token.Icmp("Invert"))
+	if( !token.Icmp( "Invert" ) )
 	{
 		*stencilOp = STENCIL_OP_INVERT;
 		return;
 	}
 
-	if (!token.Icmp("IncrWrap"))
+	if( !token.Icmp( "IncrWrap" ) )
 	{
 		*stencilOp = STENCIL_OP_INCRWRAP;
 		return;
 	}
 
-	if (!token.Icmp("DecrWrap"))
+	if( !token.Icmp( "DecrWrap" ) )
 	{
 		*stencilOp = STENCIL_OP_DECRWRAP;
 		return;
 	}
 
-	common->Warning("Material %s expected a valid stencil operation function. Got %s", GetName(), token.c_str());
+	common->Warning( "Material %s expected a valid stencil operation function. Got %s", GetName(), token.c_str() );
 }
 
 /*
@@ -1422,47 +1422,47 @@ void idMaterial::ParseStencilOperation(const idToken& token, stencilOperation_t*
 idMaterial::ParseStencil
 ===============
 */
-void idMaterial::ParseStencil(idLexer& src, stencilStage_t* stencilStage)
+void idMaterial::ParseStencil( idLexer& src, stencilStage_t* stencilStage )
 {
 	idToken	token;
-	src.ReadToken(&token);
-	if (token.Icmp("{"))
+	src.ReadToken( &token );
+	if( token.Icmp( "{" ) )
 	{
-		common->Warning("Material %s Missing { after stencil", GetName());
+		common->Warning( "Material %s Missing { after stencil", GetName() );
 		return;
 	}
 
-	while (1)
+	while( 1 )
 	{
-		if (TestMaterialFlag(MF_DEFAULTED))  	// we have a parse error
+		if( TestMaterialFlag( MF_DEFAULTED ) )  	// we have a parse error
 		{
-			return;
-		}
-		
-		if (!src.ExpectAnyToken(&token))
-		{
-			SetMaterialFlag(MF_DEFAULTED);
 			return;
 		}
 
-		if (!token.Icmp("}"))
+		if( !src.ExpectAnyToken( &token ) )
+		{
+			SetMaterialFlag( MF_DEFAULTED );
+			return;
+		}
+
+		if( !token.Icmp( "}" ) )
 		{
 			break;
 		}
 
-		if (!token.Icmp("Ref"))
+		if( !token.Icmp( "Ref" ) )
 		{
-			src.ReadTokenOnLine(&token);
+			src.ReadTokenOnLine( &token );
 
-			if (!token.IsNumeric())
+			if( !token.IsNumeric() )
 			{
-				common->Warning("Material %s expected number for stencil ref value. Got %s", GetName(), token.c_str());
+				common->Warning( "Material %s expected number for stencil ref value. Got %s", GetName(), token.c_str() );
 				continue;
 			}
-			
-			if (token.GetIntValue() > 255 || token.GetIntValue() < 0)
+
+			if( token.GetIntValue() > 255 || token.GetIntValue() < 0 )
 			{
-				common->Warning("Material %s expected stencil ref value between 0 and 255. Got %s", GetName(), token.c_str());
+				common->Warning( "Material %s expected stencil ref value between 0 and 255. Got %s", GetName(), token.c_str() );
 				continue;
 			}
 
@@ -1470,35 +1470,35 @@ void idMaterial::ParseStencil(idLexer& src, stencilStage_t* stencilStage)
 			continue;
 		}
 
-		if (!token.Icmp("Comp"))
+		if( !token.Icmp( "Comp" ) )
 		{
-			src.ReadTokenOnLine(&token);
-			ParseStencilCompare(token, &stencilStage->comp);
+			src.ReadTokenOnLine( &token );
+			ParseStencilCompare( token, &stencilStage->comp );
 			continue;
 		}
 
-		if (!token.Icmp("Pass"))
+		if( !token.Icmp( "Pass" ) )
 		{
-			src.ReadTokenOnLine(&token);
-			ParseStencilOperation(token, &stencilStage->pass);
+			src.ReadTokenOnLine( &token );
+			ParseStencilOperation( token, &stencilStage->pass );
 			continue;
 		}
 
-		if (!token.Icmp("Fail"))
+		if( !token.Icmp( "Fail" ) )
 		{
-			src.ReadTokenOnLine(&token);
-			ParseStencilOperation(token, &stencilStage->fail);
-			continue; 
-		}
-
-		if (!token.Icmp("ZFail"))
-		{
-			src.ReadTokenOnLine(&token);
-			ParseStencilOperation(token, &stencilStage->zFail);
+			src.ReadTokenOnLine( &token );
+			ParseStencilOperation( token, &stencilStage->fail );
 			continue;
 		}
 
-		common->Warning("Material %s expected a valid stencil keyword. Got %s.", GetName(), token.c_str());
+		if( !token.Icmp( "ZFail" ) )
+		{
+			src.ReadTokenOnLine( &token );
+			ParseStencilOperation( token, &stencilStage->zFail );
+			continue;
+		}
+
+		common->Warning( "Material %s expected a valid stencil keyword. Got %s.", GetName(), token.c_str() );
 	}
 }
 
@@ -1729,16 +1729,16 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 			continue;
 		}
 
-		if (!token.Icmp("cubeMapSingle"))
+		if( !token.Icmp( "cubeMapSingle" ) )
 		{
-			str = R_ParsePastImageProgram(src);
-			idStr::Copynz(imageName, str, sizeof(imageName));
+			str = R_ParsePastImageProgram( src );
+			idStr::Copynz( imageName, str, sizeof( imageName ) );
 			cubeMap = CF_SINGLE;
 			td = TD_HIGHQUALITY_CUBE;
 			continue;
 		}
 
-		if (!token.Icmp("cubeMapSize"))
+		if( !token.Icmp( "cubeMapSize" ) )
 		{
 			cubeMapSize = src.ParseInt();
 			continue;
@@ -2116,10 +2116,10 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 		}
 
 		// SP Begin
-		if (!token.Icmp("stencil"))
+		if( !token.Icmp( "stencil" ) )
 		{
-			ParseStencil(src, &stencilStage);
-			ss->stencilStage = (stencilStage_t*)Mem_Alloc(sizeof(stencilStage_t), TAG_MATERIAL);
+			ParseStencil( src, &stencilStage );
+			ss->stencilStage = ( stencilStage_t* )Mem_Alloc( sizeof( stencilStage_t ), TAG_MATERIAL );
 			*ss->stencilStage = stencilStage;
 			continue;
 		}
@@ -2225,8 +2225,8 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 		ts->image = globalImages->defaultImage;
 	}
 
-	if (ts->image &&
-		ts->image->GetOpts().textureType == TT_CUBIC)
+	if( ts->image &&
+			ts->image->GetOpts().textureType == TT_CUBIC )
 	{
 		ts->isCubeMap = true;
 	}
@@ -2366,7 +2366,7 @@ void idMaterial::AddImplicitStages( const textureRepeat_t trpDefault /* = TR_REP
 			hasDiffuse = true;
 		}
 		if( pd->parseStages[i].lighting == SL_SPECULAR ||
-			pd->parseStages[i].lighting == SL_RMAO)
+				pd->parseStages[i].lighting == SL_RMAO )
 		{
 			hasSpecular = true;
 		}
@@ -2666,7 +2666,7 @@ void idMaterial::ParseMaterial( idLexer& src )
 			continue;
 		}
 		// direct portal
-		else if ( !token.Icmp("directPortal") )
+		else if( !token.Icmp( "directPortal" ) )
 		{
 			sort = SS_SUBVIEW;
 			coverage = MC_OPAQUE;

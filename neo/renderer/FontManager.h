@@ -91,11 +91,11 @@ class FontManager
 public:
 	/// Create the font manager using an external cube atlas (doesn't take
 	/// ownership of the atlas).
-	FontManager(Atlas* _atlas);
+	FontManager( Atlas* _atlas );
 
 	/// Create the font manager and create the texture cube as BGRA8 with
 	/// linear filtering.
-	FontManager(uint16_t _textureSideWidth = 512);
+	FontManager( uint16_t _textureSideWidth = 512 );
 
 	~FontManager();
 
@@ -111,38 +111,38 @@ public:
 	/// thus can be freed or reused after this call.
 	///
 	/// @return invalid handle if the loading fail
-	TrueTypeHandle createTtf(const uint8_t* _buffer, uint32_t _size);
+	TrueTypeHandle createTtf( const uint8_t* _buffer, uint32_t _size );
 
 	/// Unload a TrueType font (free font memory) but keep loaded glyphs.
-	void destroyTtf(TrueTypeHandle _handle);
+	void destroyTtf( TrueTypeHandle _handle );
 
 	/// Return a font whose height is a fixed pixel size.
-	FontHandle createFontByPixelSize(TrueTypeHandle _handle, uint32_t _typefaceIndex, uint32_t _pixelSize, uint32_t _fontType = FONT_TYPE_ALPHA);
+	FontHandle createFontByPixelSize( TrueTypeHandle _handle, uint32_t _typefaceIndex, uint32_t _pixelSize, uint32_t _fontType = FONT_TYPE_ALPHA );
 
 	/// Return a scaled child font whose height is a fixed pixel size.
-	FontHandle createScaledFontToPixelSize(FontHandle _baseFontHandle, uint32_t _pixelSize);
+	FontHandle createScaledFontToPixelSize( FontHandle _baseFontHandle, uint32_t _pixelSize );
 
 	/// destroy a font (truetype or baked)
-	void destroyFont(FontHandle _handle);
+	void destroyFont( FontHandle _handle );
 
 	/// Preload a set of glyphs from a TrueType file.
 	///
 	/// @return True if every glyph could be preloaded, false otherwise if
 	///   the Font is a baked font, this only do validation on the characters.
-	bool preloadGlyph(FontHandle _handle, const wchar_t* _string);
+	bool preloadGlyph( FontHandle _handle, const wchar_t* _string );
 
 	/// Preload a single glyph, return true on success.
-	bool preloadGlyph(FontHandle _handle, CodePoint _character);
+	bool preloadGlyph( FontHandle _handle, CodePoint _character );
 
 	/// Return the font descriptor of a font.
 	///
 	/// @remark the handle is required to be valid
-	const FontInfo& getFontInfo(FontHandle _handle) const;
+	const FontInfo& getFontInfo( FontHandle _handle ) const;
 
 	/// Return the rendering informations about the glyph region. Load the
 	/// glyph from a TrueType font if possible
 	///
-	const GlyphInfo* getGlyphInfo(FontHandle _handle, CodePoint _codePoint);
+	const GlyphInfo* getGlyphInfo( FontHandle _handle, CodePoint _codePoint );
 
 	const GlyphInfo& getBlackGlyph() const
 	{
@@ -157,7 +157,7 @@ private:
 		uint32_t bufferSize;
 	};
 
-	bool addBitmap(GlyphInfo& _glyphInfo, const uint8_t* _data);
+	bool addBitmap( GlyphInfo& _glyphInfo, const uint8_t* _data );
 
 	bool m_ownAtlas;
 	Atlas* m_atlas;

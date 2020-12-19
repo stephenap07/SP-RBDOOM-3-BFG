@@ -817,8 +817,8 @@ public:
 	virtual bool			AreAutomaticBackgroundSwapsRunning( autoRenderIconType_t* usingAlternateIcon = NULL ) const;
 
 	virtual idFont* 		RegisterFont( const char* fontName );
-	virtual FontHandle      RegisterFont2(const char* aFontName, int aSize);
-	virtual void            FreeFont(FontHandle aHandle);
+	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize );
+	virtual void            FreeFont( FontHandle aHandle );
 	virtual void			ResetFonts();
 	virtual void			PrintMemInfo( MemInfo_t* mi );
 
@@ -830,15 +830,24 @@ public:
 	virtual void			DrawStretchPic( const idVec4& topLeft, const idVec4& topRight, const idVec4& bottomRight, const idVec4& bottomLeft, const idMaterial* material, float z = 0.0f );
 	virtual void			DrawStretchTri( const idVec2& p1, const idVec2& p2, const idVec2& p3, const idVec2& t1, const idVec2& t2, const idVec2& t3, const idMaterial* material );
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE );
-	
-	virtual FontHandle         GetDefaultFontHandle() { return defaultFont; }
-	virtual TextBufferManager* GetTextBufferManager() { return textBufferManager; }
-	virtual FontManager*       GetFontManager() { return fontManager; }
+
+	virtual FontHandle         GetDefaultFontHandle()
+	{
+		return defaultFont;
+	}
+	virtual TextBufferManager* GetTextBufferManager()
+	{
+		return textBufferManager;
+	}
+	virtual FontManager*       GetFontManager()
+	{
+		return fontManager;
+	}
 	virtual void			   DrawSmallChar( int x, int y, int ch );
 	virtual void			   DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 	virtual void			   DrawBigChar( int x, int y, int ch );
 	virtual void			   DrawBigStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
-	virtual void			   DrawBigStringExt2(int x, int y, const char* string, const idVec4& setColor, bool forceColor);
+	virtual void			   DrawBigStringExt2( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 
 	virtual void			WriteDemoPics();
 	virtual void			WriteEndFrame();
@@ -851,7 +860,7 @@ public:
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
 	virtual void			TakeScreenshot( int width, int height, const char* fileName, int downSample, renderView_t* ref, int exten );
 	virtual void			CropRenderSize( int width, int height );
-	virtual void            CropRenderSize(int x, int y, int width, int height);
+	virtual void            CropRenderSize( int x, int y, int width, int height );
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false );
 	virtual void			CaptureRenderToFile( const char* fileName, bool fixAlpha );
 	virtual void			UnCrop();
@@ -943,7 +952,7 @@ public:
 	};
 
 	idList<NewFontData, TAG_FONT> newFonts;
-	
+
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
 
 	srfTriangles_t* 		unitSquareTriangles;

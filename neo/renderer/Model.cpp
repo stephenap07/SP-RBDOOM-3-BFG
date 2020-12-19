@@ -1313,7 +1313,7 @@ typedef struct matchVert_s
 bool idRenderModelStatic::ConvertDAEToModelSurfaces( const ColladaParser* dae )
 {
 	Collada::Node**		object;
-	Collada::Mesh**		mesh;
+	//Collada::Mesh**		mesh;
 	Collada::MeshInstance* meshInstance;
 //	Collada::Material**	material;
 	const idMaterial*	im1, *im2;
@@ -1391,6 +1391,8 @@ bool idRenderModelStatic::ConvertDAEToModelSurfaces( const ColladaParser* dae )
 	}
 	else
 	{
+		int surfIndex = 0;
+
 		// search for material matches
 		for( i = 0 ; i < dae->mNodeLibrary.Num() ; i++ )
 		{
@@ -1401,44 +1403,65 @@ bool idRenderModelStatic::ConvertDAEToModelSurfaces( const ColladaParser* dae )
 				continue;
 			}
 
-			meshInstance = &( *object )->mMeshes[0]; //mesh = &object->mesh;
-
-			idStr matName = "_default";
-			if( meshInstance->mMaterials.Num() > 0 )
+			for( int meshIndex = 0; meshIndex < ( *object )->mMeshes.Num(); meshIndex++ )
 			{
-				matName = meshInstance->mMaterials[ 0 ]; //material = ase->materials[object->materialRef];
+				meshInstance = &( *object )->mMeshes[meshIndex];
 
-				matName.Replace( "_", "/" );
-				matName.StripTrailingOnce( "-material" );
-			}
-
-			im1 = declManager->FindMaterial( matName );
-			if( im1->IsDiscrete() )
-			{
-				// flares, autosprites, etc
-				j = this->NumSurfaces();
-			}
-			else
-			{
-				for( j = 0 ; j < this->NumSurfaces() ; j++ )
+				Collada::Mesh** mesh( nullptr );
+				if( !dae->mMeshLibrary.Get( meshInstance->mMeshOrController, &mesh ) )
 				{
-					modelSurf = &this->surfaces[j];
-					im2 = modelSurf->shader;
-					if( im1 == im2 )
-					{
-						// merge this
-						mergeTo[i] = j;
-						break;
-					}
+					common->FatalError( "Cannot find the specified material in the material library for mesh %s", meshInstance->mMeshOrController );
 				}
-			}
-			if( j == this->NumSurfaces() )
-			{
-				// didn't merge
-				mergeTo[i] = j;
-				surf.shader = im1;
-				surf.id = this->NumSurfaces();
-				this->AddSurface( surf );
+
+				for( int subMeshIndex = 0; subMeshIndex < ( *mesh )->mSubMeshes.Num(); subMeshIndex++ )
+				{
+					const Collada::SubMesh& subMesh = ( *mesh )->mSubMeshes[subMeshIndex];
+
+					if( subMesh.mNumFaces == 0 )
+					{
+						continue;
+					}
+
+					idStr matName = "_default";
+					if( subMesh.mMaterial.Size() > 0 )
+					{
+						matName = subMesh.mMaterial; //material = ase->materials[object->materialRef];
+						matName.Replace( "_", "/" );
+						matName.StripTrailingOnce( "-material" );
+					}
+
+					im1 = declManager->FindMaterial( matName );
+					if( im1->IsDiscrete() )
+					{
+						// flares, autosprites, etc
+						j = this->NumSurfaces();
+					}
+					else
+					{
+						for( j = 0; j < this->NumSurfaces(); j++ )
+						{
+							modelSurf = &this->surfaces[j];
+							im2 = modelSurf->shader;
+							if( im1 == im2 )
+							{
+								// merge this
+								mergeTo[surfIndex] = j;
+								break;
+							}
+						}
+					}
+
+					if( j == this->NumSurfaces() )
+					{
+						// didn't merge
+						mergeTo[surfIndex] = j;
+						surf.shader = im1;
+						surf.id = this->NumSurfaces();
+						this->AddSurface( surf );
+					}
+
+					surfIndex++;
+				}
 			}
 		}
 	}
@@ -1449,353 +1472,370 @@ bool idRenderModelStatic::ConvertDAEToModelSurfaces( const ColladaParser* dae )
 	// build the surfaces
 	for( objectNum = 0; objectNum < dae->mNodeLibrary.Num(); objectNum++ )
 	{
-		object = ( dae->mNodeLibrary.GetIndex( objectNum ) ); //object = ase->objects[objectNum];
+		object = dae->mNodeLibrary.GetIndex( objectNum );
 
 		if( ( *object )->mMeshes.Num() <= 0 )
 		{
 			continue;
 		}
 
-		meshInstance = &( *object )->mMeshes[0]; //mesh = &object->mesh;
+		meshInstance = &( *object )->mMeshes[0];
 
-		idStr matName = "_default";
-#if 0
-		if( meshInstance->mMaterials.Num() )
+		int vertexStart = 0;
+		int faceStart = 0;
+
+		int modelSurfIndex = 0;
+		for( int meshIndex = 0; meshIndex < ( *object )->mMeshes.Num(); meshIndex++ )
 		{
-			const Collada::SemanticMappingTable* mappingTable = meshInstance->mMaterials.GetIndex( 0 );
-			idStr materialId = mappingTable->mMatName;
+			meshInstance = &( *object )->mMeshes[meshIndex];
 
-			if( dae->mMaterialLibrary.Get( materialId, &material ) )
+			Collada::Mesh** mesh( nullptr );
+			if( !dae->mMeshLibrary.Get( meshInstance->mMeshOrController, &mesh ) )
 			{
-				matName = ( *material )->mEffect;
+				common->FatalError( "Cannot find the specified material in the material library for mesh %s", meshInstance->mMeshOrController );
 			}
-		}
-#else
-		if( meshInstance->mMaterials.Num() > 0 )
-		{
-			matName = meshInstance->mMaterials[ 0 ]; //material = ase->materials[object->materialRef];
 
-			matName.Replace( "_", "/" );
-			matName.StripTrailingOnce( "-material" );
-		}
-
-#endif
-		im1 = declManager->FindMaterial( matName );
-
-		// It seems like the tools our artists are using often generate
-		// verts and texcoords slightly separated that should be merged
-		// note that we really should combine the surfaces with common materials
-		// before doing this operation, because we can miss a slop combination
-		// if they are in different surfaces
-
-		idStr meshId = ( meshInstance )->mMeshOrController;
-		dae->mMeshLibrary.Get( meshId, &mesh );
-
-		bool normalsParsed = ( * mesh )->mNormals.Num() > 0; //mesh->normalsParsed;
-
-		// completely ignore any explict normals on surfaces with a renderbump command
-		// which will guarantee the best contours and least vertexes.
-		const char* rb = im1->GetRenderBump();
-		if( rb && rb[0] )
-		{
-			normalsParsed = false;
-		}
-
-
-		// TODO calculate nodeTransforms recursively using the scene hierarchy
-
-		// transform vertex positions and normals
-		idMat4 nodeTransform = dae->CalculateResultTransform( ( *object )->mTransforms );
-
-		// reset origin to zero for root node
-		if( objectNum == 0 )
-		{
-			nodeTransform[0][3] = 0;
-			nodeTransform[1][3] = 0;
-			nodeTransform[2][3] = 0;
-		}
-
-
-		for( j = 0; j < ( *mesh )->mPositions.Num(); j++ )
-		{
-			const idVec3& p = ( *mesh )->mPositions[j];
-
-			( *mesh )->mPositions[ j ] = nodeTransform * p;
-		}
-
-		for( j = 0; j < ( *mesh )->mNormals.Num(); j++ )
-		{
-			const idVec3& n = ( *mesh )->mNormals[j];
-
-			idVec4 n2( n.x, n.y, n.z, 0 );
-			n2 = nodeTransform * n2;
-			n2.Normalize();
-
-			( *mesh )->mNormals[ j ] = n2.ToVec3();
-		}
-
-
-		vRemap = ( int* )R_StaticAlloc( ( *mesh )->mPositions.Num() * sizeof( vRemap[0] ) );
-
-#if 0
-		for( j = 0; j < ( *mesh )->mPositions.Num(); j++ )
-		{
-			vRemap[j] = j;
-		}
-#else
-		if( fastLoad )
-		{
-			// renderbump doesn't care about vertex count
-			for( j = 0; j < ( *mesh )->mPositions.Num(); j++ )
+			for( int subMeshIndex = 0; subMeshIndex < ( *mesh )->mSubMeshes.Num(); subMeshIndex++ )
 			{
-				vRemap[j] = j;
-			}
-		}
-		else
-		{
-			float vertexEpsilon = r_slopVertex.GetFloat();
-			float expand = 2 * 32 * vertexEpsilon;
-			idVec3 mins, maxs;
+				const Collada::SubMesh& subMesh = ( *mesh )->mSubMeshes[subMeshIndex];
 
-			SIMDProcessor->MinMax( mins, maxs, &( *mesh )->mPositions[0], ( *mesh )->mPositions.Num() );
-			mins -= idVec3( expand, expand, expand );
-			maxs += idVec3( expand, expand, expand );
-			vertexSubset.Init( mins, maxs, 32, 1024 );
-			for( j = 0; j < ( *mesh )->mPositions.Num(); j++ )
-			{
-				vRemap[j] = vertexSubset.FindVector( &( *mesh )->mPositions[0], j, vertexEpsilon );
-			}
-		}
-#endif
-
-		tvRemap = ( int* )R_StaticAlloc( ( *mesh )->mTexCoords.Num() * sizeof( tvRemap[0] ) );
-
-#if 0
-		for( j = 0; j < ( *mesh )->mTexCoords.Num(); j++ )
-		{
-			tvRemap[j] = j;
-		}
-#else
-		if( fastLoad )
-		{
-			// renderbump doesn't care about vertex count
-			for( j = 0; j < ( *mesh )->mTexCoords.Num(); j++ )
-			{
-				tvRemap[j] = j;
-			}
-		}
-		else
-		{
-			float texCoordEpsilon = r_slopTexCoord.GetFloat();
-			float expand = 2 * 32 * texCoordEpsilon;
-			idVec2 mins, maxs;
-
-			SIMDProcessor->MinMax( mins, maxs, &( *mesh )->mTexCoords[0], ( *mesh )->mTexCoords.Num() );
-			mins -= idVec2( expand, expand );
-			maxs += idVec2( expand, expand );
-			texCoordSubset.Init( mins, maxs, 32, 1024 );
-			for( j = 0; j < ( *mesh )->mTexCoords.Num(); j++ )
-			{
-				tvRemap[j] = texCoordSubset.FindVector( &( *mesh )->mTexCoords[0], j, texCoordEpsilon );
-			}
-		}
-#endif
-
-		// we need to find out how many unique vertex / texcoord combinations
-		// there are, because ASE tracks them separately but we need them unified
-
-		// the maximum possible number of combined vertexes is the number of indexes
-		mvTable = ( matchVert_t* )R_ClearedStaticAlloc( ( *mesh )->mFacePosIndices.Num() * sizeof( mvTable[0] ) );
-
-		// we will have a hash chain based on the xyz values
-		mvHash = ( matchVert_t** )R_ClearedStaticAlloc( ( *mesh )->mPositions.Num() * sizeof( mvHash[0] ) );
-
-		// allocate triangle surface
-		tri = R_AllocStaticTriSurf();
-		tri->numVerts = 0;
-		tri->numIndexes = 0;
-		R_AllocStaticTriSurfIndexes( tri, ( *mesh )->mFacePosIndices.Num() ); //mesh->numFaces * 3 );
-		tri->generateNormals = !normalsParsed;
-
-		// init default normal, color and tex coord index
-		normal.Zero();
-		color = identityColor;
-		tv = 0;
-
-		// find all the unique combinations
-		float normalEpsilon = 1.0f - r_slopNormal.GetFloat();
-
-		for( j = 0; j < ( ( *mesh )->mFacePosIndices.Num() / 3 ); j++ )
-			//for( j = 0; j < ( *mesh )->mFacePosIndices.Num(); j++ )
-		{
-			// construct triangles in reverse order
-			for( k = 2; k >= 0; k-- )
-				//for( k = 0; k < 3; k++ )
-			{
-				//v = mesh->faces[j].vertexNum[k];
-
-				//v = ( *mesh )->mFacePosIndices[j];
-				index = j * 3 + k;
-
-				if( index < 0 || index >= ( *mesh )->mPositions.Num() )
+				if( subMesh.mNumFaces == 0 )
 				{
-					common->Error( "ConvertDAEToModelSurfaces: bad vertex index in DAE file %s", name.c_str() );
+					continue;
 				}
 
-				// collapse the position if it was slightly offset
-				v = vRemap[ index ];
+				idStr matName = "_default";
+				if( subMesh.mMaterial.Size() > 0 )
+				{
+					matName = subMesh.mMaterial;
+					matName.Replace( "_", "/" );
+					matName.StripTrailingOnce( "-material" );
+				}
+
+				im1 = declManager->FindMaterial( matName );
+
+				// It seems like the tools our artists are using often generate
+				// verts and texcoords slightly separated that should be merged
+				// note that we really should combine the surfaces with common materials
+				// before doing this operation, because we can miss a slop combination
+				// if they are in different surfaces
+
+				bool normalsParsed = ( *mesh )->mNormals.Num() > 0;
+
+				// completely ignore any explict normals on surfaces with a renderbump command
+				// which will guarantee the best contours and least vertexes.
+				const char* rb = im1->GetRenderBump();
+				if( rb && rb[0] )
+				{
+					normalsParsed = false;
+				}
+
+				// TODO calculate nodeTransforms recursively using the scene hierarchy
+
+				// transform vertex positions and normals
+				idMat4 nodeTransform = dae->CalculateResultTransform( ( *object )->mTransforms );
+
+				// reset origin to zero for root node
+				if( objectNum == 0 )
+				{
+					nodeTransform[0][3] = 0;
+					nodeTransform[1][3] = 0;
+					nodeTransform[2][3] = 0;
+				}
+
+				int numVertexes = 0;
+				for( int f = faceStart; f < ( faceStart + subMesh.mNumFaces ); f++ )
+				{
+					numVertexes += ( *mesh )->mFaceSize[f];
+				}
+
+				const int endVertex = vertexStart + numVertexes;
+
+				for( j = vertexStart; j < endVertex; j++ )
+				{
+					const idVec3& p = ( *mesh )->mPositions[j];
+
+					( *mesh )->mPositions[j] = nodeTransform * p;
+				}
+
+				// TODO(Stephen): No guarantee that the number of normals matches the number of vertexes.
+				for( j = vertexStart; j < endVertex; j++ )
+				{
+					const idVec3& n = ( *mesh )->mNormals[j];
+
+					idVec4 n2( n.x, n.y, n.z, 0 );
+					n2 = nodeTransform * n2;
+					n2.Normalize();
+
+					( *mesh )->mNormals[j] = n2.ToVec3();
+				}
+
+
+				vRemap = ( int* )R_StaticAlloc( numVertexes * sizeof( vRemap[0] ) );
+
+#if 0
+				for( j = 0; j < ( *mesh )->mPositions.Num(); j++ )
+				{
+					vRemap[j] = j;
+				}
+#else
+				if( fastLoad )
+				{
+					// renderbump doesn't care about vertex count
+					for( j = 0; j < numVertexes; j++ )
+					{
+						vRemap[j] = j;
+					}
+				}
+				else
+				{
+					float vertexEpsilon = r_slopVertex.GetFloat();
+					float expand = 2 * 32 * vertexEpsilon;
+					idVec3 mins, maxs;
+
+					SIMDProcessor->MinMax( mins, maxs, &( *mesh )->mPositions[vertexStart], numVertexes );
+					mins -= idVec3( expand, expand, expand );
+					maxs += idVec3( expand, expand, expand );
+					vertexSubset.Init( mins, maxs, 32, 1024 );
+					for( j = 0; j < numVertexes; j++ )
+					{
+						vRemap[j] = vertexSubset.FindVector( &( *mesh )->mPositions[0], j + vertexStart, vertexEpsilon ) - vertexStart;
+					}
+				}
+#endif
+
+				// TODO(Stephen): Also no guarantee the number of texture coordinates matches the number of vertexes.
+				tvRemap = ( int* )R_StaticAlloc( numVertexes * sizeof( tvRemap[0] ) );
+
+#if 0
+				for( j = 0; j < ( *mesh )->mTexCoords.Num(); j++ )
+				{
+					tvRemap[j] = j;
+				}
+#else
+				if( fastLoad )
+				{
+					// renderbump doesn't care about vertex count
+					for( j = 0; j < numVertexes; j++ )
+					{
+						tvRemap[j] = j;
+					}
+				}
+				else
+				{
+					float texCoordEpsilon = r_slopTexCoord.GetFloat();
+					float expand = 2 * 32 * texCoordEpsilon;
+					idVec2 mins, maxs;
+
+					SIMDProcessor->MinMax( mins, maxs, &( *mesh )->mTexCoords[vertexStart], numVertexes );
+					mins -= idVec2( expand, expand );
+					maxs += idVec2( expand, expand );
+					texCoordSubset.Init( mins, maxs, 32, 1024 );
+					for( j = 0; j < numVertexes; j++ )
+					{
+						tvRemap[j] = texCoordSubset.FindVector( &( *mesh )->mTexCoords[0], j + vertexStart, texCoordEpsilon ) - vertexStart;
+					}
+				}
+#endif
+
+				// we need to find out how many unique vertex / texcoord combinations
+				// there are, because ASE tracks them separately but we need them unified
+
+				// the maximum possible number of combined vertexes is the number of indexes
+				mvTable = ( matchVert_t* )R_ClearedStaticAlloc( numVertexes * sizeof( mvTable[0] ) );
+
+				// we will have a hash chain based on the xyz values
+				mvHash = ( matchVert_t** )R_ClearedStaticAlloc( numVertexes * sizeof( mvHash[0] ) );
+
+				// allocate triangle surface
+				tri = R_AllocStaticTriSurf();
+				tri->numVerts = 0;
+				tri->numIndexes = 0;
+				R_AllocStaticTriSurfIndexes( tri, numVertexes ); //mesh->numFaces * 3 );
+				tri->generateNormals = !normalsParsed;
+
+				// init default normal, color and tex coord index
+				normal.Zero();
+				color = identityColor;
+				tv = 0;
+
+				// find all the unique combinations
+				float normalEpsilon = 1.0f - r_slopNormal.GetFloat();
+
+				for( j = 0; j < subMesh.mNumFaces; j++ )
+				{
+					// construct triangles in reverse order
+					const int faceSize = ( *mesh )->mFaceSize[faceStart + j];
+
+					for( k = ( faceSize - 1 ); k >= 0; k-- )
+					{
+						index = ( j * faceSize ) + k;
+
+						if( index < 0 || index >= numVertexes )
+						{
+							common->Error( "ConvertDAEToModelSurfaces: bad vertex index in DAE file %s", name.c_str() );
+						}
+
+						// collapse the position if it was slightly offset
+						v = vRemap[index];
 
 #if 1
-				// we may or may not have texcoords to compare
-				//if( mesh->numTVFaces == mesh->numFaces && mesh->numTVertexes != 0 )
-				if( ( *mesh )->mTexCoords.Num() )
-				{
-					tv = index; //tv = mesh->faces[j].tVertexNum[k];
+						// we may or may not have texcoords to compare
+						//if( mesh->numTVFaces == mesh->numFaces && mesh->numTVertexes != 0 )
+						if( ( *mesh )->mTexCoords.Num() )
+						{
+							tv = index;
 
-					if( tv < 0 || tv >= ( *mesh )->mTexCoords.Num() )
-					{
-						common->Error( "ConvertDAEToModelSurfaces: bad tex coord index in DAE file %s", name.c_str() );
-					}
+							if( tv < 0 || tv >= ( *mesh )->mTexCoords.Num() )
+							{
+								common->Error( "ConvertDAEToModelSurfaces: bad tex coord index in DAE file %s", name.c_str() );
+							}
 
-					// collapse the tex coord if it was slightly offset
-					tv = tvRemap[tv];
-				}
+							// collapse the tex coord if it was slightly offset
+							tv = tvRemap[tv];
+						}
 
 
-				// we may or may not have normals to compare
-				if( normalsParsed )
-				{
-					normal = ( *mesh )->mNormals[ index ]; //mesh->faces[j].vertexNormals[k];
-				}
+						// we may or may not have normals to compare
+						if( normalsParsed )
+						{
+							normal = ( *mesh )->mNormals[index + vertexStart];
+						}
 
-				// we may or may not have colors to compare
-				if( ( *mesh )->mColors.Num() > 0 )
-				{
-					color = ( byte* ) & ( *mesh )->mColors[ index ]; //mesh->faces[j].vertexColors[k];
-				}
+						// we may or may not have colors to compare
+						if( ( *mesh )->mColors.Num() > 0 )
+						{
+							color = ( byte* ) & ( *mesh )->mColors[index + vertexStart];
+						}
 #endif
-				// find a matching vert
-				for( lastmv = NULL, mv = mvHash[v]; mv != NULL; lastmv = mv, mv = mv->next )
-				{
+						// find a matching vert
+						for( lastmv = NULL, mv = mvHash[v]; mv != NULL; lastmv = mv, mv = mv->next )
+						{
 #if 1
-					if( mv->tv != tv )
-					{
-						continue;
-					}
+							if( mv->tv != tv )
+							{
+								continue;
+							}
 
-					if( *( unsigned* )mv->color != *( unsigned* )color )
-					{
-						continue;
-					}
+							if( *( unsigned* )mv->color != *( unsigned* )color )
+							{
+								continue;
+							}
 
-					if( !normalsParsed )
-					{
-						// if we are going to create the normals, just
-						// matching texcoords is enough
-						break;
-					}
+							if( !normalsParsed )
+							{
+								// if we are going to create the normals, just
+								// matching texcoords is enough
+								break;
+							}
 
-					if( mv->normal * normal > normalEpsilon )
-					{
-						break;		// we already have this one
-					}
+							if( mv->normal * normal > normalEpsilon )
+							{
+								break;		// we already have this one
+							}
 #endif
+						}
+
+						if( !mv )
+						{
+							// allocate a new match vert and link to hash chain
+							mv = &mvTable[tri->numVerts];
+							mv->v = v;
+							mv->tv = tv;
+							mv->normal = normal;
+							*( unsigned* )mv->color = *( unsigned* )color;
+							mv->next = NULL;
+
+							if( lastmv )
+							{
+								lastmv->next = mv;
+							}
+							else
+							{
+								mvHash[v] = mv;
+							}
+							tri->numVerts++;
+						}
+
+						tri->indexes[tri->numIndexes] = mv - mvTable;
+						tri->numIndexes++;
+					}
 				}
 
-				if( !mv )
+				// allocate space for the indexes and copy them
+				if( tri->numIndexes > ( *mesh )->mFacePosIndices.Num() )
 				{
-					// allocate a new match vert and link to hash chain
-					mv = &mvTable[ tri->numVerts ];
-					mv->v = v;
-					mv->tv = tv;
-					mv->normal = normal;
-					*( unsigned* )mv->color = *( unsigned* )color;
-					mv->next = NULL;
-
-					if( lastmv )
-					{
-						lastmv->next = mv;
-					}
-					else
-					{
-						mvHash[v] = mv;
-					}
-					tri->numVerts++;
+					common->FatalError( "ConvertDAEToModelSurfaces: index miscount in DAE file %s", name.c_str() );
+				}
+				if( tri->numVerts > ( *mesh )->mFacePosIndices.Num() )
+				{
+					common->FatalError( "ConvertDAEToModelSurfaces: vertex miscount in DAE file %s", name.c_str() );
 				}
 
-				tri->indexes[tri->numIndexes] = mv - mvTable;
-				tri->numIndexes++;
+				// an ASE allows the texture coordinates to be scaled, translated, and rotated
+				//if( ase->materials.Num() == 0 )
+				{
+					uOffset = vOffset = 0.0f;
+					uTiling = vTiling = 1.0f;
+					textureSin = 0.0f;
+					textureCos = 1.0f;
+				}
+				/*
+				else
+				{
+					material = ase->materials[object->materialRef];
+					uOffset = -material->uOffset;
+					vOffset = material->vOffset;
+					uTiling = material->uTiling;
+					vTiling = material->vTiling;
+					textureSin = idMath::Sin( material->angle );
+					textureCos = idMath::Cos( material->angle );
+				}
+				*/
+
+				// now allocate and generate the combined vertexes
+				R_AllocStaticTriSurfVerts( tri, tri->numVerts );
+				for( j = 0; j < tri->numVerts; j++ )
+				{
+					mv = &mvTable[j];
+					tri->verts[j].Clear();
+					tri->verts[j].xyz = ( *mesh )->mPositions[mv->v + vertexStart];
+					tri->verts[j].SetNormal( mv->normal );
+					*( unsigned* )tri->verts[j].color = *( unsigned* )mv->color;
+
+					//if( mesh->numTVFaces == mesh->numFaces && mesh->numTVertexes != 0 )
+					if( ( *mesh )->mTexCoords.Num() > 0 )
+					{
+						const idVec2& tv = ( *mesh )->mTexCoords[mv->tv + vertexStart];
+						float u = tv.x * uTiling + uOffset;
+						float v = tv.y * vTiling + vOffset;
+						tri->verts[j].SetTexCoord( u * textureCos + v * textureSin, u * -textureSin + v * textureCos );
+					}
+				}
+
+				R_StaticFree( mvTable );
+				R_StaticFree( mvHash );
+				R_StaticFree( tvRemap );
+				R_StaticFree( vRemap );
+
+				// see if we need to merge with a previous surface of the same material
+				modelSurf = &this->surfaces[mergeTo[modelSurfIndex]];
+				srfTriangles_t* mergeTri = modelSurf->geometry;
+				if( !mergeTri )
+				{
+					modelSurf->geometry = tri;
+				}
+				else
+				{
+					modelSurf->geometry = R_MergeTriangles( mergeTri, tri );
+					R_FreeStaticTriSurf( tri );
+					R_FreeStaticTriSurf( mergeTri );
+				}
+
+				vertexStart += numVertexes;
+				faceStart += subMesh.mNumFaces;
+				modelSurfIndex++;
 			}
-		}
-
-		// allocate space for the indexes and copy them
-		if( tri->numIndexes > ( *mesh )->mFacePosIndices.Num() )// mesh->numFaces * 3 )
-		{
-			common->FatalError( "ConvertDAEToModelSurfaces: index miscount in DAE file %s", name.c_str() );
-		}
-		if( tri->numVerts > ( *mesh )->mFacePosIndices.Num() ) //mesh->numFaces * 3 )
-		{
-			common->FatalError( "ConvertDAEToModelSurfaces: vertex miscount in DAE file %s", name.c_str() );
-		}
-
-		// an ASE allows the texture coordinates to be scaled, translated, and rotated
-		//if( ase->materials.Num() == 0 )
-		{
-			uOffset = vOffset = 0.0f;
-			uTiling = vTiling = 1.0f;
-			textureSin = 0.0f;
-			textureCos = 1.0f;
-		}
-		/*
-		else
-		{
-			material = ase->materials[object->materialRef];
-			uOffset = -material->uOffset;
-			vOffset = material->vOffset;
-			uTiling = material->uTiling;
-			vTiling = material->vTiling;
-			textureSin = idMath::Sin( material->angle );
-			textureCos = idMath::Cos( material->angle );
-		}
-		*/
-
-		// now allocate and generate the combined vertexes
-		R_AllocStaticTriSurfVerts( tri, tri->numVerts );
-		for( j = 0; j < tri->numVerts; j++ )
-		{
-			mv = &mvTable[j];
-			tri->verts[ j ].Clear();
-			tri->verts[ j ].xyz = ( *mesh )->mPositions[ mv->v ];
-			tri->verts[ j ].SetNormal( mv->normal );
-			*( unsigned* )tri->verts[j].color = *( unsigned* )mv->color;
-
-			//if( mesh->numTVFaces == mesh->numFaces && mesh->numTVertexes != 0 )
-			if( ( *mesh )->mTexCoords.Num() > 0 )
-			{
-				const idVec2& tv = ( *mesh )->mTexCoords[ mv->tv ];
-				float u = tv.x * uTiling + uOffset;
-				float v = tv.y * vTiling + vOffset;
-				tri->verts[ j ].SetTexCoord( u * textureCos + v * textureSin, u * -textureSin + v * textureCos );
-			}
-		}
-
-		R_StaticFree( mvTable );
-		R_StaticFree( mvHash );
-		R_StaticFree( tvRemap );
-		R_StaticFree( vRemap );
-
-		// see if we need to merge with a previous surface of the same material
-		modelSurf = &this->surfaces[mergeTo[ objectNum ]];
-		srfTriangles_t*	mergeTri = modelSurf->geometry;
-		if( !mergeTri )
-		{
-			modelSurf->geometry = tri;
-		}
-		else
-		{
-			modelSurf->geometry = R_MergeTriangles( mergeTri, tri );
-			R_FreeStaticTriSurf( tri );
-			R_FreeStaticTriSurf( mergeTri );
 		}
 	}
 

@@ -495,7 +495,7 @@ static void R_ReloadSurface_f( const idCmdArgs& args )
 	modelTrace_t mt;
 	idVec3 start, end;
 
-	if (!tr.primaryView)
+	if( !tr.primaryView )
 	{
 		return;
 	}
@@ -1994,7 +1994,7 @@ void idRenderSystemLocal::Init()
 	// RB end
 
 	idCinematic::InitCinematic();
-	
+
 	// build brightness translation tables
 	R_SetColorMappings();
 
@@ -2046,10 +2046,10 @@ void idRenderSystemLocal::Init()
 	common->Printf( "--------------------------------------\n" );
 
 	// Initialize new font code
-	fontManager = new FontManager(512);
+	fontManager = new FontManager( 512 );
 	fontManager->init();
-	textBufferManager = new TextBufferManager(fontManager);
-	defaultFont = RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 24);
+	textBufferManager = new TextBufferManager( fontManager );
+	defaultFont = RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 24 );
 }
 
 /*
@@ -2063,21 +2063,21 @@ void idRenderSystemLocal::Shutdown()
 
 	//fontManager->destroyFont(defaultFont);
 
-	for (int i = 0; i < newFonts.Num(); i++)
+	for( int i = 0; i < newFonts.Num(); i++ )
 	{
-		FreeFont(newFonts[i].fontHandle);
-		fontManager->destroyTtf(newFonts[i].ttfHandle);
+		FreeFont( newFonts[i].fontHandle );
+		fontManager->destroyTtf( newFonts[i].ttfHandle );
 	}
 
 	newFonts.Clear();
-	
+
 	fonts.DeleteContents();
 
 	delete textBufferManager;
 	delete fontManager;
 
 	RenderDebug::Get().Shutdown();
-	
+
 	if( IsInitialized() )
 	{
 		globalImages->PurgeAllImages();
@@ -2226,53 +2226,53 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 	return newFont;
 }
 
-FontHandle idRenderSystemLocal::RegisterFont2(const char* fontName, int aSize)
+FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize )
 {
 	// Look for an already loaded font.
 	idStrStatic< MAX_OSPATH > baseFontName = fontName;
-	baseFontName.Replace("fonts/", "");
+	baseFontName.Replace( "fonts/", "" );
 
-	for (int i = 0; i < newFonts.Num(); i++)
+	for( int i = 0; i < newFonts.Num(); i++ )
 	{
-		if (idStr::Icmp(newFonts[i].name, baseFontName) == 0 &&
-			newFonts[i].size == aSize)
+		if( idStr::Icmp( newFonts[i].name, baseFontName ) == 0 &&
+				newFonts[i].size == aSize )
 		{
 			// Found one. Return it.
 			return newFonts[i].fontHandle;
 		}
 	}
 
-	std::unique_ptr<idFile> fd(fileSystem->OpenFileRead(fontName));
-	if (fd == nullptr)
+	std::unique_ptr<idFile> fd( fileSystem->OpenFileRead( fontName ) );
+	if( fd == nullptr )
 	{
-		common->Error("Failed to load font %s", fontName);
+		common->Error( "Failed to load font %s", fontName );
 		return FontHandle();
 	}
 
 	const int len = fd->Length();
 
-	idTempArray<byte> buffer(len);
-	if ((int)fd->Read(buffer.Ptr(), len) != len)
+	idTempArray<byte> buffer( len );
+	if( ( int )fd->Read( buffer.Ptr(), len ) != len )
 	{
 		// Couldn't open this file. Cleanup and return an invalid handle.
 		return FontHandle();
 	}
 
 	NewFontData data;
-	data.ttfHandle = fontManager->createTtf(buffer.Ptr(), len);
-	data.fontHandle = fontManager->createFontByPixelSize(data.ttfHandle, 0, aSize);
+	data.ttfHandle = fontManager->createTtf( buffer.Ptr(), len );
+	data.fontHandle = fontManager->createFontByPixelSize( data.ttfHandle, 0, aSize );
 	data.name = baseFontName;
 	data.size = aSize;
-	newFonts.Append(data);
+	newFonts.Append( data );
 
-	fontManager->preloadGlyph(data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!_/ \n");
+	fontManager->preloadGlyph( data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!_/ \n" );
 
 	return data.fontHandle;
 }
 
-void idRenderSystemLocal::FreeFont(FontHandle aHandle)
+void idRenderSystemLocal::FreeFont( FontHandle aHandle )
 {
-	fontManager->destroyFont(aHandle);
+	fontManager->destroyFont( aHandle );
 }
 
 /*

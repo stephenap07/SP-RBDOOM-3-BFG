@@ -68,7 +68,7 @@ public:
 	virtual void        InitView();
 	virtual	void		Draw( bool forceFullScreen );
 	virtual void        ShutdownView();
-	
+
 	virtual void		PrintOverlay( idOverlayHandle& handle, justify_t justify, const char* text, ... );
 
 	virtual idDebugGraph* 	CreateGraph( int numItems );
@@ -158,7 +158,7 @@ private:
 
 	FontHandle          smallFontHandle;
 	FontHandle          bigFontHandle;
-	
+
 	static idCVar		con_speed;
 	static idCVar		con_notifyTime;
 	static idCVar		con_noPrint;
@@ -169,7 +169,7 @@ class ConsoleRenderer
 public:
 	virtual void Init() = 0;
 	virtual void Shutdown() = 0;
-	virtual void DrawSmallStringExt(int x, int y, const char* string, const idVec4& setColor, bool forceColor) = 0;
+	virtual void DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
 };
 
 class DefaultConsoleRenderer : public ConsoleRenderer
@@ -180,7 +180,7 @@ public:
 
 	virtual void Init();
 	virtual void Shutdown();
-	virtual void DrawSmallStringExt(int x, int y, const char* string, const idVec4& setColor, bool forceColor);
+	virtual void DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 };
 
 class OptimizedConsoleRenderer : public ConsoleRenderer
@@ -191,7 +191,7 @@ public:
 
 	virtual void Init();
 	virtual void Shutdown();
-	virtual void DrawSmallStringExt(int x, int y, const char* string, const idVec4& setColor, bool forceColor);
+	virtual void DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 
 private:
 
@@ -302,9 +302,9 @@ float idConsoleLocal::DrawFPS( float y )
 		const char* s = va( "%ifps", fps );
 		int w = strlen( s ) * BIGCHAR_WIDTH;
 
-		if (com_showFPS.GetInteger() == 1)
+		if( com_showFPS.GetInteger() == 1 )
 		{
-			renderSystem->DrawBigStringExt2(LOCALSAFE_RIGHT - w, idMath::Ftoi(y) + 2, s, colorWhite, true);
+			renderSystem->DrawBigStringExt2( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
 			//renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
 		}
 	}
@@ -483,7 +483,7 @@ float idConsoleLocal::DrawFPS( float y )
 	resolutionScale.GetConsoleText( resolutionText );
 	int w = resolutionText.Length() * BIGCHAR_WIDTH;
 	renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, resolutionText.c_str(), colorWhite, true );
-	
+
 	const int gameThreadTotalTime = commonLocal.GetGameThreadTotalTime();
 	const int gameThreadGameTime = commonLocal.GetGameThreadGameTime();
 	const int gameThreadRenderTime = commonLocal.GetGameThreadRenderTime();
@@ -495,62 +495,62 @@ float idConsoleLocal::DrawFPS( float y )
 
 	auto man = renderSystem->GetTextBufferManager();
 
-	auto textHandle = man->createTextBuffer(1, BufferType::Dynamic);
+	auto textHandle = man->createTextBuffer( 1, BufferType::Dynamic );
 
 	y += SMALLCHAR_HEIGHT + 4;
 	idStr timeStr;
 	timeStr.Format( "%sG+RF: %4d", gameThreadTotalTime > maxTime ? S_COLOR_RED : "", gameThreadTotalTime );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->setPenPosition(textHandle, LOCALSAFE_RIGHT - w, idMath::Ftoi(y) + 2);
-	man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(colorWhite));
-	man->appendText(textHandle, smallFontHandle, timeStr);
-	man->appendText(textHandle, smallFontHandle, idStr('\n'));
+	man->setPenPosition( textHandle, LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2 );
+	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( colorWhite ) );
+	man->appendText( textHandle, smallFontHandle, timeStr );
+	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
 	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sG: %4d", gameThreadGameTime > maxTime ? S_COLOR_RED : "", gameThreadGameTime );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText(textHandle, smallFontHandle, timeStr);
-	man->appendText(textHandle, smallFontHandle, idStr('\n'));
+	man->appendText( textHandle, smallFontHandle, timeStr );
+	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
 	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sRF: %4d", gameThreadRenderTime > maxTime ? S_COLOR_RED : "", gameThreadRenderTime );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText(textHandle, smallFontHandle, timeStr);
-	man->appendText(textHandle, smallFontHandle, idStr('\n'));
+	man->appendText( textHandle, smallFontHandle, timeStr );
+	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
 	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sRB: %4.1f", rendererBackEndTime > maxTime * 1000 ? S_COLOR_RED : "", rendererBackEndTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText(textHandle, smallFontHandle, timeStr);
-	man->appendText(textHandle, smallFontHandle, idStr('\n'));
+	man->appendText( textHandle, smallFontHandle, timeStr );
+	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
 	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sSV: %4.1f", rendererShadowsTime > maxTime * 1000 ? S_COLOR_RED : "", rendererShadowsTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText(textHandle, smallFontHandle, timeStr);
-	man->appendText(textHandle, smallFontHandle, idStr('\n'));
+	man->appendText( textHandle, smallFontHandle, timeStr );
+	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
 	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sIDLE: %4.1f", rendererGPUIdleTime > maxTime * 1000 ? S_COLOR_RED : "", rendererGPUIdleTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText(textHandle, smallFontHandle, timeStr);
-	man->appendText(textHandle, smallFontHandle, idStr('\n'));
+	man->appendText( textHandle, smallFontHandle, timeStr );
+	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
 	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sGPU: %4.1f", rendererGPUTime > maxTime * 1000 ? S_COLOR_RED : "", rendererGPUTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText(textHandle, smallFontHandle, timeStr);
-	man->appendText(textHandle, smallFontHandle, idStr('\n'));
+	man->appendText( textHandle, smallFontHandle, timeStr );
+	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
 	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 
-	man->submitTextBuffer(textHandle);
-	man->destroyTextBuffer(textHandle);
+	man->submitTextBuffer( textHandle );
+	man->destroyTextBuffer( textHandle );
 
 	return y + BIGCHAR_HEIGHT + 4;
 #endif
@@ -1310,7 +1310,7 @@ DRAWING
 
 void idConsoleLocal::InitView()
 {
-	if (consoleRenderer)
+	if( consoleRenderer )
 	{
 		delete consoleRenderer;
 	}
@@ -1318,8 +1318,8 @@ void idConsoleLocal::InitView()
 	consoleRenderer = new OptimizedConsoleRenderer();
 	consoleRenderer->Init();
 
-	smallFontHandle = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 16);
-	bigFontHandle = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 32);
+	smallFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 16 );
+	bigFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 32 );
 }
 
 
@@ -1472,31 +1472,31 @@ void idConsoleLocal::DrawSolidConsole( float frac )
 	i = version.Length();
 
 	auto man = renderSystem->GetTextBufferManager();
-	auto textHandle = man->createTextBuffer(0, BufferType::Dynamic);
-	man->setPenPosition(textHandle, 0, 0);
-	man->appendText(textHandle, renderSystem->GetDefaultFontHandle(), version);
-	TextRectangle textSize = man->getRectangle(textHandle);
-	man->clearTextBuffer(textHandle);
+	auto textHandle = man->createTextBuffer( 0, BufferType::Dynamic );
+	man->setPenPosition( textHandle, 0, 0 );
+	man->appendText( textHandle, renderSystem->GetDefaultFontHandle(), version );
+	TextRectangle textSize = man->getRectangle( textHandle );
+	man->clearTextBuffer( textHandle );
 
-	idVec2 virtualToReal(renderSystem->GetWidth() / (float)renderSystem->GetVirtualWidth(),
-		renderSystem->GetHeight() / (float)renderSystem->GetVirtualHeight());
+	idVec2 virtualToReal( renderSystem->GetWidth() / ( float )renderSystem->GetVirtualWidth(),
+						  renderSystem->GetHeight() / ( float )renderSystem->GetVirtualHeight() );
 
-	const idVec2 scaleToVirtual((float)renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-		(float)renderSystem->GetVirtualHeight() / renderSystem->GetHeight());
-	
-	auto myX = std::max<int>(0, renderSystem->GetWidth() - textSize.width - 5.0f);
-	auto myY = (lines * virtualToReal.y) - (textSize.height + textSize.height / 4);
-	man->setPenPosition(textHandle, myX, myY);
-	man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(idStr::ColorForIndex(C_COLOR_CYAN)));
-	man->appendText(textHandle, renderSystem->GetDefaultFontHandle(), version);
-	man->scale(textHandle, scaleToVirtual);
-	man->submitTextBuffer(textHandle);
-	man->destroyTextBuffer(textHandle);
-	
+	const idVec2 scaleToVirtual( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
+								 ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
+
+	auto myX = std::max<int>( 0, renderSystem->GetWidth() - textSize.width - 5.0f );
+	auto myY = ( lines * virtualToReal.y ) - ( textSize.height + textSize.height / 4 );
+	man->setPenPosition( textHandle, myX, myY );
+	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( idStr::ColorForIndex( C_COLOR_CYAN ) ) );
+	man->appendText( textHandle, renderSystem->GetDefaultFontHandle(), version );
+	man->scale( textHandle, scaleToVirtual );
+	man->submitTextBuffer( textHandle );
+	man->destroyTextBuffer( textHandle );
+
 	for( x = 0; x < i; x++ )
 	{
 		//renderSystem->DrawSmallChar( LOCALSAFE_WIDTH - ( i - x ) * SMALLCHAR_WIDTH,
-		//							 ( lines - ( SMALLCHAR_HEIGHT + SMALLCHAR_HEIGHT / 4 ) ), version[x] );							 
+		//							 ( lines - ( SMALLCHAR_HEIGHT + SMALLCHAR_HEIGHT / 4 ) ), version[x] );
 	}
 
 
@@ -1790,9 +1790,9 @@ void DefaultConsoleRenderer::Shutdown()
 {
 }
 
-void DefaultConsoleRenderer::DrawSmallStringExt(int x, int y, const char* string, const idVec4& setColor, bool forceColor)
+void DefaultConsoleRenderer::DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor )
 {
-	renderSystem->DrawSmallStringExt(x, y, string, setColor, forceColor);
+	renderSystem->DrawSmallStringExt( x, y, string, setColor, forceColor );
 }
 
 OptimizedConsoleRenderer::OptimizedConsoleRenderer()
@@ -1801,23 +1801,23 @@ OptimizedConsoleRenderer::OptimizedConsoleRenderer()
 
 void OptimizedConsoleRenderer::Init()
 {
-	smallFontHandle = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 8);
-	bigFontHandle = renderSystem->RegisterFont2("fonts/Merriweather/Merriweather-Regular.ttf", 16);
+	smallFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 8 );
+	bigFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 16 );
 }
 
 void OptimizedConsoleRenderer::Shutdown()
 {
 }
 
-void OptimizedConsoleRenderer::DrawSmallStringExt(int x, int y, const char* string, const idVec4& setColor, bool forceColor)
+void OptimizedConsoleRenderer::DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor )
 {
 	auto man = renderSystem->GetTextBufferManager();
 
-	auto textHandle = man->createTextBuffer(1, BufferType::Dynamic);
+	auto textHandle = man->createTextBuffer( 1, BufferType::Dynamic );
 
-	man->setPenPosition(textHandle, x, y);
-	man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(setColor));
-	man->appendText(textHandle, smallFontHandle, string);
-	man->submitTextBuffer(textHandle);
-	man->destroyTextBuffer(textHandle);
+	man->setPenPosition( textHandle, x, y );
+	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( setColor ) );
+	man->appendText( textHandle, smallFontHandle, string );
+	man->submitTextBuffer( textHandle );
+	man->destroyTextBuffer( textHandle );
 }

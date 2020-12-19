@@ -1129,7 +1129,7 @@ drawSurf_t* R_DeformDrawSurf( drawSurf_t* drawSurf )
 		return NULL;
 	}
 
-	return R_DeformDrawSurf(drawSurf, drawSurf->material->Deform());
+	return R_DeformDrawSurf( drawSurf, drawSurf->material->Deform() );
 }
 
 /*
@@ -1137,33 +1137,33 @@ drawSurf_t* R_DeformDrawSurf( drawSurf_t* drawSurf )
 R_DeformDrawSurf
 =================
 */
-drawSurf_t* R_DeformDrawSurf(drawSurf_t* drawSurf, deform_t deformType)
+drawSurf_t* R_DeformDrawSurf( drawSurf_t* drawSurf, deform_t deformType )
 {
-	if (r_skipDeforms.GetBool())
+	if( r_skipDeforms.GetBool() )
 	{
 		return drawSurf;
 	}
-	switch (deformType)
+	switch( deformType )
 	{
-	case DFRM_SPRITE:
-		return R_AutospriteDeform(drawSurf);
-	case DFRM_TUBE:
-		return R_TubeDeform(drawSurf);
-	case DFRM_FLARE:
-		return R_FlareDeform(drawSurf);
-	case DFRM_EXPAND:
-		return R_ExpandDeform(drawSurf);
-	case DFRM_MOVE:
-		return R_MoveDeform(drawSurf);
-	case DFRM_TURB:
-		return R_TurbulentDeform(drawSurf);
-	case DFRM_EYEBALL:
-		return R_EyeballDeform(drawSurf);
-	case DFRM_PARTICLE:
-		return R_ParticleDeform(drawSurf, true);
-	case DFRM_PARTICLE2:
-		return R_ParticleDeform(drawSurf, false);
-	default:
-		return NULL;
+		case DFRM_SPRITE:
+			return R_AutospriteDeform( drawSurf );
+		case DFRM_TUBE:
+			return R_TubeDeform( drawSurf );
+		case DFRM_FLARE:
+			return R_FlareDeform( drawSurf );
+		case DFRM_EXPAND:
+			return R_ExpandDeform( drawSurf );
+		case DFRM_MOVE:
+			return R_MoveDeform( drawSurf );
+		case DFRM_TURB:
+			return R_TurbulentDeform( drawSurf );
+		case DFRM_EYEBALL:
+			return R_EyeballDeform( drawSurf );
+		case DFRM_PARTICLE:
+			return R_ParticleDeform( drawSurf, true );
+		case DFRM_PARTICLE2:
+			return R_ParticleDeform( drawSurf, false );
+		default:
+			return NULL;
 	}
 }

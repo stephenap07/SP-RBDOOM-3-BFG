@@ -611,17 +611,17 @@ to a fixed color.
 Coordinates are at 640 by 480 virtual resolution
 ==================
 */
-void idRenderSystemLocal::DrawBigStringExt2(int x, int y, const char* string, const idVec4& setColor, bool forceColor)
+void idRenderSystemLocal::DrawBigStringExt2( int x, int y, const char* string, const idVec4& setColor, bool forceColor )
 {
 	auto man = GetTextBufferManager();
 
-	auto textHandle = man->createTextBuffer(1, BufferType::Dynamic);
+	auto textHandle = man->createTextBuffer( 1, BufferType::Dynamic );
 
-	man->setPenPosition(textHandle, x, y);
-	man->setTextColor(textHandle, VectorUtil::Vec4ToColorInt(setColor));
-	man->appendText(textHandle, defaultFont, string);
-	man->submitTextBuffer(textHandle);
-	man->destroyTextBuffer(textHandle);
+	man->setPenPosition( textHandle, x, y );
+	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( setColor ) );
+	man->appendText( textHandle, defaultFont, string );
+	man->submitTextBuffer( textHandle );
+	man->destroyTextBuffer( textHandle );
 }
 
 //======================================================================================
@@ -1035,9 +1035,9 @@ void idRenderSystemLocal::CropRenderSize( int width, int height )
 idRenderSystemLocal::CropRenderSize
 ================
 */
-void idRenderSystemLocal::CropRenderSize(int x, int y, int width, int height)
+void idRenderSystemLocal::CropRenderSize( int x, int y, int width, int height )
 {
-	if (!IsInitialized())
+	if( !IsInitialized() )
 	{
 		return;
 	}
@@ -1047,21 +1047,21 @@ void idRenderSystemLocal::CropRenderSize(int x, int y, int width, int height)
 	guiModel->Clear();
 
 
-	if (width < 1 || height < 1)
+	if( width < 1 || height < 1 )
 	{
-		common->Error("CropRenderSize: bad sizes");
+		common->Error( "CropRenderSize: bad sizes" );
 	}
 
-	if (common->WriteDemo())
+	if( common->WriteDemo() )
 	{
-		common->WriteDemo()->WriteInt(DS_RENDER);
-		common->WriteDemo()->WriteInt(DC_CROP_RENDER);
-		common->WriteDemo()->WriteInt(width);
-		common->WriteDemo()->WriteInt(height);
+		common->WriteDemo()->WriteInt( DS_RENDER );
+		common->WriteDemo()->WriteInt( DC_CROP_RENDER );
+		common->WriteDemo()->WriteInt( width );
+		common->WriteDemo()->WriteInt( height );
 
-		if (r_showDemo.GetBool())
+		if( r_showDemo.GetBool() )
 		{
-			common->Printf("write DC_CROP_RENDER\n");
+			common->Printf( "write DC_CROP_RENDER\n" );
 		}
 	}
 

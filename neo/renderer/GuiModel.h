@@ -60,7 +60,7 @@ public:
 
 	void		EmitToCurrentView( float modelMatrix[16], bool depthHack );
 	void		EmitFullScreen();
-	void		EmitSurfaces(float modelMatrix[16], float modelViewMatrix[16], bool depthHack, bool allowFullScreenStereoDepth, bool linkAsEntity);
+	void		EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16], bool depthHack, bool allowFullScreenStereoDepth, bool linkAsEntity );
 
 	// RB
 	void		EmitImGui( ImDrawData* drawData );
@@ -69,7 +69,7 @@ public:
 	// 32 bit writes and never read from it.
 	idDrawVert* AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material,
 						   const uint64 glState, const stereoDepthType_t stereoType );
-						   
+
 	//---------------------------
 private:
 	void		AdvanceSurf();

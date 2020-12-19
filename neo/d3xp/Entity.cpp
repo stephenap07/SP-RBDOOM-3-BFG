@@ -3572,7 +3572,10 @@ idEntity::RemoveContactEntity
 */
 void idEntity::RemoveContactEntity( idEntity* ent )
 {
-	GetPhysics()->RemoveContactEntity( ent );
+	if( GetPhysics() )
+	{
+		GetPhysics()->RemoveContactEntity( ent );
+	}
 }
 
 

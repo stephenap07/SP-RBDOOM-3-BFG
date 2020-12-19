@@ -7399,10 +7399,10 @@ void idPhysics_AF::DebugDraw()
 			body = bodies[i];
 			idMat3& I = body->inertiaTensor;
 			gameRenderWorld->DebugText( va( "\n\n\n( %.1f %.1f %.1f )\n( %.1f %.1f %.1f )\n( %.1f %.1f %.1f )",
-										   I[0].x, I[0].y, I[0].z,
-										   I[1].x, I[1].y, I[1].z,
-										   I[2].x, I[2].y, I[2].z ),
-									   body->GetWorldOrigin(), 0.05f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
+											I[0].x, I[0].y, I[0].z,
+											I[1].x, I[1].y, I[1].z,
+											I[2].x, I[2].y, I[2].z ),
+										body->GetWorldOrigin(), 0.05f, colorCyan, gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), 1 );
 		}
 	}
 

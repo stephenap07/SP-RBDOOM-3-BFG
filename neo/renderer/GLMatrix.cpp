@@ -407,15 +407,21 @@ This uses the "infinite far z" trick
 idCVar r_centerX( "r_centerX", "0", CVAR_FLOAT, "projection matrix center adjust" );
 idCVar r_centerY( "r_centerY", "0", CVAR_FLOAT, "projection matrix center adjust" );
 
-inline float sgn(float a)
+inline float sgn( float a )
 {
-	if (a > 0.0f) return (1.0f);
-	if (a < 0.0f) return (-1.0f);
-	return (0.0f);
+	if( a > 0.0f )
+	{
+		return ( 1.0f );
+	}
+	if( a < 0.0f )
+	{
+		return ( -1.0f );
+	}
+	return ( 0.0f );
 }
 
 // clipPlane is a plane in camera space.
-void ModifyProjectionMatrix(viewDef_t* viewDef, const idPlane& clipPlane)
+void ModifyProjectionMatrix( viewDef_t* viewDef, const idPlane& clipPlane )
 {
 	static float s_flipMatrix[16] =
 	{
@@ -428,16 +434,16 @@ void ModifyProjectionMatrix(viewDef_t* viewDef, const idPlane& clipPlane)
 	};
 
 	idMat4 flipMatrix;
-	memcpy(&flipMatrix, &(s_flipMatrix[0]), sizeof(float) * 16);
+	memcpy( &flipMatrix, &( s_flipMatrix[0] ), sizeof( float ) * 16 );
 
 	idVec4 vec = clipPlane.ToVec4();// * flipMatrix;
-	idPlane newPlane(vec[0], vec[1], vec[2], vec[3]);
+	idPlane newPlane( vec[0], vec[1], vec[2], vec[3] );
 
 	// Calculate the clip-space corner point opposite the clipping plane
 	// as (sgn(clipPlane.x), sgn(clipPlane.y), 1, 1) and
 	// transform it into camera space by multiplying it
 	// by the inverse of the projection matrix
-	
+
 	//idVec4 q;
 	//q.x = (sgn(newPlane[0]) + viewDef->projectionMatrix[8]) / viewDef->projectionMatrix[0];
 	//q.y = (sgn(newPlane[1]) + viewDef->projectionMatrix[9]) / viewDef->projectionMatrix[5];
@@ -445,14 +451,14 @@ void ModifyProjectionMatrix(viewDef_t* viewDef, const idPlane& clipPlane)
 	//q.w = (1.0F + viewDef->projectionMatrix[10]) / viewDef->projectionMatrix[14];
 
 	idMat4 unprojection;
-	R_MatrixFullInverse(viewDef->projectionMatrix, (float*)&unprojection);
-	idVec4 q = unprojection * idVec4(sgn(newPlane[0]), sgn(newPlane[1]), 1.0f, 1.0f);
+	R_MatrixFullInverse( viewDef->projectionMatrix, ( float* )&unprojection );
+	idVec4 q = unprojection * idVec4( sgn( newPlane[0] ), sgn( newPlane[1] ), 1.0f, 1.0f );
 
 	// Calculate the scaled plane vector
-	idVec4 c = newPlane.ToVec4() * (2.0f / (q * newPlane.ToVec4()));
+	idVec4 c = newPlane.ToVec4() * ( 2.0f / ( q * newPlane.ToVec4() ) );
 
 	float matrix[16];
-	std::memcpy(matrix, viewDef->projectionMatrix, sizeof(float) * 16);
+	std::memcpy( matrix, viewDef->projectionMatrix, sizeof( float ) * 16 );
 
 	// Replace the third row of the projection matrix
 	matrix[2] = c[0];
@@ -460,7 +466,7 @@ void ModifyProjectionMatrix(viewDef_t* viewDef, const idPlane& clipPlane)
 	matrix[10] = c[2] + 1.0f;
 	matrix[14] = c[3];
 
-	memcpy(viewDef->projectionMatrix, matrix, sizeof(float) * 16);
+	memcpy( viewDef->projectionMatrix, matrix, sizeof( float ) * 16 );
 }
 
 void R_SetupProjectionMatrix( viewDef_t* viewDef )
@@ -551,9 +557,9 @@ void R_SetupProjectionMatrix( viewDef_t* viewDef )
 	}
 
 	idPlane zeroPlane = idPlane();
-	if (viewDef->renderView.clipPlane != zeroPlane)
+	if( viewDef->renderView.clipPlane != zeroPlane )
 	{
-		ModifyProjectionMatrix(viewDef, viewDef->renderView.clipPlane);
+		ModifyProjectionMatrix( viewDef, viewDef->renderView.clipPlane );
 	}
 }
 
