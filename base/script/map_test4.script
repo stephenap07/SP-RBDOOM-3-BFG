@@ -1,0 +1,28 @@
+namespace map_test4
+{
+
+	void my_test()
+	{
+		sys.print("my_test called");
+		$func_mover_1.time(5);
+		$func_mover_1.decelTime(0.5);
+		$func_mover_1.accelTime(0.5);
+		$func_mover_1.moveTo($func_static_1);
+	}
+
+	void switch_camera_target()
+	{
+		$portaltop1.setKey("cameraTarget", "portaltop2");
+	}
+
+	void switch_camera_target2()
+	{
+		$portaltop1.setKey("cameraTarget", "portalbottom");
+	}
+
+	void main()
+	{
+		sys.print("Hi");
+		//my_test();
+	}
+}

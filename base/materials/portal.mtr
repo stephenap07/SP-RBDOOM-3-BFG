@@ -1,0 +1,12 @@
+textures/stencilPortal
+{
+	// sub view sorting
+	qer_editorimage textures/editor/stencilportal
+	discrete
+	//noShadows
+	directPortal
+	{
+		blend add
+		map _black
+	}
+}

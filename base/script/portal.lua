@@ -1,3 +1,11 @@
-function main( ... )
-	comPrintf("Hello world\n")
+Portal =
+{
+	targetPortal = ""
+}
+
+function Portal:spawn ()
+	comPrintf("Spawned the portal!\n")
+end
+
+function Portal:think ()
 end

@@ -1,0 +1,7 @@
+// Props
+
+
+textures/props/dogcollar/dogcollarColor
+{
+	diffusemap textures/props/dogcollar/dogcollarColor
+}

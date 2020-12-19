@@ -262,6 +262,22 @@ textures/common/trig_touch
 	trigger
 }
 
+textures/common/trigmulti
+{
+	qer_editorimage 	textures/editor/trigger_std.tga
+	qer_nocarve		// don't let an awry CSG operation cut it up
+	noshadows
+	trigger
+}
+
+textures/common/trigonce
+{
+	qer_editorimage 	textures/editor/trigger_std.tga
+	qer_nocarve		// don't let an awry CSG operation cut it up
+	noshadows
+	trigger
+}
+
 //======================================================================
 //                      Triggers End!
 //======================================================================

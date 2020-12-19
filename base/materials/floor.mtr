@@ -17,3 +17,39 @@ textures/floor/diamond_plate
         map addnormals( textures/floor/diamond_plate/DiamondPlate001_2K_Normal, heightmap(textures/floor/diamond_plate/DiamondPlate001_2K_Displacement, 6 ))
     }
 }
+
+textures/floor/aged_wood_floor_01
+{
+    noselfShadow
+    qer_editorimage textures/floor/aged_wood_floor/aged_wood_floor_01
+    wood
+
+    diffuseMap  textures/floor/aged_wood_floor/aged_wood_floor_01
+}
+
+textures/floor/dryearth
+{
+    noselfShadow
+    qer_editorimage textures/floor/forest/dryearth
+    wood
+
+    diffuseMap  textures/floor/forest/dryearth
+    {
+        blend bumpmap
+        map textures/floor/forest/dryearth_norm
+    }
+}
+
+textures/floor/drymattedgrass
+{
+    noselfShadow
+    qer_editorimage textures/floor/forest/dry_matted_grass
+    wood
+
+    diffuseMap  textures/floor/forest/dry_matted_grass
+    {
+        blend bumpmap
+        map textures/floor/forest/dry_matted_grass_norm
+    }
+}
+}

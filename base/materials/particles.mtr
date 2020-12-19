@@ -1,66 +1,56 @@
 
 textures/particles/spark_01
 {
-    noSelfShadow
+    DECAL_MACRO
+    nonsolid
+    noimpact
+    twoSided
     translucent
-    noShadows
+    //spectrum 1
 
     qer_editorimage textures/particles/spark_01
 
     {
-        maskcolor
-        map makealpha(textures/particles/spark_01.png)
-    }
-
-    {
-        blend       gl_dst_alpha, gl_one
-        map         textures/particles/spark_01.png
+        blend       add
+        map         textures/particles/spark_01
+        clamp
+        linear
         vertexColor
+        highQuality
     }
 }
 
 textures/particles/spark_02
 {
-    noSelfShadow
-    translucent
-    noShadows
-    noshadows
-    translucent
-    discrete
-    twosided
+    DECAL_MACRO
     nonsolid
     noimpact
+    twoSided
+    translucent
 
     qer_editorimage textures/particles/spark_02
 
     {
-        maskcolor
-        map makealpha(textures/particles/spark_02.png)
-    }
-
-    {
-        blend       gl_dst_alpha, gl_one_minus_dst_alpha
+        blend       add
         map         textures/particles/spark_02.png
-        vertexColor
+        clamp
+        linear
+        vertexcolor
     }
 }
 
 textures/particles/spark_03
 {
-    noSelfShadow
+    DECAL_MACRO
     translucent
-    noShadows
 
     qer_editorimage textures/particles/spark_03
 
     {
-        maskcolor
-        map makealpha(textures/particles/spark_03.png)
-    }
-
-    {
-        blend       gl_dst_alpha, gl_one_minus_dst_alpha
+        blend       add
         map         textures/particles/spark_03.png
-        vertexColor
+        clamp
+        linear
+        vertexcolor
     }
 }

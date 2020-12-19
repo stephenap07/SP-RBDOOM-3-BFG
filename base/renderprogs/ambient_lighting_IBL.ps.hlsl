@@ -64,7 +64,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	half4 bumpMap =			tex2D( samp0, fragment.texcoord0.xy );
 	half4 YCoCG =			tex2D( samp2, fragment.texcoord1.xy );
 	half4 specMapSRGB =		tex2D( samp1, fragment.texcoord2.xy );
-	half4 specMap =			sRGBAToLinearRGBA( specMapSRGB );
+	half4 specMap =			specMapSRGB;//sRGBAToLinearRGBA( specMapSRGB );
 
 	half3 diffuseMap = sRGBToLinearRGB( ConvertYCoCgToRGB( YCoCG ) );
 

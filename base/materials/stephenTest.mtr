@@ -72,19 +72,6 @@ stephenTest/blue
 	}
 }
 
-stephenTest/stencilPortal
-{
-	// sub view sorting
-	qer_editorimage textures/editor/stencilportal
-	discrete
-	noShadows
-	directPortal
-	{
-		blend gl_dst_color,gl_zero
-		map _white
-	}
-}
-
 stephenTest/mirrorTest
 {
 	discrete
@@ -97,4 +84,90 @@ stephenTest/mirrorTest
 	}
 	solid
 	mirror
+}
+
+textures/sfx/flare
+{
+	noshadows
+	translucent
+	nonsolid
+	deform flare 		4
+	qer_editorimage		textures/editor/flare.tga
+	{
+		//if ( parm7 == 0 )
+		blend		add
+		map		_quadratic
+		colored
+		vertexcolor
+	}
+}
+
+textures/test/cube
+{
+	//noSelfShadow
+	qer_editorimage	textures/test/CubeColor.png
+	diffusemap textures/test/CubeColor.png
+	specularmap textures/test/CubeColorSpecular.png
+
+	{
+		maskcolor
+		map makealpha(textures/test/beam1.tga)
+		//	scroll	time * 3 , time * 0	
+		forceHighQuality	
+	}
+
+	{
+		blend gl_dst_alpha, gl_one
+	    maskalpha
+		map textures/test/dust.tga
+		scale	 4 , 4
+		rotate time * -.02
+		scroll	time * .001 , time * .001
+	}
+}
+
+textures/test/cube2
+{
+	//noSelfShadow
+	qer_editorimage	textures/test/CubeColor2.png
+
+	{
+		blend diffusemap
+		map textures/test/CubeColor2.png
+		forceHighQuality
+	}
+
+	{
+		blend specularmap
+		map textures/test/CubeSpecular2.png
+		forceHighQuality
+	}
+
+	{
+		blend bumpmap
+		map textures/test/CubeNormal.png
+		forceHighQuality
+	}
+}
+
+material models/items/flashlight/beam1 {
+	translucent
+	deform tube
+	twoSided
+	
+	{
+		maskcolor
+		map makealpha(textures/test/beam1.tga)
+		//	scroll	time * 3 , time * 0	
+		forceHighQuality	
+	}
+
+	{
+		blend gl_dst_alpha, gl_one
+	    maskalpha
+		map textures/test/dust.tga
+		scale	 4 , 4
+		rotate time * -.02
+		scroll	time * .001 , time * .001
+	}
 }

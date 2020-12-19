@@ -1,0 +1,19 @@
+// PBR Tests
+
+material textures/blackLeatherChair
+{
+    qer_editorimage textures/toilet_paper/toilet_paper_Diffuse
+    diffusemap      textures/black_leather_chair/Chair_Basecolor.png
+
+    {
+        blend rmaomap 
+        map combineRgba(textures/black_leather_chair/Chair_Roughness.png,
+                        textures/black_leather_chair/Chair_Metalness.png,
+                        textures/black_leather_chair/Chair_Ao.png)
+    }
+
+    {
+        blend bumpmap
+        map textures/black_leather_chair/Chair_Normal.png
+    }
+}

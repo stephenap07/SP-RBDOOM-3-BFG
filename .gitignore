@@ -239,3 +239,5 @@ neo/cmake-build-*/
 /preybase
 /renderdoc.cap
 /.vs
+/base/DoomConfig.cfg
+/dump/common

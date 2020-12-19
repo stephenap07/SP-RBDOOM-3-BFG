@@ -1,0 +1,9 @@
+entityDef gamePortal
+{
+	"spawnClass"  "spGamePortal"
+
+	"noTeleport"  "0"
+	"startActive" "1"
+	"flipX"       "0"
+	"luaObject"   "Portal"
+}

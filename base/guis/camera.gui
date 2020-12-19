@@ -1,0 +1,15 @@
+windowDef Desktop {
+	rect	0 ,0 ,640 ,480 
+	nocursor	1
+	float parm	1
+	float nocam	0
+
+	windowDef CamView {
+		rect 0, 0, 640, 480
+		matcolor 1, 1, 1, 1
+		forecolor 1, 1, 1, 1
+		backcolor 0, 0, 0, 1
+		visible 1
+		background "textures/cameraView1"
+	}
+}

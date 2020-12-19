@@ -59,7 +59,8 @@ void main( PS_IN fragment, out PS_OUT result )
 //	half4 lightFalloff =	idtex2Dproj( samp1, fragment.texcoord2 );
 //	half4 lightProj	=		idtex2Dproj( samp2, fragment.texcoord3 );
 	half4 YCoCG =			tex2D( samp2, fragment.texcoord4.xy );
-	half4 specMap =			sRGBAToLinearRGBA( tex2D( samp1, fragment.texcoord5.xy ) );
+//	half4 specMap =			sRGBAToLinearRGBA( tex2D( samp1, fragment.texcoord5.xy ) );
+	half4 specMap =			tex2D( samp1, fragment.texcoord5.xy );
 
 	half3 lightVector = normalize( fragment.texcoord0.xyz );
 	half3 diffuseMap = sRGBToLinearRGB( ConvertYCoCgToRGB( YCoCG ) );

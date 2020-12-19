@@ -3,50 +3,94 @@ windowDef Desktop {
     backcolor   0, 0, 0, 0
     visible     1
     nocursor    0
+    scaleToRenderWindow 1
 
-    windowDef Test2 {
-        rect        100, 350, 300, 130
+    onTab
+    {
+        set "cmd" "close"
+    }
+
+    windowDef Inventory {
+        rect        100, 100, 600, 800
         backcolor   .29, 0.29, 0.28, .8
         bordercolor 0.5, 0.6, 0.6, 1
         bordersize  1
-        text        "Test Inventory"
-        textalign   1
+        text        "Inventory"
+        textalign   3
         shadow      2
+        scaleToRenderWindow 1
 
-        onMouseEnter
-        {
-            set "Test2::text"         "Mouse Over Inventory"
-            set "Test2::backcolor"    "1, .6, 0, 1";
+        windowDef Icon1 {
+            rect 2, 45, 128, 128
+            //backcolor   .29, 0.29, 0.28, .8
+            background "guis/simplekey"
+
+            bordercolor 0.5, 0.6, 0.6, 1
+            bordersize  1
+            text        "Icon1"
+            scaleToRenderWindow 1
+
+            onMouseEnter
+            {
+                set "Icon1::text" "Yo dawg" ;
+                localSound "sound/gui/btn_roll_over" ;
+            }
+
+            onMouseExit
+            {
+                set "Icon1::text" "No dawg" ;
+            } 
+
+            onAction
+            {
+                set "cmd" "give weapon_tazer" ;
+                set "Icon1::text" "You pressed me" ;
+                localSound "sound/gui/btn_pda_advance" ;
+            }
         }
 
-        onMouseExit
-        {
-            set "Test2::backcolor"    ".29, 0.29, 0.28, .8";
-        } 
-    }
+        windowDef Icon2 {
+            rect 2 + 128 + 2, 45, 128, 128
+            backcolor   .29, 0.29, 0.28, .8
+            bordercolor 0.5, 0.6, 0.6, 1
+            bordersize  1
+            text        "Icon2"
+            scaleToRenderWindow 1
 
-    windowDef Test3 {
-        rect        600, 350, 128/4, 400/4
-        background  "guis/assets/icons/simplekey"
-        bordercolor 0.5, 0.6, 0.6, 1
-    }
+            onMouseEnter
+            {
+                set "text" "Yo dawg" ;
+                localSound "sound/gui/btn_roll_over" ;
+            }
 
-    choiceDef Mychoice {
-        rect        100, 20, 100, 30
-        backcolor   .29, 0.29, 0.28, .8
-        bordercolor 0.5, 0.6, 0.6, 1
-        text        "Choices"
-        choices     McGee;N;O;P
-        values      1;2;3;4
+            onMouseExit
+            {
+                set "text" "No dawg" ;
+            } 
 
-        onMouseEnter
-        {
-            set "Mychoice::backcolor"    "1 .6 0 1";
+            onAction
+            {
+                set "cmd" "give weapon_tazer" ;
+                set "text" "You pressed me" ;
+                localSound "sound/gui/btn_pda_advance" ;
+            }
         }
-     
-        onMouseExit
-        {
-            set "Mychoice::backcolor"    ".29, 0.29, 0.28, .8";
-        } 
     }
+
+/*
+    renderDef TestRender {
+        rect            0, 20, 400, 300
+        bordercolor     0.5, 0.6, 0.6, 1
+        visible         1
+        backcolor       0.5, 1, 1, 1
+        model           "models/static/toilet_paper.dae"
+        modelRotate     0, time * 0.1, -30, 0
+        modelOrigin     0, 0, 0, 0
+        viewOffset      -40, 0, 2, 0
+        lightOrigin     -40, 30, 0, 0
+        lightColor      .5, .5, .5, .5
+        notime          1
+        scaleToRenderWindow 1
+    }
+*/
 }

@@ -1,0 +1,17 @@
+// Moveables
+
+entityDef moveable_black_leather_chair
+{
+	"spawnclass" "idMoveable"
+
+	"model" "models/static/black_leather_chair.dae"
+	"clipmodel" "models/static/black_leather_chair_clip.dae"
+}
+
+entityDef moveable_dog_collar
+{
+	"spawnClass" "idMoveable"
+
+	"model" "models/static/dogcollar.dae"
+	"clipmodel" "models/static/dogcollar_clip.dae"
+}

@@ -1,0 +1,54 @@
+windowDef Desktop
+{
+    rect        0, 0, 640, 480
+    backcolor   0, 0, 0, 1
+    visible     1
+
+    windowDef PortalSwitcher {
+        rect        0, 0, 640, 480
+        backcolor   .29, 0.29, 0.28, 1
+        text        "Portal Switcher"
+        textScale   1
+        textalign   1
+        shadow      2
+
+        windowDef Icon1 {
+            rect 2, 90, 128, 128
+            //backcolor   .29, 0.29, 0.28, .8
+            background "guis/simplekey"
+
+            bordercolor 0.5, 0.6, 0.6, 1
+            bordersize  3
+            text        "Top Portal"
+
+            onMouseEnter
+            {
+                localSound "sound/gui/btn_roll_over" ;
+            }
+
+            onAction
+            {
+                "runscript" "map_test4::switch_camera_target"
+            }
+        }
+
+        windowDef Icon2 {
+            rect 2 + 128 + 2, 90, 128, 128
+            backcolor   .29, 0.29, 0.28, .8
+            bordercolor 0.5, 0.6, 0.6, 1
+            bordersize  3
+            text        "Bottom Portal"
+
+            onMouseEnter
+            {
+                localSound "sound/gui/btn_roll_over" ;
+            }
+
+            onAction
+            {
+                "runscript" "map_test4::switch_camera_target2"
+                localSound "sound/gui/btn_pda_advance" ;
+            }
+        }
+    }
+}

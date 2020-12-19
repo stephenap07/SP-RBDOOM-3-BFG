@@ -1,5 +1,7 @@
 table blinktable { { 0, 1 } }
 
+table delayedBlinkTable { { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1 } }
+
 lights/defaultPointLight
 {
 	lightFalloffImage	_noFalloff
@@ -17,9 +19,22 @@ lights/blinkingRoundLight
 	{
 		forceHighQuality
 		map lights/round.tga
-		red 		( blinktable [Parm4 + (time * (6 * Parm3)) ]) * Parm0
-		green 		( blinktable [Parm4 + (time * (6 * Parm3)) ]) * Parm1
-		blue 		( blinktable [Parm4 + (time * (6 * Parm3)) ]) * Parm2
+		red 		( delayedBlinkTable [Parm4 + (time * (3 * Parm3)) ]) * Parm0
+		green 		( delayedBlinkTable [Parm4 + (time * (3 * Parm3)) ]) * Parm1
+		blue 		( delayedBlinkTable [Parm4 + (time * (3 * Parm3)) ]) * Parm2
+		zeroClamp
+	}
+}
+
+lights/blinkingGrateLight
+{
+	lightFalloffImage	makeintensity( lights/round_light_simple_falloff.tga )
+	{
+		forceHighQuality
+		map lights/lightgratelight.tga
+		red 		( delayedBlinkTable [Parm4 + (time * (3 * Parm3)) ]) * Parm0
+		green 		( delayedBlinkTable [Parm4 + (time * (3 * Parm3)) ]) * Parm1
+		blue 		( delayedBlinkTable [Parm4 + (time * (3 * Parm3)) ]) * Parm2
 		zeroClamp
 	}
 }
@@ -44,5 +59,15 @@ lights/ambientLight2
 		map lights/square_light_simple.tga
 		colored
 		zeroClamp
+	}
+}
+
+lights/basicFogLight
+{
+	fogLight
+	lightFalloffImage	makeintensity( lights/square_light_simple.tga )
+	{
+		forceHighQuality
+		map lights/square_light_simple.tga
 	}
 }

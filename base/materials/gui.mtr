@@ -22,3 +22,10 @@ material auroraRightEye {
 		map guis/assets/mainmenu/eye_right.tga
 	}
 }
+
+material guis/simplekey {
+	{
+		blend blend
+		map guis/assets/icons/simplekey.png
+	}
+}
