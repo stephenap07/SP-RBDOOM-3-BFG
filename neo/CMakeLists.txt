@@ -467,6 +467,9 @@ file(GLOB IMGUI_SOURCES libs/imgui/*.cpp)
 
 file(GLOB STB_INCLUDES libs/stb/*.h)
 
+file(GLOB MIKKTSPACE_INCLUDES libs/mikktspace/*.h)
+file(GLOB MIKKTSPACE_SOURCES libs/mikktspace/*.c)
+
 if (NOT JPEG_FOUND)
     set(JPEG_INCLUDES
         libs/jpeg-6/jchuff.h
@@ -789,6 +792,8 @@ file(GLOB GAMED3XP_PHYSICS_SOURCES d3xp/physics/*.cpp)
 file(GLOB GAMED3XP_SCRIPT_INCLUDES d3xp/script/*.h)
 file(GLOB GAMED3XP_SCRIPT_SOURCES d3xp/script/*.cpp)
 
+file(GLOB GAMED3XP_LUA_INCLUDES d3xp/lua/*.h)
+file(GLOB GAMED3XP_LUA_SOURCES d3xp/lua/*.cpp)
 
 file(GLOB COMPILER_INCLUDES tools/compilers/*.h)
 
@@ -1083,6 +1088,9 @@ source_group("libs\\imgui" FILES ${IMGUI_SOURCES})
 
 source_group("libs\\stb" FILES ${STB_INCLUDES})
 
+source_group("libs\\mikktspace" FILES ${MIKKTSPACE_INCLUDES})
+source_group("libs\\mikktspace" FILES ${MIKKTSPACE_SOURCES})
+
 source_group("libs\\jpeg-6" FILES ${JPEG_INCLUDES})
 source_group("libs\\jpeg-6" FILES ${JPEG_SOURCES})
 
@@ -1165,7 +1173,8 @@ source_group("game-d3xp\\physics" FILES ${GAMED3XP_PHYSICS_SOURCES})
 source_group("game-d3xp\\script" FILES ${GAMED3XP_SCRIPT_INCLUDES})
 source_group("game-d3xp\\script" FILES ${GAMED3XP_SCRIPT_SOURCES})
 
-
+source_group("game-d3xp\\lua" FILES ${GAMED3XP_LUA_INCLUDES})
+source_group("game-d3xp\\lua" FILES ${GAMED3XP_LUA_SOURCES})
 
 
 source_group("sys\\win32" FILES ${WIN32_INCLUDES})
@@ -1263,6 +1272,8 @@ set(RBDOOM3_INCLUDES
 			${FRAMEWORK_IMGUI_INCLUDES}
 			${IMGUI_INCLUDES}
 			${STB_INCLUDES}
+			${MIKKTSPACE_INCLUDES}
+			${MIKKTSPACE_SOURCES}
 			${JPEG_INCLUDES}
 			${PNG_INCLUDES}
 			${ZLIB_INCLUDES}
@@ -1343,7 +1354,8 @@ if(MONOLITH)
 		${GAMED3XP_GAMESYS_INCLUDES} 
 		${GAMED3XP_MENUS_INCLUDES}
 		${GAMED3XP_PHYSICS_INCLUDES}
-		${GAMED3XP_SCRIPT_INCLUDES})
+		${GAMED3XP_SCRIPT_INCLUDES}
+		${GAMED3XP_LUA_INCLUDES})
 		
 	list(APPEND RBDOOM3_SOURCES
 		${GAMED3XP_SOURCES}
@@ -1352,7 +1364,8 @@ if(MONOLITH)
 		${GAMED3XP_GAMESYS_SOURCES}
 		${GAMED3XP_MENUS_SOURCES}
 		${GAMED3XP_PHYSICS_SOURCES}
-		${GAMED3XP_SCRIPT_SOURCES})
+		${GAMED3XP_SCRIPT_SOURCES}
+		${GAMED3XP_LUA_SOURCES})
 else()
 	add_definitions(-D__DOOM_DLL__)
 endif()
