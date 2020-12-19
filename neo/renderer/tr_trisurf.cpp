@@ -1046,23 +1046,6 @@ static void	R_DuplicateMirroredVertexes( srfTriangles_t* tri )
 R_DeriveMikktspaceTangents
 
 Derives the tangent space for the given triangles using the Mikktspace standard.
-Normals must be calculated at this point.
-============
-*/
-static void R_DeriveMikktspaceTangents( srfTriangles_t* tri )
-{
-	SMikkTSpaceContext context;
-	SetUpMikkTSpaceContext( &context );
-	context.m_pUserData = tri;
-	genTangSpaceDefault( &context );
-	tri->tangentsCalculated = true;
-}
-
-/*
-============
-R_DeriveMikktspaceTangents
-
-Derives the tangent space for the given triangles using the Mikktspace standard.
 Normals must be calculated beforehand.
 ============
 */
