@@ -134,19 +134,16 @@ textures/test/cube2
 	{
 		blend diffusemap
 		map textures/test/CubeColor2.png
-		forceHighQuality
 	}
 
 	{
 		blend specularmap
 		map textures/test/CubeSpecular2.png
-		forceHighQuality
 	}
 
 	{
 		blend bumpmap
 		map textures/test/CubeNormal.png
-		forceHighQuality
 	}
 }
 
