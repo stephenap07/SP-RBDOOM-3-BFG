@@ -29,7 +29,9 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __MENUSCREEN_H__
 #define __MENUSCREEN_H__
 
-#include "../../renderer/RenderCommon.h"
+#ifndef __TYPEINFOGEN__
+	#include "../../renderer/RenderCommon.h"
+#endif
 
 enum mainMenuTransition_t
 {
@@ -1362,10 +1364,9 @@ public:
 			SYSTEM_FIELD_FRAMERATE,
 			SYSTEM_FIELD_VSYNC,
 			SYSTEM_FIELD_ANTIALIASING,
-			SYSTEM_FIELD_MOTIONBLUR,
 			// RB begin
+			SYSTEM_FIELD_POSTFX,
 			SYSTEM_FIELD_SHADOWMAPPING,
-			//SYSTEM_FIELD_LODBIAS,
 			// RB end
 			SYSTEM_FIELD_BRIGHTNESS,
 			SYSTEM_FIELD_VOLUME,
@@ -1394,7 +1395,7 @@ public:
 	private:
 		int originalFramerate;
 		int originalAntialias;
-		int originalMotionBlur;
+		int originalPostProcessing;
 		int originalVsync;
 		float originalBrightness;
 		float originalVolume;

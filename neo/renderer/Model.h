@@ -173,7 +173,7 @@ public:
 	virtual bool				SupportsBinaryModel() = 0;
 
 	// RB begin
-	virtual void				ExportOBJ( idFile* objFile, idFile* mtlFile, ID_TIME_T* _timeStamp = NULL ) const = 0;
+	virtual void				ExportOBJ( idFile* objFile, idFile* mtlFile, ID_TIME_T* _timeStamp = NULL ) = 0;
 	// RB end
 
 	// renderBump uses this to load the very high poly count models, skipping the
@@ -194,7 +194,7 @@ public:
 	// Creates the duplicated back side geometry for two sided, alpha tested, lit materials
 	// This does not need to be called if none of the surfaces added with AddSurface require
 	// light interaction, and all the triangles are already well formed.
-	virtual void				FinishSurfaces() = 0;
+	virtual void				FinishSurfaces( bool useMikktspace ) = 0;
 
 	// frees all the data, but leaves the class around for dangling references,
 	// which can regenerate the data with LoadModel()

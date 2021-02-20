@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2012-2021 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -39,7 +40,8 @@ If you have questions concerning this license or the applicable additional terms
 
 class idJointMat;
 struct deformInfo_t;
-class ColladaParser; // RB: Collada support
+class ColladaParser;	// RB: Collada support
+struct objModel_t;		// RB: Wavefront OBJ support
 
 class idRenderModelStatic : public idRenderModel
 {
@@ -59,7 +61,7 @@ public:
 	}
 
 	// RB begin
-	virtual void				ExportOBJ( idFile* objFile, idFile* mtlFile, ID_TIME_T* _timeStamp = NULL ) const;
+	virtual void				ExportOBJ( idFile* objFile, idFile* mtlFile, ID_TIME_T* _timeStamp = NULL );
 	// RB end
 
 	virtual void				PartialInitFromFile( const char* fileName );
@@ -72,7 +74,7 @@ public:
 	virtual void				TouchData();
 	virtual void				InitEmpty( const char* name );
 	virtual void				AddSurface( modelSurface_t surface );
-	virtual void				FinishSurfaces();
+	virtual void				FinishSurfaces( bool useMikktspace );
 	virtual void				FreeVertexCache();
 	virtual const char* 		Name() const;
 	virtual void				Print() const;
@@ -115,12 +117,14 @@ public:
 
 	void						MakeDefaultModel();
 
-	bool						LoadASE( const char* fileName );
-	bool						LoadDAE( const char* fileName ); // RB
-	bool						LoadLWO( const char* fileName );
-	bool						LoadMA( const char* filename );
+	bool						LoadASE( const char* fileName, ID_TIME_T* sourceTimeStamp );
+	bool						LoadLWO( const char* fileName, ID_TIME_T* sourceTimeStamp );
+	bool						LoadMA( const char* filename, ID_TIME_T* sourceTimeStamp );
+	bool						LoadDAE( const char* fileName, ID_TIME_T* sourceTimeStamp ); // RB
+	bool						LoadOBJ( const char* fileName, ID_TIME_T* sourceTimeStamp ); // RB
 
 	bool						ConvertDAEToModelSurfaces( const ColladaParser* dae ); // RB
+	bool						ConvertOBJToModelSurfaces( const objModel_t* obj ); // RB
 	bool						ConvertASEToModelSurfaces( const struct aseModel_s* ase );
 	bool						ConvertLWOToModelSurfaces( const struct st_lwObject* lwo );
 	bool						ConvertMAToModelSurfaces( const struct maModel_s* ma );
@@ -232,6 +236,10 @@ public:
 	{
 		return true;
 	}
+
+	// RB begin
+	virtual void				ExportOBJ( idFile* objFile, idFile* mtlFile, ID_TIME_T* _timeStamp = NULL );
+	// RB end
 
 private:
 	idList<idMD5Joint, TAG_MODEL>	joints;

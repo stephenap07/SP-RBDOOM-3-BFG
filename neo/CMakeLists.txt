@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8) # Eric: These are rookie numbers, you need to bump those numbers up.
+cmake_minimum_required(VERSION 3.2)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 project(RBDoom3BFG)
@@ -11,9 +11,6 @@ option(COMPILE_COMMANDS
 
 option(USE_MFC_TOOLS
 		"Compile the built-in MFC based tools" OFF)
-		
-option(MONOLITH
-		"Embed game logic into main executable" ON)
 
 option(USE_PRECOMPILED_HEADERS
 		"Use precompiled headers during build" ON)
@@ -66,7 +63,7 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
 	set(CPU_OPTIMIZATION "-mmmx -msse -msse2" CACHE STRING "Which CPU specific optimitations should be used beside the compiler's default?")
 endif()
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(powerpc|ppc)64le")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "((powerpc|ppc)64le)|(mips64)")
 	option(USE_INTRINSICS "Compile using intrinsics (e.g mmx, sse, msse2)" OFF)
 else()
 	option(USE_INTRINSICS "Compile using intrinsics (e.g mmx, sse, msse2)" ON)
@@ -251,8 +248,8 @@ elseif(MSVC)
 					-D_CRT_SECURE_NO_DEPRECATE
 					-D_CRT_NONSTDC_NO_DEPRECATE
 					-D_CRT_SECURE_NO_WARNINGS
-                                        -D_MBCS
-                                       #-DUSE_OPENAL
+					-D_MBCS
+					#-DUSE_OPENAL
 					-DUSE_EXCEPTIONS)
         ## Check for Version ##
         if( WINRT OR WINDOWS10 ) # Windows RT
@@ -472,6 +469,16 @@ file(GLOB RENDERER_VULKAN_INCLUDES renderer/Vulkan/*.h)
 file(GLOB RENDERER_VULKAN_SOURCES renderer/Vulkan/*.cpp)
 
 file(GLOB SHADERS ../base/renderprogs/*.hlsl ../base/renderprogs/*.inc )
+file(GLOB SHADERS_BUILTIN ../base/renderprogs/builtin/*.hlsl )
+file(GLOB SHADERS_BUILTIN_DEBUG ../base/renderprogs/builtin/debug/*.hlsl )
+file(GLOB SHADERS_BUILTIN_FOG ../base/renderprogs/builtin/fog/*.hlsl )
+file(GLOB SHADERS_BUILTIN_LEGACY ../base/renderprogs/builtin/legacy/*.hlsl )
+file(GLOB SHADERS_BUILTIN_LIGHTING ../base/renderprogs/builtin/lighting/*.hlsl )
+file(GLOB SHADERS_BUILTIN_POST ../base/renderprogs/builtin/post/*.hlsl )
+file(GLOB SHADERS_BUILTIN_SSAO ../base/renderprogs/builtin/SSAO/*.hlsl )
+file(GLOB SHADERS_BUILTIN_SSGI ../base/renderprogs/builtin/SSGI/*.hlsl )
+file(GLOB SHADERS_BUILTIN_VIDEO ../base/renderprogs/builtin/video/*.hlsl )
+file(GLOB SHADERS_BUILTIN_VR ../base/renderprogs/builtin/VR/*.hlsl )
 
 file(GLOB IRRXML_INCLUDES libs/irrxml/src/*.h)
 file(GLOB IRRXML_SOURCES libs/irrxml/src/*.cpp)
@@ -1093,6 +1100,16 @@ source_group("renderer\\Vulkan" FILES ${RENDERER_VULKAN_SOURCES})
 source_group("renderer\\SMAA" FILES ${RENDERER_SMAA_INCLUDES})
 
 source_group("renderer\\Shaders" FILES ${SHADERS})
+source_group("renderer\\Shaders\\builtin" FILES ${SHADERS_BUILTIN})
+source_group("renderer\\Shaders\\builtin\\debug" FILES ${SHADERS_BUILTIN_DEBUG})
+source_group("renderer\\Shaders\\builtin\\fog" FILES ${SHADERS_BUILTIN_FOG})
+source_group("renderer\\Shaders\\builtin\\legacy" FILES ${SHADERS_BUILTIN_LEGACY})
+source_group("renderer\\Shaders\\builtin\\lighting" FILES ${SHADERS_BUILTIN_LIGHTING})
+source_group("renderer\\Shaders\\builtin\\post" FILES ${SHADERS_BUILTIN_POST})
+source_group("renderer\\Shaders\\builtin\\SSAO" FILES ${SHADERS_BUILTIN_SSAO})
+source_group("renderer\\Shaders\\builtin\\SSGI" FILES ${SHADERS_BUILTIN_SSGI})
+source_group("renderer\\Shaders\\builtin\\video" FILES ${SHADERS_BUILTIN_VIDEO})
+source_group("renderer\\Shaders\\builtin\\VR" FILES ${SHADERS_BUILTIN_VR})
 
 source_group("libs\\irrxml" FILES ${IRRXML_INCLUDES})
 source_group("libs\\irrxml" FILES ${IRRXML_SOURCES})
@@ -1281,6 +1298,17 @@ set(RBDOOM3_INCLUDES
 			${RENDERER_JOBS_STATICSHADOWVOLUME_INCLUDES}
 			
 			${SHADERS}
+			${SHADERS_BUILTIN}
+			${SHADERS_BUILTIN_DEBUG}
+			${SHADERS_BUILTIN_FOG}
+			${SHADERS_BUILTIN_LEGACY}
+			${SHADERS_BUILTIN_LIGHTING}
+			${SHADERS_BUILTIN_POST}
+			${SHADERS_BUILTIN_SSAO}
+			${SHADERS_BUILTIN_SSGI}
+			${SHADERS_BUILTIN_VIDEO}
+			${SHADERS_BUILTIN_VR}
+			
 			${RENDERER_SMAA_INCLUDES}
 			${IRRXML_INCLUDES}
 			${FRAMEWORK_IMGUI_INCLUDES}
@@ -1313,6 +1341,15 @@ set(RBDOOM3_INCLUDES
 			${TOOLS_INCLUDES}
 			${IMGUI_EDITOR_INCLUDES}
 			${IMGUI_EDITOR_LIGHT_INCLUDES}
+			
+			${GAMED3XP_INCLUDES}
+			${GAMED3XP_AI_INCLUDES} 
+			${GAMED3XP_ANIM_INCLUDES} 
+			${GAMED3XP_GAMESYS_INCLUDES} 
+			${GAMED3XP_MENUS_INCLUDES}
+			${GAMED3XP_PHYSICS_INCLUDES}
+			${GAMED3XP_SCRIPT_INCLUDES}
+			${GAMED3XP_LUA_INCLUDES}
 			)
 			
 set(RBDOOM3_SOURCES
@@ -1351,6 +1388,15 @@ set(RBDOOM3_SOURCES
 			
 			${IMGUI_EDITOR_SOURCES}
 			${IMGUI_EDITOR_LIGHT_SOURCES}
+			
+			${GAMED3XP_SOURCES}
+			${GAMED3XP_AI_SOURCES}
+			${GAMED3XP_ANIM_SOURCES}
+			${GAMED3XP_GAMESYS_SOURCES}
+			${GAMED3XP_MENUS_SOURCES}
+			${GAMED3XP_PHYSICS_SOURCES}
+			${GAMED3XP_SCRIPT_SOURCES}
+			${GAMED3XP_LUA_SOURCES}
 			)
 
 #add_definitions(-DUSE_DOOMCLASSIC)
@@ -1360,29 +1406,6 @@ add_definitions(-D__DOOM__
 				#-DFT2_BUILD_LIBRARY
 				)
 				
-if(MONOLITH)
-	list(APPEND RBDOOM3_INCLUDES
-		${GAMED3XP_INCLUDES}
-		${GAMED3XP_AI_INCLUDES} 
-		${GAMED3XP_ANIM_INCLUDES} 
-		${GAMED3XP_GAMESYS_INCLUDES} 
-		${GAMED3XP_MENUS_INCLUDES}
-		${GAMED3XP_PHYSICS_INCLUDES}
-		${GAMED3XP_SCRIPT_INCLUDES}
-		${GAMED3XP_LUA_INCLUDES})
-		
-	list(APPEND RBDOOM3_SOURCES
-		${GAMED3XP_SOURCES}
-		${GAMED3XP_AI_SOURCES}
-		${GAMED3XP_ANIM_SOURCES}
-		${GAMED3XP_GAMESYS_SOURCES}
-		${GAMED3XP_MENUS_SOURCES}
-		${GAMED3XP_PHYSICS_SOURCES}
-		${GAMED3XP_SCRIPT_SOURCES}
-		${GAMED3XP_LUA_SOURCES})
-else()
-	add_definitions(-D__DOOM_DLL__)
-endif()
 
 include_directories(
 			.
@@ -1543,15 +1566,19 @@ if(MSVC)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/staticshadowvolume/StaticShadowVolume.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/ShadowShared.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/RenderLog.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/framework/precompiled.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/Vulkan/vma.cpp)
+		#list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES d3xp/gamesys/Class.cpp)
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/framework/precompiled.cpp)
+	
+		foreach( src_file ${RBDOOM3_PRECOMPILED_SOURCES} )
+			message(STATUS "-include precompiled.h for ${src_file}")
+		endforeach()
 	
 		set_source_files_properties(
 		${RBDOOM3_PRECOMPILED_SOURCES}
 		PROPERTIES
 		COMPILE_FLAGS "/Yuprecompiled.h"
 		OBJECT_DEPENDS "precompiled.pch"
-
 		)
 		
 		set_source_files_properties(framework/precompiled.cpp
@@ -1562,6 +1589,16 @@ if(MSVC)
 	endif()
 	
 	set_source_files_properties( ${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_DEBUG} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_FOG} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_LEGACY} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_LIGHTING} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_POST} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_SSAO} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_SSGI} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_VIDEO} PROPERTIES VS_TOOL_OVERRIDE "None" )
+	set_source_files_properties( ${SHADERS_BUILTIN_VR} PROPERTIES VS_TOOL_OVERRIDE "None" )
 	
 	list(APPEND RBDOOM3_SOURCES ${WIN32_RESOURCES})
 	
@@ -1691,7 +1728,7 @@ else()
 	
 	if(USE_PRECOMPILED_HEADERS) 	
 		set(RBDOOM3_PRECOMPILED_SOURCES ${RBDOOM3_SOURCES})
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES})
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES})
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib/minizip/ioapi.c)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTDecoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder.cpp)

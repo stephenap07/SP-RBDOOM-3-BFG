@@ -1168,7 +1168,7 @@ extern idCVar r_hdrDebug;
 extern idCVar r_ldrContrastThreshold;
 extern idCVar r_ldrContrastOffset;
 
-extern idCVar r_useFilmicPostProcessEffects;
+extern idCVar r_useFilmicPostProcessing;
 extern idCVar r_forceAmbient;
 
 extern idCVar r_useSSGI;
@@ -1491,7 +1491,7 @@ void				R_RemoveDegenerateTriangles( srfTriangles_t* tri );
 void				R_RemoveUnusedVerts( srfTriangles_t* tri );
 void				R_RangeCheckIndexes( const srfTriangles_t* tri );
 void				R_CreateVertexNormals( srfTriangles_t* tri );		// also called by dmap
-void				R_CleanupTriangles( srfTriangles_t* tri, bool createNormals, bool identifySilEdges, bool useUnsmoothedTangents );
+void				R_CleanupTriangles( srfTriangles_t* tri, bool createNormals, bool identifySilEdges, bool useUnsmoothedTangents, bool useMikktspace );
 void				R_ReverseTriangles( srfTriangles_t* tri );
 
 // Only deals with vertexes and indexes, not silhouettes, planes, etc.

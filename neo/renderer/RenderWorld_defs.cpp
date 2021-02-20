@@ -769,10 +769,10 @@ void R_DeriveEnvprobeData( RenderEnvprobeLocal* probe )
 
 	// TODO get preconvolved cubemaps
 	fullname.Format( "env/%s/envprobe%i_amb", basename.c_str(), probeIndex );
-	probe->irradianceImage = globalImages->ImageFromFile( fullname, TF_DEFAULT, TR_CLAMP, TD_HIGHQUALITY_CUBE, CF_NATIVE );
+	probe->irradianceImage = globalImages->ImageFromFile( fullname, TF_DEFAULT, TR_CLAMP, TD_LOOKUP_TABLE_RGB1, CF_2D );
 
 	fullname.Format( "env/%s/envprobe%i_spec", basename.c_str(), probeIndex );
-	probe->radianceImage = globalImages->ImageFromFile( fullname, TF_DEFAULT, TR_CLAMP, TD_HIGHQUALITY_CUBE, CF_NATIVE );
+	probe->radianceImage = globalImages->ImageFromFile( fullname, TF_DEFAULT, TR_CLAMP, TD_LOOKUP_TABLE_RGB1, CF_2D );
 
 	// ------------------------------------
 	// compute the light projection matrix

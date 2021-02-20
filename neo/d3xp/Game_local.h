@@ -68,6 +68,7 @@ class idThread;
 class idEditEntities;
 class idLocationEntity;
 class idMenuHandler_Shell;
+class EnvironmentProbe; // RB
 
 // SP Begin
 struct lua_State;
@@ -649,6 +650,8 @@ private:
 
 	idLocationEntity** 		locationEntities;		// for location names, etc
 
+	idList<EnvironmentProbe*> environmentProbes;	// RB
+
 	idCamera* 				camera;
 	const idMaterial* 		globalMaterial;			// for overriding everything
 
@@ -714,6 +717,9 @@ private:
 	// commons used by init, shutdown, and restart
 	void					MapPopulate();
 	void					MapClear( bool clearClients );
+
+	// RB: spawn environment probes if there aren't any by default
+	void					PopulateEnvironmentProbes();
 
 	pvsHandle_t				GetClientPVS( idPlayer* player, pvsType_t type );
 	void					SetupPlayerPVS();

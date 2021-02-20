@@ -1432,19 +1432,15 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		AddStartupCommands();
 
-		guiMainMenu = uiManager->FindGui( "guis/mainmenu.gui", true, false, true );
-		guiLoading = uiManager->FindGui( "guis/map/loading.gui", true, false, true );
-		pauseMenu = uiManager->FindGui( "guis/pausemenu.gui", true, false, true );
-		//SetGui(guiMainMenu);
-
-		//idSWF testGui("test", soundWorld);
-
-		while( showSplash && ( Sys_Milliseconds() - legalStartTime < legalMinTime ) )
+		StartMenu( true );
+#ifndef ID_RETAIL
+		while( Sys_Milliseconds() - legalStartTime < legalMinTime )
 		{
 			RenderSplash();
 			Sys_GenerateEvents();
 			Sys_Sleep( 10 );
 		};
+#endif
 
 		// print all warnings queued during initialization
 		PrintWarnings();

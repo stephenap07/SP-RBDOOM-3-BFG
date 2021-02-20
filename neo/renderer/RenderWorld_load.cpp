@@ -297,7 +297,8 @@ idRenderModel* idRenderWorldLocal::ParseModel( idLexer* src, const char* mapName
 
 	src->ExpectTokenString( "}" );
 
-	model->FinishSurfaces();
+	// RB: FIXME add check for mikktspace
+	model->FinishSurfaces( false );
 
 	if( fileOut != NULL && model->SupportsBinaryModel() && binaryLoadRenderModels.GetBool() )
 	{
@@ -1089,7 +1090,6 @@ void idRenderWorldLocal::AddWorldModelEntities()
 	{
 		common->UpdateLevelLoadPacifier();
 
-
 		idRenderEntityLocal*	 def = new( TAG_RENDER_ENTITY ) idRenderEntityLocal;
 
 		// try and reuse a free spot
@@ -1141,7 +1141,11 @@ void idRenderWorldLocal::AddWorldModelEntities()
 
 		R_DeriveEntityData( def );
 
-		AddEntityRefToArea( def, &portalAreas[i] );
+		portalArea_t* area = &portalAreas[i];
+		AddEntityRefToArea( def, area );
+
+		// RB: remember BSP area AABB for quick lookup later
+		area->globalBounds = def->globalReferenceBounds;
 	}
 }
 
