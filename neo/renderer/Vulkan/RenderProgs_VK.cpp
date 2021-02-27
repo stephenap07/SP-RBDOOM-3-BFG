@@ -553,8 +553,8 @@ static int CompileGLSLtoSPIRV( const char* filename, const idStr& dataGLSL, cons
 	if( !shader->parse( &resources, 100, false, messages ) )
 	{
 		idLib::Printf( "GLSL parsing failed for: %s\n", filename );
-		idLib::Printf( "%s\n", shader.getInfoLog() );
-		idLib::Printf( "%s\n", shader.getInfoDebugLog() );
+		idLib::Printf( "%s\n", shader->getInfoLog() );
+		idLib::Printf( "%s\n", shader->getInfoDebugLog() );
 
 		//*spirvBuffer = NULL;
 		//return 0;
@@ -869,6 +869,7 @@ void idRenderProgManager::KillAllShaders()
 		vkDestroyDescriptorSetLayout( vkcontext.device, prog.descriptorSetLayout, NULL );
 		vkDestroyPipelineLayout( vkcontext.device, prog.pipelineLayout, NULL );
 	}
+
 	renderProgs.Clear();
 
 	for( int i = 0; i < NUM_FRAME_DATA; ++i )
