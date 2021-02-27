@@ -597,8 +597,6 @@ void TextBufferManager::destroyTextBuffer( TextBufferHandle _handle )
 	BufferCache& bc = m_textBuffers[_handle._id];
 	m_textBufferHandles.free( _handle._id );
 	bc.textBuffer->clearTextBuffer();
-	//delete bc.textBuffer;
-	//bc.textBuffer = nullptr;
 }
 
 void TextBufferManager::deformSprite( TextBufferHandle _handle, const idMat3& viewAxis )
