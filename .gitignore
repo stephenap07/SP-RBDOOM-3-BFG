@@ -241,3 +241,11 @@ neo/cmake-build-*/
 /.vs
 /base/DoomConfig.cfg
 /dump/common
+/swscale-5.dll
+/swresample-3.dll
+/postproc-55.dll
+/avutil-56.dll
+/avformat-58.dll
+/avfilter-7.dll
+/avdevice-58.dll
+/avcodec-58.dll
