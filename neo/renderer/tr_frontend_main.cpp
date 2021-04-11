@@ -473,16 +473,12 @@ void R_RenderView( viewDef_t* parms )
 
 	tr.viewDef = parms;
 
-	if( !parms->isObliqueProjection )
-	{
-		// setup the matrix for world space to eye space
-		R_SetupViewMatrix( tr.viewDef );
+	// setup the matrix for world space to eye space
+	R_SetupViewMatrix( tr.viewDef );
 
-		// we need to set the projection matrix before doing
-		// portal-to-screen scissor calculations
-		R_SetupProjectionMatrix( tr.viewDef );
-	}
-
+	// we need to set the projection matrix before doing
+	// portal-to-screen scissor calculations
+	R_SetupProjectionMatrix( tr.viewDef );
 
 	// RB: we need a unprojection matrix to calculate the vertex position based on the depth image value
 	// for some post process shaders
