@@ -46,7 +46,7 @@ public:
 private:
 
 	void InitLuaState();
-	bool LoadLuaScript( const char* luaScript );
+	bool LoadLuaScript( const char* luaScript, bool failIfFound = false );
 
 	lua_State* luaState;
 };

@@ -908,6 +908,14 @@ private:
 		idList<pipelineState_t>	pipelines;
 	};
 
+	struct Resource
+	{
+		VkObjectType type;
+		uint64_t handle;
+	};
+
+	idList<Resource> resourcesToRelease[ NUM_FRAME_DATA ];
+
 	static void		CreateDescriptorSetLayout( const shader_t& vertexShader, const shader_t& fragmentShader, renderProg_t& renderProg );
 	void			AllocParmBlockBuffer( const idList<int>& parmIndices, idUniformBuffer& ubo );
 #else

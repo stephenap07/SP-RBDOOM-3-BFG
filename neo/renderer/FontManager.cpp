@@ -336,7 +336,11 @@ typedef std::unordered_map<CodePoint, GlyphInfo> GlyphHashMap;
 struct FontManager::CachedFont
 {
 	CachedFont()
-		: trueTypeFont( NULL )
+		: fontInfo()
+		, cachedGlyphs()
+		, trueTypeFont( nullptr )
+		, masterFontHandle()
+		, padding( 0 )
 	{
 		masterFontHandle.id = kInvalidHandle;
 	}

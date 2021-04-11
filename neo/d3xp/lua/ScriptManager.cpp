@@ -105,7 +105,10 @@ bool ScriptManager::Init()
 
 void ScriptManager::Shutdown()
 {
-	lua_close( luaState );
+	if( luaState )
+	{
+		lua_close( luaState );
+	}
 }
 
 void ScriptManager::InitLuaState()
@@ -123,15 +126,22 @@ void ScriptManager::InitLuaState()
 	SetLuaSearchPath( luaState, scriptDir );
 }
 
-bool ScriptManager::LoadLuaScript( const char* luaScript )
+bool ScriptManager::LoadLuaScript( const char* luaScript, bool failIfNotFound )
 {
 	char* src;
 
 	int length = fileSystem->ReadFile( luaScript, ( void** )&src, NULL );
 	if( length < 0 )
 	{
-		gameLocal.Error( "Failed to find lua script %s\n", luaScript );
-		fileSystem->FreeFile( src );
+		if( failIfNotFound )
+		{
+			gameLocal.Error( "Failed to find lua script %s\n", luaScript );
+		}
+		else
+		{
+			gameLocal.Warning( "Failed to find lua script %s\n", luaScript );
+		}
+
 		return false;
 	}
 

@@ -51,6 +51,10 @@ private:
 
 	struct Node
 	{
+		Node() : x( 0 ), y( 0 ), width( 0 )
+		{
+		}
+
 		Node( int16_t _x, int16_t _y, int16_t _width ) : x( _x ), y( _y ), width( _width )
 		{
 		}
@@ -64,7 +68,7 @@ private:
 	uint32_t m_width;            //< width (in pixels) of the underlying texture
 	uint32_t m_height;           //< height (in pixels) of the underlying texture
 	uint32_t m_usedSpace;        //< Surface used in squared pixel
-	std::vector<Node> m_skyline; //< node of the skyline algorithm
+	idList<Node> m_skyline; //< node of the skyline algorithm
 };
 
 RectanglePacker::RectanglePacker()
@@ -81,7 +85,7 @@ RectanglePacker::RectanglePacker( uint32_t _width, uint32_t _height )
 {
 	// We want a one pixel border around the whole atlas to avoid any artefact when
 	// sampling texture
-	m_skyline.push_back( Node( 1, 1, uint16_t( _width - 2 ) ) );
+	m_skyline.Append( Node( 1, 1, uint16_t( _width - 2 ) ) );
 }
 
 void RectanglePacker::init( uint32_t _width, uint32_t _height )
@@ -93,10 +97,10 @@ void RectanglePacker::init( uint32_t _width, uint32_t _height )
 	m_height = _height;
 	m_usedSpace = 0;
 
-	m_skyline.clear();
+	m_skyline.Clear();
 	// We want a one pixel border around the whole atlas to avoid any artifact when
 	// sampling texture
-	m_skyline.push_back( Node( 1, 1, uint16_t( _width - 2 ) ) );
+	m_skyline.Append( Node( 1, 1, uint16_t( _width - 2 ) ) );
 }
 
 bool RectanglePacker::addRectangle( uint16_t _width, uint16_t _height, uint16_t& _outX, uint16_t& _outY )
@@ -111,7 +115,7 @@ bool RectanglePacker::addRectangle( uint16_t _width, uint16_t _height, uint16_t&
 	best_height = INT_MAX;
 	best_index = -1;
 	best_width = INT_MAX;
-	for( uint16_t ii = 0, num = uint16_t( m_skyline.size() ); ii < num; ++ii )
+	for( uint16_t ii = 0, num = uint16_t( m_skyline.Num() ); ii < num; ++ii )
 	{
 		int32_t yy = fit( ii, _width, _height );
 		if( yy >= 0 )
@@ -135,9 +139,9 @@ bool RectanglePacker::addRectangle( uint16_t _width, uint16_t _height, uint16_t&
 	}
 
 	Node newNode( _outX, _outY + _height, _width );
-	m_skyline.insert( m_skyline.begin() + best_index, newNode );
+	m_skyline.Insert( newNode, best_index );
 
-	for( uint16_t ii = uint16_t( best_index + 1 ), num = uint16_t( m_skyline.size() ); ii < num; ++ii )
+	for( uint16_t ii = uint16_t( best_index + 1 ), num = uint16_t( m_skyline.Num() ); ii < num; ++ii )
 	{
 		node = &m_skyline[ii];
 		prev = &m_skyline[ii - 1];
@@ -148,7 +152,7 @@ bool RectanglePacker::addRectangle( uint16_t _width, uint16_t _height, uint16_t&
 			node->width -= shrink;
 			if( node->width <= 0 )
 			{
-				m_skyline.erase( m_skyline.begin() + ii );
+				m_skyline.RemoveIndex( ii );
 				--ii;
 				--num;
 			}
@@ -181,12 +185,12 @@ float RectanglePacker::getUsageRatio()
 
 void RectanglePacker::clear()
 {
-	m_skyline.clear();
+	m_skyline.Clear();
 	m_usedSpace = 0;
 
 	// We want a one pixel border around the whole atlas to avoid any artefact when
 	// sampling texture
-	m_skyline.push_back( Node( 1, 1, uint16_t( m_width - 2 ) ) );
+	m_skyline.Append( Node( 1, 1, uint16_t( m_width - 2 ) ) );
 }
 
 int32_t RectanglePacker::fit( uint32_t _skylineNodeIndex, uint16_t _width, uint16_t _height )
@@ -232,14 +236,14 @@ void RectanglePacker::merge()
 	Node* next;
 	uint32_t ii;
 
-	for( ii = 0; ii < m_skyline.size() - 1; ++ii )
+	for( ii = 0; ii < m_skyline.Num() - 1; ++ii )
 	{
 		node = ( Node* )&m_skyline[ii];
 		next = ( Node* )&m_skyline[ii + 1];
 		if( node->y == next->y )
 		{
 			node->width += next->width;
-			m_skyline.erase( m_skyline.begin() + ii + 1 );
+			m_skyline.RemoveIndex( ii + 1 );
 			--ii;
 		}
 	}
