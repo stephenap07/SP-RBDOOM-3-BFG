@@ -94,7 +94,7 @@ idResolutionScale::GetCurrentResolutionScale
 void idResolutionScale::GetCurrentResolutionScale( float& x, float& y )
 {
 	// for some reason this fails when the window is minimized for a while.
-	//assert( currentResolution >= MINIMUM_RESOLUTION_SCALE);
+	assert( currentResolution >= MINIMUM_RESOLUTION_SCALE );
 	//assert( currentResolution <= MAXIMUM_RESOLUTION_SCALE);
 
 	x = MAXIMUM_RESOLUTION_SCALE;
