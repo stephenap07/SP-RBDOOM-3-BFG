@@ -813,7 +813,7 @@ static VkPresentModeKHR ChoosePresentMode( idList< VkPresentModeKHR >& modes )
 			{
 				return VK_PRESENT_MODE_MAILBOX_KHR;
 			}
-			if( ( modes[i] != VK_PRESENT_MODE_MAILBOX_KHR ) && ( modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR ) )
+			if( modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR )
 			{
 				return VK_PRESENT_MODE_IMMEDIATE_KHR;
 			}
@@ -1246,8 +1246,8 @@ static void CreateRenderPass()
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-	// RB
-	//depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
