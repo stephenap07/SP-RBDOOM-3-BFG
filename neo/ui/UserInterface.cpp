@@ -65,7 +65,6 @@ void idUserInterfaceManagerLocal::Init()
 	dcOptimized.Init();
 
 	SetDrawingDC();
-
 }
 
 void idUserInterfaceManagerLocal::Shutdown()

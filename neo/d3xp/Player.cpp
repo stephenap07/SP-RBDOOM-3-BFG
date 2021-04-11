@@ -33,6 +33,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "../framework/Common_local.h"
 #include "PredictedValue_impl.h"
 
+#include "gui/TestGui.h"
+#include "rmlui/RmlUserInterfaceLocal.h"
+
+
 idCVar flashlight_batteryDrainTimeMS( "flashlight_batteryDrainTimeMS", "30000", CVAR_INTEGER, "amount of time (in MS) it takes for full battery to drain (-1 == no battery drain)" );
 idCVar flashlight_batteryChargeTimeMS( "flashlight_batteryChargeTimeMS", "3000", CVAR_INTEGER, "amount of time (in MS) it takes to fully recharge battery" );
 idCVar flashlight_minActivatePercent( "flashlight_minActivatePercent", ".25", CVAR_FLOAT, "( 0.0 - 1.0 ) minimum amount of battery (%) needed to turn on flashlight" );
@@ -1503,6 +1507,16 @@ idPlayer::idPlayer():
 	inventoryOpen                 = false;
 	initializedInventoryThisFrame = false;
 
+	// RML Testing
+	testGui					= rmlManager->FindGui( "guis/rml/inventory/inventory.rml", true, false, true );
+	inventoryRml			= new UI_Inventory();
+	testGui->AddUi(inventoryRml);
+
+	inventoryRml->Init("Inventory", idVec2(0, 0), testGui->Context());
+	inventoryRml->AddItem("Hello, Mcgee");
+	inventoryRml->AddItem("Hello, 1");
+	inventoryRml->AddItem("Hello, 2");
+
 	mountedObject			= NULL;
 	enviroSuitLight			= NULL;
 
@@ -2050,7 +2064,6 @@ void idPlayer::Spawn()
 	// only the local player needs guis
 	if( !common->IsMultiplayer() || IsLocallyControlled() )
 	{
-
 		// load HUD
 		if( hudManager != NULL )
 		{
@@ -2059,13 +2072,13 @@ void idPlayer::Spawn()
 			hud = hudManager->GetHud();
 		}
 
-		if( inventoryGui != nullptr )
+		if( testGui )
 		{
 			sysEvent_t ev;
 			memset( &ev, 0, sizeof( ev ) );
 			ev.evType = SE_NONE;
-			inventoryGui->HandleEvent( &ev, Sys_Milliseconds() );
-			inventoryGui->Activate( true, Sys_Milliseconds() );
+			testGui->HandleEvent( &ev, Sys_Milliseconds() );
+			testGui->Activate( true, Sys_Milliseconds() );
 		}
 
 		// load cursor
@@ -3662,6 +3675,14 @@ void idPlayer::DrawInventory()
 	if( inventoryGui )
 	{
 		inventoryGui->Redraw( Sys_Milliseconds(), true );
+	}
+}
+
+void idPlayer::DrawTestGui()
+{
+	if( testGui )
+	{
+		testGui->Redraw( Sys_Milliseconds(), true );
 	}
 }
 
@@ -8813,6 +8834,7 @@ bool idPlayer::HandleGuiEvents( const sysEvent_t* ev )
 		handled = pdaMenu->HandleGuiEvent( ev );
 	}
 
+	/*
 	if( inventoryGui != nullptr && inventoryOpen )
 	{
 		const char* command = inventoryGui->HandleEvent( ev, Sys_Milliseconds() );
@@ -8822,6 +8844,13 @@ bool idPlayer::HandleGuiEvents( const sysEvent_t* ev )
 			// Let the player think once before calling the handle gui commands method.
 			HandleGuiCommands( this, command );
 		}
+	}
+	*/
+
+	if( testGui )
+	{
+		const char* command = testGui->HandleEvent( ev, Sys_Milliseconds() );
+		HandleGuiCommands( this, command );
 	}
 
 	return handled;

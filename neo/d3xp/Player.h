@@ -44,6 +44,7 @@ class idMenuHandler_HUD;
 class idMenuHandler_Inventory;
 class idMenuScreen_HUD;
 class idTarget_SetPrimaryObjective;
+class UI_Inventory;
 
 extern const idEventDef EV_Player_GetButtons;
 extern const idEventDef EV_Player_GetMove;
@@ -354,16 +355,19 @@ public:
 	int						flashlightBattery;
 	idEntityPtr<idWeapon>	flashlight;
 
-	idEntityPtr<idWeapon>	 weapon;
-	idMenuHandler_HUD* 		 hudManager;
-	idMenuScreen_HUD* 		 hud;
-	idMenuHandler_PDA*       pdaMenu;
-	idSWF* 					 mpMessages;
-	idUserInterface*         inventoryGui;
-	bool                     inventoryOpen;
-	bool                     initializedInventoryThisFrame;
-	bool					 objectiveSystemOpen;
-	int						 quickSlot[ NUM_QUICK_SLOTS ];
+	idEntityPtr<idWeapon>	weapon;
+	idMenuHandler_HUD*		hudManager;
+	idMenuScreen_HUD*		hud;
+	idMenuHandler_PDA*		pdaMenu;
+	idSWF*					mpMessages;
+	idUserInterface*		inventoryGui;
+	RmlUserInterface*		testGui;
+	UI_Inventory*				inventoryRml;
+
+	bool					inventoryOpen;
+	bool					initializedInventoryThisFrame;
+	bool					objectiveSystemOpen;
+	int						quickSlot[ NUM_QUICK_SLOTS ];
 
 	int						weapon_soulcube;
 	int						weapon_pda;
@@ -543,6 +547,7 @@ public:
 	void					DrawHUD( idMenuHandler_HUD* hudManager );
 
 	void                    DrawInventory();
+	void					DrawTestGui();
 
 	void					WeaponFireFeedback( const idDict* weaponDef );
 

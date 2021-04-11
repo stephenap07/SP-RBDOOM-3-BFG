@@ -847,6 +847,8 @@ void idRenderProgManager::KillAllShaders()
 {
 	Unbind();
 
+	const int nextFrameIndex = ( currentData + 1 ) % NUM_FRAME_DATA;
+
 	// destroy shaders
 	for( int i = 0; i < shaders.Num(); ++i )
 	{
@@ -863,20 +865,31 @@ void idRenderProgManager::KillAllShaders()
 		for( int j = 0; j < prog.pipelines.Num(); ++j )
 		{
 			vkDestroyPipeline( vkcontext.device, prog.pipelines[ j ].pipeline, NULL );
+
+			//Resource res;
+			//res.handle = (uint64_t)prog.pipelines[ j ].pipeline;
+			//res.type = VK_OBJECT_TYPE_PIPELINE;
+			//resourcesToRelease[ nextFrameIndex ].Append(res);
 		}
+
 		prog.pipelines.Clear();
 
 		vkDestroyDescriptorSetLayout( vkcontext.device, prog.descriptorSetLayout, NULL );
 		vkDestroyPipelineLayout( vkcontext.device, prog.pipelineLayout, NULL );
 	}
 
-	renderProgs.Clear();
+	//renderProgs.Clear();
 
 	for( int i = 0; i < NUM_FRAME_DATA; ++i )
 	{
 		parmBuffers[ i ]->FreeBufferObject();
 		delete parmBuffers[ i ];
 		parmBuffers[ i ] = NULL;
+
+		//Resource res;
+		//res.handle = (uint64_t)parmBuffers[ i ];
+		//res.type = ID_UNIFORM_OBJECT;
+		//resourcesToRelease[ i ].Append( res );
 	}
 
 	emptyUBO.FreeBufferObject();
@@ -884,12 +897,17 @@ void idRenderProgManager::KillAllShaders()
 	for( int i = 0; i < NUM_FRAME_DATA; ++i )
 	{
 		//vkFreeDescriptorSets( vkcontext.device, descriptorPools[ i ], MAX_DESC_SETS, descriptorSets[ i ] );
-		vkResetDescriptorPool( vkcontext.device, descriptorPools[ i ], 0 );
-		vkDestroyDescriptorPool( vkcontext.device, descriptorPools[ i ], NULL );
+		//vkResetDescriptorPool( vkcontext.device, descriptorPools[ i ], 0 );
+		//vkDestroyDescriptorPool( vkcontext.device, descriptorPools[ i ], NULL );
+
+		//Resource res;
+		//res.handle = (uint64_t)descriptorPools[ i ];
+		//res.type = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
+		//resourcesToRelease[ i ].Append( res );
 	}
 
-	memset( descriptorSets, 0, sizeof( descriptorSets ) );
-	memset( descriptorPools, 0, sizeof( descriptorPools ) );
+	//memset( descriptorSets, 0, sizeof( descriptorSets ) );
+	//memset( descriptorPools, 0, sizeof( descriptorPools ) );
 
 	counter = 0;
 	currentData = 0;

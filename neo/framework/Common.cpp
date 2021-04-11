@@ -1338,7 +1338,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		const int legalMinTime = 4000;
 		const bool showVideo = ( !com_skipIntroVideos.GetBool() && fileSystem->UsingResourceFiles() );
-		const bool showSplash = false;
+		const bool showSplash = true;
 		if( showVideo )
 		{
 			RenderBink( "video\\loadvideo.bik" );
@@ -1351,7 +1351,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 			// display the legal splash screen
 			// No clue why we have to render this twice to show up...
 			RenderSplash();
-			//RenderSplash();
+			RenderSplash();
 		}
 
 
@@ -1375,6 +1375,9 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		// initialize the user interfaces
 		uiManager->Init();
+
+		// Initialize RML UI
+		rmlManager->Init();
 
 		// startup the script debugger
 		// DebuggerServerInit();
@@ -1596,6 +1599,10 @@ void idCommonLocal::Shutdown()
 	// shut down the user interfaces
 	printf( "uiManager->Shutdown();\n" );
 	uiManager->Shutdown();
+
+	// shut down the rml interface
+	printf( "rmlManager->Shutdown();\n" );
+	rmlManager->Shutdown();
 
 	// shut down the sound system
 	printf( "soundSystem->Shutdown();\n" );

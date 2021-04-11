@@ -26,6 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
+#include "rmlui/D3RmlRender.h"
+#include "rmlui/RmlFileSystem.h"
+#include "ui/D3RmlSystem.h"
+
 class idWindow;
 
 class idUserInterfaceLocal : public idUserInterface
@@ -167,7 +171,10 @@ private:
 	int							refs;
 };
 
-
+namespace Rml
+{
+class Context;
+}
 
 class idUserInterfaceManagerLocal : public idUserInterfaceManager
 {

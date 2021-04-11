@@ -428,8 +428,6 @@ else (RAPIDJSON_FOUND)
 	include_directories("libs/rapidjson/include")
 endif (RAPIDJSON_FOUND)
 
-
-	
 add_subdirectory(idlib)
 add_subdirectory(libs/lua-5.4.1)
 
@@ -621,6 +619,12 @@ set(FREETYPE_SOURCES
 	libs/freetype/src/cid/type1cid.c
 	libs/freetype/src/type42/type42.c
 	libs/freetype/src/winfonts/winfnt.c)
+
+
+set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
+set(RMLUI_LIBRARIES
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/RmlCore.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/RmlDebugger.lib)
 	
 	
 set(SOUND_INCLUDES
@@ -707,6 +711,9 @@ file(GLOB UI_SOURCES ui/*.cpp)
 
 file(GLOB SWF_INCLUDES swf/*.h)
 file(GLOB SWF_SOURCES swf/*.cpp)
+
+file(GLOB RML_INCLUDES rmlui/*.h)
+file(GLOB RML_SOURCES rmlui/*.cpp)
 
 set(GAMED3XP_INCLUDES
 	d3xp/Achievements.h
@@ -815,6 +822,9 @@ file(GLOB GAMED3XP_SCRIPT_SOURCES d3xp/script/*.cpp)
 
 file(GLOB GAMED3XP_LUA_INCLUDES d3xp/lua/*.h)
 file(GLOB GAMED3XP_LUA_SOURCES d3xp/lua/*.cpp)
+
+file(GLOB GAMED3XP_GUI_INCLUDES d3xp/gui/*.h)
+file(GLOB GAMED3XP_GUI_SOURCES d3xp/gui/*.cpp)
 
 file(GLOB COMPILER_INCLUDES tools/compilers/*.h)
 
@@ -1169,6 +1179,9 @@ source_group("ui" FILES ${UI_SOURCES})
 source_group("swf" FILES ${SWF_INCLUDES})
 source_group("swf" FILES ${SWF_SOURCES})
 
+source_group("rmlui" FILES ${RML_INCLUDES})
+source_group("rmlui" FILES ${RML_SOURCES})
+
 source_group("sys" FILES ${SYS_INCLUDES})
 source_group("sys" FILES ${SYS_SOURCES})
 
@@ -1206,6 +1219,9 @@ source_group("game-d3xp\\script" FILES ${GAMED3XP_SCRIPT_SOURCES})
 
 source_group("game-d3xp\\lua" FILES ${GAMED3XP_LUA_INCLUDES})
 source_group("game-d3xp\\lua" FILES ${GAMED3XP_LUA_SOURCES})
+
+source_group("game-d3xp\\gui" FILES ${GAMED3XP_GUI_INCLUDES})
+source_group("game-d3xp\\gui" FILES ${GAMED3XP_GUI_SOURCES})
 
 
 source_group("sys\\win32" FILES ${WIN32_INCLUDES})
@@ -1328,6 +1344,7 @@ set(RBDOOM3_INCLUDES
 			#${OGGVORBIS_INCLUDES}
 			${UI_INCLUDES}
 			${SWF_INCLUDES}
+			${RML_INCLUDES}
 			${COMMON_INCLUDES}
 			${DOOMCLASSIC_INCLUDES}
 			${TIMIDITY_INCLUDES}
@@ -1350,6 +1367,7 @@ set(RBDOOM3_INCLUDES
 			${GAMED3XP_PHYSICS_INCLUDES}
 			${GAMED3XP_SCRIPT_INCLUDES}
 			${GAMED3XP_LUA_INCLUDES}
+			${GAMED3XP_GUI_INCLUDES}
 			)
 			
 set(RBDOOM3_SOURCES
@@ -1379,6 +1397,7 @@ set(RBDOOM3_SOURCES
 			#${OGGVORBIS_INCLUDES} ${OGGVORBIS_SOURCES}
 			${UI_SOURCES}
 			${SWF_SOURCES}
+			${RML_SOURCES}
 			${COMMON_SOURCES}
 			${DOOMCLASSIC_SOURCES}
 			${TIMIDITY_SOURCES}
@@ -1397,6 +1416,7 @@ set(RBDOOM3_SOURCES
 			${GAMED3XP_PHYSICS_SOURCES}
 			${GAMED3XP_SCRIPT_SOURCES}
 			${GAMED3XP_LUA_SOURCES}
+			${GAMED3XP_GUI_SOURCES}
 			)
 
 #add_definitions(-DUSE_DOOMCLASSIC)
@@ -1613,6 +1633,9 @@ if(MSVC)
 	add_dependencies(RBDoom3BFG idlib)
 	add_dependencies(RBDoom3BFG lua_static)
 
+	target_include_directories(RBDoom3BFG PUBLIC
+					${RMLUI_INCLUDE})
+
 	target_link_libraries(RBDoom3BFG
 		idlib
 		lua_static
@@ -1630,6 +1653,7 @@ if(MSVC)
         ${PNG_LIBRARY}
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
+        ${RMLUI_LIBRARIES}
 		${CMAKE_DL_LIBS}
 		)
 		

@@ -46,13 +46,12 @@ idPlayerView::idPlayerView()
 	memset( screenBlobs, 0, sizeof( screenBlobs ) );
 	memset( &view, 0, sizeof( view ) );
 	player = NULL;
-	// SP: Comment these out to avoid warnings
-	//tunnelMaterial = declManager->FindMaterial( "textures/decals/tunnel" );
-	//armorMaterial = declManager->FindMaterial( "armorViewEffect" );
-	//berserkMaterial = declManager->FindMaterial( "textures/decals/berserk" );
-	//irGogglesMaterial = declManager->FindMaterial( "textures/decals/irblend" );
-	//bloodSprayMaterial = declManager->FindMaterial( "textures/decals/bloodspray" );
-	//bfgMaterial = declManager->FindMaterial( "textures/decals/bfgvision" );
+	tunnelMaterial = declManager->FindMaterial( "textures/decals/tunnel" );
+	armorMaterial = declManager->FindMaterial( "armorViewEffect" );
+	berserkMaterial = declManager->FindMaterial( "textures/decals/berserk" );
+	irGogglesMaterial = declManager->FindMaterial( "textures/decals/irblend" );
+	bloodSprayMaterial = declManager->FindMaterial( "textures/decals/bloodspray" );
+	bfgMaterial = declManager->FindMaterial( "textures/decals/bfgvision" );
 	bfgVision = false;
 	dvFinishTime = 0;
 	kickFinishTime = 0;
@@ -117,12 +116,12 @@ void idPlayerView::Save( idSaveGame* savefile ) const
 	savefile->WriteBool( bfgVision );
 
 	// Comment these out because we don't need it.
-	//savefile->WriteMaterial( tunnelMaterial );
-	//savefile->WriteMaterial( armorMaterial );
-	//savefile->WriteMaterial( berserkMaterial );
-	//savefile->WriteMaterial( irGogglesMaterial );
-	//savefile->WriteMaterial( bloodSprayMaterial );
-	//savefile->WriteMaterial( bfgMaterial );
+	savefile->WriteMaterial( tunnelMaterial );
+	savefile->WriteMaterial( armorMaterial );
+	savefile->WriteMaterial( berserkMaterial );
+	savefile->WriteMaterial( irGogglesMaterial );
+	savefile->WriteMaterial( bloodSprayMaterial );
+	savefile->WriteMaterial( bfgMaterial );
 	savefile->WriteFloat( lastDamageTime );
 
 	savefile->WriteVec4( fadeColor );
@@ -175,12 +174,12 @@ void idPlayerView::Restore( idRestoreGame* savefile )
 	savefile->ReadBool( bfgVision );
 
 	// Comment these out because we don't need them.
-	//savefile->ReadMaterial( tunnelMaterial );
-	//savefile->ReadMaterial( armorMaterial );
-	//savefile->ReadMaterial( berserkMaterial );
-	//savefile->ReadMaterial( irGogglesMaterial );
-	//savefile->ReadMaterial( bloodSprayMaterial );
-	//savefile->ReadMaterial( bfgMaterial );
+	savefile->ReadMaterial( tunnelMaterial );
+	savefile->ReadMaterial( armorMaterial );
+	savefile->ReadMaterial( berserkMaterial );
+	savefile->ReadMaterial( irGogglesMaterial );
+	savefile->ReadMaterial( bloodSprayMaterial );
+	savefile->ReadMaterial( bfgMaterial );
 	savefile->ReadFloat( lastDamageTime );
 
 	savefile->ReadVec4( fadeColor );
@@ -519,7 +518,8 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 
 		if( player->GetInventoryOpen() )
 		{
-			player->DrawInventory();
+			//player->DrawInventory();
+			player->DrawTestGui();
 		}
 
 		// armor impulse feedback

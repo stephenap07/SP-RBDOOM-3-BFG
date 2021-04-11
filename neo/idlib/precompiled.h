@@ -115,6 +115,9 @@ const uint32 NUM_FRAME_DATA	= 2;
 #include "../ui/ListGUI.h"
 #include "../ui/UserInterface.h"
 
+// rml interfaces
+#include "../rmlui/RmlUserInterface.h"
+
 // RB: required for SWF extensions
 //#include "rapidjson/document.h"
 
