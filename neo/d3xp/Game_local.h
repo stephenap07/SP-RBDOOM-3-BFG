@@ -72,6 +72,8 @@ class EnvironmentProbe; // RB
 
 // SP Begin
 struct lua_State;
+class UI_Shell;
+class UI_Inventory;
 // SP End
 
 const int MAX_CLIENTS			= MAX_PLAYERS;
@@ -606,6 +608,8 @@ public:
 	virtual void					Shell_ClosePause();
 	virtual void					Shell_CreateMenu( bool inGame );
 	virtual bool					Shell_IsActive() const;
+	virtual bool					Shell_IsPausingGame() const;
+	virtual bool					Shell_InhibitsControl() const;
 	virtual bool					Shell_HandleGuiEvent( const sysEvent_t* sev );
 	virtual void					Shell_Render();
 	virtual void					Shell_ResetMenu();
@@ -658,6 +662,10 @@ private:
 	idList<idAAS*>			aasList;				// area system
 
 	idMenuHandler_Shell* 	shellHandler;
+
+	// SP begin
+	UI_Shell*				rmlShell;				// new UI!
+	// SP end
 
 	idStrList				aasNames;
 
@@ -947,6 +955,10 @@ const int	CINEMATIC_SKIP_DELAY	= SEC2MS( 2.0f );
 #include "menus/MenuWidget.h"
 #include "menus/MenuScreen.h"
 #include "menus/MenuHandler.h"
+
+// SP Begin New ui
+#include "gui/RmlShell.h"
+// SP End
 
 #include "script/Script_Compiler.h"
 #include "script/Script_Interpreter.h"

@@ -10,7 +10,6 @@
 #include "ui/D3RmlSystem.h"
 #include "ui/DeviceContext.h"
 
-
 class RmlUserInterfaceLocal : public RmlUserInterface
 {
 public:
@@ -20,7 +19,7 @@ public:
 	virtual ~RmlUserInterfaceLocal();
 
 	// Begin RmlUserInterface
-	bool						InitFromFile( const char* qpath, bool rebuild = true, bool cache = true ) override;
+	bool						Init( const char* name ) override;
 
 	// handles an event, can return an action string, the caller interprets
 	// any return and acts accordingly
@@ -32,7 +31,7 @@ public:
 	// repaints the ui
 	void						Redraw( int time, bool hud = false ) override;
 
-	RmlUi*						AddUi(RmlUi* ui);
+	RmlUi*						AddUi( RmlUi* ui );
 
 	void						Reload();
 
@@ -57,7 +56,7 @@ public:
 		return _cursorEnabled;
 	}
 
-	bool						SetCursorEnabled( bool cursorEnabled )
+	void						SetCursorEnabled( bool cursorEnabled )
 	{
 		_cursorEnabled = cursorEnabled;
 	}
@@ -69,9 +68,9 @@ public:
 
 	size_t						Size();
 
-	const char*					GetSourceFile() const
+	const char*					GetName() const
 	{
-		return _source;
+		return _name;
 	}
 
 	ID_TIME_T					GetTimeStamp() const
@@ -101,76 +100,96 @@ public:
 
 	void						DrawCursor();
 
-private:
+	bool						IsActive() override
+	{
+		return _isActive;
+	}
 
-	friend bool LoadRmlDemo( RmlUserInterfaceLocal* ui, const char* qpath );
+	bool						IsPausingGame() override
+	{
+		return _isPausingGame;
+	}
+
+	virtual void				SetIsPausingGame( bool pause ) override
+	{
+		_isPausingGame = pause;
+	}
+
+	bool						InhibitsControl() override
+	{
+		return _inhibitsControl;
+	}
+
+	void						SetInhibitsControl( bool inhibit )
+	{
+		_inhibitsControl = inhibit;
+	}
+
+protected:
 
 	Rml::Context*				_context;
 
-	idStr						_source;
+	idStr						_name;
 	ID_TIME_T					_timeStamp;
 
 	float						_cursorX;
 	float						_cursorY;
 	bool						_cursorEnabled;
+	bool						_isActive;
+	bool						_isPausingGame;
+	bool						_inhibitsControl;
 
 	int							_refs;
 
 	idList<RmlUi*>				_rmlUi;
 };
 
+struct RmlMaterial
+{
+	idImage* image = nullptr;
+	const idMaterial* material = nullptr;
+	const byte* data = nullptr;
+	idVec2 dimensions = idVec2( 0.0f, 0.0f );
+
+	~RmlMaterial();
+};
+
 class RmlUserInterfaceManagerLocal : public RmlUserInterfaceManager
 {
 public:
 
-	enum
+	virtual						~RmlUserInterfaceManagerLocal() = default;
+
+	void						Init() override;
+	void						Shutdown() override;
+	virtual RmlUserInterface*	Find( const char* name, bool autoload ) override;
+
+	void						BeginLevelLoad() override;
+	void						EndLevelLoad( const char* mapName ) override;
+	bool						InLevelLoad() const override
 	{
-		CURSOR_ARROW,
-		CURSOR_HAND,
-		CURSOR_HAND_JOY1,
-		CURSOR_HAND_JOY2,
-		CURSOR_HAND_JOY3,
-		CURSOR_HAND_JOY4,
-		CURSOR_COUNT
-	};
-
-	virtual					~RmlUserInterfaceManagerLocal() = default;
-
-	void					Init() override;
-	void					Shutdown() override;
-	void					Touch( const char* name ) override;
-
-	void					BeginLevelLoad() override;
-	void					EndLevelLoad( const char* mapName ) override;
-	void					Preload( const char* mapName ) override;
+		return _inLevelLoad;
+	}
 
 	// Reloads changed guis, or all guis.
-	void					Reload( bool all ) override;
+	void						Reload( bool all ) override;
 
-	// lists all guis
-	void					ListGuis() const override;
+	void						PostRender() override;
 
-	// Returns true if gui exists.
-	bool					CheckGui( const char* qpath ) const override;
-
-	// Allocates a new gui.
-	RmlUserInterface*		Alloc() const override;
-
-	// De-allocates a gui.. ONLY USE FOR PRECACHING
-	void					DeAlloc( RmlUserInterface* gui ) override;
-
-	// Returns NULL if gui by that name does not exist.
-	RmlUserInterface*		FindGui( const char* qpath, bool autoLoad = false, bool needUnique = false, bool forceUnique = false ) override;
+	// Class owns data
+	void						AddMaterialToReload( const idMaterial* material, idImage* image, idVec2 dimensions, const byte* data );
 
 private:
 
 	idDeviceContextOptimized		_dc;
 
 	idList<RmlUserInterfaceLocal*>	_guis;
+	idList<RmlMaterial>				_materialsToReload;
 
 	idRmlSystem						_rmlSystem;
 	idRmlRender						_rmlRender;
 	RmlFileSystem					_rmlFileSystem;
+	bool							_inLevelLoad;
 };
 
 #endif  // !__RMLUSERINTERFACE_H__

@@ -33,9 +33,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "../framework/Common_local.h"
 #include "PredictedValue_impl.h"
 
-#include "gui/TestGui.h"
-#include "rmlui/RmlUserInterfaceLocal.h"
-
 
 idCVar flashlight_batteryDrainTimeMS( "flashlight_batteryDrainTimeMS", "30000", CVAR_INTEGER, "amount of time (in MS) it takes for full battery to drain (-1 == no battery drain)" );
 idCVar flashlight_batteryChargeTimeMS( "flashlight_batteryChargeTimeMS", "3000", CVAR_INTEGER, "amount of time (in MS) it takes to fully recharge battery" );
@@ -1507,16 +1504,6 @@ idPlayer::idPlayer():
 	inventoryOpen                 = false;
 	initializedInventoryThisFrame = false;
 
-	// RML Testing
-	testGui					= rmlManager->FindGui( "guis/rml/inventory/inventory.rml", true, false, true );
-	inventoryRml			= new UI_Inventory();
-	testGui->AddUi(inventoryRml);
-
-	inventoryRml->Init("Inventory", idVec2(0, 0), testGui->Context());
-	inventoryRml->AddItem("Hello, Mcgee");
-	inventoryRml->AddItem("Hello, 1");
-	inventoryRml->AddItem("Hello, 2");
-
 	mountedObject			= NULL;
 	enviroSuitLight			= NULL;
 
@@ -2070,15 +2057,6 @@ void idPlayer::Spawn()
 			hudManager->Initialize( "hud", common->SW() );
 			hudManager->ActivateMenu( true );
 			hud = hudManager->GetHud();
-		}
-
-		if( testGui )
-		{
-			sysEvent_t ev;
-			memset( &ev, 0, sizeof( ev ) );
-			ev.evType = SE_NONE;
-			testGui->HandleEvent( &ev, Sys_Milliseconds() );
-			testGui->Activate( true, Sys_Milliseconds() );
 		}
 
 		// load cursor
@@ -3675,14 +3653,6 @@ void idPlayer::DrawInventory()
 	if( inventoryGui )
 	{
 		inventoryGui->Redraw( Sys_Milliseconds(), true );
-	}
-}
-
-void idPlayer::DrawTestGui()
-{
-	if( testGui )
-	{
-		testGui->Redraw( Sys_Milliseconds(), true );
 	}
 }
 
@@ -8846,12 +8816,6 @@ bool idPlayer::HandleGuiEvents( const sysEvent_t* ev )
 		}
 	}
 	*/
-
-	if( testGui )
-	{
-		const char* command = testGui->HandleEvent( ev, Sys_Milliseconds() );
-		HandleGuiCommands( this, command );
-	}
 
 	return handled;
 }

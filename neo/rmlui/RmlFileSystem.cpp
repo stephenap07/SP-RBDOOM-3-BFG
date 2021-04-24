@@ -31,3 +31,94 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 
 #include "RmlFileSystem.h"
+
+/*
+===============
+RmlFileSystem
+
+File system for RML
+===============
+*/
+
+
+RmlFileSystem::RmlFileSystem()
+{
+}
+
+RmlFileSystem::~RmlFileSystem()
+{
+}
+
+Rml::FileHandle RmlFileSystem::Open( const Rml::String& path )
+{
+	idFile* file = fileSystem->OpenFileRead( path.c_str() );
+
+	return Rml::FileHandle( file );
+}
+
+void RmlFileSystem::Close( Rml::FileHandle file )
+{
+	if( file )
+	{
+		fileSystem->CloseFile( reinterpret_cast<idFile*>( file ) );
+	}
+}
+
+size_t RmlFileSystem::Read( void* buffer, size_t size, Rml::FileHandle file )
+{
+	idFile* theFile = reinterpret_cast<idFile*>( file );
+	if( !theFile )
+	{
+		return 0;
+	}
+
+	return theFile->Read( buffer, size );
+}
+
+bool RmlFileSystem::Seek( Rml::FileHandle file, long offset, int origin )
+{
+	idFile* theFile = reinterpret_cast<idFile*>( file );
+	if( !theFile )
+	{
+		return false;
+	}
+
+	return theFile->Seek( offset, ( fsOrigin_t )origin );
+}
+
+size_t RmlFileSystem::Tell( Rml::FileHandle file )
+{
+	idFile* theFile = reinterpret_cast<idFile*>( file );
+	if( !theFile )
+	{
+		return 0;
+	}
+
+	return theFile->Tell();
+}
+
+size_t RmlFileSystem::Length( Rml::FileHandle file )
+{
+	idFile* theFile = reinterpret_cast<idFile*>( file );
+	if( !theFile )
+	{
+		return 0;
+	}
+
+	return theFile->Length();
+}
+
+bool RmlFileSystem::LoadFile( const Rml::String& path, Rml::String& out_data )
+{
+	idFile* theFile = fileSystem->OpenFileRead( path.c_str() );
+	if( !theFile )
+	{
+		return false;
+	}
+
+	int len = theFile->Length();
+	out_data.resize( len );
+	int ret = theFile->Read( &out_data[0], len );
+
+	return ret != 0;
+}

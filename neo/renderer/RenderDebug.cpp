@@ -15,8 +15,8 @@ constexpr int kMaxDebugLineModels = 16384;
 
 struct DebugTextModel
 {
-	TextBufferHandle handle;
-	idRenderMatrix modelMatrix;
+	TextBufferHandle	handle;
+	idRenderMatrix		modelMatrix;
 };
 
 struct DebugLineModel
@@ -53,15 +53,15 @@ private:
 	/// Clears all debug drawing models.
 	void ClearAll();
 
-	idArray<DebugTextModel, kMaxDebugTextModels> _debugText;
-	int _numActiveDebugText = 0;
+	idArray<DebugTextModel, kMaxDebugTextModels>	_debugText;
+	int												_numActiveDebugText = 0;
 
-	idArray<DebugLineModel, kMaxDebugLineModels> _debugLine;
-	int _numActiveDebugLine = 0;
+	idArray<DebugLineModel, kMaxDebugLineModels>	_debugLine;
+	int												_numActiveDebugLine = 0;
 
-	float _shaderParms[MAX_ENTITY_SHADER_PARMS];
+	float											_shaderParms[MAX_ENTITY_SHADER_PARMS];
 
-	const idMaterial* _whiteMaterial = nullptr;
+	const idMaterial*								_whiteMaterial = nullptr;
 };
 
 

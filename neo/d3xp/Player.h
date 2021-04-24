@@ -361,8 +361,6 @@ public:
 	idMenuHandler_PDA*		pdaMenu;
 	idSWF*					mpMessages;
 	idUserInterface*		inventoryGui;
-	RmlUserInterface*		testGui;
-	UI_Inventory*				inventoryRml;
 
 	bool					inventoryOpen;
 	bool					initializedInventoryThisFrame;
@@ -547,7 +545,6 @@ public:
 	void					DrawHUD( idMenuHandler_HUD* hudManager );
 
 	void                    DrawInventory();
-	void					DrawTestGui();
 
 	void					WeaponFireFeedback( const idDict* weaponDef );
 

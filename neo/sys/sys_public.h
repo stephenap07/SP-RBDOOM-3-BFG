@@ -434,6 +434,10 @@ struct sysEvent_t
 	{
 		return evType == SE_MOUSE;
 	}
+	bool			IsMouseAbsoluteEvent() const
+	{
+		return evType == SE_MOUSE_ABSOLUTE;
+	}
 	bool			IsCharEvent() const
 	{
 		return evType == SE_CHAR;

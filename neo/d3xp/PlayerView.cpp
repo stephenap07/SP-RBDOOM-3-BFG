@@ -519,7 +519,6 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 		if( player->GetInventoryOpen() )
 		{
 			//player->DrawInventory();
-			player->DrawTestGui();
 		}
 
 		// armor impulse feedback

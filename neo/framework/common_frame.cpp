@@ -600,7 +600,7 @@ void idCommonLocal::Frame()
 		const bool pauseGame = ( !mapSpawned
 								 || ( !IsMultiplayer()
 									  && ( Dialog().IsDialogPausing() || session->IsSystemUIShowing()
-										   || ( game && game->Shell_IsActive() ) || com_pause.GetInteger() ) ) );
+										   || ( game && game->Shell_IsPausingGame() ) || com_pause.GetInteger() ) ) );
 #endif
 		// RB end
 
@@ -862,7 +862,6 @@ void idCommonLocal::Frame()
 		// start the game / draw command generation thread going in the background
 		gameReturn_t ret = gameThread.RunGameAndDraw( numGameFrames, userCmdMgr, IsClient(), gameFrame - numGameFrames );
 
-
 		// foresthale 2014-05-12: also check com_editors as many of them are not particularly thread-safe (editLights for example)
 		if( !com_smp.GetInteger() < 0 )
 		{
@@ -892,6 +891,8 @@ void idCommonLocal::Frame()
 		// make sure the game / draw thread has completed
 		// This may block if the game is taking longer than the render back end
 		gameThread.WaitForThread();
+
+		rmlManager->PostRender();
 
 		// Send local usermds to the server.
 		// This happens after the game frame has run so that prediction data is up to date.

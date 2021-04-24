@@ -1694,6 +1694,7 @@ void idCommonLocal::CreateMainMenu()
 		renderSystem->BeginLevelLoad();
 		soundSystem->BeginLevelLoad();
 		uiManager->BeginLevelLoad();
+		rmlManager->BeginLevelLoad();
 
 		// create main inside an "empty" game level load - so assets get
 		// purged automagically when we transition to a "real" map
@@ -1709,6 +1710,7 @@ void idCommonLocal::CreateMainMenu()
 		soundSystem->EndLevelLoad();
 		declManager->EndLevelLoad();
 		uiManager->EndLevelLoad( "" );
+		rmlManager->EndLevelLoad( "" );
 	}
 }
 
@@ -1844,7 +1846,6 @@ bool idCommonLocal::ProcessEvent( const sysEvent_t* event )
 			else
 			{
 				if( !game->Shell_IsActive() )
-					//if( !guiActive )
 				{
 					// menus / etc
 					if( MenuEvent( event ) )
