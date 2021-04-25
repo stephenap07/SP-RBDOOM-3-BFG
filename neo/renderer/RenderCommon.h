@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2012-2020 Robert Beckebans
+Copyright (C) 2012-2021 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -275,8 +275,8 @@ public:
 
 	// derived information
 	//idPlane						lightProject[4];		// old style light projection where Z and W are flipped and projected lights lightProject[3] is divided by ( zNear + zFar )
-	idRenderMatrix				baseLightProject;		// global xyz1 to projected light strq
-	idRenderMatrix				inverseBaseLightProject;// transforms the zero-to-one cube to exactly cover the light in world space
+	//idRenderMatrix				baseLightProject;		// global xyz1 to projected light strq
+	idRenderMatrix				inverseBaseProbeProject;// transforms the zero-to-one cube to exactly cover the light in world space
 
 	idBounds					globalProbeBounds;
 
@@ -481,10 +481,29 @@ struct viewEnvprobe_t
 	bool					removeFromList;
 
 	idVec3					globalOrigin;				// global envprobe origin used by backend
+	idBounds				globalProbeBounds;
 
-	idRenderMatrix			inverseBaseLightProject;	// the matrix for deforming the 'zeroOneCubeModel' to exactly cover the light volume in world space
+	idRenderMatrix			inverseBaseProbeProject;	// the matrix for deforming the 'zeroOneCubeModel' to exactly cover the light volume in world space
 	idImage* 				irradianceImage;			// cubemap image used for diffuse IBL by backend
 	idImage* 				radianceImage;				// cubemap image used for specular IBL by backend
+};
+
+struct calcEnvprobeParms_t
+{
+	// input
+	byte*							buffers[6];				// HDR R11G11B11F standard OpenGL cubemap sides
+	int								samples;
+
+	int								outWidth;
+	int								outHeight;
+
+	bool							printProgress;
+
+	idStr							filename;
+
+	// output
+	halfFloat_t*					outBuffer;				// HDR R11G11B11F packed atlas
+	int								time;					// execution time in milliseconds
 };
 // RB end
 
@@ -599,6 +618,7 @@ struct viewDef_t
 	viewEnvprobe_t*		viewEnvprobes;
 
 	// RB: nearest probe for now
+	idBounds			globalProbeBounds;
 	idRenderMatrix		inverseBaseEnvProbeProject;	// the matrix for deforming the 'zeroOneCubeModel' to exactly cover the environent probe volume in world space
 	idImage* 			irradianceImage;			// cubemap image used for diffuse IBL by backend
 	idImage* 			radianceImage;				// cubemap image used for specular IBL by backend
@@ -969,6 +989,10 @@ public:
 	drawSurf_t				testImageSurface_;
 
 	idParallelJobList* 		frontEndJobList;
+
+	// RB irradiance and GGX background jobs
+	idParallelJobList* 		envprobeJobList;
+	idList<calcEnvprobeParms_t*> irradianceJobs;
 
 	idRenderBackend			backend;
 
@@ -1608,8 +1632,6 @@ void RB_SetVertexColorParms( stageVertexColor_t svc );
 #include "jobs/staticshadowvolume/StaticShadowVolume.h"
 #include "jobs/dynamicshadowvolume/DynamicShadowVolume.h"
 #include "GLMatrix.h"
-
-
 
 #include "BufferObject.h"
 #include "RenderProgs.h"

@@ -1,9 +1,9 @@
-/*
+﻿/*
 ===========================================================================
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2020 Robert Beckebans
+Copyright (C) 2020-2021 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -29,6 +29,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #pragma hdrstop
 #include "precompiled.h"
+
+#include "../libs/mesa/format_r11g11b10f.h"
 
 #include "RenderCommon.h"
 
@@ -60,7 +62,8 @@ viewEnvprobe_t* R_SetEnvprobeDefViewEnvprobe( RenderEnvprobeLocal* probe )
 	// copy data used by backend
 	// RB: this would normaly go into R_AddSingleEnvprobe
 	vProbe->globalOrigin = probe->parms.origin;
-	vProbe->inverseBaseLightProject = probe->inverseBaseLightProject;
+	vProbe->globalProbeBounds = probe->globalProbeBounds;
+	vProbe->inverseBaseProbeProject = probe->inverseBaseProbeProject;
 
 	//if( probe->irradianceImage->IsLoaded() )
 	{
@@ -102,7 +105,7 @@ bool idRenderWorldLocal::CullEnvprobeByPortals( const RenderEnvprobeLocal* probe
 	if( r_useLightPortalCulling.GetInteger() == 1 )
 	{
 		ALIGNTYPE16 frustumCorners_t corners;
-		idRenderMatrix::GetFrustumCorners( corners, probe->inverseBaseLightProject, bounds_zeroOneCube );
+		idRenderMatrix::GetFrustumCorners( corners, probe->inverseBaseProbeProject, bounds_zeroOneCube );
 		for( int i = 0; i < ps->numPortalPlanes; i++ )
 		{
 			if( idRenderMatrix::CullFrustumCornersToPlane( corners, ps->portalPlanes[i] ) == FRUSTUM_CULL_FRONT )
@@ -111,66 +114,6 @@ bool idRenderWorldLocal::CullEnvprobeByPortals( const RenderEnvprobeLocal* probe
 			}
 		}
 
-	}
-	else if( r_useLightPortalCulling.GetInteger() >= 2 )
-	{
-
-		idPlane frustumPlanes[6];
-		idRenderMatrix::GetFrustumPlanes( frustumPlanes, probe->baseLightProject, true, true );
-
-		// exact clip of light faces against all planes
-		for( int i = 0; i < 6; i++ )
-		{
-			// the light frustum planes face inward, so the planes that have the
-			// view origin on the positive side will be the "back" faces of the light,
-			// which must have some fragment inside the the portal stack planes to be visible
-			if( frustumPlanes[i].Distance( tr.viewDef->renderView.vieworg ) <= 0.0f )
-			{
-				continue;
-			}
-
-			// calculate a winding for this frustum side
-			idFixedWinding w;
-			w.BaseForPlane( frustumPlanes[i] );
-			for( int j = 0; j < 6; j++ )
-			{
-				if( j == i )
-				{
-					continue;
-				}
-				if( !w.ClipInPlace( frustumPlanes[j], ON_EPSILON ) )
-				{
-					break;
-				}
-			}
-			if( w.GetNumPoints() <= 2 )
-			{
-				continue;
-			}
-
-			assert( ps->numPortalPlanes <= MAX_PORTAL_PLANES );
-			assert( w.GetNumPoints() + ps->numPortalPlanes < MAX_POINTS_ON_WINDING );
-
-			// now clip the winding against each of the portalStack planes
-			// skip the last plane which is the last portal itself
-			for( int j = 0; j < ps->numPortalPlanes - 1; j++ )
-			{
-				if( !w.ClipInPlace( -ps->portalPlanes[j], ON_EPSILON ) )
-				{
-					break;
-				}
-			}
-
-			if( w.GetNumPoints() > 2 )
-			{
-				// part of the winding is visible through the portalStack,
-				// so the light is not culled
-				return false;
-			}
-		}
-
-		// nothing was visible
-		return true;
 	}
 
 	return false;
@@ -225,13 +168,13 @@ void idRenderWorldLocal::AddAreaViewEnvprobes( int areaNum, const portalStack_t*
 
 /*
 ==================
-R_SampleCubeMap
+R_SampleCubeMapHDR
 ==================
 */
 static idMat3		cubeAxis[6];
 static const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
 
-void R_SampleCubeMap( const idVec3& dir, int size, byte* buffers[6], byte result[4] )
+void R_SampleCubeMapHDR( const idVec3& dir, int size, byte* buffers[6], float result[3], float& u, float& v )
 {
 	float	adir[3];
 	int		axis, x, y;
@@ -289,10 +232,24 @@ void R_SampleCubeMap( const idVec3& dir, int size, byte* buffers[6], byte result
 		y = size - 1;
 	}
 
-	result[0] = buffers[axis][( y * size + x ) * 4 + 0];
-	result[1] = buffers[axis][( y * size + x ) * 4 + 1];
-	result[2] = buffers[axis][( y * size + x ) * 4 + 2];
-	result[3] = buffers[axis][( y * size + x ) * 4 + 3];
+	u = x;
+	v = y;
+
+	// unpack RGBA8 to 3 floats
+	union
+	{
+		uint32	i;
+		byte	b[4];
+	} tmp;
+
+	tmp.b[0] = buffers[axis][( y * size + x ) * 4 + 0];
+	tmp.b[1] = buffers[axis][( y * size + x ) * 4 + 1];
+	tmp.b[2] = buffers[axis][( y * size + x ) * 4 + 2];
+	tmp.b[3] = buffers[axis][( y * size + x ) * 4 + 3];
+
+	//uint32_t value = ( *( const uint32_t* )buffers[axis][( y * size + x ) * 4 + 0] );
+
+	r11g11b10f_to_float3( tmp.i, result );
 }
 
 class CommandlineProgressBar
@@ -307,7 +264,10 @@ public:
 	CommandlineProgressBar( int _expectedCount )
 	{
 		expectedCount = _expectedCount;
+	}
 
+	void Start()
+	{
 		common->Printf( "0%%  10   20   30   40   50   60   70   80   90   100%%\n" );
 		common->Printf( "|----|----|----|----|----|----|----|----|----|----|\n" );
 
@@ -350,19 +310,6 @@ public:
 // Since it is in base 2 we can use some basic bit operations to achieve this.
 // The brilliant book Hacker's Delight [warren01] provides us a a simple way to reverse the bits in a given 32bit integer. Using this, the following code then implements phi2(i)
 
-/*
-GLSL version
-
-float radicalInverse_VdC( uint bits )
-{
-	bits = (bits << 16u) | (bits >> 16u);
-	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-	return float(bits) * 2.3283064365386963e-10; // / 0x100000000
-}
-*/
 
 // RB: radical inverse implementation from the Mitsuba PBR system
 
@@ -483,7 +430,720 @@ idVec2 IntegrateBRDF( float NdotV, float roughness, int sampleCount )
 	return idVec2( A, B );
 }
 
-//void R_MakeBrdfLut_f( const idCmdArgs& args )
+
+// Compute normalized oct coord, mapping top left of top left pixel to (-1,-1)
+idVec2 NormalizedOctCoord( int x, int y, const int probeSideLength )
+{
+	const int margin = 0;
+
+	int probeWithBorderSide = probeSideLength + margin;
+
+	idVec2 octFragCoord = idVec2( ( x - margin ) % probeWithBorderSide, ( y - margin ) % probeWithBorderSide );
+
+	// Add back the half pixel to get pixel center normalized coordinates
+	return ( idVec2( octFragCoord ) + idVec2( 0.5f, 0.5f ) ) * ( 2.0f / float( probeSideLength ) ) - idVec2( 1.0f, 1.0f );
+}
+
+/*
+static inline float LatLongTexelArea( const idVec2i& pos, const idVec2i& imageSize )
+{
+	idVec2 uv0;
+	uv0.x = pos.x / imageSize.x;
+	uv0.y = pos.y / imageSize.y;
+
+	idVec2 uv1;
+	uv1.x = ( pos.x + 1 ) / imageSize.x;
+	uv1.y = ( pos.y + 1 ) / imageSize.y;
+
+	float theta0 = idMath::PI * ( uv0.x * 2.0f - 1.0f );
+	float theta1 = idMath::PI * ( uv1.x * 2.0f - 1.0f );
+
+	float phi0 = idMath::PI * ( uv0.y - 0.5f );
+	float phi1 = idMath::PI * ( uv1.y - 0.5f );
+
+	return abs( theta1 - theta0 ) * abs( sin( phi1 ) - sin( phi0 ) );
+}
+
+
+static inline idVec2 CartesianToLatLongTexcoord( const idVec3& p )
+{
+	// http://gl.ict.usc.edu/Data/HighResProbes
+
+	float u = ( 1.0f + idMath::ATan( p.x, -p.z ) / idMath::PI );
+	float v = idMath::ACos( p.y ) / idMath::PI;
+
+	return idVec2( u * 0.5f, v );
+}
+*/
+
+
+/// http://www.mpia-hd.mpg.de/~mathar/public/mathar20051002.pdf
+/// http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
+static inline float AreaElement( float _x, float _y )
+{
+	return atan2f( _x * _y, sqrtf( _x * _x + _y * _y + 1.0f ) );
+}
+
+/// u and v should be center adressing and in [-1.0 + invSize.. 1.0 - invSize] range.
+static inline float CubemapTexelSolidAngle( float u, float v, float _invFaceSize )
+{
+	// Specify texel area.
+	const float x0 = u - _invFaceSize;
+	const float x1 = u + _invFaceSize;
+	const float y0 = v - _invFaceSize;
+	const float y1 = v + _invFaceSize;
+
+	// Compute solid angle of texel area.
+	const float solidAngle = AreaElement( x1, y1 )
+							 - AreaElement( x0, y1 )
+							 - AreaElement( x1, y0 )
+							 + AreaElement( x0, y0 )
+							 ;
+
+	return solidAngle;
+}
+
+static inline idVec3 MapXYSToDirection( uint64 x, uint64 y, uint64 s, uint64 width, uint64 height )
+{
+	float u = ( ( x + 0.5f ) / float( width ) ) * 2.0f - 1.0f;
+	float v = ( ( y + 0.5f ) / float( height ) ) * 2.0f - 1.0f;
+	v *= -1.0f;
+
+	idVec3 dir( 0, 0, 0 );
+
+	// +x, -x, +y, -y, +z, -z
+	switch( s )
+	{
+		case 0:
+			dir = idVec3( 1.0f, v, -u );
+			break;
+		case 1:
+			dir = idVec3( -1.0f, v, u );
+			break;
+		case 2:
+			dir = idVec3( u, 1.0f, -v );
+			break;
+		case 3:
+			dir = idVec3( u, -1.0f, v );
+			break;
+		case 4:
+			dir = idVec3( u, v, 1.0f );
+			break;
+		case 5:
+			dir = idVec3( -u, v, -1.0f );
+			break;
+	}
+
+	dir.Normalize();
+
+	return dir;
+}
+
+void CalculateIrradianceJob( calcEnvprobeParms_t* parms )
+{
+	byte*		buffers[6];
+
+	int	start = Sys_Milliseconds();
+
+	for( int i = 0; i < 6; i++ )
+	{
+		buffers[ i ] = parms->buffers[ i ];
+	}
+
+	const float invDstSize = 1.0f / float( parms->outHeight );
+
+	const int numMips = idMath::BitsForInteger( parms->outHeight );
+
+	const idVec2i sourceImageSize( parms->outHeight, parms->outHeight );
+
+	CommandlineProgressBar progressBar( R_CalculateUsedAtlasPixels( sourceImageSize.y ) );
+	if( parms->printProgress )
+	{
+		progressBar.Start();
+	}
+
+	// build L4 Spherical Harmonics from source image
+	SphericalHarmonicsT<idVec3, 4> shRadiance;
+
+	for( int i = 0; i < shSize( 4 ); i++ )
+	{
+		shRadiance[i].Zero();
+	}
+
+#if 0
+
+	// build SH by only iterating over the octahedron
+	// RB: not used because I don't know the texel area of an octahedron pixel and the cubemap texel area is too small
+	// however it would be nice to use this because it would be 6 times faster
+
+	idVec4 dstRect = R_CalculateMipRect( parms->outHeight, 0 );
+
+	for( int x = dstRect.x; x < ( dstRect.x + dstRect.z ); x++ )
+	{
+		for( int y = dstRect.y; y < ( dstRect.y + dstRect.w ); y++ )
+		{
+			idVec2 octCoord = NormalizedOctCoord( x, y, dstRect.z );
+
+			// convert UV coord to 3D direction
+			idVec3 dir;
+
+			dir.FromOctahedral( octCoord );
+
+			float u, v;
+			idVec3 radiance;
+			R_SampleCubeMapHDR( dir, parms->outHeight, buffers, &radiance[0], u, v );
+
+			//radiance = dir * 0.5 + idVec3( 0.5f, 0.5f, 0.5f );
+
+			// convert from [0 .. size-1] to [-1.0 + invSize .. 1.0 - invSize]
+			const float uu = 2.0f * ( u * invDstSize ) - 1.0f;
+			const float vv = 2.0f * ( v * invDstSize ) - 1.0f;
+
+			float texelArea = CubemapTexelSolidAngle( uu, vv, invDstSize );
+
+			const SphericalHarmonicsT<float, 4>& sh = shEvaluate<4>( dir );
+
+			bool shValid = true;
+			for( int i = 0; i < 25; i++ )
+			{
+				if( IsNAN( sh[i] ) )
+				{
+					shValid = false;
+					break;
+				}
+			}
+
+			if( shValid )
+			{
+				shAddWeighted( shRadiance, sh, radiance * texelArea );
+			}
+		}
+	}
+
+#else
+
+	// build SH by iterating over all cubemap pixels
+
+	idVec4 dstRect = R_CalculateMipRect( parms->outHeight, 0 );
+
+	for( int side = 0; side < 6; side++ )
+	{
+		for( int x = 0; x < sourceImageSize.x; x++ )
+		{
+			for( int y = 0; y < sourceImageSize.y; y++ )
+			{
+				// convert UV coord to 3D direction
+				idVec3 dir = MapXYSToDirection( x, y, side, sourceImageSize.x, sourceImageSize.y );
+
+				float u, v;
+				idVec3 radiance;
+				R_SampleCubeMapHDR( dir, parms->outHeight, buffers, &radiance[0], u, v );
+
+				//radiance = dir * 0.5 + idVec3( 0.5f, 0.5f, 0.5f );
+
+				// convert from [0 .. size-1] to [-1.0 + invSize .. 1.0 - invSize]
+				const float uu = 2.0f * ( u * invDstSize ) - 1.0f;
+				const float vv = 2.0f * ( v * invDstSize ) - 1.0f;
+
+				float texelArea = CubemapTexelSolidAngle( uu, vv, invDstSize );
+
+				const SphericalHarmonicsT<float, 4>& sh = shEvaluate<4>( dir );
+
+				bool shValid = true;
+				for( int i = 0; i < 25; i++ )
+				{
+					if( IsNAN( sh[i] ) )
+					{
+						shValid = false;
+						break;
+					}
+				}
+
+				if( shValid )
+				{
+					shAddWeighted( shRadiance, sh, radiance * texelArea );
+				}
+			}
+		}
+	}
+
+#endif
+
+	// reset image to black
+	for( int x = 0; x < parms->outWidth; x++ )
+	{
+		for( int y = 0; y < parms->outHeight; y++ )
+		{
+			parms->outBuffer[( y * parms->outWidth + x ) * 3 + 0] = F32toF16( 0 );
+			parms->outBuffer[( y * parms->outWidth + x ) * 3 + 1] = F32toF16( 0 );
+			parms->outBuffer[( y * parms->outWidth + x ) * 3 + 2] = F32toF16( 0 );
+		}
+	}
+
+	for( int mip = 0; mip < numMips; mip++ )
+	{
+		float roughness = ( float )mip / ( float )( numMips - 1 );
+
+		idVec4 dstRect = R_CalculateMipRect( parms->outHeight, mip );
+
+		for( int x = dstRect.x; x < ( dstRect.x + dstRect.z ); x++ )
+		{
+			for( int y = dstRect.y; y < ( dstRect.y + dstRect.w ); y++ )
+			{
+				idVec2 octCoord;
+				if( mip > 0 )
+				{
+					// move back to [0, 1] coords
+					octCoord = NormalizedOctCoord( x - dstRect.x, y - dstRect.y, dstRect.z );
+				}
+				else
+				{
+					octCoord = NormalizedOctCoord( x, y, dstRect.z );
+				}
+
+				// convert UV coord to 3D direction
+				idVec3 dir;
+
+				dir.FromOctahedral( octCoord );
+
+				idVec3 outColor( 0, 0, 0 );
+
+#if 1
+				// generate ambient colors by evaluating the L4 Spherical Harmonics
+				SphericalHarmonicsT<float, 4> shDirection = shEvaluate<4>( dir );
+
+				idVec3 sampleIrradianceSh = shEvaluateDiffuse<idVec3, 4>( shRadiance, dir ) / idMath::PI;
+
+				outColor[0] = Max( 0.0f, sampleIrradianceSh.x );
+				outColor[1] = Max( 0.0f, sampleIrradianceSh.y );
+				outColor[2] = Max( 0.0f, sampleIrradianceSh.z );
+#else
+				// generate ambient colors using Monte Carlo method
+				for( int s = 0; s < parms->samples; s++ )
+				{
+					idVec2 Xi = Hammersley2D( s, parms->samples );
+					idVec3 H = ImportanceSampleGGX( Xi, dir, 0.95f );
+
+					float u, v;
+					idVec3 radiance;
+					R_SampleCubeMapHDR( H, parms->outHeight, buffers, &radiance[0], u, v );
+
+					outColor[0] += radiance[0];
+					outColor[1] += radiance[1];
+					outColor[2] += radiance[2];
+				}
+
+				outColor[0] /= parms->samples;
+				outColor[1] /= parms->samples;
+				outColor[2] /= parms->samples;
+#endif
+
+				//outColor = dir * 0.5 + idVec3( 0.5f, 0.5f, 0.5f );
+
+				parms->outBuffer[( y * parms->outWidth + x ) * 3 + 0] = F32toF16( outColor[0] );
+				parms->outBuffer[( y * parms->outWidth + x ) * 3 + 1] = F32toF16( outColor[1] );
+				parms->outBuffer[( y * parms->outWidth + x ) * 3 + 2] = F32toF16( outColor[2] );
+
+				if( parms->printProgress )
+				{
+					progressBar.Increment();
+				}
+			}
+		}
+	}
+
+	int	end = Sys_Milliseconds();
+
+	parms->time = end - start;
+}
+
+void CalculateRadianceJob( calcEnvprobeParms_t* parms )
+{
+	byte*		buffers[6];
+
+	int	start = Sys_Milliseconds();
+
+	for( int i = 0; i < 6; i++ )
+	{
+		buffers[ i ] = parms->buffers[ i ];
+	}
+
+	const float invDstSize = 1.0f / float( parms->outHeight );
+
+	const int numMips = idMath::BitsForInteger( parms->outHeight );
+
+	const idVec2i sourceImageSize( parms->outHeight, parms->outHeight );
+
+	CommandlineProgressBar progressBar( R_CalculateUsedAtlasPixels( sourceImageSize.y ) );
+	if( parms->printProgress )
+	{
+		progressBar.Start();
+	}
+
+	// reset output image to black
+	for( int x = 0; x < parms->outWidth; x++ )
+	{
+		for( int y = 0; y < parms->outHeight; y++ )
+		{
+			parms->outBuffer[( y * parms->outWidth + x ) * 3 + 0] = F32toF16( 0 );
+			parms->outBuffer[( y * parms->outWidth + x ) * 3 + 1] = F32toF16( 0 );
+			parms->outBuffer[( y * parms->outWidth + x ) * 3 + 2] = F32toF16( 0 );
+		}
+	}
+
+	for( int mip = 0; mip < numMips; mip++ )
+	{
+		float roughness = ( float )mip / ( float )( numMips - 1 );
+
+		idVec4 dstRect = R_CalculateMipRect( parms->outHeight, mip );
+
+		for( int x = dstRect.x; x < ( dstRect.x + dstRect.z ); x++ )
+		{
+			for( int y = dstRect.y; y < ( dstRect.y + dstRect.w ); y++ )
+			{
+				idVec2 octCoord;
+				if( mip > 0 )
+				{
+					// move back to [0, 1] coords
+					octCoord = NormalizedOctCoord( x - dstRect.x, y - dstRect.y, dstRect.z );
+				}
+				else
+				{
+					octCoord = NormalizedOctCoord( x, y, dstRect.z );
+				}
+
+				// convert UV coord to 3D direction
+				idVec3 N;
+
+				N.FromOctahedral( octCoord );
+
+				idVec3 outColor( 0, 0, 0 );
+
+				// RB: Split Sum approximation explanation
+
+				// Epic Games makes a further approximation by assuming the view direction
+				// (and thus the specular reflection direction) to be equal to the output sample direction ωo.
+				// This translates itself to the following code:
+				const idVec3 R = N;
+				const idVec3 V = R;
+
+				float totalWeight = 0.0f;
+
+				for( int s = 0; s < parms->samples; s++ )
+				{
+					idVec2 Xi = Hammersley2D( s, parms->samples );
+					idVec3 H = ImportanceSampleGGX( Xi, N, roughness );
+					idVec3 L = ( 2.0 * ( H * ( V * H ) ) - V );
+
+					float NdotL = Max( ( N * L ), 0.0f );
+					if( NdotL > 0.0 )
+					{
+						float sample[3];
+						float u, v;
+
+						R_SampleCubeMapHDR( H, parms->outHeight, buffers, sample, u, v );
+
+						outColor[0] += sample[0] * NdotL;
+						outColor[1] += sample[1] * NdotL;
+						outColor[2] += sample[2] * NdotL;
+
+						totalWeight += NdotL;
+					}
+				}
+
+				outColor[0] /= totalWeight;
+				outColor[1] /= totalWeight;
+				outColor[2] /= totalWeight;
+
+				parms->outBuffer[( y * parms->outWidth + x ) * 3 + 0] = F32toF16( outColor[0] );
+				parms->outBuffer[( y * parms->outWidth + x ) * 3 + 1] = F32toF16( outColor[1] );
+				parms->outBuffer[( y * parms->outWidth + x ) * 3 + 2] = F32toF16( outColor[2] );
+
+				if( parms->printProgress )
+				{
+					progressBar.Increment();
+				}
+			}
+		}
+	}
+
+	int	end = Sys_Milliseconds();
+
+	parms->time = end - start;
+}
+
+REGISTER_PARALLEL_JOB( CalculateIrradianceJob, "CalculateIrradianceJob" );
+REGISTER_PARALLEL_JOB( CalculateRadianceJob, "CalculateRadianceJob" );
+
+
+void R_MakeAmbientMap( const char* baseName, const char* suffix, int outSize, bool specular, bool deleteTempFiles, bool useThreads )
+{
+	idStr		fullname;
+	renderView_t	ref;
+	viewDef_t	primary;
+	byte*		buffers[6];
+	int			width = 0, height = 0;
+
+	// read all of the images
+	for( int i = 0 ; i < 6 ; i++ )
+	{
+		fullname.Format( "env/%s%s.exr", baseName, envDirection[i] );
+
+		const bool captureToImage = false;
+		common->UpdateScreen( captureToImage );
+
+		R_LoadImage( fullname, &buffers[i], &width, &height, NULL, true, NULL );
+		if( !buffers[i] )
+		{
+			common->Printf( "loading %s failed.\n", fullname.c_str() );
+			for( i-- ; i >= 0 ; i-- )
+			{
+				Mem_Free( buffers[i] );
+			}
+			return;
+		}
+	}
+
+	// set up the job
+	calcEnvprobeParms_t* jobParms = new calcEnvprobeParms_t;
+
+	for( int i = 0; i < 6; i++ )
+	{
+		jobParms->buffers[ i ] = buffers[ i ];
+	}
+
+	jobParms->samples = 1000;
+	jobParms->filename.Format( "env/%s%s.exr", baseName, suffix );
+
+	jobParms->printProgress = !useThreads;
+
+	jobParms->outWidth = int( outSize * 1.5f );
+	jobParms->outHeight = outSize;
+	jobParms->outBuffer = ( halfFloat_t* )R_StaticAlloc( idMath::Ceil( outSize * outSize * 3 * sizeof( halfFloat_t ) * 1.5f ), TAG_IMAGE );
+
+	tr.irradianceJobs.Append( jobParms );
+
+	if( useThreads )
+	{
+		if( specular )
+		{
+			tr.envprobeJobList->AddJob( ( jobRun_t )CalculateRadianceJob, jobParms );
+		}
+		else
+		{
+			tr.envprobeJobList->AddJob( ( jobRun_t )CalculateIrradianceJob, jobParms );
+		}
+	}
+	else
+	{
+		if( specular )
+		{
+			CalculateRadianceJob( jobParms );
+		}
+		else
+		{
+			CalculateIrradianceJob( jobParms );
+		}
+	}
+
+	if( deleteTempFiles )
+	{
+		for( int i = 0 ; i < 6 ; i++ )
+		{
+			fullname.Format( "env/%s%s.exr", baseName, envDirection[i] );
+
+			fileSystem->RemoveFile( fullname );
+		}
+	}
+}
+
+CONSOLE_COMMAND( generateEnvironmentProbes, "Generate environment probes", NULL )
+{
+	idStr			fullname;
+	idStr			baseName;
+	renderView_t	ref;
+	int				blends;
+	const char*		extension;
+	int				size;
+
+	static const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
+
+	if( !tr.primaryWorld )
+	{
+		common->Printf( "No primary world loaded.\n" );
+		return;
+	}
+
+	bool useThreads = true;
+
+	baseName = tr.primaryWorld->mapName;
+	baseName.StripFileExtension();
+
+	size = RADIANCE_CUBEMAP_SIZE;
+	blends = 1;
+
+	if( !tr.primaryView )
+	{
+		common->Printf( "No primary view.\n" );
+		return;
+	}
+
+	const viewDef_t primary = *tr.primaryView;
+
+	memset( &cubeAxis, 0, sizeof( cubeAxis ) );
+
+	// +X
+	cubeAxis[0][0][0] = 1;
+	cubeAxis[0][1][2] = 1;
+	cubeAxis[0][2][1] = 1;
+
+	// -X
+	cubeAxis[1][0][0] = -1;
+	cubeAxis[1][1][2] = -1;
+	cubeAxis[1][2][1] = 1;
+
+	// +Y
+	cubeAxis[2][0][1] = 1;
+	cubeAxis[2][1][0] = -1;
+	cubeAxis[2][2][2] = -1;
+
+	// -Y
+	cubeAxis[3][0][1] = -1;
+	cubeAxis[3][1][0] = -1;
+	cubeAxis[3][2][2] = 1;
+
+	// +Z
+	cubeAxis[4][0][2] = 1;
+	cubeAxis[4][1][0] = -1;
+	cubeAxis[4][2][1] = 1;
+
+	// -Z
+	cubeAxis[5][0][2] = -1;
+	cubeAxis[5][1][0] = 1;
+	cubeAxis[5][2][1] = 1;
+
+	//--------------------------------------------
+	// CAPTURE SCENE LIGHTING TO CUBEMAPS
+	//--------------------------------------------
+
+	for( int i = 0; i < tr.primaryWorld->envprobeDefs.Num(); i++ )
+	{
+		RenderEnvprobeLocal* def = tr.primaryWorld->envprobeDefs[i];
+		if( def == NULL )
+		{
+			continue;
+		}
+
+		for( int j = 0 ; j < 6 ; j++ )
+		{
+			ref = primary.renderView;
+
+			ref.rdflags = RDF_NOAMBIENT | RDF_IRRADIANCE;
+			ref.fov_x = ref.fov_y = 90;
+
+			ref.vieworg = def->parms.origin;
+			ref.viewaxis = cubeAxis[j];
+
+			extension = envDirection[ j ];
+			fullname.Format( "env/%s/envprobe%i%s", baseName.c_str(), i, extension );
+
+			tr.TakeScreenshot( size, size, fullname, blends, &ref, EXR );
+			//tr.CaptureRenderToFile( fullname, false );
+		}
+	}
+
+
+	common->Printf( "Wrote a env set with the name %s\n", baseName.c_str() );
+
+	//--------------------------------------------
+	// CONVOLVE CUBEMAPS
+	//--------------------------------------------
+
+	int	start = Sys_Milliseconds();
+
+	for( int i = 0; i < tr.primaryWorld->envprobeDefs.Num(); i++ )
+	{
+		RenderEnvprobeLocal* def = tr.primaryWorld->envprobeDefs[i];
+		if( def == NULL )
+		{
+			continue;
+		}
+
+		fullname.Format( "%s/envprobe%i", baseName.c_str(), i );
+
+		R_MakeAmbientMap( fullname.c_str(), "_amb", IRRADIANCE_CUBEMAP_SIZE, false, false, useThreads );
+		R_MakeAmbientMap( fullname.c_str(), "_spec", RADIANCE_CUBEMAP_SIZE, true, true, useThreads );
+	}
+
+	if( useThreads )
+	{
+		//tr.envprobeJobList->Submit();
+		tr.envprobeJobList->Submit( NULL, JOBLIST_PARALLELISM_MAX_CORES );
+		tr.envprobeJobList->Wait();
+	}
+
+	for( int j = 0; j < tr.irradianceJobs.Num(); j++ )
+	{
+		calcEnvprobeParms_t* job = tr.irradianceJobs[ j ];
+
+		R_WriteEXR( job->filename, ( byte* )job->outBuffer, 3, job->outWidth, job->outHeight, "fs_basepath" );
+
+		common->Printf( "%s convolved in %5.1f seconds\n\n", job->filename.c_str(), job->time * 0.001f );
+
+		for( int i = 0; i < 6; i++ )
+		{
+			if( job->buffers[i] )
+			{
+				Mem_Free( job->buffers[i] );
+			}
+		}
+
+		Mem_Free( job->outBuffer );
+
+		delete job;
+	}
+
+	tr.irradianceJobs.Clear();
+
+	int	end = Sys_Milliseconds();
+
+	common->Printf( "convolved probes in %5.1f seconds\n\n", ( end - start ) * 0.001f );
+}
+
+/*
+==================
+R_MakeAmbientMap_f
+
+R_MakeAmbientMap_f <basename> [size]
+
+Saves out env/<basename>_amb_ft.tga, etc
+==================
+*/
+CONSOLE_COMMAND( makeAmbientMap, "Saves out env/<basename>_amb_ft.tga, etc", NULL )
+{
+	const char*	baseName;
+	int			outSize;
+
+	if( args.Argc() != 2 && args.Argc() != 3 && args.Argc() != 4 )
+	{
+		common->Printf( "USAGE: makeAmbientMap <basename> [size]\n" );
+		return;
+	}
+	baseName = args.Argv( 1 );
+
+	if( args.Argc() >= 3 )
+	{
+		outSize = atoi( args.Argv( 2 ) );
+	}
+	else
+	{
+		outSize = 32;
+	}
+
+	R_MakeAmbientMap( baseName, "_amb", outSize, false, false, false );
+}
+
+
 CONSOLE_COMMAND( makeBrdfLUT, "make a GGX BRDF lookup table", NULL )
 {
 	int			outSize = 256;
@@ -499,8 +1159,6 @@ CONSOLE_COMMAND( makeBrdfLUT, "make a GGX BRDF lookup table", NULL )
 	//{
 	//	outSize = atoi( args.Argv( 1 ) );
 	//}
-
-	bool pacifier = true;
 
 	// resample with hemispherical blending
 	int	samples = 1024;
@@ -596,423 +1254,89 @@ static const unsigned char brfLutTexBytes[] =
 	Mem_Free( hdrBuffer );
 }
 
-
-// Compute normalized oct coord, mapping top left of top left pixel to (-1,-1)
-idVec2 NormalizedOctCoord( int x, int y, const int probeSideLength )
+CONSOLE_COMMAND( makeImageHeader, "load an image and turn it into a .h file", NULL )
 {
-	const int margin = 0;
-
-	int probeWithBorderSide = probeSideLength + margin;
-
-	idVec2 octFragCoord = idVec2( ( x - margin ) % probeWithBorderSide, ( y - margin ) % probeWithBorderSide );
-	
-	// Add back the half pixel to get pixel center normalized coordinates
-	return ( idVec2( octFragCoord ) + idVec2( 0.5f, 0.5f ) ) * ( 2.0f / float( probeSideLength ) ) - idVec2( 1.0f, 1.0f );
-}
-
-/*
-==================
-R_MakeAmbientMap_f
-
-R_MakeAmbientMap_f <basename> [size]
-
-Saves out env/<basename>_amb_ft.tga, etc
-==================
-*/
-void R_MakeAmbientMap( const char* baseName, const char* suffix, int outSize, float roughness )
-{
-	idStr		fullname;
-	renderView_t	ref;
-	viewDef_t	primary;
-	byte*		buffers[6];
+	byte*		buffer;
 	int			width = 0, height = 0;
 
-	memset( &cubeAxis, 0, sizeof( cubeAxis ) );
-	cubeAxis[0][0][0] = 1;
-	cubeAxis[0][1][2] = 1;
-	cubeAxis[0][2][1] = 1;
-
-	cubeAxis[1][0][0] = -1;
-	cubeAxis[1][1][2] = -1;
-	cubeAxis[1][2][1] = 1;
-
-	cubeAxis[2][0][1] = 1;
-	cubeAxis[2][1][0] = -1;
-	cubeAxis[2][2][2] = -1;
-
-	cubeAxis[3][0][1] = -1;
-	cubeAxis[3][1][0] = -1;
-	cubeAxis[3][2][2] = 1;
-
-	cubeAxis[4][0][2] = 1;
-	cubeAxis[4][1][0] = -1;
-	cubeAxis[4][2][1] = 1;
-
-	cubeAxis[5][0][2] = -1;
-	cubeAxis[5][1][0] = 1;
-	cubeAxis[5][2][1] = 1;
-
-	// read all of the images
-	for( int i = 0 ; i < 6 ; i++ )
+	if( args.Argc() < 2 )
 	{
-		fullname.Format( "env/%s%s.png", baseName, envDirection[i] );
-
-		const bool captureToImage = false;
-		common->UpdateScreen( captureToImage );
-		
-		R_LoadImage( fullname, &buffers[i], &width, &height, NULL, true, NULL );
-		if( !buffers[i] )
-		{
-			common->Printf( "loading %s failed.\n", fullname.c_str() );
-			for( i-- ; i >= 0 ; i-- )
-			{
-				Mem_Free( buffers[i] );
-			}
-			return;
-		}
-	}
-
-	bool pacifier = true;
-
-	// resample with hemispherical blending
-	int	samples = 1000;
-
-	byte*	outBuffer = ( byte* )_alloca( outSize * outSize * 4 );
-
-#if 0
-	{
-		CommandlineProgressBar progressBar( outSize * outSize * 6 );
-
-		int	start = Sys_Milliseconds();
-
-		for( int i = 0 ; i < 6 ; i++ )
-		{
-			for( int x = 0 ; x < outSize ; x++ )
-			{
-				for( int y = 0 ; y < outSize ; y++ )
-				{
-					idVec3	dir;
-					float	total[3];
-
-					dir = cubeAxis[i][0] + -( -1 + 2.0 * x / ( outSize - 1 ) ) * cubeAxis[i][1] + -( -1 + 2.0 * y / ( outSize - 1 ) ) * cubeAxis[i][2];
-					dir.Normalize();
-					total[0] = total[1] = total[2] = 0;
-
-					//float roughness = map ? 0.1 : 0.95;		// small for specular, almost hemisphere for ambient
-
-					for( int s = 0 ; s < samples ; s++ )
-					{
-						idVec2 Xi = Hammersley2D( s, samples );
-						idVec3 test = ImportanceSampleGGX( Xi, dir, roughness );
-
-						byte	result[4];
-						//test = dir;
-						R_SampleCubeMap( test, width, buffers, result );
-						total[0] += result[0];
-						total[1] += result[1];
-						total[2] += result[2];
-					}
-					outBuffer[( y * outSize + x ) * 4 + 0] = total[0] / samples;
-					outBuffer[( y * outSize + x ) * 4 + 1] = total[1] / samples;
-					outBuffer[( y * outSize + x ) * 4 + 2] = total[2] / samples;
-					outBuffer[( y * outSize + x ) * 4 + 3] = 255;
-
-					progressBar.Increment();
-				}
-			}
-
-			
-			fullname.Format( "env/%s%s%s.png", baseName, suffix, envDirection[i] );
-			//common->Printf( "writing %s\n", fullname.c_str() );
-
-			const bool captureToImage = false;
-			common->UpdateScreen( captureToImage );
-
-			//R_WriteTGA( fullname, outBuffer, outSize, outSize, false, "fs_basepath" );
-			R_WritePNG( fullname, outBuffer, 4, outSize, outSize, true, "fs_basepath" );
-		}
-
-		int	end = Sys_Milliseconds();
-
-		common->Printf( "env/%s convolved  in %5.1f seconds\n\n", baseName, ( end - start ) * 0.001f );
-	}
-#else
-	{
-
-		// output an octahedron probe
-
-		CommandlineProgressBar progressBar( outSize * outSize );
-
-		int	start = Sys_Milliseconds();
-
-		const float invDstSize = 1.0f / float( outSize );
-
-		for( int x = 0 ; x < outSize ; x++ )
-		{
-			for( int y = 0 ; y < outSize ; y++ )
-			{
-				idVec3	dir;
-				float	total[3];
-
-				// convert UV coord from [0, 1] to [-1, 1] space
-				const float u = 2.0f * x * invDstSize - 1.0f;
-				const float v = 2.0f * y * invDstSize - 1.0f;
-
-				idVec2 octCoord = NormalizedOctCoord( x, y, outSize );
-
-				// convert UV coord to 3D direction
-				dir.FromOctahedral( octCoord );
-
-				total[0] = total[1] = total[2] = 0; 
-
-				//float roughness = map ? 0.1 : 0.95;		// small for specular, almost hemisphere for ambient
-
-				for( int s = 0 ; s < samples ; s++ )
-				{
-					idVec2 Xi = Hammersley2D( s, samples );
-					idVec3 test = ImportanceSampleGGX( Xi, dir, roughness );
-
-					byte	result[4];
-					//test = dir;
-					R_SampleCubeMap( test, width, buffers, result );
-					total[0] += result[0];
-					total[1] += result[1];
-					total[2] += result[2];
-				}
-
-#if 1
-				outBuffer[( y * outSize + x ) * 4 + 0] = total[0] / samples;
-				outBuffer[( y * outSize + x ) * 4 + 1] = total[1] / samples;
-				outBuffer[( y * outSize + x ) * 4 + 2] = total[2] / samples;
-				outBuffer[( y * outSize + x ) * 4 + 3] = 255;
-#else
-				outBuffer[( y * outSize + x ) * 4 + 0] = byte( ( dir.x * 0.5f + 0.5f ) * 255 );
-				outBuffer[( y * outSize + x ) * 4 + 1] = byte( ( dir.y * 0.5f + 0.5f ) * 255 );
-				outBuffer[( y * outSize + x ) * 4 + 2] = byte( ( dir.z * 0.5f + 0.5f ) * 255 );
-				outBuffer[( y * outSize + x ) * 4 + 3] = 255;
-#endif
-
-				progressBar.Increment();
-			}
-		}
-
-			
-		fullname.Format( "env/%s%s.png", baseName, suffix );
-		//common->Printf( "writing %s\n", fullname.c_str() );
-
-		const bool captureToImage = false;
-		common->UpdateScreen( captureToImage );
-
-		//R_WriteTGA( fullname, outBuffer, outSize, outSize, false, "fs_basepath" );
-		R_WritePNG( fullname, outBuffer, 4, outSize, outSize, true, "fs_basepath" );
-
-		int	end = Sys_Milliseconds();
-
-		common->Printf( "env/%s convolved in %5.1f seconds\n\n", baseName, ( end - start ) * 0.001f );
-	}
-#endif
-
-	for( int i = 0 ; i < 6 ; i++ )
-	{
-		if( buffers[i] )
-		{
-			Mem_Free( buffers[i] );
-		}
-	}
-}
-
-/*
-==================
-R_MakeAmbientMap_f
-
-R_MakeAmbientMap_f <basename> [size]
-
-Saves out env/<basename>_amb_ft.tga, etc
-==================
-*/
-//void R_MakeAmbientMap_f( const idCmdArgs& args )
-CONSOLE_COMMAND( makeAmbientMap, "Saves out env/<basename>_amb_ft.tga, etc", NULL )
-{
-	const char*	baseName;
-	int			outSize;
-	float		roughness;
-
-	if( args.Argc() != 2 && args.Argc() != 3 && args.Argc() != 4 )
-	{
-		common->Printf( "USAGE: makeAmbientMap <basename> [size]\n" );
-		return;
-	}
-	baseName = args.Argv( 1 );
-
-	if( args.Argc() >= 3 )
-	{
-		outSize = atoi( args.Argv( 2 ) );
-	}
-	else
-	{
-		outSize = 32;
-	}
-
-	if( args.Argc() == 4 )
-	{
-		roughness = atof( args.Argv( 3 ) );
-	}
-	else
-	{
-		roughness = 0.95;
-	}
-
-	if( roughness > 0.8f )
-	{
-		R_MakeAmbientMap( baseName, "_amb", outSize, roughness );
-	}
-	else
-	{
-		R_MakeAmbientMap( baseName, "_spec", outSize, roughness );
-	}
-}
-
-CONSOLE_COMMAND( generateEnvironmentProbes, "Generate environment probes", NULL )
-{
-	idStr			fullname;
-	idStr			baseName;
-	idMat3			axis[6], oldAxis;
-	idVec3			oldPosition;
-	renderView_t	ref;
-	viewDef_t		primary;
-	int				blends;
-	const char*		extension;
-	int				size;
-	int				res_w, res_h, old_fov_x, old_fov_y;
-
-	static const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
-
-	res_w = renderSystem->GetWidth();
-	res_h = renderSystem->GetHeight();
-
-	baseName = tr.primaryWorld->mapName;
-	baseName.StripFileExtension();
-
-	size = RADIANCE_CUBEMAP_SIZE;
-	blends = 1;
-
-	if( !tr.primaryView )
-	{
-		common->Printf( "No primary view.\n" );
+		common->Printf( "USAGE: makeImageHeader filename [exportname]\n" );
 		return;
 	}
 
-	primary = *tr.primaryView;
+	idStr filename = args.Argv( 1 );
 
-	memset( &axis, 0, sizeof( axis ) );
-
-	// +X
-	axis[0][0][0] = 1;
-	axis[0][1][2] = 1;
-	axis[0][2][1] = 1;
-
-	// -X
-	axis[1][0][0] = -1;
-	axis[1][1][2] = -1;
-	axis[1][2][1] = 1;
-
-	// +Y
-	axis[2][0][1] = 1;
-	axis[2][1][0] = -1;
-	axis[2][2][2] = -1;
-
-	// -Y
-	axis[3][0][1] = -1;
-	axis[3][1][0] = -1;
-	axis[3][2][2] = 1;
-
-	// +Z
-	axis[4][0][2] = 1;
-	axis[4][1][0] = -1;
-	axis[4][2][1] = 1;
-
-	// -Z
-	axis[5][0][2] = -1;
-	axis[5][1][0] = 1;
-	axis[5][2][1] = 1;
-
-	//--------------------------------------------
-	// CAPTURE SCENE LIGHTING TO CUBEMAPS
-	//--------------------------------------------
-
-	// let's get the game window to a "size" resolution
-	if( ( res_w != size ) || ( res_h != size ) )
+	R_LoadImage( filename, &buffer, &width, &height, NULL, true, NULL );
+	if( !buffer )
 	{
-		cvarSystem->SetCVarInteger( "r_windowWidth", size );
-		cvarSystem->SetCVarInteger( "r_windowHeight", size );
-		R_SetNewMode( false ); // the same as "vid_restart"
-	} // FIXME that's a hack!!
+		common->Printf( "loading %s failed.\n", filename.c_str() );
+		return;
+	}
 
-	// so we return to that axis and fov after the fact.
-	oldPosition = primary.renderView.vieworg;
-	oldAxis = primary.renderView.viewaxis;
-	old_fov_x = primary.renderView.fov_x;
-	old_fov_y = primary.renderView.fov_y;
+	filename.StripFileExtension();
 
-	for( int i = 0; i < tr.primaryWorld->envprobeDefs.Num(); i++ )
+	idStr exportname;
+
+	if( args.Argc() == 3 )
 	{
-		RenderEnvprobeLocal* def = tr.primaryWorld->envprobeDefs[i];
-		if( def == NULL )
+		exportname.Format( "Image_%s.h", args.Argv( 2 ) );
+	}
+	else
+	{
+		exportname.Format( "Image_%s.h", filename.c_str() );
+	}
+
+	for( int i = 0; i < exportname.Length(); i++ )
+	{
+		if( exportname[ i ] == '/' )
 		{
-			continue;
-		}
-
-		for( int j = 0 ; j < 6 ; j++ )
-		{
-			ref = primary.renderView;
-
-			extension = envDirection[ j ];
-
-			ref.fov_x = ref.fov_y = 90;
-
-			ref.vieworg = def->parms.origin;
-			ref.viewaxis = axis[j];
-			fullname.Format( "env/%s/envprobe%i%s", baseName.c_str(), i, extension );
-
-			// TODO capture resolved HDR data without bloom aka _currentRender in 16bit float HDR RGB
-			tr.TakeScreenshot( size, size, fullname, blends, &ref, PNG );
-			//tr.CaptureRenderToFile( fullname, false );
+			exportname[ i ] = '_';
 		}
 	}
 
-	// restore the original resolution, axis and fov
-	ref.vieworg = oldPosition;
-	ref.viewaxis = oldAxis;
-	ref.fov_x = old_fov_x;
-	ref.fov_y = old_fov_y;
-	cvarSystem->SetCVarInteger( "r_windowWidth", res_w );
-	cvarSystem->SetCVarInteger( "r_windowHeight", res_h );
-	R_SetNewMode( false ); // the same as "vid_restart"
+	idFileLocal headerFile( fileSystem->OpenFileWrite( exportname, "fs_basepath" ) );
 
-    common->Printf( "Wrote a env set with the name %s\n", baseName.c_str() );
+	idStr uppername = exportname;
+	uppername.ToUpper();
 
-	//--------------------------------------------
-	// CONVOLVE CUBEMAPS
-	//--------------------------------------------
-
-	int	start = Sys_Milliseconds();
-
-	for( int i = 0; i < tr.primaryWorld->envprobeDefs.Num(); i++ )
+	for( int i = 0; i < uppername.Length(); i++ )
 	{
-		RenderEnvprobeLocal* def = tr.primaryWorld->envprobeDefs[i];
-		if( def == NULL )
+		if( uppername[ i ] == '.' )
 		{
-			continue;
+			uppername[ i ] = '_';
 		}
-
-		fullname.Format( "%s/envprobe%i", baseName.c_str(), i );
-
-		R_MakeAmbientMap( fullname.c_str(), "_amb", IRRADIANCE_CUBEMAP_SIZE, 0.95f );
-		R_MakeAmbientMap( fullname.c_str(), "_spec", RADIANCE_CUBEMAP_SIZE, 0.1f );
 	}
 
-	int	end = Sys_Milliseconds();
+	headerFile->Printf( "#ifndef %s_TEX_H\n", uppername.c_str() );
+	headerFile->Printf( "#define %s_TEX_H\n\n", uppername.c_str() );
 
-	common->Printf( "convolved probes in %5.1f seconds\n\n", ( end - start ) * 0.001f );
+	headerFile->Printf( "#define %s_TEX_WIDTH %i\n", uppername.c_str(), width );
+	headerFile->Printf( "#define %s_TEX_HEIGHT %i\n\n", uppername.c_str(), height );
+
+	headerFile->Printf( "static const unsigned char %s_Bytes[] = {\n", uppername.c_str() );
+
+	int bufferSize = width * height * 4;
+
+	for( int i = 0; i < bufferSize; i++ )
+	{
+		byte b = buffer[i];
+
+		if( i < ( bufferSize - 1 ) )
+		{
+			headerFile->Printf( "0x%02hhx, ", b );
+		}
+		else
+		{
+			headerFile->Printf( "0x%02hhx", b );
+		}
+
+		if( i % 12 == 0 )
+		{
+			headerFile->Printf( "\n" );
+		}
+	}
+	headerFile->Printf( "\n};\n#endif\n" );
+
+	Mem_Free( buffer );
 }
-

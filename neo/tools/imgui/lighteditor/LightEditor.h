@@ -60,19 +60,14 @@ public:
 #if 0 // FIXME: unused, delete?
 	bool		fog;
 	idVec4		fogDensity;
-
-	bool		strobe;
-	float		strobeSpeed;
-	bool		rotate;
-	float		rotateSpeed;
 #endif // 0
 
 	idVec3		lightRadius;
 	bool		castShadows;
 	bool		castSpecular;
-	bool		castDiffuse;
 	bool		hasCenter;
 	bool		isParallel;
+	int			lightStyle;
 
 	LightInfo();
 
@@ -85,8 +80,11 @@ public:
 
 class LightEditor
 {
-	idStr title;
-	idStr entityName;
+private:
+	idStr	title;
+	idStr	entityName;
+	idVec3	entityPos;
+
 	LightInfo original;
 	LightInfo cur; // current status of the light
 
@@ -96,6 +94,13 @@ class LightEditor
 	int currentTextureIndex;
 	idImage* currentTexture;
 	const idMaterial* currentMaterial;
+
+	// RB: light style support
+	idList<idStr> styleNames;
+	int currentStyleIndex;
+
+	void LoadLightStyles();
+	static bool StyleItemsGetter( void* data, int idx, const char** out_text );
 
 	void Init( const idDict* dict, idEntity* light );
 	void Reset();

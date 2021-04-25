@@ -161,7 +161,11 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
 	endif()
 	
 	if(NOT CMAKE_CROSSCOMPILING AND ONATIVE)
-		add_definitions(-march=native)
+		if(CMAKE_SYSTEM_PROCESSOR MATCHES "((powerpc|ppc)64le)|(mips64)")
+			add_definitions(-mcpu=native)
+		else()
+			add_definitions(-march=native)
+		endif()
 	endif()
 
 	add_compile_options(-fno-strict-aliasing)
@@ -485,6 +489,10 @@ file(GLOB IMGUI_INCLUDES libs/imgui/*.h)
 file(GLOB IMGUI_SOURCES libs/imgui/*.cpp)
 
 file(GLOB STB_INCLUDES libs/stb/*.h)
+
+file(GLOB MESA_INCLUDES libs/mesa/*.h)
+
+file(GLOB TINYEXR_INCLUDES libs/tinyexr/*.h)
 
 file(GLOB MIKKTSPACE_INCLUDES libs/mikktspace/*.h)
 file(GLOB MIKKTSPACE_SOURCES libs/mikktspace/*.c)
@@ -1129,6 +1137,10 @@ source_group("libs\\imgui" FILES ${IMGUI_SOURCES})
 
 source_group("libs\\stb" FILES ${STB_INCLUDES})
 
+source_group("libs\\mesa" FILES ${MESA_INCLUDES})
+
+source_group("libs\\tinyexr" FILES ${TINYEXR_INCLUDES})
+
 source_group("libs\\mikktspace" FILES ${MIKKTSPACE_INCLUDES})
 source_group("libs\\mikktspace" FILES ${MIKKTSPACE_SOURCES})
 
@@ -1330,6 +1342,8 @@ set(RBDOOM3_INCLUDES
 			${FRAMEWORK_IMGUI_INCLUDES}
 			${IMGUI_INCLUDES}
 			${STB_INCLUDES}
+			${MESA_INCLUDES}
+			${TINYEXR_INCLUDES}
 			${MIKKTSPACE_INCLUDES}
 			${JPEG_INCLUDES}
 			${PNG_INCLUDES}
