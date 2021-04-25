@@ -26,9 +26,6 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "rmlui/D3RmlRender.h"
-#include "rmlui/RmlFileSystem.h"
-#include "ui/D3RmlSystem.h"
 
 class idWindow;
 

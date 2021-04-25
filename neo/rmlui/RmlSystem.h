@@ -3,7 +3,6 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2012 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -27,7 +26,59 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
-#include "precompiled.h"
+#ifndef __RML_RMLSYSTEM_H_
+#define __RML_RMLSYSTEM_H_
 
-#include "D3RmlSystem.h"
+#include "RmlUi/Core/Input.h"
+#include "RmlUi/Core/SystemInterface.h"
+
+class idRmlSystem : public Rml::SystemInterface
+{
+public:
+
+	enum
+	{
+		CURSOR_ARROW,
+		CURSOR_HAND,
+		CURSOR_HAND_JOY1,
+		CURSOR_HAND_JOY2,
+		CURSOR_HAND_JOY3,
+		CURSOR_HAND_JOY4,
+		CURSOR_COUNT
+	};
+
+	idRmlSystem();
+	~idRmlSystem() override;
+
+	/// Get the number of seconds elapsed since the start of the application.
+	/// @return Elapsed time, in seconds.
+	double GetElapsedTime() override;
+
+	/// Log the specified message.
+	/// @param[in] type Type of log message, ERROR, WARNING, etc.
+	/// @param[in] message Message to log.
+	/// @return True to continue execution, false to break into the debugger.
+	bool LogMessage(Rml::Log::Type type, const Rml::String& message) override;
+
+	/// Set clipboard text.
+	/// @param[in] text Text to apply to clipboard.
+	void SetClipboardText(const Rml::String& text) override;
+
+	/// Get clipboard text.
+	/// @param[out] text Retrieved text from clipboard.
+	void GetClipboardText(Rml::String& text) override;
+
+	/// Set mouse cursor.
+	/// @param[in] cursor_name Cursor name to activate.
+	void SetMouseCursor(const Rml::String& cursorName) override;
+
+	static Rml::Input::KeyIdentifier TranslateKey(int key);
+
+	static int GetKeyModifier();
+
+private:
+
+	int _cursor = 0;
+};
+
+#endif

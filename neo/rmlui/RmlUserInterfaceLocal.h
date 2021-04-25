@@ -7,7 +7,7 @@
 #include "RmlFileSystem.h"
 #include "D3RmlRender.h"
 
-#include "ui/D3RmlSystem.h"
+#include "rmlui/RmlSystem.h"
 #include "ui/DeviceContext.h"
 
 class RmlUserInterfaceLocal : public RmlUserInterface
