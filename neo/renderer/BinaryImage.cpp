@@ -369,8 +369,8 @@ void idBinaryImage::Load2DAtlasMipchainFromMemory( int width, int height, const 
 		// RB: create shrunk image which is a copy of the sub image in the atlas
 		idVec4 rect = R_CalculateMipRect( sourceWidth, level );
 
-		int	scaledWidth = Max(2, (int)rect.z);
-		int scaledHeight = Max(2, (int)rect.w);
+		int	scaledWidth = Max( 2, ( int )rect.z );
+		int scaledHeight = Max( 2, ( int )rect.w );
 
 		byte* pic = ( byte* )Mem_Alloc( scaledWidth * scaledHeight * 4, TAG_TEMP );
 
@@ -928,11 +928,11 @@ idBinaryImage::GetGeneratedFileName
 */
 void idBinaryImage::GetGeneratedFileName( idStr& gfn, const char* name )
 {
-	gfn.Format("generated/images/%s.bimage", name);
-	gfn.Replace("(", "/");
-	gfn.Replace(",", "/");
-	gfn.Replace(")", "");
-	gfn.Replace(" ", "");
+	gfn.Format( "generated/images/%s.bimage", name );
+	gfn.Replace( "(", "/" );
+	gfn.Replace( ",", "/" );
+	gfn.Replace( ")", "" );
+	gfn.Replace( " ", "" );
 }
 
 

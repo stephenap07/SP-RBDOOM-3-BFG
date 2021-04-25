@@ -62,6 +62,7 @@ RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 	, _cursorEnabled( true )
 	, _isActive( false )
 	, _isPausingGame( false )
+	, _inhibitsControl( false )
 	, _refs( 1 )
 {
 }

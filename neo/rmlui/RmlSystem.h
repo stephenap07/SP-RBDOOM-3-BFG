@@ -58,21 +58,21 @@ public:
 	/// @param[in] type Type of log message, ERROR, WARNING, etc.
 	/// @param[in] message Message to log.
 	/// @return True to continue execution, false to break into the debugger.
-	bool LogMessage(Rml::Log::Type type, const Rml::String& message) override;
+	bool LogMessage( Rml::Log::Type type, const Rml::String& message ) override;
 
 	/// Set clipboard text.
 	/// @param[in] text Text to apply to clipboard.
-	void SetClipboardText(const Rml::String& text) override;
+	void SetClipboardText( const Rml::String& text ) override;
 
 	/// Get clipboard text.
 	/// @param[out] text Retrieved text from clipboard.
-	void GetClipboardText(Rml::String& text) override;
+	void GetClipboardText( Rml::String& text ) override;
 
 	/// Set mouse cursor.
 	/// @param[in] cursor_name Cursor name to activate.
-	void SetMouseCursor(const Rml::String& cursorName) override;
+	void SetMouseCursor( const Rml::String& cursorName ) override;
 
-	static Rml::Input::KeyIdentifier TranslateKey(int key);
+	static Rml::Input::KeyIdentifier TranslateKey( int key );
 
 	static int GetKeyModifier();
 
