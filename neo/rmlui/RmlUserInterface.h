@@ -49,23 +49,30 @@ public:
 	virtual void				SetInhibitsControl( bool inhibit ) = 0;
 };
 
+namespace Rml
+{
+	class ElementDocument;
+	class Context;
+}
+
 class RmlUserInterfaceManager
 {
 public:
-	virtual						~RmlUserInterfaceManager() = default;
+	virtual							~RmlUserInterfaceManager() = default;
 
-	virtual void				Init() = 0;
-	virtual void				Shutdown() = 0;
-	virtual RmlUserInterface*	Find( const char* name, bool autoload ) = 0;
+	virtual void					Init() = 0;
+	virtual void					Shutdown() = 0;
+	virtual RmlUserInterface*		Find( const char* name, bool autoload ) = 0;
+	virtual Rml::ElementDocument*	LoadDocument(Rml::Context* context, const char* name) = 0;
 
-	virtual void				BeginLevelLoad() = 0;
-	virtual void				EndLevelLoad( const char* mapName ) = 0;
-	virtual bool				InLevelLoad() const = 0;
+	virtual void					BeginLevelLoad() = 0;
+	virtual void					EndLevelLoad( const char* mapName ) = 0;
+	virtual bool					InLevelLoad() const = 0;
 
 	// Reloads changed guis, or all guis.
-	virtual void				Reload( bool all ) = 0;
+	virtual void					Reload( bool all ) = 0;
 
-	virtual void				PostRender() = 0;
+	virtual void					PostRender() = 0;
 };
 
 extern RmlUserInterfaceManager* rmlManager;

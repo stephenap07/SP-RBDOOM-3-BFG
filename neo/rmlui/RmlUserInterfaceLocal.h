@@ -144,14 +144,13 @@ protected:
 	idList<RmlUi*>				_rmlUi;
 };
 
-struct RmlMaterial
+struct RmlImage
 {
 	idImage* image = nullptr;
-	const idMaterial* material = nullptr;
 	const byte* data = nullptr;
 	idVec2 dimensions = idVec2( 0.0f, 0.0f );
 
-	~RmlMaterial();
+	~RmlImage();
 };
 
 class RmlUserInterfaceManagerLocal : public RmlUserInterfaceManager
@@ -162,7 +161,8 @@ public:
 
 	void						Init() override;
 	void						Shutdown() override;
-	virtual RmlUserInterface*	Find( const char* name, bool autoload ) override;
+	RmlUserInterface*			Find( const char* name, bool autoload ) override;
+	Rml::ElementDocument*		LoadDocument(Rml::Context* context, const char* name) override;
 
 	void						BeginLevelLoad() override;
 	void						EndLevelLoad( const char* mapName ) override;
@@ -174,17 +174,26 @@ public:
 	// Reloads changed guis, or all guis.
 	void						Reload( bool all ) override;
 
+	// Run this method on the main thread to actually generate data for the image. This is used to generate font glyphs to an idImage.
 	void						PostRender() override;
 
 	// Class owns data
-	void						AddMaterialToReload( const idMaterial* material, idImage* image, idVec2 dimensions, const byte* data );
+	void						AddMaterialToReload( idImage* image, idVec2 dimensions, const byte* data );
 
 private:
+
+	struct Document
+	{
+		Rml::ElementDocument* _doc = nullptr;
+		ID_TIME_T _timeStamp = 0;
+		idStr _name;
+	};
 
 	idDeviceContextOptimized		_dc;
 
 	idList<RmlUserInterfaceLocal*>	_guis;
-	idList<RmlMaterial>				_materialsToReload;
+	idList<RmlImage>				_imagesToReload;
+	idList<Document>				_documents;
 
 	idRmlSystem						_rmlSystem;
 	idRmlRender						_rmlRender;

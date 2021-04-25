@@ -29,11 +29,52 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #pragma hdrstop
 
-#include "rmlui/RmlUserInterfaceLocal.h"
-
 #include "RmlShell.h"
 
 #include "../Game_local.h"
+
+#include "rmlui/RmlUserInterfaceLocal.h"
+
+#include "RmlUi/Core/EventListener.h"
+#include "RmlUi/Core/EventListenerInstancer.h"
+
+class UI_Shell;
+class MyEventListener : public Rml::EventListener
+{
+public:
+	MyEventListener(UI_Shell* shell, const Rml::String& value, Rml::Element* element);
+
+	void ProcessEvent(Rml::Event& event) override;
+
+	void OnDetach(Rml::Element* /*element*/) override;
+
+private:
+	UI_Shell* _shell;
+	Rml::String value;
+	Rml::Element* element;
+};
+
+class MyEventListenerInstancer : public Rml::EventListenerInstancer
+{
+public:
+	MyEventListenerInstancer()
+		: _shell(nullptr)
+	{
+	}
+
+	void SetShell(UI_Shell* shell)
+	{
+		_shell = shell;
+	}
+
+	Rml::EventListener* InstanceEventListener(const Rml::String& value, Rml::Element* element) override
+	{
+		return new MyEventListener(_shell, value, element);
+	}
+
+private:
+	UI_Shell* _shell;
+};
 
 class EventHandler
 {
@@ -109,15 +150,19 @@ void MyEventListener::OnDetach( Rml::Element* /*element*/ )
 	delete this;
 }
 
+static MyEventListenerInstancer eventListenerInstancer;
+
 // UI Code
 
 UI_Shell::UI_Shell()
-	: _eventListenerInstancer( this )
+	: _eventListenerInstancer( &eventListenerInstancer )
 	, _ui( nullptr )
 	, _isActive( false )
 	, _isPausingGame( false )
 	, _inhibitsControl( false )
+	, _showCursor( false )
 {
+	((MyEventListenerInstancer*)_eventListenerInstancer)->SetShell(this);
 }
 
 bool UI_Shell::Init()
@@ -128,7 +173,7 @@ bool UI_Shell::Init()
 	_isPausingGame = false;
 
 	// Register event listeners. Note that registering event listeners must happen before documents are loaded.
-	Rml::Factory::RegisterEventListenerInstancer( &_eventListenerInstancer );
+	Rml::Factory::RegisterEventListenerInstancer( _eventListenerInstancer );
 
 	if( LoadDocument( "startmenu" ) )
 	{
@@ -138,6 +183,21 @@ bool UI_Shell::Init()
 	}
 
 	return false;
+}
+
+bool UI_Shell::IsCursorEnabled() const
+{
+	return _ui->IsCursorEnabled();
+}
+
+void UI_Shell::SetCursorEnabled(bool showCursor)
+{
+	_ui->SetCursorEnabled(showCursor);
+}
+
+bool UI_Shell::HandleEvent(const sysEvent_t* event, int time)
+{
+	return _ui->HandleEvent(event, time);
 }
 
 void UI_Shell::Redraw( int time )
@@ -178,7 +238,7 @@ Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
 	docPath.AppendPath( windowName );
 	docPath.Append( ".rml" );
 
-	Rml::ElementDocument* document = _ui->Context()->LoadDocument( docPath.c_str() );
+	Rml::ElementDocument* document = rmlManager->LoadDocument( _ui->Context(), docPath.c_str() );
 	if( document == nullptr )
 	{
 		//event_handler = old_event_handler;

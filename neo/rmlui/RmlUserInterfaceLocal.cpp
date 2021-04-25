@@ -344,6 +344,25 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool aut
 	return ui;
 }
 
+Rml::ElementDocument* RmlUserInterfaceManagerLocal::LoadDocument(Rml::Context* context, const char* name)
+{
+	ID_TIME_T timeStamp(0);
+	fileSystem->ReadFile(name, nullptr, &timeStamp);
+
+	Rml::ElementDocument* document = nullptr;
+	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
+	{
+		document = context->LoadDocument(name);
+
+		if (document)
+		{
+			_documents.Append({document, timeStamp, name});
+		}
+	}
+
+	return document;
+}
+
 void RmlUserInterfaceManagerLocal::BeginLevelLoad()
 {
 	_inLevelLoad = true;
@@ -356,34 +375,48 @@ void RmlUserInterfaceManagerLocal::EndLevelLoad( const char* mapName )
 
 void RmlUserInterfaceManagerLocal::Reload( bool all )
 {
-	for( int i = 0; i < _guis.Num(); i++ )
+	for (int i = 0; i < _documents.Num(); i++)
 	{
-		_guis[i]->Reload();
+		ID_TIME_T timeStamp(0);
+		fileSystem->ReadFile(_documents[i]._name.c_str(), nullptr, &timeStamp);
+		if (timeStamp != _documents[i]._timeStamp)
+		{
+			// file needs a reload.
+			common->Printf("Reloading %s\n", _documents[i]._name.c_str());
+			bool show = _documents[i]._doc->IsVisible();
+			Rml::Context* context = _documents[i]._doc->GetContext();
+			context->UnloadDocument(_documents[i]._doc);
+			_documents[i]._doc = context->LoadDocument(_documents[i]._name.c_str());
+			if (show && _documents[i]._doc)
+			{
+				_documents[i]._doc->Show();
+			}
+		}
 	}
 }
 
 void RmlUserInterfaceManagerLocal::PostRender()
 {
-	for( int i = 0; i < _materialsToReload.Num(); i++ )
+	for( int i = 0; i < _imagesToReload.Num(); i++ )
 	{
-		_materialsToReload[i].image->GenerateImage(
-			_materialsToReload[i].data,
-			_materialsToReload[i].dimensions.x,
-			_materialsToReload[i].dimensions.y,
+		RmlImage& img = _imagesToReload[i];
+		img.image->GenerateImage(
+			img.data,
+			img.dimensions.x,
+			img.dimensions.y,
 			textureFilter_t::TF_NEAREST,
 			textureRepeat_t::TR_CLAMP,
 			textureUsage_t::TD_LOOKUP_TABLE_RGBA );
 	}
 
-	_materialsToReload.Clear();
+	_imagesToReload.Clear();
 }
 
-void RmlUserInterfaceManagerLocal::AddMaterialToReload( const idMaterial* material, idImage* image, idVec2 dimensions, const byte* data )
+void RmlUserInterfaceManagerLocal::AddMaterialToReload( idImage* image, idVec2 dimensions, const byte* data )
 {
-	_materialsToReload.Append( RmlMaterial() );
-	RmlMaterial& mat = _materialsToReload[_materialsToReload.Num() - 1];
+	_imagesToReload.Append( RmlImage() );
+	RmlImage& mat = _imagesToReload[_imagesToReload.Num() - 1];
 	mat.image = image;
-	mat.material = material;
 	mat.data = data;
 	mat.dimensions = dimensions;
 }
