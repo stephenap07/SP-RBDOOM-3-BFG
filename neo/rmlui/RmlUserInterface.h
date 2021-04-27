@@ -51,8 +51,8 @@ public:
 
 namespace Rml
 {
-	class ElementDocument;
-	class Context;
+class ElementDocument;
+class Context;
 }
 
 class RmlUserInterfaceManager
@@ -63,7 +63,10 @@ public:
 	virtual void					Init() = 0;
 	virtual void					Shutdown() = 0;
 	virtual RmlUserInterface*		Find( const char* name, bool autoload ) = 0;
-	virtual Rml::ElementDocument*	LoadDocument(Rml::Context* context, const char* name) = 0;
+	virtual Rml::ElementDocument*	LoadDocument( Rml::Context* context, const char* name ) = 0;
+	virtual void					CloseDocument( Rml::Context* context, const char* name ) = 0;
+	virtual bool					IsDocumentOpen( Rml::Context* context, const char* name ) = 0;
+	virtual Rml::ElementDocument*	GetDocument( Rml::Context* context, const char* name ) = 0;
 
 	virtual void					BeginLevelLoad() = 0;
 	virtual void					EndLevelLoad( const char* mapName ) = 0;

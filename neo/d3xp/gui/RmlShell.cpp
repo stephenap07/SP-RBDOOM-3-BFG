@@ -42,11 +42,11 @@ class UI_Shell;
 class MyEventListener : public Rml::EventListener
 {
 public:
-	MyEventListener(UI_Shell* shell, const Rml::String& value, Rml::Element* element);
+	MyEventListener( UI_Shell* shell, const Rml::String& value, Rml::Element* element );
 
-	void ProcessEvent(Rml::Event& event) override;
+	void ProcessEvent( Rml::Event& event ) override;
 
-	void OnDetach(Rml::Element* /*element*/) override;
+	void OnDetach( Rml::Element* /*element*/ ) override;
 
 private:
 	UI_Shell* _shell;
@@ -58,18 +58,18 @@ class MyEventListenerInstancer : public Rml::EventListenerInstancer
 {
 public:
 	MyEventListenerInstancer()
-		: _shell(nullptr)
+		: _shell( nullptr )
 	{
 	}
 
-	void SetShell(UI_Shell* shell)
+	void SetShell( UI_Shell* shell )
 	{
 		_shell = shell;
 	}
 
-	Rml::EventListener* InstanceEventListener(const Rml::String& value, Rml::Element* element) override
+	Rml::EventListener* InstanceEventListener( const Rml::String& value, Rml::Element* element ) override
 	{
-		return new MyEventListener(_shell, value, element);
+		return new MyEventListener( _shell, value, element );
 	}
 
 private:
@@ -119,9 +119,6 @@ void MyEventListener::ProcessEvent( Rml::Event& event )
 		if( !token.Icmp( "goto" ) )
 		{
 			src.ReadToken( &token );
-			_shell->SetInhibitsControl( false );
-			_shell->SetIsPausingGame( false );
-			_shell->SetCursorEnabled( false );
 			_shell->SetNextScreen( token.c_str() );
 			event.GetTargetElement()->GetOwnerDocument()->Close();
 		}
@@ -129,17 +126,11 @@ void MyEventListener::ProcessEvent( Rml::Event& event )
 		if( !token.Icmp( "load" ) )
 		{
 			src.ReadToken( &token );
-			_shell->SetInhibitsControl( false );
-			_shell->SetIsPausingGame( false );
-			_shell->SetCursorEnabled( false );
 			_shell->SetNextScreen( token.c_str() );
 		}
 
 		if( !token.Icmp( "game" ) )
 		{
-			_shell->SetInhibitsControl( false );
-			_shell->SetIsPausingGame( false );
-			_shell->SetCursorEnabled( false );
 			cmdSystem->AppendCommandText( "map test4\n" );
 		}
 	}
@@ -162,7 +153,7 @@ UI_Shell::UI_Shell()
 	, _inhibitsControl( false )
 	, _showCursor( false )
 {
-	((MyEventListenerInstancer*)_eventListenerInstancer)->SetShell(this);
+	( ( MyEventListenerInstancer* )_eventListenerInstancer )->SetShell( this );
 }
 
 bool UI_Shell::Init()
@@ -190,14 +181,14 @@ bool UI_Shell::IsCursorEnabled() const
 	return _ui->IsCursorEnabled();
 }
 
-void UI_Shell::SetCursorEnabled(bool showCursor)
+void UI_Shell::SetCursorEnabled( bool showCursor )
 {
-	_ui->SetCursorEnabled(showCursor);
+	_ui->SetCursorEnabled( showCursor );
 }
 
-bool UI_Shell::HandleEvent(const sysEvent_t* event, int time)
+bool UI_Shell::HandleEvent( const sysEvent_t* event, int time )
 {
-	return _ui->HandleEvent(event, time);
+	return _ui->HandleEvent( event, time );
 }
 
 void UI_Shell::Redraw( int time )
@@ -206,19 +197,44 @@ void UI_Shell::Redraw( int time )
 	{
 		TransitionNextScreen();
 	}
+
 	_ui->Redraw( time );
 }
 
 void UI_Shell::SetNextScreen( const char* screen )
 {
+	if( !_currentScreen.Icmp( screen ) )
+	{
+		return;
+	}
+
 	_nextScreen = screen;
 }
 
 void UI_Shell::TransitionNextScreen()
 {
+	if( _nextScreen.IsEmpty() )
+	{
+		return;
+	}
+
+	if( !_nextScreen.Icmp( "game" ) )
+	{
+		SetInhibitsControl( false );
+		SetIsPausingGame( false );
+		SetCursorEnabled( false );
+	}
+	else if( !_nextScreen.Icmp( "startmenu" ) )
+	{
+		SetInhibitsControl( true );
+		SetIsPausingGame( false );
+		SetCursorEnabled( true );
+	}
+
 	if( !_nextScreen.IsEmpty() )
 	{
 		LoadDocument( _nextScreen.c_str() );
+		_currentScreen = _nextScreen;
 		_nextScreen.Empty();
 	}
 }
@@ -233,24 +249,38 @@ Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
 //else
 //	event_handler = nullptr;
 
-// Attempt to load the referenced RML document.
+	// Attempt to load the referenced RML document.
 	idStr docPath = "guis/rml/shell/";
 	docPath.AppendPath( windowName );
 	docPath.Append( ".rml" );
 
-	Rml::ElementDocument* document = rmlManager->LoadDocument( _ui->Context(), docPath.c_str() );
+	Rml::ElementDocument* document = rmlManager->GetDocument( _ui->Context(), docPath.c_str() );
+
+	if( !_currentScreen.IsEmpty() )
+	{
+		idStr currentDocPath = "guis/rml/shell/";
+		currentDocPath.AppendPath( _currentScreen );
+		currentDocPath.Append( ".rml" );
+
+		if( currentDocPath != docPath )
+		{
+			rmlManager->CloseDocument( _ui->Context(), currentDocPath.c_str() );
+		}
+	}
+
+	if( document )
+	{
+		document->Show();
+		return document;
+	}
+
+	document = rmlManager->LoadDocument( _ui->Context(), docPath.c_str() );
+
 	if( document == nullptr )
 	{
 		//event_handler = old_event_handler;
 		common->Warning( "Failed to load document %s\n", docPath.c_str() );
 		return nullptr;
-	}
-
-	// Set the element's title on the title; IDd 'title' in the RML.
-	Rml::Element* title = document->GetElementById( "title" );
-	if( title != nullptr )
-	{
-		title->SetInnerRML( document->GetTitle() );
 	}
 
 	document->Show();

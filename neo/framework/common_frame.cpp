@@ -831,7 +831,7 @@ void idCommonLocal::Frame()
 		// Store server game time - don't let time go past last SS time in case we are extrapolating
 		if( IsClient() )
 		{
-			newCmd.serverGameMilliseconds = std::min( Game()->GetServerGameTimeMs(), Game()->GetSSEndTime() );
+			newCmd.serverGameMilliseconds = Min( Game()->GetServerGameTimeMs(), Game()->GetSSEndTime() );
 		}
 		else
 		{
@@ -892,6 +892,7 @@ void idCommonLocal::Frame()
 		// This may block if the game is taking longer than the render back end
 		gameThread.WaitForThread();
 
+		// Load the generated textures to the GPU.
 		rmlManager->PostRender();
 
 		// Send local usermds to the server.

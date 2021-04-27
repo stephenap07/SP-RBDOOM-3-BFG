@@ -82,7 +82,6 @@ void idRmlRender::Init()
 	_guiSolid = declManager->FindMaterial( "guiSolid" );
 }
 
-static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
 void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indices, int numIndexes, Rml::TextureHandle texture, const Rml::Vector2f& translation )
 {
 	triIndex_t* tris = &_tris[_numIndexes];
@@ -145,6 +144,7 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	_numIndexes = 0;
 }
 
+static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
 void idRmlRender::RenderClipMask()
 {
 	// Usually, scissor regions are handled  with actual scissor render commands.
@@ -243,10 +243,23 @@ bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml
 
 	const idMaterial* material = declManager->FindMaterial( va( "_rmlImage%d", _texGen ) );
 	material->SetSort( SS_GUI );
+
+	if( !material )
+	{
+		return false;
+	}
+
 	size_t sz = 4 * source_dimensions.x * source_dimensions.y;
 	const byte* mem = ( byte* )Mem_ClearedAlloc( sz, TAG_FONT );
 	memcpy( ( void* )mem, source, sz );
-	rmlManagerLocal.AddMaterialToReload( image, idVec2( source_dimensions.x, source_dimensions.y ), mem );
+
+	RmlImage rmlImage;
+	rmlImage.image = image;
+	rmlImage.material = material;
+	rmlImage.data = mem;
+	rmlImage.dimensions = idVec2( source_dimensions.x, source_dimensions.y );
+	rmlImage.referencedOutsideLevelLoad = true; // might need to arrange this in some other way.
+	rmlManagerLocal.AddMaterialToReload( &rmlImage );
 
 	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
 
@@ -283,7 +296,7 @@ void idRmlRender::PostRender()
 {
 }
 
-RmlImage::~RmlImage()
+void RmlImage::Free()
 {
 	if( data )
 	{

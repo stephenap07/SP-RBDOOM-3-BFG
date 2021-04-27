@@ -211,7 +211,6 @@ void RmlUserInterfaceLocal::Redraw( int time, bool hud )
 	_context->Update();
 	( ( idRmlRender* )Rml::GetRenderInterface() )->PreRender();
 	_context->Render();
-	( ( idRmlRender* )Rml::GetRenderInterface() )->PostRender();
 	DrawCursor();
 }
 
@@ -251,11 +250,6 @@ void RmlUserInterfaceLocal::DrawCursor()
 	float x = _cursorX * scaleToVirtual.x;
 	float y = _cursorY * scaleToVirtual.y;
 	rmlDc->DrawCursor( &x, &y, 36.0f * scaleToVirtual.x, bounds );
-}
-
-static void Cmd_ReloadRml( const idCmdArgs& args )
-{
-	rmlManagerLocal.Reload( true );
 }
 
 /*
@@ -304,8 +298,6 @@ void RmlUserInterfaceManagerLocal::Init()
 
 	rmlDc = &_dc;
 
-	cmdSystem->AddCommand( "reloadRml", Cmd_ReloadRml, CMD_FL_SYSTEM, "reload rml guis" );
-
 	_inLevelLoad = false;
 }
 
@@ -344,23 +336,74 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool aut
 	return ui;
 }
 
-Rml::ElementDocument* RmlUserInterfaceManagerLocal::LoadDocument(Rml::Context* context, const char* name)
+Rml::ElementDocument* RmlUserInterfaceManagerLocal::LoadDocument( Rml::Context* context, const char* name )
 {
-	ID_TIME_T timeStamp(0);
-	fileSystem->ReadFile(name, nullptr, &timeStamp);
+	Rml::ElementDocument* foundDoc( GetDocument( context, name ) );
+	if( foundDoc )
+	{
+		return foundDoc;
+	}
+
+	ID_TIME_T timeStamp( 0 );
+	fileSystem->ReadFile( name, nullptr, &timeStamp );
 
 	Rml::ElementDocument* document = nullptr;
 	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
 	{
-		document = context->LoadDocument(name);
+		document = context->LoadDocument( name );
 
-		if (document)
+		if( document )
 		{
-			_documents.Append({document, timeStamp, name});
+			_documents.Append( {document, timeStamp, name} );
 		}
 	}
 
 	return document;
+}
+
+void RmlUserInterfaceManagerLocal::CloseDocument( Rml::Context* context, const char* name )
+{
+	idList<int> toRemove;
+	for( int i = 0; i < _documents.Num(); i++ )
+	{
+		if( context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
+		{
+			_documents[i]._doc->Close();
+			toRemove.Append( i );
+		}
+	}
+
+	while( toRemove.Num() > 0 )
+	{
+		_documents.RemoveIndex( toRemove[0] );
+		toRemove.RemoveIndex( 0 );
+	}
+}
+
+bool RmlUserInterfaceManagerLocal::IsDocumentOpen( Rml::Context* context, const char* name )
+{
+	for( int i = 0; i < _documents.Num(); i++ )
+	{
+		if( context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+Rml::ElementDocument* RmlUserInterfaceManagerLocal::GetDocument( Rml::Context* context, const char* name )
+{
+	for( int i = 0; i < _documents.Num(); i++ )
+	{
+		if( context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
+		{
+			return _documents[i]._doc;
+		}
+	}
+
+	return nullptr;
 }
 
 void RmlUserInterfaceManagerLocal::BeginLevelLoad()
@@ -375,19 +418,19 @@ void RmlUserInterfaceManagerLocal::EndLevelLoad( const char* mapName )
 
 void RmlUserInterfaceManagerLocal::Reload( bool all )
 {
-	for (int i = 0; i < _documents.Num(); i++)
+	for( int i = 0; i < _documents.Num(); i++ )
 	{
-		ID_TIME_T timeStamp(0);
-		fileSystem->ReadFile(_documents[i]._name.c_str(), nullptr, &timeStamp);
-		if (timeStamp != _documents[i]._timeStamp)
+		ID_TIME_T timeStamp( 0 );
+		fileSystem->ReadFile( _documents[i]._name.c_str(), nullptr, &timeStamp );
+		if( timeStamp != _documents[i]._timeStamp )
 		{
 			// file needs a reload.
-			common->Printf("Reloading %s\n", _documents[i]._name.c_str());
+			common->Printf( "Reloading %s\n", _documents[i]._name.c_str() );
 			bool show = _documents[i]._doc->IsVisible();
 			Rml::Context* context = _documents[i]._doc->GetContext();
-			context->UnloadDocument(_documents[i]._doc);
-			_documents[i]._doc = context->LoadDocument(_documents[i]._name.c_str());
-			if (show && _documents[i]._doc)
+			context->UnloadDocument( _documents[i]._doc );
+			_documents[i]._doc = context->LoadDocument( _documents[i]._name.c_str() );
+			if( show && _documents[i]._doc )
 			{
 				_documents[i]._doc->Show();
 			}
@@ -407,16 +450,22 @@ void RmlUserInterfaceManagerLocal::PostRender()
 			textureFilter_t::TF_NEAREST,
 			textureRepeat_t::TR_CLAMP,
 			textureUsage_t::TD_LOOKUP_TABLE_RGBA );
+		if( img.referencedOutsideLevelLoad )
+		{
+			img.image->SetReferencedOutsideLevelLoad();
+		}
+		img.Free();
 	}
 
 	_imagesToReload.Clear();
 }
 
-void RmlUserInterfaceManagerLocal::AddMaterialToReload( idImage* image, idVec2 dimensions, const byte* data )
+void RmlUserInterfaceManagerLocal::AddMaterialToReload( RmlImage* rmlImage )
 {
-	_imagesToReload.Append( RmlImage() );
-	RmlImage& mat = _imagesToReload[_imagesToReload.Num() - 1];
-	mat.image = image;
-	mat.data = data;
-	mat.dimensions = dimensions;
+	_imagesToReload.Append( *rmlImage );
+}
+
+CONSOLE_COMMAND( reloadRml, "Reload updated rml gui files", NULL )
+{
+	rmlManagerLocal.Reload( true );
 }

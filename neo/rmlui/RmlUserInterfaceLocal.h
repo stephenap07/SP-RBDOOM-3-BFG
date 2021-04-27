@@ -147,10 +147,12 @@ protected:
 struct RmlImage
 {
 	idImage* image = nullptr;
+	const idMaterial* material = nullptr;
 	const byte* data = nullptr;
 	idVec2 dimensions = idVec2( 0.0f, 0.0f );
+	bool referencedOutsideLevelLoad = false;
 
-	~RmlImage();
+	void Free();
 };
 
 class RmlUserInterfaceManagerLocal : public RmlUserInterfaceManager
@@ -162,7 +164,10 @@ public:
 	void						Init() override;
 	void						Shutdown() override;
 	RmlUserInterface*			Find( const char* name, bool autoload ) override;
-	Rml::ElementDocument*		LoadDocument(Rml::Context* context, const char* name) override;
+	Rml::ElementDocument*		LoadDocument( Rml::Context* context, const char* name ) override;
+	void						CloseDocument( Rml::Context* context, const char* name ) override;
+	bool						IsDocumentOpen( Rml::Context* context, const char* name ) override;
+	Rml::ElementDocument*		GetDocument( Rml::Context* context, const char* name ) override;
 
 	void						BeginLevelLoad() override;
 	void						EndLevelLoad( const char* mapName ) override;
@@ -178,7 +183,7 @@ public:
 	void						PostRender() override;
 
 	// Class owns data
-	void						AddMaterialToReload( idImage* image, idVec2 dimensions, const byte* data );
+	void						AddMaterialToReload( RmlImage* rmlImage );
 
 private:
 

@@ -6,8 +6,8 @@ class RmlUserInterfaceLocal;
 
 namespace Rml
 {
-	class EventListenerInstancer;
-	class ElementDocument;
+class EventListenerInstancer;
+class ElementDocument;
 }
 
 class UI_Shell
@@ -44,7 +44,7 @@ public:
 
 	bool					IsCursorEnabled() const;
 
-	void					SetCursorEnabled(bool showCursor);
+	void					SetCursorEnabled( bool showCursor );
 
 	bool					HandleEvent( const sysEvent_t* event, int time );
 

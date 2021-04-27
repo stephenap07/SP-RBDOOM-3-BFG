@@ -178,8 +178,6 @@ void idCommonLocal::ExitMenu()
 	}
 
 	soundSystem->SetPlayingSoundWorld( soundWorld );
-
-	SetGui( nullptr );
 }
 
 /*

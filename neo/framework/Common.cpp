@@ -172,7 +172,6 @@ idCommonLocal::idCommonLocal() :
 
 	gameDLL = 0;
 
-	loadGUI = NULL;
 	nextLoadTip = 0;
 	isHellMap = false;
 	wipeForced = false;
@@ -1508,24 +1507,6 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 	}
 }
 
-void idCommonLocal::SetGui( idUserInterface* aGui )
-{
-	return; // TODO(Stephen): Remove this early return ifwe want to do something with this.
-
-	if( !aGui )
-	{
-		guiActive = aGui;
-		return;
-	}
-
-	guiActive = aGui;
-	sysEvent_t ev;
-	memset( &ev, 0, sizeof( ev ) );
-	ev.evType = SE_NONE;
-	guiActive->HandleEvent( &ev, Sys_Milliseconds() );
-	guiActive->Activate( true, Sys_Milliseconds() );
-}
-
 /*
 =================
 idCommonLocal::Shutdown
@@ -1698,8 +1679,6 @@ void idCommonLocal::CreateMainMenu()
 
 		// create main inside an "empty" game level load - so assets get
 		// purged automagically when we transition to a "real" map
-
-		// TODO(STEPHEN): Add old GUI stuff here.
 
 		game->Shell_CreateMenu( false );
 		game->Shell_Show( true );
@@ -2077,8 +2056,6 @@ void idCommonLocal::HandleMainMenuCommands( const char* menuCommand )
 			{
 				StartNewGame( "level1", false, GAME_MODE_SINGLEPLAYER );
 			}
-
-			SetGui( nullptr );
 
 			// stop playing the game sounds
 			soundSystem->SetPlayingSoundWorld( menuSoundWorld );
