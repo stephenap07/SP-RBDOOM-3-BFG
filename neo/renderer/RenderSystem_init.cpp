@@ -58,7 +58,15 @@ glconfig_t	glConfig;
 idCVar r_requestStereoPixelFormat( "r_requestStereoPixelFormat", "1", CVAR_RENDERER, "Ask for a stereo GL pixel format on startup" );
 idCVar r_debugContext( "r_debugContext", "0", CVAR_RENDERER, "Enable various levels of context debug." );
 idCVar r_glDriver( "r_glDriver", "", CVAR_RENDERER, "\"opengl32\", etc." );
-idCVar r_skipIntelWorkarounds( "r_skipIntelWorkarounds", "0", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for Intel driver bugs" );
+// SRS - Added workaround for AMD OSX driver bugs caused by GL_EXT_timer_query when shadow mapping enabled; Intel bugs not present on OSX
+#if defined(__APPLE__)
+	idCVar r_skipIntelWorkarounds( "r_skipIntelWorkarounds", "1", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for Intel driver bugs" );
+	idCVar r_skipAMDWorkarounds( "r_skipAMDWorkarounds", "0", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for AMD driver bugs" );
+#else
+	idCVar r_skipIntelWorkarounds( "r_skipIntelWorkarounds", "0", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for Intel driver bugs" );
+	idCVar r_skipAMDWorkarounds( "r_skipAMDWorkarounds", "1", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for AMD driver bugs" );
+#endif
+// SRS end
 // RB: disabled 16x MSAA
 idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = SMAA 1x\n 2 = MSAA 2x\n 3 = MSAA 4x\n 4 = MSAA 8x\n", 0, ANTI_ALIASING_MSAA_8X );
 // RB end
@@ -88,11 +96,11 @@ idCVar r_useNodeCommonChildren( "r_useNodeCommonChildren", "1", CVAR_RENDERER | 
 idCVar r_useShadowSurfaceScissor( "r_useShadowSurfaceScissor", "1", CVAR_RENDERER | CVAR_BOOL, "scissor shadows by the scissor rect of the interaction surfaces" );
 idCVar r_useCachedDynamicModels( "r_useCachedDynamicModels", "1", CVAR_RENDERER | CVAR_BOOL, "cache snapshots of dynamic models" );
 idCVar r_useSeamlessCubeMap( "r_useSeamlessCubeMap", "1", CVAR_RENDERER | CVAR_BOOL, "use ARB_seamless_cube_map if available" );
-idCVar r_useSRGB( "r_useSRGB", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_ARCHIVE, "1 = both texture and framebuffer, 2 = framebuffer only, 3 = texture only" );
 idCVar r_maxAnisotropicFiltering( "r_maxAnisotropicFiltering", "8", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "limit aniso filtering" );
 idCVar r_useTrilinearFiltering( "r_useTrilinearFiltering", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "Extra quality filtering" );
 // RB: not used anymore
-idCVar r_lodBias( "r_lodBias", "0.5", CVAR_RENDERER | CVAR_ARCHIVE, "UNUSED: image lod bias" );
+// SRS - Reenabled LODBIAS
+idCVar r_lodBias( "r_lodBias", "0.5", CVAR_RENDERER | CVAR_ARCHIVE, /*"UNUSED: */"image lod bias" );
 // RB end
 
 idCVar r_useStateCaching( "r_useStateCaching", "1", CVAR_RENDERER | CVAR_BOOL, "avoid redundant state changes in GL_*() calls" );
@@ -264,9 +272,9 @@ idCVar r_shadowMapSunDepthBiasScale( "r_shadowMapSunDepthBiasScale", "0.999991",
 
 // RB: HDR parameters
 #if defined( USE_VULKAN )
-	idCVar r_useHDR( "r_useHDR", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "use high dynamic range rendering" );
+	idCVar r_useHDR( "r_useHDR", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "Can't be changed, is broken on Vulkan backend" );
 #else
-	idCVar r_useHDR( "r_useHDR", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use high dynamic range rendering" );
+	idCVar r_useHDR( "r_useHDR", "1", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "Can't be changed: Use high dynamic range rendering" );
 #endif
 
 idCVar r_hdrAutoExposure( "r_hdrAutoExposure", "0", CVAR_RENDERER | CVAR_BOOL, "EXPENSIVE: enables adapative HDR tone mapping otherwise the exposure is derived by r_exposure" );
@@ -294,7 +302,11 @@ idCVar r_useSSGI( "r_useSSGI", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "u
 idCVar r_ssgiDebug( "r_ssgiDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
 idCVar r_ssgiFiltering( "r_ssgiFiltering", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 
-idCVar r_useSSAO( "r_useSSAO", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
+#if defined( USE_VULKAN )
+	idCVar r_useSSAO( "r_useSSAO", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
+#else
+	idCVar r_useSSAO( "r_useSSAO", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
+#endif
 idCVar r_ssaoDebug( "r_ssaoDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
 idCVar r_ssaoFiltering( "r_ssaoFiltering", "0", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_useHierarchicalDepthBuffer( "r_useHierarchicalDepthBuffer", "1", CVAR_RENDERER | CVAR_BOOL, "" );
@@ -302,6 +314,9 @@ idCVar r_useHierarchicalDepthBuffer( "r_useHierarchicalDepthBuffer", "1", CVAR_R
 idCVar r_usePBR( "r_usePBR", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use PBR and Image Based Lighting instead of old Quake 4 style ambient lighting" );
 idCVar r_pbrDebug( "r_pbrDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "show which materials have PBR support (green = PBR, red = oldschool D3)" );
 idCVar r_showViewEnvprobes( "r_showViewEnvprobes", "0", CVAR_RENDERER | CVAR_INTEGER, "1 = displays the bounding boxes of all view environment probes, 2 = show irradiance" );
+idCVar r_showLightGrid( "r_showLightGrid", "0", CVAR_RENDERER | CVAR_INTEGER, "show Quake 3 style light grid points" );
+
+idCVar r_useLightGrid( "r_useLightGrid", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 
 idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [0.0 .. 1.0]", 0.0f, 1.0f );
 // RB end
@@ -430,7 +445,8 @@ void R_SetNewMode( const bool fullInit )
 		if( fullInit )
 		{
 			// create the context as well as setting up the window
-#if defined(__linux__) && defined(USE_VULKAN)
+// SRS - Add OSX case
+#if ( defined(__linux__) || defined(__APPLE__) ) && defined(USE_VULKAN)
 			if( VKimp_Init( parms ) )
 #else
 			if( GLimp_Init( parms ) )
@@ -447,7 +463,8 @@ void R_SetNewMode( const bool fullInit )
 		else
 		{
 			// just rebuild the window
-#if defined(__linux__) && defined(USE_VULKAN)
+// SRS - Add OSX case
+#if ( defined(__linux__) || defined(__APPLE__) ) && defined(USE_VULKAN)
 			if( VKimp_SetScreenParms( parms ) )
 #else
 			if( GLimp_SetScreenParms( parms ) )
@@ -743,7 +760,7 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 	if( ref && ref->rdflags & RDF_IRRADIANCE )
 	{
 		// * 2 = sizeof( half float )
-		temp = ( byte* )R_StaticAlloc( RADIANCE_CUBEMAP_SIZE * RADIANCE_CUBEMAP_SIZE * 3 * 2 );
+		//temp = ( byte* )R_StaticAlloc( RADIANCE_CUBEMAP_SIZE * RADIANCE_CUBEMAP_SIZE * 3 * 2 );
 	}
 	else
 	{
@@ -770,8 +787,12 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 
 	int originalNativeWidth = glConfig.nativeScreenWidth;
 	int originalNativeHeight = glConfig.nativeScreenHeight;
-	glConfig.nativeScreenWidth = sysWidth;
-	glConfig.nativeScreenHeight = sysHeight;
+
+	//if( !ref || ( ref && !( ref->rdflags & RDF_IRRADIANCE ) ) )
+	{
+		glConfig.nativeScreenWidth = sysWidth;
+		glConfig.nativeScreenHeight = sysHeight;
+	}
 #endif
 
 	// disable scissor, so we don't need to adjust all those rects
@@ -870,8 +891,11 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 	// discard anything currently on the list
 	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
-	glConfig.nativeScreenWidth = originalNativeWidth;
-	glConfig.nativeScreenHeight = originalNativeHeight;
+	if( !ref || ( ref && !( ref->rdflags & RDF_IRRADIANCE ) ) )
+	{
+		glConfig.nativeScreenWidth = originalNativeWidth;
+		glConfig.nativeScreenHeight = originalNativeHeight;
+	}
 #endif
 
 	r_useScissor.SetBool( true );
@@ -1014,6 +1038,33 @@ void idRenderSystemLocal::TakeScreenshot( int width, int height, const char* fil
 	R_StaticFree( buffer );
 
 	takingScreenshot = false;
+}
+
+// RB begin
+byte* idRenderSystemLocal::CaptureRenderToBuffer( int width, int height, renderView_t* ref )
+{
+	byte*		buffer;
+
+	takingScreenshot = true;
+
+	int pix = width * height;
+	const int bufferSize = pix * 3 + 18;
+
+	// HDR only for now
+	//if( exten == EXR )
+	{
+		buffer = ( byte* )R_StaticAlloc( pix * 3 * 2 );
+	}
+	//else if( exten == PNG )
+	//{
+	//	buffer = ( byte* )R_StaticAlloc( pix * 3 );
+	//}
+
+	R_ReadTiledPixels( width, height, buffer, ref );
+
+	takingScreenshot = false;
+
+	return buffer;
 }
 
 /*
@@ -1275,11 +1326,6 @@ void R_EnvShot_f( const idCmdArgs& args )
 
 //============================================================================
 
-static idMat3		cubeAxis[6];
-
-
-
-
 void R_TransformCubemap( const char* orgDirection[6], const char* orgDir, const char* destDirection[6], const char* destDir, const char* baseName )
 {
 	idStr fullname;
@@ -1406,7 +1452,8 @@ void R_SetColorMappings()
 		int inf = idMath::Ftoi( 0xffff * pow( j / 255.0f, invg ) + 0.5f );
 		tr.gammaTable[i] = idMath::ClampInt( 0, 0xFFFF, inf );
 	}
-#if defined(__linux__) && defined(USE_VULKAN)
+// SRS - Add OSX case
+#if ( defined(__linux__) || defined(__APPLE__) ) && defined(USE_VULKAN)
 	VKimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );
 #else
 	GLimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );
@@ -1698,6 +1745,7 @@ void idRenderSystemLocal::Clear()
 	guiRecursionLevel = 0;
 	guiModel = NULL;
 	memset( gammaTable, 0, sizeof( gammaTable ) );
+	memset( &cubeAxis, 0, sizeof( cubeAxis ) ); // RB
 	takingScreenshot = false;
 
 	if( unitSquareTriangles != NULL )
@@ -1728,7 +1776,8 @@ void idRenderSystemLocal::Clear()
 
 	// RB
 	envprobeJobList = NULL;
-	irradianceJobs.Clear();
+	envprobeJobs.Clear();
+	lightGridJobs.Clear();
 }
 
 /*
@@ -1912,7 +1961,7 @@ static srfTriangles_t* R_MakeZeroOneSphereTris()
 
 			verts[ numVerts ].SetTexCoord( s * S, r * R );
 			verts[ numVerts ].xyz = idVec3( x, y, z ) * radius;
-			verts[ numVerts ].SetNormal( -x, -y, -z );
+			verts[ numVerts ].SetNormal( x, y, z );
 			verts[ numVerts ].SetColor( 0xffffffff );
 			numVerts++;
 
@@ -2046,6 +2095,38 @@ void idRenderSystemLocal::Init()
 	identitySpace.modelMatrix[1 * 4 + 1] = 1.0f;
 	identitySpace.modelMatrix[2 * 4 + 2] = 1.0f;
 
+	// set cubemap axis for cubemap sampling tools
+
+	// +X
+	cubeAxis[0][0][0] = 1;
+	cubeAxis[0][1][2] = 1;
+	cubeAxis[0][2][1] = 1;
+
+	// -X
+	cubeAxis[1][0][0] = -1;
+	cubeAxis[1][1][2] = -1;
+	cubeAxis[1][2][1] = 1;
+
+	// +Y
+	cubeAxis[2][0][1] = 1;
+	cubeAxis[2][1][0] = -1;
+	cubeAxis[2][2][2] = -1;
+
+	// -Y
+	cubeAxis[3][0][1] = -1;
+	cubeAxis[3][1][0] = -1;
+	cubeAxis[3][2][2] = 1;
+
+	// +Z
+	cubeAxis[4][0][2] = 1;
+	cubeAxis[4][1][0] = -1;
+	cubeAxis[4][2][1] = 1;
+
+	// -Z
+	cubeAxis[5][0][2] = -1;
+	cubeAxis[5][1][0] = 1;
+	cubeAxis[5][2][1] = 1;
+
 	// make sure the tr.unitSquareTriangles data is current in the vertex / index cache
 	if( unitSquareTriangles == NULL )
 	{
@@ -2135,6 +2216,9 @@ void idRenderSystemLocal::Shutdown()
 	R_ShutdownFrameData();
 
 	UnbindBufferObjects();
+
+	// SRS - wait for fence to hit before freeing any resources the GPU may be using, otherwise get Vulkan validation layer errors on shutdown
+	backend.GL_BlockingSwapBuffers();
 
 	// free the vertex cache, which should have nothing allocated now
 	vertexCache.Shutdown();

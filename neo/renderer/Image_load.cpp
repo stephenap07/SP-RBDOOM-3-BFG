@@ -405,7 +405,12 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 
 	if( ( fileSystem->InProductionMode() && binaryFileTime != FILE_NOT_FOUND_TIMESTAMP ) || ( ( binaryFileTime != FILE_NOT_FOUND_TIMESTAMP )
 			&& ( header.colorFormat == opts.colorFormat )
+#if defined(__APPLE__) && defined(USE_VULKAN)
+			// SRS - Handle case when image read is cached and RGB565 format conversion is already done
+			&& ( header.format == opts.format || ( header.format == FMT_RGB565 && opts.format == FMT_RGBA8 ) )
+#else
 			&& ( header.format == opts.format )
+#endif
 			&& ( header.textureType == opts.textureType )
 																							) )
 	{
@@ -413,7 +418,17 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 		opts.height = header.height;
 		opts.numLevels = header.numLevels;
 		opts.colorFormat = ( textureColor_t )header.colorFormat;
-		opts.format = ( textureFormat_t )header.format;
+#if defined(__APPLE__) && defined(USE_VULKAN)
+		// SRS - Set in-memory format to FMT_RGBA8 for converted FMT_RGB565 image
+		if( header.format == FMT_RGB565 )
+		{
+			opts.format = FMT_RGBA8;
+		}
+		else
+#endif
+		{
+			opts.format = ( textureFormat_t )header.format;
+		}
 		opts.textureType = ( textureType_t )header.textureType;
 		if( cvarSystem->GetCVarBool( "fs_buildresources" ) )
 		{
@@ -742,7 +757,7 @@ void idImage::Reload( bool force )
 	if( !force )
 	{
 		ID_TIME_T current;
-		if( cubeFiles != CF_2D )
+		if( cubeFiles == CF_NATIVE || cubeFiles == CF_CAMERA )
 		{
 			R_LoadCubeImages( imgName, cubeFiles, NULL, NULL, &current );
 		}
@@ -797,6 +812,30 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 	if( pic == NULL || opts.textureType == TT_2D_MULTISAMPLE )
 	{
 		AllocImage();
+
+		// RB: shouldn't be needed as the Vulkan backend is not feature complete yet
+		// I just make sure r_useSSAO is 0
+#if 0 //defined(USE_VULKAN)
+		// SRS - update layout of Ambient Occlusion image otherwise get Vulkan validation layer errors with SSAO enabled
+		if( imgName == "_ao0" || imgName == "_ao1" )
+		{
+			VkImageSubresourceRange subresourceRange;
+			if( internalFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || opts.format == FMT_DEPTH )
+			{
+				subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+			else
+			{
+				subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			}
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.levelCount = opts.numLevels;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.layerCount = 1;
+
+			SetImageLayout( image, subresourceRange, VK_IMAGE_LAYOUT_UNDEFINED, layout );
+		}
+#endif
 	}
 	else
 	{

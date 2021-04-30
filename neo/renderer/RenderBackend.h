@@ -113,7 +113,8 @@ void RB_SetVertexColorParms( stageVertexColor_t svc );
 
 #if defined( USE_VULKAN )
 
-#if defined(__linux__)
+//SRS - Add OSX case
+#if defined(__linux__) || defined(__APPLE__)
 	#include <SDL.h>
 	#include <SDL_vulkan.h>
 #endif
@@ -133,7 +134,8 @@ struct gpuInfo_t
 struct vulkanContext_t
 {
 	// Eric: If on linux, use this to pass SDL_Window pointer to the SDL_Vulkan_* methods not in sdl_vkimp.cpp file.
-#if defined(__linux__)
+	// SRS - Add OSX case
+#if defined(__linux__) || defined(__APPLE__)
 	SDL_Window*						sdlWindow = nullptr;
 #endif
 	uint64							frameCounter;
@@ -425,6 +427,7 @@ private:
 	void				DBG_ShowDominantTris( drawSurf_t** drawSurfs, int numDrawSurfs );
 	void				DBG_ShowEdges( drawSurf_t** drawSurfs, int numDrawSurfs );
 	void				DBG_ShowLights();
+	void				DBG_ShowLightGrid(); // RB
 	void				DBG_ShowViewEnvprobes(); // RB
 	void				DBG_ShowShadowMapLODs(); // RB
 	void				DBG_ShowPortals();

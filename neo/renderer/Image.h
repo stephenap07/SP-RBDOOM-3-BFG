@@ -315,6 +315,11 @@ public:
 		return opts.height;
 	}
 
+	idVec2i		GetUploadResolution() const
+	{
+		return idVec2i( opts.width, opts.height );
+	}
+
 	void		SetReferencedOutsideLevelLoad()
 	{
 		referencedOutsideLevelLoad = true;
@@ -462,6 +467,9 @@ private:
 
 #if defined( USE_VULKAN )
 	void				CreateSampler();
+	// SRS - added method to set image layout
+	void                SetImageLayout( VkImage image, VkImageSubresourceRange subresourceRange, VkImageLayout oldImageLayout, VkImageLayout newImageLayout );
+	// SRS End
 
 	bool				bIsSwapChainImage;
 	VkFormat			internalFormat;

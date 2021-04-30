@@ -40,7 +40,9 @@ uniform sampler2D samp3 : register(s3); // texture 3 is the BRDF LUT
 uniform sampler2D samp4 : register(s4); // texture 4 is SSAO
 
 uniform sampler2D	samp7 : register(s7); // texture 7 is the irradiance cube map
-uniform sampler2D	samp8 : register(s8); // texture 8 is the radiance cube map
+uniform sampler2D	samp8 : register(s8); // texture 8 is the radiance cube map 1
+uniform sampler2D	samp9 : register(s9); // texture 9 is the radiance cube map 2
+uniform sampler2D	samp10 : register(s10); // texture 10 is the radiance cube map 3
 
 struct PS_IN 
 {
@@ -61,6 +63,7 @@ struct PS_OUT
 	half4 color : COLOR;
 };
 // *INDENT-ON*
+
 
 // RB: TODO OPTIMIZE
 // this is a straight port of idBounds::RayIntersection
@@ -118,6 +121,26 @@ bool AABBRayIntersection( float3 b[2], float3 start, float3 dir, out float scale
 			 hit[ax2] >= b[0][ax2] && hit[ax2] <= b[1][ax2] );
 }
 
+
+float2 OctTexCoord( float3 worldDir )
+{
+	float2 normalizedOctCoord = octEncode( worldDir );
+	float2 normalizedOctCoordZeroOne = ( normalizedOctCoord + float2( 1.0 ) ) * 0.5;
+
+	// offset by one pixel border bleed size for linear filtering
+#if 0
+	// texcoord sizes in rpCascadeDistances are not valid
+	float2 octCoordNormalizedToTextureDimensions = ( normalizedOctCoordZeroOne * ( rpCascadeDistances.x - float( 2.0 ) ) ) / rpCascadeDistances.xy;
+
+	float2 probeTopLeftPosition = float2( 1.0, 1.0 );
+	float2 normalizedProbeTopLeftPosition = probeTopLeftPosition * rpCascadeDistances.zw;
+
+	normalizedOctCoordZeroOne.xy = normalizedProbeTopLeftPosition + octCoordNormalizedToTextureDimensions;
+#endif
+
+	return normalizedOctCoordZeroOne;
+}
+
 void main( PS_IN fragment, out PS_OUT result )
 {
 	half4 bumpMap =			tex2D( samp0, fragment.texcoord0.xy );
@@ -144,15 +167,14 @@ void main( PS_IN fragment, out PS_OUT result )
 
 	float3 globalPosition = fragment.texcoord7.xyz;
 
-	// RB: rpGlobalLightOrigin is global view origin
-	float3 globalEye = normalize( rpGlobalLightOrigin.xyz - globalPosition );
+	float3 globalView = normalize( rpGlobalEyePos.xyz - globalPosition );
 
-	float3 reflectionVector = globalNormal * dot3( globalEye, globalNormal );
-	reflectionVector = normalize( ( reflectionVector * 2.0f ) - globalEye );
+	float3 reflectionVector = globalNormal * dot3( globalView, globalNormal );
+	reflectionVector = normalize( ( reflectionVector * 2.0f ) - globalView );
 
-#if 1
+#if 0
 	// parallax box correction using portal area bounds
-	float hitScale;
+	float hitScale = 0.0;
 	float3 bounds[2];
 	bounds[0].x = rpWobbleSkyX.x;
 	bounds[0].y = rpWobbleSkyX.y;
@@ -178,7 +200,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	}
 #endif
 
-	half vDotN = saturate( dot3( globalEye, globalNormal ) );
+	half vDotN = saturate( dot3( globalView, globalNormal ) );
 
 #if defined( USE_PBR )
 	const half metallic = specMapSRGB.g;
@@ -236,8 +258,7 @@ void main( PS_IN fragment, out PS_OUT result )
 
 	// evaluate diffuse IBL
 
-	float2 normalizedOctCoord = octEncode( globalNormal );
-	float2 normalizedOctCoordZeroOne = ( normalizedOctCoord + float2( 1.0 ) ) * 0.5;
+	float2 normalizedOctCoordZeroOne = OctTexCoord( globalNormal );
 
 	float3 irradiance = tex2D( samp7, normalizedOctCoordZeroOne ).rgb;
 	float3 diffuseLight = ( kD * irradiance * diffuseColor ) * ao * ( rpDiffuseModifier.xyz * 1.0 );
@@ -249,10 +270,11 @@ void main( PS_IN fragment, out PS_OUT result )
 	float mip = clamp( ( roughness * MAX_REFLECTION_LOD ), 0.0, MAX_REFLECTION_LOD );
 	//float mip = 0.0;
 
-	normalizedOctCoord = octEncode( reflectionVector );
-	normalizedOctCoordZeroOne = ( normalizedOctCoord + float2( 1.0 ) ) * 0.5;
+	normalizedOctCoordZeroOne = OctTexCoord( reflectionVector );
 
-	float3 radiance = textureLod( samp8, normalizedOctCoordZeroOne, mip ).rgb;
+	float3 radiance = textureLod( samp8, normalizedOctCoordZeroOne, mip ).rgb * rpLocalLightOrigin.x;
+	radiance += textureLod( samp9, normalizedOctCoordZeroOne, mip ).rgb * rpLocalLightOrigin.y;
+	radiance += textureLod( samp10, normalizedOctCoordZeroOne, mip ).rgb * rpLocalLightOrigin.z;
 	//radiance = float3( 0.0 );
 
 	float2 envBRDF  = texture( samp3, float2( max( vDotN, 0.0 ), roughness ) ).rg;
@@ -266,7 +288,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	float specAO = ComputeSpecularAO( vDotN, ao, roughness );
 	float3 specularLight = radiance * ( kS * envBRDF.x + float3( envBRDF.y ) ) * specAO * ( rpSpecularModifier.xyz * 0.5 );
 
-#if 0
+#if 1
 	// Marmoset Horizon Fade trick
 	const half horizonFade = 1.3;
 	half horiz = saturate( 1.0 + horizonFade * saturate( dot3( reflectionVector, globalNormal ) ) );
@@ -275,11 +297,12 @@ void main( PS_IN fragment, out PS_OUT result )
 #endif
 
 	half3 lightColor = sRGBToLinearRGB( rpAmbientColor.rgb );
+	//half3 lightColor = ( rpAmbientColor.rgb );
 
 	//result.color.rgb = diffuseLight;
 	//result.color.rgb = diffuseLight * lightColor;
 	//result.color.rgb = specularLight;
-	result.color.rgb = ( diffuseLight + specularLight ) * lightColor * fragment.color.rgb;
+	result.color.rgb = ( diffuseLight + specularLight * horiz ) * lightColor * fragment.color.rgb;
 	//result.color.rgb = localNormal.xyz * 0.5 + 0.5;
 	//result.color.rgb = float3( ao );
 	result.color.w = fragment.color.a;

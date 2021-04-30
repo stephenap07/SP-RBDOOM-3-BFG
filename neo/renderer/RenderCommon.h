@@ -454,6 +454,17 @@ struct viewEntity_t
 	// be linked to the lights or added to the drawsurf list in a serial code section
 	drawSurf_t* 			drawSurfs;
 
+	// RB: use light grid of the best area this entity is in
+	bool					useLightGrid;
+	idImage* 				lightGridAtlasImage;
+	int						lightGridAtlasSingleProbeSize; // including border
+	int						lightGridAtlasBorderSize;
+
+	idVec3					lightGridOrigin;
+	idVec3					lightGridSize;
+	int						lightGridBounds[3];
+	// RB end
+
 	// R_AddSingleModel will build a chain of parameters here to setup shadow volumes
 	staticShadowVolumeParms_t* 		staticShadowVolumes;
 	dynamicShadowVolumeParms_t* 	dynamicShadowVolumes;
@@ -491,18 +502,42 @@ struct viewEnvprobe_t
 struct calcEnvprobeParms_t
 {
 	// input
-	byte*							buffers[6];				// HDR R11G11B11F standard OpenGL cubemap sides
+	byte*							radiance[6];			// HDR RGB16F standard OpenGL cubemap sides
+	int								freeRadiance;
 	int								samples;
 
 	int								outWidth;
 	int								outHeight;
 
 	bool							printProgress;
+	int								printWidth;
+	int								printHeight;
 
 	idStr							filename;
 
 	// output
-	halfFloat_t*					outBuffer;				// HDR R11G11B11F packed atlas
+	halfFloat_t*					outBuffer;				// HDR R11G11B11F packed octahedron atlas
+	int								time;					// execution time in milliseconds
+};
+
+
+
+static const int LIGHTGRID_IRRADIANCE_BORDER_SIZE = 2;	// one pixel border all around the octahedron so 2 on each side
+static const int LIGHTGRID_IRRADIANCE_SIZE = 30 + LIGHTGRID_IRRADIANCE_BORDER_SIZE;
+
+struct calcLightGridPointParms_t
+{
+	// input
+	byte*							radiance[6];			// HDR RGB16F standard OpenGL cubemap sides
+	int								gridCoord[3];
+
+	int								outWidth;				// LIGHTGRID_IRRADIANCE_SIZE
+	int								outHeight;
+
+	// output
+	SphericalHarmonicsT<idVec3, 4>	shRadiance;				// L4 Spherical Harmonics
+
+	halfFloat_t*					outBuffer;				// HDR R11G11B11F octahedron LIGHTGRID_IRRADIANCE_SIZE^2
 	int								time;					// execution time in milliseconds
 };
 // RB end
@@ -621,8 +656,8 @@ struct viewDef_t
 	idBounds			globalProbeBounds;
 	idRenderMatrix		inverseBaseEnvProbeProject;	// the matrix for deforming the 'zeroOneCubeModel' to exactly cover the environent probe volume in world space
 	idImage* 			irradianceImage;			// cubemap image used for diffuse IBL by backend
-	idImage* 			radianceImage;				// cubemap image used for specular IBL by backend
-	// RB end
+	idImage* 			radianceImages[3];			// cubemap image used for specular IBL by backend
+	idVec4				radianceImageBlends;		// blending weights
 };
 
 
@@ -879,6 +914,7 @@ public:
 
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
 	virtual void			TakeScreenshot( int width, int height, const char* fileName, int downSample, renderView_t* ref, int exten );
+	virtual byte*			CaptureRenderToBuffer( int width, int height, renderView_t* ref );
 	virtual void			CropRenderSize( int width, int height );
 	virtual void            CropRenderSize( int x, int y, int width, int height );
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false );
@@ -975,6 +1011,8 @@ public:
 
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
 
+	idMat3					cubeAxis[6]; // RB
+
 	srfTriangles_t* 		unitSquareTriangles;
 	srfTriangles_t* 		zeroOneCubeTriangles;
 	srfTriangles_t* 		zeroOneSphereTriangles;
@@ -991,8 +1029,9 @@ public:
 	idParallelJobList* 		frontEndJobList;
 
 	// RB irradiance and GGX background jobs
-	idParallelJobList* 		envprobeJobList;
-	idList<calcEnvprobeParms_t*> irradianceJobs;
+	idParallelJobList* 					envprobeJobList;
+	idList<calcEnvprobeParms_t*>		envprobeJobs;
+	idList<calcLightGridPointParms_t*>	lightGridJobs;
 
 	idRenderBackend			backend;
 
@@ -1013,6 +1052,9 @@ extern idCVar r_windowHeight;
 
 extern idCVar r_debugContext;				// enable various levels of context debug
 extern idCVar r_glDriver;					// "opengl32", etc
+// SRS - Added cvar to control workarounds for AMD OSX driver bugs when shadow mapping enabled
+extern idCVar r_skipAMDWorkarounds;         // skip work arounds for AMD driver bugs
+// SRS end
 extern idCVar r_skipIntelWorkarounds;		// skip work arounds for Intel driver bugs
 extern idCVar r_vidMode;					// video mode number
 extern idCVar r_displayRefresh;				// optional display refresh rate option for vid mode
@@ -1061,7 +1103,6 @@ extern idCVar r_useShadowDepthBounds;		// use depth bounds test on individual sh
 extern idCVar r_useShadowMapping;			// use shadow mapping instead of stencil shadows
 extern idCVar r_useHalfLambertLighting;		// use Half-Lambert lighting instead of classic Lambert
 extern idCVar r_useHDR;
-extern idCVar r_useSRGB;
 extern idCVar r_useSeamlessCubeMap;
 // RB end
 
@@ -1207,6 +1248,9 @@ extern idCVar r_useHierarchicalDepthBuffer;
 extern idCVar r_usePBR;
 extern idCVar r_pbrDebug;
 extern idCVar r_showViewEnvprobes;
+extern idCVar r_showLightGrid;				// show Quake 3 style light grid points
+
+extern idCVar r_useLightGrid;
 
 extern idCVar r_exposure;
 // RB end
@@ -1276,7 +1320,8 @@ struct glimpParms_t
 };
 
 // Eric: If on Linux using Vulkan use the sdl_vkimp.cpp methods
-#if defined(__linux__) && defined(USE_VULKAN)
+// SRS - Add OSX case
+#if ( defined(__linux__) || defined(__APPLE__) ) && defined(USE_VULKAN)
 #include <vector>
 
 #define CLAMP(x, lo, hi)    ((x) < (lo) ? (lo) : (x) > (hi) ? (hi) : (x))
@@ -1383,6 +1428,104 @@ RENDERWORLD_PORTALS
 
 viewEntity_t* R_SetEntityDefViewEntity( idRenderEntityLocal* def );
 viewLight_t* R_SetLightDefViewLight( idRenderLightLocal* def );
+
+/*
+============================================================
+
+RENDERWORLD_ENVPROBES
+
+============================================================
+*/
+
+void R_SampleCubeMapHDR( const idVec3& dir, int size, byte* buffers[6], float result[3], float& u, float& v );
+void R_SampleCubeMapHDR16F( const idVec3& dir, int size, halfFloat_t* buffers[6], float result[3], float& u, float& v );
+
+idVec2 NormalizedOctCoord( int x, int y, const int probeSideLength );
+
+class CommandlineProgressBar
+{
+private:
+	size_t tics = 0;
+	size_t nextTicCount = 0;
+	int	count = 0;
+	int expectedCount = 0;
+
+	int sysWidth = 1280;
+	int sysHeight = 720;
+
+public:
+	CommandlineProgressBar( int _expectedCount, int width, int height )
+	{
+		expectedCount = _expectedCount;
+		sysWidth = width;
+		sysHeight = height;
+	}
+
+	void Start()
+	{
+		// restore the original resolution, same as "vid_restart"
+		glConfig.nativeScreenWidth = sysWidth;
+		glConfig.nativeScreenHeight = sysHeight;
+		R_SetNewMode( false );
+
+		common->Printf( "0%%  10   20   30   40   50   60   70   80   90   100%%\n" );
+		common->Printf( "|----|----|----|----|----|----|----|----|----|----|\n" );
+
+		common->UpdateScreen( false );
+	}
+
+	void Increment()
+	{
+		if( ( count + 1 ) >= nextTicCount )
+		{
+			// discard anything currently on the list
+			//tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+
+			// restore the original resolution, same as "vid_restart"
+			glConfig.nativeScreenWidth = sysWidth;
+			glConfig.nativeScreenHeight = sysHeight;
+			R_SetNewMode( false );
+
+			size_t ticsNeeded = ( size_t )( ( ( double )( count + 1 ) / expectedCount ) * 50.0 );
+
+			do
+			{
+				common->Printf( "*" );
+			}
+			while( ++tics < ticsNeeded );
+
+			nextTicCount = ( size_t )( ( tics / 50.0 ) * expectedCount );
+			if( count == ( expectedCount - 1 ) )
+			{
+				if( tics < 51 )
+				{
+					common->Printf( "*" );
+				}
+				common->Printf( "\n" );
+			}
+
+			common->UpdateScreen( false );
+			//common->UpdateScreen( false );
+		}
+
+		count++;
+	}
+
+	void Reset()
+	{
+		count = 0;
+		tics = 0;
+		nextTicCount = 0;
+	}
+
+	void Reset( int expected )
+	{
+		expectedCount = expected;
+		count = 0;
+		tics = 0;
+		nextTicCount = 0;
+	}
+};
 
 /*
 ====================================================================
@@ -1534,6 +1677,9 @@ void				R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri );
 // time, rather than being re-created each frame in the frame temporary buffers.
 void				R_CreateStaticBuffersForTri( srfTriangles_t& tri );
 
+// RB
+idVec3				R_ClosestPointPointTriangle( const idVec3& point, const idVec3& vertex1, const idVec3& vertex2, const idVec3& vertex3 );
+
 // deformable meshes precalculate as much as possible from a base frame, then generate
 // complete srfTriangles_t from just a new set of vertexes
 struct deformInfo_t
@@ -1592,7 +1738,6 @@ struct localTrace_t
 localTrace_t R_LocalTrace( const idVec3& start, const idVec3& end, const float radius, const srfTriangles_t* tri );
 
 
-
 /*
 ============================================================
 
@@ -1622,6 +1767,9 @@ void RB_DrawBounds( const idBounds& bounds );
 
 void RB_ShutdownDebugTools();
 void RB_SetVertexColorParms( stageVertexColor_t svc );
+
+
+
 
 //=============================================
 
