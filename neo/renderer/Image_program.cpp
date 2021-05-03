@@ -401,16 +401,16 @@ static void R_CombineRgba( byte* data1, int width1, int height1, byte* data2, in
 	{
 		for( int i = 0; i < 4 * width1; i += 4 )
 		{
-			byte r = ( ( int )data1[i + j * width1] + ( int )data1[1 + i + j * width1] + ( int )data1[2 + i + j * width1] ) / 255;
+			// Average the rbg of each data into separate rgb channels
+			byte r = ( ( int )data1[i + j * width1] + ( int )data1[1 + i + j * width1] + ( int )data1[2 + i + j * width1] ) / 3;
 
-			byte g = ( ( int )data2[i + j * width1] + ( int )data2[1 + i + j * width1] + ( int )data2[2 + i + j * width1] ) / 255;
+			byte g = ( ( int )data2[i + j * width1] + ( int )data2[1 + i + j * width1] + ( int )data2[2 + i + j * width1] ) / 3;
 
 			byte b = 255;
 
-			if( data3 &&
-					width1 == width3 )
+			if( data3 && width1 == width3 )
 			{
-				b = ( ( int )data3[i + j * width1] + ( int )data3[1 + i + j * width1] + ( int )data3[2 + i + j * width1] ) / 255;
+				b = ( ( int )data3[i + j * width1] + ( int )data3[1 + i + j * width1] + ( int )data3[2 + i + j * width1] ) / 3;
 			}
 
 			byte a = 255;
