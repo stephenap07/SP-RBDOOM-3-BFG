@@ -689,8 +689,12 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 
 	// After coming back from an autoswap, we won't have anything to render
 	//if( frameData && frameData->cmdHead->next != NULL )
+
+	// keep capturing envprobes completely in the background
+	// and only update the screen when we update the progress bar in the console
+	if( !takingEnvprobe )
 	{
-#if !defined( USE_VULKAN ) && !defined( IMGUI_BFGUI )
+#if !IMGUI_BFGUI
 		ImGuiHook::Render();
 #endif
 
@@ -846,7 +850,7 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 
 	// RB: general GUI system path to treat ImGui surfaces in the renderer frontend like SWF
 	// this calls io.RenderDrawListsFn
-#if defined( USE_VULKAN ) || IMGUI_BFGUI
+#if IMGUI_BFGUI
 	ImGuiHook::Render();
 #endif
 

@@ -47,6 +47,7 @@ If you have questions concerning this license or the applicable additional terms
 // this allows to have the com_showFPS stats in screenshots
 #define IMGUI_BFGUI 1
 
+
 // maximum texture units
 const int MAX_PROG_TEXTURE_PARMS	= 16;
 
@@ -521,9 +522,10 @@ struct calcEnvprobeParms_t
 };
 
 
+#define STORE_LIGHTGRID_SHDATA 0
 
 static const int LIGHTGRID_IRRADIANCE_BORDER_SIZE = 2;	// one pixel border all around the octahedron so 2 on each side
-static const int LIGHTGRID_IRRADIANCE_SIZE = 30 + LIGHTGRID_IRRADIANCE_BORDER_SIZE;
+static const int LIGHTGRID_IRRADIANCE_SIZE = 14 + LIGHTGRID_IRRADIANCE_BORDER_SIZE;
 
 struct calcLightGridPointParms_t
 {
@@ -535,7 +537,9 @@ struct calcLightGridPointParms_t
 	int								outHeight;
 
 	// output
+#if STORE_LIGHTGRID_SHDATA
 	SphericalHarmonicsT<idVec3, 4>	shRadiance;				// L4 Spherical Harmonics
+#endif
 
 	halfFloat_t*					outBuffer;				// HDR R11G11B11F octahedron LIGHTGRID_IRRADIANCE_SIZE^2
 	int								time;					// execution time in milliseconds
@@ -951,6 +955,7 @@ public:
 	bool					registered;		// cleared at shutdown, set at InitOpenGL
 
 	bool					takingScreenshot;
+	bool					takingEnvprobe;
 
 	int						frameCount;		// incremented every frame
 	int						viewCount;		// incremented every view (twice a scene if subviewed)
@@ -1474,17 +1479,20 @@ public:
 		common->UpdateScreen( false );
 	}
 
-	void Increment()
+	void Increment( bool updateScreen )
 	{
 		if( ( count + 1 ) >= nextTicCount )
 		{
-			// discard anything currently on the list
-			//tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+			if( updateScreen )
+			{
+				// restore the original resolution, same as "vid_restart"
+				glConfig.nativeScreenWidth = sysWidth;
+				glConfig.nativeScreenHeight = sysHeight;
+				R_SetNewMode( false );
 
-			// restore the original resolution, same as "vid_restart"
-			glConfig.nativeScreenWidth = sysWidth;
-			glConfig.nativeScreenHeight = sysHeight;
-			R_SetNewMode( false );
+				// resize frame buffers (this triggers SwapBuffers)
+				tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+			}
 
 			size_t ticsNeeded = ( size_t )( ( ( double )( count + 1 ) / expectedCount ) * 50.0 );
 
@@ -1504,8 +1512,13 @@ public:
 				common->Printf( "\n" );
 			}
 
-			common->UpdateScreen( false );
-			//common->UpdateScreen( false );
+			if( updateScreen )
+			{
+				common->UpdateScreen( false );
+
+				// swap front / back buffers
+				tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+			}
 		}
 
 		count++;

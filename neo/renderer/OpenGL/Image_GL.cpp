@@ -888,6 +888,9 @@ void idImage::PurgeImage()
 		glcontext.tmu[i].current2DArray = TEXTURE_NOT_LOADED;
 		glcontext.tmu[i].currentCubeMap = TEXTURE_NOT_LOADED;
 	}
+
+	// reset for reloading images
+	defaulted = false;
 }
 
 /*

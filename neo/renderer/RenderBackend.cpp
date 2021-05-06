@@ -1399,7 +1399,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 #if defined( USE_VULKAN )
 		globalImages->whiteImage->Bind();
 #else
-		if( !r_useSSAO.GetBool() )
+		if( !r_useSSAO.GetBool() || ( viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) ) )
 		{
 			globalImages->whiteImage->Bind();
 		}
@@ -1481,7 +1481,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 #if defined( USE_VULKAN )
 		globalImages->whiteImage->Bind();
 #else
-		if( !r_useSSAO.GetBool() )
+		if( !r_useSSAO.GetBool() || ( viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) ) )
 		{
 			globalImages->whiteImage->Bind();
 		}
@@ -4970,7 +4970,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		return;
 	}
 
-	if( _viewDef->renderView.rdflags & RDF_NOAMBIENT )
+	if( _viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) )
 	{
 		return;
 	}
@@ -5286,7 +5286,7 @@ void idRenderBackend::DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewD
 		return;
 	}
 
-	if( _viewDef->renderView.rdflags & RDF_NOAMBIENT )
+	if( _viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) )
 	{
 		return;
 	}

@@ -93,7 +93,7 @@ private:
 	idList<idStr> textureNames;
 	int currentTextureIndex;
 	idImage* currentTexture;
-	const idMaterial* currentMaterial;
+	const idMaterial* currentTextureMaterial;
 
 	// RB: light style support
 	idList<idStr> styleNames;

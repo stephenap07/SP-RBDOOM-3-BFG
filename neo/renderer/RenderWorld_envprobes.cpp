@@ -33,6 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../libs/mesa/format_r11g11b10f.h"
 
 #include "RenderCommon.h"
+#include "../framework/Common_local.h" // commonLocal.WaitGameThread();
 
 /*
 =============
@@ -171,8 +172,6 @@ void idRenderWorldLocal::AddAreaViewEnvprobes( int areaNum, const portalStack_t*
 R_SampleCubeMapHDR
 ==================
 */
-static const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
-
 void R_SampleCubeMapHDR( const idVec3& dir, int size, byte* buffers[6], float result[3], float& u, float& v )
 {
 	float	adir[3];
@@ -594,13 +593,10 @@ void CalculateIrradianceJob( calcEnvprobeParms_t* parms )
 		buffers[ i ] = ( halfFloat_t* ) parms->radiance[ i ];
 	}
 
-	const float invDstSize = 1.0f / float( parms->outHeight );
+	const float invDstSize = 1.0f / float( ENVPROBE_CAPTURE_SIZE );
+	const idVec2i sourceImageSize( ENVPROBE_CAPTURE_SIZE, ENVPROBE_CAPTURE_SIZE );
 
-	const int numMips = idMath::BitsForInteger( parms->outHeight );
-
-	const idVec2i sourceImageSize( parms->outHeight, parms->outHeight );
-
-	CommandlineProgressBar progressBar( R_CalculateUsedAtlasPixels( sourceImageSize.y ), parms->printWidth, parms->printHeight );
+	CommandlineProgressBar progressBar( R_CalculateUsedAtlasPixels( parms->outHeight ), parms->printWidth, parms->printHeight );
 	if( parms->printProgress )
 	{
 		progressBar.Start();
@@ -629,7 +625,7 @@ void CalculateIrradianceJob( calcEnvprobeParms_t* parms )
 
 				float u, v;
 				idVec3 radiance;
-				R_SampleCubeMapHDR16F( dir, parms->outHeight, buffers, &radiance[0], u, v );
+				R_SampleCubeMapHDR16F( dir, ENVPROBE_CAPTURE_SIZE, buffers, &radiance[0], u, v );
 
 				//radiance = dir * 0.5 + idVec3( 0.5f, 0.5f, 0.5f );
 
@@ -670,10 +666,10 @@ void CalculateIrradianceJob( calcEnvprobeParms_t* parms )
 		}
 	}
 
+	const int numMips = idMath::BitsForInteger( parms->outHeight );
+
 	for( int mip = 0; mip < numMips; mip++ )
 	{
-		float roughness = ( float )mip / ( float )( numMips - 1 );
-
 		idVec4 dstRect = R_CalculateMipRect( parms->outHeight, mip );
 
 		for( int x = dstRect.x; x < ( dstRect.x + dstRect.z ); x++ )
@@ -736,7 +732,7 @@ void CalculateIrradianceJob( calcEnvprobeParms_t* parms )
 
 				if( parms->printProgress )
 				{
-					progressBar.Increment();
+					progressBar.Increment( true );
 				}
 			}
 		}
@@ -761,10 +757,9 @@ void CalculateRadianceJob( calcEnvprobeParms_t* parms )
 	const float invDstSize = 1.0f / float( parms->outHeight );
 
 	const int numMips = idMath::BitsForInteger( parms->outHeight );
+	const int numOctahedronMips = numMips - 3; // the last 3 mips are too low quality for filtering
 
-	const idVec2i sourceImageSize( parms->outHeight, parms->outHeight );
-
-	CommandlineProgressBar progressBar( R_CalculateUsedAtlasPixels( sourceImageSize.y ), parms->printWidth, parms->printHeight );
+	CommandlineProgressBar progressBar( R_CalculateUsedAtlasPixels( parms->outHeight ), parms->printWidth, parms->printHeight );
 	if( parms->printProgress )
 	{
 		progressBar.Start();
@@ -781,9 +776,9 @@ void CalculateRadianceJob( calcEnvprobeParms_t* parms )
 		}
 	}
 
-	for( int mip = 0; mip < numMips; mip++ )
+	for( int mip = 0; mip < numOctahedronMips; mip++ )
 	{
-		float roughness = ( float )mip / ( float )( numMips - 1 );
+		float roughness = ( float )mip / ( float )( numOctahedronMips - 1 );
 
 		idVec4 dstRect = R_CalculateMipRect( parms->outHeight, mip );
 
@@ -831,7 +826,7 @@ void CalculateRadianceJob( calcEnvprobeParms_t* parms )
 						float sample[3];
 						float u, v;
 
-						R_SampleCubeMapHDR16F( H, parms->outHeight, buffers, sample, u, v );
+						R_SampleCubeMapHDR16F( H, ENVPROBE_CAPTURE_SIZE, buffers, sample, u, v );
 
 						outColor[0] += sample[0] * NdotL;
 						outColor[1] += sample[1] * NdotL;
@@ -851,7 +846,7 @@ void CalculateRadianceJob( calcEnvprobeParms_t* parms )
 
 				if( parms->printProgress )
 				{
-					progressBar.Increment();
+					progressBar.Increment( true );
 				}
 			}
 		}
@@ -926,10 +921,7 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 	idStr			fullname;
 	idStr			baseName;
 	renderView_t	ref;
-	const char*		extension;
 	int				captureSize;
-
-	static const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
 
 	if( !tr.primaryWorld )
 	{
@@ -945,7 +937,7 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 	baseName = tr.primaryWorld->mapName;
 	baseName.StripFileExtension();
 
-	captureSize = RADIANCE_CUBEMAP_SIZE;
+	captureSize = ENVPROBE_CAPTURE_SIZE;
 
 	if( !tr.primaryView )
 	{
@@ -958,6 +950,48 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 	//--------------------------------------------
 	// CONVOLVE CUBEMAPS
 	//--------------------------------------------
+
+	// make sure the game / draw thread has completed
+	commonLocal.WaitGameThread();
+
+	glConfig.nativeScreenWidth = captureSize;
+	glConfig.nativeScreenHeight = captureSize;
+
+	// disable scissor, so we don't need to adjust all those rects
+	r_useScissor.SetBool( false );
+
+	// RB: this really sucks but prevents a crash I couldn't track down
+	extern idCVar r_useParallelAddModels;
+	extern idCVar r_useParallelAddShadows;
+	extern idCVar r_useParallelAddLights;
+
+	r_useParallelAddModels.SetBool( false );
+	r_useParallelAddShadows.SetBool( false );
+	r_useParallelAddLights.SetBool( false );
+
+	// discard anything currently on the list (this triggers SwapBuffers)
+	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+
+	tr.takingEnvprobe = true;
+
+	int totalProcessedProbes = 0;
+	int	totalStart = Sys_Milliseconds();
+
+	for( int i = 0; i < tr.primaryWorld->envprobeDefs.Num(); i++ )
+	{
+		RenderEnvprobeLocal* def = tr.primaryWorld->envprobeDefs[i];
+		if( def == NULL )
+		{
+			continue;
+		}
+
+		totalProcessedProbes++;
+	}
+
+	idLib::Printf( "Shooting %i environment probes...\n", totalProcessedProbes );
+
+	CommandlineProgressBar progressBar( totalProcessedProbes, sysWidth, sysHeight );
+	progressBar.Start();
 
 	int	start = Sys_Milliseconds();
 
@@ -981,28 +1015,89 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 			ref.vieworg = def->parms.origin;
 			ref.viewaxis = tr.cubeAxis[j];
 
-			//extension = envDirection[ j ];
-			//fullname.Format( "env/%s/envprobe%i%s", baseName.c_str(), i, extension );
-			//tr.TakeScreenshot( size, size, fullname, blends, &ref, EXR );
-
+#if 0
 			byte* float16FRGB = tr.CaptureRenderToBuffer( captureSize, captureSize, &ref );
+#else
+			glConfig.nativeScreenWidth = captureSize;
+			glConfig.nativeScreenHeight = captureSize;
+
+			int pix = captureSize * captureSize;
+			const int bufferSize = pix * 3 * 2;
+
+			byte* float16FRGB = ( byte* )R_StaticAlloc( bufferSize );
+
+			// discard anything currently on the list
+			tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+
+			// build commands to render the scene
+			tr.primaryWorld->RenderScene( &ref );
+
+			// finish off these commands
+			const emptyCommand_t* cmd = tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+
+			// issue the commands to the GPU
+			tr.RenderCommandBuffers( cmd );
+
+			// discard anything currently on the list (this triggers SwapBuffers)
+			tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+
+#if defined(USE_VULKAN)
+
+			// TODO
+
+#else
+
+			glFinish();
+
+			glReadBuffer( GL_BACK );
+
+			globalFramebuffers.envprobeFBO->Bind();
+
+			glPixelStorei( GL_PACK_ROW_LENGTH, ENVPROBE_CAPTURE_SIZE );
+			glReadPixels( 0, 0, captureSize, captureSize, GL_RGB, GL_HALF_FLOAT, float16FRGB );
+
+			R_VerticalFlipRGB16F( float16FRGB, captureSize, captureSize );
+
+			Framebuffer::Unbind();
+#endif
+
+#endif
 			buffers[ j ] = float16FRGB;
 		}
+
+		tr.takingEnvprobe = false;
+		progressBar.Increment( true );
+		tr.takingEnvprobe = true;
 
 		fullname.Format( "%s/envprobe%i", baseName.c_str(), i );
 
 		// create 2 jobs
-		R_MakeAmbientMap( fullname.c_str(), buffers, "_amb", IRRADIANCE_CUBEMAP_SIZE, false, useThreads );
-		R_MakeAmbientMap( fullname.c_str(), buffers, "_spec", RADIANCE_CUBEMAP_SIZE, true, useThreads );
+		R_MakeAmbientMap( fullname.c_str(), buffers, "_amb", IRRADIANCE_OCTAHEDRON_SIZE, false, useThreads );
+		R_MakeAmbientMap( fullname.c_str(), buffers, "_spec", RADIANCE_OCTAHEDRON_SIZE, true, useThreads );
 	}
+
+	int	end = Sys_Milliseconds();
+
+	tr.takingEnvprobe = false;
 
 	// restore the original resolution, same as "vid_restart"
 	glConfig.nativeScreenWidth = sysWidth;
 	glConfig.nativeScreenHeight = sysHeight;
 	R_SetNewMode( false );
 
+	r_useScissor.SetBool( true );
+	r_useParallelAddModels.SetBool( true );
+	r_useParallelAddShadows.SetBool( true );
+	r_useParallelAddLights.SetBool( true );
+
+	common->Printf( "captured environemt probes %5.1f seconds\n\n", ( end - start ) * 0.001f );
+
 	if( useThreads )
 	{
+		idLib::Printf( "Processing probes on all available cores... Please wait.\n" );
+		common->UpdateScreen( false );
+		common->UpdateScreen( false );
+
 		//tr.envprobeJobList->Submit();
 		tr.envprobeJobList->Submit( NULL, JOBLIST_PARALLELISM_MAX_CORES );
 		tr.envprobeJobList->Wait();
@@ -1034,9 +1129,7 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 
 	tr.envprobeJobs.Clear();
 
-	int	end = Sys_Milliseconds();
-
-	common->Printf( "convolved probes in %5.1f seconds\n\n", ( end - start ) * 0.001f );
+	int	totalEnd = Sys_Milliseconds();
 
 	//--------------------------------------------
 	// LOAD CONVOLVED OCTAHEDRONS INTO THE GPU
@@ -1049,9 +1142,13 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 			continue;
 		}
 
-		def->irradianceImage->Reload( false );
-		def->radianceImage->Reload( false );
+		def->irradianceImage->Reload( true );
+		def->radianceImage->Reload( true );
 	}
+
+	idLib::Printf( "----------------------------------\n" );
+	idLib::Printf( "Processed %i light probes\n", totalProcessedProbes );
+	common->Printf( "Baked SH irradiance and GGX mip maps in %5.1f seconds\n\n", ( totalEnd - totalStart ) / ( 1000.0f ) );
 }
 
 CONSOLE_COMMAND( makeBrdfLUT, "make a GGX BRDF lookup table", NULL )
@@ -1109,7 +1206,7 @@ CONSOLE_COMMAND( makeBrdfLUT, "make a GGX BRDF lookup table", NULL )
 			//hdrBuffer[( y * outSize + x ) * 4 + 2] = 0;
 			//hdrBuffer[( y * outSize + x ) * 4 + 3] = 1;
 
-			progressBar.Increment();
+			progressBar.Increment( true );
 		}
 	}
 
