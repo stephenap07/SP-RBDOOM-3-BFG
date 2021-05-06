@@ -757,7 +757,7 @@ void idImage::Reload( bool force )
 	if( !force )
 	{
 		ID_TIME_T current;
-		if( cubeFiles == CF_NATIVE || cubeFiles == CF_CAMERA )
+		if( cubeFiles == CF_NATIVE || cubeFiles == CF_CAMERA || cubeFiles == CF_SINGLE )
 		{
 			R_LoadCubeImages( imgName, cubeFiles, NULL, NULL, &current );
 		}
