@@ -140,7 +140,7 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 
 	if( verts )
 	{
-		WriteDrawVerts16(verts, temp, numVerts);
+		WriteDrawVerts16( verts, temp, numVerts );
 	}
 
 	_numVerts = 0;
