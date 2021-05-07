@@ -1,0 +1,67 @@
+//******************
+// Material file for door shaders
+//******************
+
+material textures/base_door/wood
+{
+	mikktspace
+	qer_editorimage	textures/base_door/door_BaseColor.png
+	diffusemap		textures/base_door/door_BaseColor.png
+	bumpmap			textures/base_door/door_Normal.png
+	unsmoothedTangents
+
+	{
+        blend rmaomap
+        map combineRgba(textures/base_door/door_Roughness.png,
+                        textures/base_door/door_Metallic.png,
+                        textures/base_door/door_AO.png)
+    }
+}
+
+material textures/base_door/frame
+{
+	mikktspace
+	qer_editorimage	textures/base_door/door_BaseColor.png
+	diffusemap		textures/base_door/door_BaseColor.png
+	bumpmap			textures/base_door/door_Normal.png
+	unsmoothedTangents
+	
+	{
+        blend rmaomap
+        map combineRgba(textures/base_door/door_Roughness.png,
+                        textures/base_door/door_Metallic.png,
+                        textures/base_door/door_AO.png)
+    }
+}
+
+material textures/base_door/plasticdoor
+{
+	mikktspace
+	qer_editorimage	textures/base_door/door2_BaseColor.png
+	diffusemap		textures/base_door/door2_BaseColor.png
+	bumpmap			textures/base_door/door2_Normal.png
+	unsmoothedTangents
+	
+	{
+        blend rmaomap
+        map combineRgba(textures/base_door/door2_Roughness.png,
+                        textures/base_door/door2_Metallic.png,
+                        textures/base_door/door2_AO.png)
+    }
+}
+
+material textures/wood_door
+{
+	mikktspace
+	qer_editorimage	textures/base_door/door3_BaseColor.png
+	diffusemap		textures/base_door/door3_BaseColor.png
+	bumpmap			textures/base_door/door3_Normal.png
+	unsmoothedTangents
+	
+	{
+        blend rmaomap
+        map combineRgba(textures/base_door/door3_Roughness.png,
+                        textures/base_door/door3_Metallic.png,
+                        textures/base_door/door3_AO.png)
+    }
+}

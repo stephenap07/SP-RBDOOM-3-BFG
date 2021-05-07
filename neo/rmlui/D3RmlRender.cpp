@@ -138,7 +138,10 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 							glState,
 							STEREO_DEPTH_TYPE_NONE );
 
-	WriteDrawVerts16( verts, temp, numVerts );
+	if( verts )
+	{
+		WriteDrawVerts16(verts, temp, numVerts);
+	}
 
 	_numVerts = 0;
 	_numIndexes = 0;

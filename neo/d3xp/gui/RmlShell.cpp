@@ -133,6 +133,12 @@ void MyEventListener::ProcessEvent( Rml::Event& event )
 		{
 			cmdSystem->AppendCommandText( "map test4\n" );
 		}
+
+		if (!token.Icmp("map"))
+		{
+			src.ReadToken(&token);
+			cmdSystem->AppendCommandText(va("map %s\n", token.c_str()));
+		}
 	}
 }
 

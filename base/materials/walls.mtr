@@ -30,17 +30,13 @@ textures/walls/wright_tile_plaster
     qer_editorimage textures/white_plaster/white_plaster_baseColor
 	diffusemap    textures/white_plaster/white_plaster_baseColor
     specularmap   textures/white_plaster/white_plaster_specularlevel
+    bumpmap       textures/white_plaster/white_plaster_normal
 
     {
         blend rmaomap 
         map combineRgba(textures/white_plaster/white_plaster_roughness,
                         textures/white_plaster/white_plaster_specularlevel,
                         _black)
-    }
-
-    {
-        blend bumpmap
-        map addnormals(textures/white_plaster/white_plaster_normal, heightmap(textures/white_plaster/white_plaster_height, 6 ))
     }
 
     stone

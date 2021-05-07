@@ -272,7 +272,7 @@ static void R_EnvprobeImage_HDR( idImage* image )
 
 static void R_EnvprobeImage_Depth( idImage* image )
 {
-	image->GenerateImage( NULL, RADIANCE_CUBEMAP_SIZE, RADIANCE_CUBEMAP_SIZE, TF_NEAREST, TR_CLAMP, TD_DEPTH_STENCIL );
+	image->GenerateImage( NULL, ENVPROBE_CAPTURE_SIZE, ENVPROBE_CAPTURE_SIZE, TF_NEAREST, TR_CLAMP, TD_DEPTH_STENCIL );
 }
 
 static void R_SMAAImage_ResNative( idImage* image )

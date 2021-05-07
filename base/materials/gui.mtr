@@ -29,3 +29,11 @@ material guis/simplekey {
 		map guis/assets/icons/simplekey.png
 	}
 }
+
+material guis/assets/userinterface_skin {
+	{
+		blend blend
+		map guis/assets/userinterface_skin.png
+		clamp
+	}
+}

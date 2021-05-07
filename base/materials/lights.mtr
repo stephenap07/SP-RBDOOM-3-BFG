@@ -62,6 +62,30 @@ lights/ambientLight2
 	}
 }
 
+lights/ambientLight3
+{
+	ambientLight
+	lightFalloffImage	makeintensity( lights/lightfalloff.png )
+	{
+		forceHighQuality
+		map lights/lightfalloff.png
+		colored
+		zeroClamp
+	}
+}
+
+lights/fullambient
+{
+	ambientLight
+	lightFalloffImage	makeintensity( lights/square_light_simple.tga )
+	{
+		forceHighQuality
+		map lights/square_light_simple.tga
+		colored
+		zeroClamp
+	}
+}
+
 lights/basicFogLight
 {
 	fogLight

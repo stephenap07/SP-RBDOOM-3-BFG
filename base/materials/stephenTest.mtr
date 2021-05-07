@@ -107,7 +107,8 @@ textures/test/cube
 	//noSelfShadow
 	qer_editorimage	textures/test/CubeColor.png
 	diffusemap textures/test/CubeColor.png
-	specularmap textures/test/CubeColorSpecular.png
+	//specularmap textures/test/CubeColorSpecular.png
+	unsmoothedTangents
 
 	{
 		maskcolor
@@ -130,21 +131,18 @@ textures/test/cube2
 {
 	//noSelfShadow
 	qer_editorimage	textures/test/CubeColor2.png
+	//unsmoothedTangents
+	diffusemap textures/test/CubeColor2.png
 
-	{
-		blend diffusemap
-		map textures/test/CubeColor2.png
-	}
+	//{
+		//blend specularmap
+		//map textures/test/CubeSpecular2.png
+//	}
 
-	{
-		blend specularmap
-		map textures/test/CubeSpecular2.png
-	}
-
-	{
-		blend bumpmap
-		map textures/test/CubeNormal.png
-	}
+	//{
+		//blend bumpmap
+		//map textures/test/CubeNormal.png
+	//}
 }
 
 material models/items/flashlight/beam1 {
