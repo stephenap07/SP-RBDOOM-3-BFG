@@ -347,7 +347,6 @@ void idGameLocal::Init()
 
 	// SP begin
 	rmlShell = new UI_Shell();
-	rmlShell->Init();
 	// SP end
 
 	if( !g_xp_bind_run_once.GetBool() )
@@ -5793,7 +5792,18 @@ idGameLocal::Shell_Init
 */
 void idGameLocal::Shell_Init( const char* filename, idSoundWorld* sw )
 {
-	rmlShell->Init();
+	if( idStr::Icmp( filename, "game" ) == 0 )
+	{
+		rmlShell->SetNextScreen( "game" );
+	}
+	else if( idStr::Icmp( filename, "pause" ) == 0 )
+	{
+		rmlShell->SetNextScreen( "pause" );
+	}
+	else if( idStr::Icmp( filename, "shell" ) == 0 )
+	{
+		rmlShell->Init( sw );
+	}
 
 	//if( shellHandler != NULL )
 	//{
@@ -5830,28 +5840,28 @@ idGameLocal::Shell_CreateMenu
 */
 void idGameLocal::Shell_CreateMenu( bool inGame )
 {
-	//Shell_ResetMenu();
+	Shell_ResetMenu();
 
-	//if( shellHandler != NULL )
-	//{
-	//	if( !inGame )
-	//	{
-	//		shellHandler->SetInGame( false );
-	//		Shell_Init( "shell", common->MenuSW() );
-	//	}
-	//	else
-	//	{
-	//		shellHandler->SetInGame( true );
-	//		if( common->IsMultiplayer() )
-	//		{
-	//			Shell_Init( "pause", common->SW() );
-	//		}
-	//		else
-	//		{
-	//			Shell_Init( "pause", common->MenuSW() );
-	//		}
-	//	}
-	//}
+	if( shellHandler )
+	{
+		if( !inGame )
+		{
+			shellHandler->SetInGame( false );
+			Shell_Init( "shell", common->MenuSW() );
+		}
+		else
+		{
+			shellHandler->SetInGame( true );
+			if( common->IsMultiplayer() )
+			{
+				Shell_Init( "pause", common->SW() );
+			}
+			else
+			{
+				Shell_Init( "pause", common->MenuSW() );
+			}
+		}
+	}
 }
 
 /*
@@ -5924,6 +5934,19 @@ bool idGameLocal::Shell_IsPausingGame() const
 	}
 
 	return false;
+}
+
+/*
+========================
+idGameLocal::Shell_SetPauseGame
+========================
+*/
+void idGameLocal::Shell_SetPauseGame( bool pause )
+{
+	if( rmlShell )
+	{
+		rmlShell->SetIsPausingGame( pause );
+	}
 }
 
 /*
@@ -6011,7 +6034,19 @@ void idGameLocal::Shell_SyncWithSession()
 			break;
 		case idSession::INGAME:
 			shellHandler->SetShellState( SHELL_STATE_PAUSED );
-			rmlShell->SetNextScreen( "game" );
+			//rmlShell->SetNextScreen( "game" );
+			if( rmlShell->IsPausingGame() )
+			{
+				rmlShell->SetNextScreen( "pause" );
+				rmlShell->SetInhibitsControl( true );
+				rmlShell->SetCursorEnabled( true );
+			}
+			else
+			{
+				rmlShell->SetNextScreen( "game" );
+				rmlShell->SetInhibitsControl( false );
+				rmlShell->SetCursorEnabled( false );
+			}
 			break;
 		case idSession::IDLE:
 			shellHandler->SetShellState( SHELL_STATE_IDLE );

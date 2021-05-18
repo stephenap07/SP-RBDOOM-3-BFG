@@ -662,6 +662,7 @@ set(FREETYPE_SOURCES
 	libs/freetype/src/winfonts/winfnt.c)
 
 
+add_definitions("-DRMLUI_STATIC_LIB")
 set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
 set(RMLUI_LIBRARIES
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/RmlCore.lib

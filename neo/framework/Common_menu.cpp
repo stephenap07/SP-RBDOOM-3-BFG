@@ -147,6 +147,7 @@ void idCommonLocal::StartMenu( bool playIntro )
 {
 	if( game && game->Shell_IsActive() )
 	{
+		game->Shell_SetPauseGame( true );
 		return;
 	}
 

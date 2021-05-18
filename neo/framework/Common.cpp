@@ -1827,7 +1827,7 @@ bool idCommonLocal::ProcessEvent( const sysEvent_t* event )
 			}
 			else
 			{
-				if( !game->Shell_IsActive() )
+				if( !game->Shell_IsPausingGame() )
 				{
 					// menus / etc
 					if( MenuEvent( event ) )
@@ -1859,6 +1859,7 @@ bool idCommonLocal::ProcessEvent( const sysEvent_t* event )
 					}
 
 					game->Shell_ClosePause();
+					game->Shell_SetPauseGame( false );
 				}
 			}
 		}

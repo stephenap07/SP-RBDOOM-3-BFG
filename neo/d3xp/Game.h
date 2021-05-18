@@ -177,6 +177,7 @@ public:
 	virtual void				Shell_Show( bool show ) = 0;
 	virtual bool				Shell_IsActive() const = 0;
 	virtual bool				Shell_IsPausingGame() const = 0;
+	virtual void				Shell_SetPauseGame( bool pause ) = 0;
 	virtual bool				Shell_InhibitsControl() const = 0;
 	virtual bool				Shell_HandleGuiEvent( const sysEvent_t* sev ) = 0;
 	virtual void				Shell_Render() = 0;

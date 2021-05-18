@@ -98,6 +98,7 @@ void MyEventListener::ProcessEvent( Rml::Event& event )
 	idLexer src;
 	idToken token;
 	src.LoadMemory( value.c_str(), value.length(), "rmlCommands" );
+	src.SetFlags( LEXFL_NOFATALERRORS | LEXFL_NOSTRINGCONCAT | LEXFL_NOSTRINGESCAPECHARS | LEXFL_ALLOWPATHNAMES );
 
 	while( true )
 	{
@@ -139,6 +140,12 @@ void MyEventListener::ProcessEvent( Rml::Event& event )
 			src.ReadToken( &token );
 			cmdSystem->AppendCommandText( va( "map %s\n", token.c_str() ) );
 		}
+
+		if( !token.Icmp( "playsound" ) )
+		{
+			src.ReadToken( &token );
+			_shell->PlaySound( token.c_str() );
+		}
 	}
 }
 
@@ -162,9 +169,10 @@ UI_Shell::UI_Shell()
 	( ( MyEventListenerInstancer* )_eventListenerInstancer )->SetShell( this );
 }
 
-bool UI_Shell::Init()
+bool UI_Shell::Init( idSoundWorld* soundWorld )
 {
 	_ui = ( RmlUserInterfaceLocal* )rmlManager->Find( "main", true );
+	_soundWorld = soundWorld;
 	_inhibitsControl = true;
 	_isActive = true;
 	_isPausingGame = false;
@@ -172,14 +180,31 @@ bool UI_Shell::Init()
 	// Register event listeners. Note that registering event listeners must happen before documents are loaded.
 	Rml::Factory::RegisterEventListenerInstancer( _eventListenerInstancer );
 
-	if( LoadDocument( "startmenu" ) )
+	Rml::ElementDocument* document = LoadDocument( "startmenu" );
+	if( !document )
 	{
-		// Seed the initial materials.
-		_ui->Redraw( 0 );
-		return true;
+		common->Warning( "Failed to load shell startmenu document." );
+		return false;
 	}
 
-	return false;
+	// When this object frees its resources after destructing, it frees itself using the overriden delete method.
+	// Originally this was allocated with the non-overriden 'new' function. Annoying.
+	Rml::StringList textureNames = Rml::GetTextureSourceList();
+
+	for( const auto& texturePath : textureNames )
+	{
+		const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
+		if( material )
+		{
+			material->ReloadImages( false );
+		}
+		else
+		{
+			common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
+		}
+	}
+
+	return true;
 }
 
 bool UI_Shell::IsCursorEnabled() const
@@ -292,4 +317,33 @@ Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
 	document->Show();
 
 	return document;
+}
+
+int UI_Shell::PlaySound( const char* sound, int channel, bool blocking )
+{
+	if( !IsActive() )
+	{
+		return -1;
+	}
+	if( _soundWorld )
+	{
+		return _soundWorld->PlayShaderDirectly( sound, channel );
+	}
+	else
+	{
+		idLib::Warning( "No playing sound world on soundSystem in swf play sound!" );
+		return -1;
+	}
+}
+
+void UI_Shell::StopSound( int channel )
+{
+	if( _soundWorld )
+	{
+		_soundWorld->PlayShaderDirectly( NULL, channel );
+	}
+	else
+	{
+		idLib::Warning( "No playing sound world on soundSystem in rml play sound!" );
+	}
 }

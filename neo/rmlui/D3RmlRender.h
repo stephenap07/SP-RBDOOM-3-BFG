@@ -71,19 +71,10 @@ public:
 	/// Called by RmlUi when a texture is required to be built from an internally-generated sequence of pixels.
 	bool GenerateTexture( Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions );
 
-	/// <summary>
-	///
-	/// </summary>
 	void RenderClipMask();
 
-	/// <summary>
-	///
-	/// </summary>
 	void PreRender();
 
-	/// <summary>
-	///
-	/// </summary>
 	void PostRender();
 
 private:

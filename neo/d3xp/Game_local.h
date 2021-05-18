@@ -609,6 +609,7 @@ public:
 	virtual void					Shell_CreateMenu( bool inGame );
 	virtual bool					Shell_IsActive() const;
 	virtual bool					Shell_IsPausingGame() const;
+	virtual void					Shell_SetPauseGame( bool pause );
 	virtual bool					Shell_InhibitsControl() const;
 	virtual bool					Shell_HandleGuiEvent( const sysEvent_t* sev );
 	virtual void					Shell_Render();

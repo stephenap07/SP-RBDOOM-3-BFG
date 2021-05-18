@@ -16,11 +16,16 @@ public:
 
 	UI_Shell();
 
-	bool					Init();
+	bool					Init( idSoundWorld* soundWorld );
 
 	bool					IsActive()
 	{
 		return _isActive;
+	}
+
+	void					SetIsActive( bool active )
+	{
+		_isActive = active;
 	}
 
 	bool					IsPausingGame()
@@ -61,6 +66,9 @@ public:
 		return _ui;
 	}
 
+	int PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false );
+	void StopSound( int channel = SCHANNEL_ANY );
+
 private:
 
 	Rml::EventListenerInstancer*	_eventListenerInstancer;
@@ -68,6 +76,7 @@ private:
 	idStr							_currentScreen;
 
 	RmlUserInterfaceLocal*			_ui;
+	idSoundWorld*					_soundWorld;
 
 	bool							_isActive;
 	bool							_isPausingGame;

@@ -74,7 +74,10 @@ RmlUserInterfaceLocal::~RmlUserInterfaceLocal()
 bool RmlUserInterfaceLocal::Init( const char* name )
 {
 	_context = Rml::CreateContext( name, Rml::Vector2i( renderSystem->GetWidth(), renderSystem->GetHeight() ) );
-	_context->EnableMouseCursor( true );
+	if( _context )
+	{
+		_context->EnableMouseCursor( true );
+	}
 	return _context != nullptr;
 }
 
@@ -338,6 +341,11 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool aut
 
 Rml::ElementDocument* RmlUserInterfaceManagerLocal::LoadDocument( Rml::Context* context, const char* name )
 {
+	if( !context )
+	{
+		return nullptr;
+	}
+
 	Rml::ElementDocument* foundDoc( GetDocument( context, name ) );
 	if( foundDoc )
 	{
@@ -455,6 +463,11 @@ void RmlUserInterfaceManagerLocal::PostRender()
 			img.image->SetReferencedOutsideLevelLoad();
 		}
 		img.Free();
+	}
+
+	if( _imagesToReload.Num() == 0 )
+	{
+		return;
 	}
 
 	_imagesToReload.Clear();

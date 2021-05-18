@@ -79,7 +79,7 @@ void idRmlRender::Init()
 	_verts = new idDrawVert[kMaxInitialVerts];
 	_tris = new triIndex_t[kMaxInitialTris];
 
-	_guiSolid = declManager->FindMaterial( "guiSolid" );
+	_guiSolid = declManager->FindMaterial( "_white", false );
 }
 
 void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indices, int numIndexes, Rml::TextureHandle texture, const Rml::Vector2f& translation )
@@ -110,7 +110,7 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 		temp[i].xyz = pos;
 		temp[i].SetTexCoord( vertices[i].tex_coord.x, vertices[i].tex_coord.y );
 		temp[i].SetColor( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) ) );
-		temp[i].SetColor2( PackColor( idVec4( 255.0f, 255.0f, 255.0f, 255.0f ) ) );
+		temp[i].SetColor2( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) ) );
 
 		_numVerts++;
 
@@ -230,8 +230,6 @@ bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i
 	{
 		return false;
 	}
-
-	material->ReloadImages( false );
 
 	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
 	texture_dimensions.x = material->GetImageWidth();
