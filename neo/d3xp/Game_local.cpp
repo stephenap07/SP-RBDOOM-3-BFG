@@ -6008,6 +6008,11 @@ idGameLocal::Shell_ResetMenu
 */
 void idGameLocal::Shell_ResetMenu()
 {
+	if( rmlShell != nullptr )
+	{
+		rmlShell->SetNextScreen("startmenu");
+	}
+
 	//if( shellHandler != NULL )
 	//{
 	//	delete shellHandler;
@@ -6050,7 +6055,7 @@ void idGameLocal::Shell_SyncWithSession()
 			break;
 		case idSession::IDLE:
 			shellHandler->SetShellState( SHELL_STATE_IDLE );
-			rmlShell->SetNextScreen( "game" );
+			rmlShell->SetNextScreen( "startmenu" );
 			break;
 		case idSession::PARTY_LOBBY:
 			shellHandler->SetShellState( SHELL_STATE_PARTY_LOBBY );
@@ -6063,12 +6068,15 @@ void idGameLocal::Shell_SyncWithSession()
 			break;
 		case idSession::LOADING:
 			shellHandler->SetShellState( SHELL_STATE_LOADING );
+			rmlShell->SetNextScreen( "loading" );
 			break;
 		case idSession::CONNECTING:
 			shellHandler->SetShellState( SHELL_STATE_CONNECTING );
+			rmlShell->SetNextScreen( "loading" );
 			break;
 		case idSession::BUSY:
 			shellHandler->SetShellState( SHELL_STATE_BUSY );
+			rmlShell->SetNextScreen( "loading" );
 			break;
 	}
 }

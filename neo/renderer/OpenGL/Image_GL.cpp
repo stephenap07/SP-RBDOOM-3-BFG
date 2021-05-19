@@ -57,7 +57,6 @@ idImage::idImage( const char* name ) : imgName( name )
 
 	referencedOutsideLevelLoad = false;
 	levelLoadReferenced = false;
-	midLevelLoadReferenced = false;
 	defaulted = false;
 	sourceFileTime = FILE_NOT_FOUND_TIMESTAMP;
 	binaryFileTime = FILE_NOT_FOUND_TIMESTAMP;

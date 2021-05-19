@@ -18,10 +18,7 @@ public:
 
 	bool					Init( idSoundWorld* soundWorld );
 
-	bool					IsActive()
-	{
-		return _isActive;
-	}
+	bool					IsActive();
 
 	void					SetIsActive( bool active )
 	{

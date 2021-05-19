@@ -180,12 +180,9 @@ bool UI_Shell::Init( idSoundWorld* soundWorld )
 	// Register event listeners. Note that registering event listeners must happen before documents are loaded.
 	Rml::Factory::RegisterEventListenerInstancer( _eventListenerInstancer );
 
-	Rml::ElementDocument* document = LoadDocument( "startmenu" );
-	if( !document )
-	{
-		common->Warning( "Failed to load shell startmenu document." );
-		return false;
-	}
+	SetNextScreen("startmenu");
+
+	TransitionNextScreen();
 
 	// When this object frees its resources after destructing, it frees itself using the overriden delete method.
 	// Originally this was allocated with the non-overriden 'new' function. Annoying.
@@ -205,6 +202,11 @@ bool UI_Shell::Init( idSoundWorld* soundWorld )
 	}
 
 	return true;
+}
+
+bool UI_Shell::IsActive()
+{
+	return _ui->Context() && _isActive;
 }
 
 bool UI_Shell::IsCursorEnabled() const
@@ -281,7 +283,7 @@ Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
 //	event_handler = nullptr;
 
 	// Attempt to load the referenced RML document.
-	idStr docPath = "guis/rml/shell/";
+	idStrStatic<128> docPath = "guis/rml/shell";
 	docPath.AppendPath( windowName );
 	docPath.Append( ".rml" );
 
