@@ -6010,7 +6010,7 @@ void idGameLocal::Shell_ResetMenu()
 {
 	if( rmlShell != nullptr )
 	{
-		rmlShell->SetNextScreen("startmenu");
+		rmlShell->SetNextScreen( "startmenu" );
 	}
 
 	//if( shellHandler != NULL )

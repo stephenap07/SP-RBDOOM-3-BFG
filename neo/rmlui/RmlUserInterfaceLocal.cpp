@@ -71,12 +71,12 @@ RmlUserInterfaceLocal::~RmlUserInterfaceLocal()
 {
 }
 
-bool RmlUserInterfaceLocal::Init(const char* name)
+bool RmlUserInterfaceLocal::Init( const char* name )
 {
-	_context = Rml::GetContext(name);
+	_context = Rml::GetContext( name );
 	if( !_context )
 	{
-		_context = Rml::CreateContext(name, Rml::Vector2i(renderSystem->GetWidth(), renderSystem->GetHeight()));
+		_context = Rml::CreateContext( name, Rml::Vector2i( renderSystem->GetWidth(), renderSystem->GetHeight() ) );
 	}
 	if( _context )
 	{

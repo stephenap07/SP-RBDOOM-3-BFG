@@ -111,7 +111,7 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	for( int i = 0; i < numVerts; i++ )
 	{
 		idVec3 pos = idVec3( vertices[i].position.x, vertices[i].position.y, 0 );
-		pos += idVec3(translation.x, translation.y, 0);
+		pos += idVec3( translation.x, translation.y, 0 );
 
 		// transform
 		pos *= mat;
@@ -160,12 +160,12 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	_numIndexes = 0;
 }
 
-void idRmlRender::SetTransform(const Rml::Matrix4f* transform)
+void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
 {
 	origin.Zero();
 	mat.Identity();
 
-	if (!transform)
+	if( !transform )
 	{
 		return;
 	}
@@ -183,7 +183,7 @@ void idRmlRender::SetTransform(const Rml::Matrix4f* transform)
 	idVec3 vecY( rmlVec2.x, rmlVec2.y, rmlVec2.z );
 	idVec3 vecZ( rmlVec3.x, rmlVec3.y, rmlVec3.z );
 
-	mat = idMat3(vecX, vecY, vecZ);
+	mat = idMat3( vecX, vecY, vecZ );
 
 	//mat.OrthoNormalizeSelf();
 }

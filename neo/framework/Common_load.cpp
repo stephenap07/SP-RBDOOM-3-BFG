@@ -294,27 +294,27 @@ void idCommonLocal::LoadLoadingGui( const char* mapName, bool& hellMap )
 		loadTipList[i] = i;
 	}
 
-	if (loadGUI != NULL)
+	if( loadGUI != NULL )
 	{
-		loadGUI->Activate(true);
+		loadGUI->Activate( true );
 		nextLoadTip = Sys_Milliseconds() + LOAD_TIP_CHANGE_INTERVAL;
 
-		idSWFSpriteInstance* bgImg = loadGUI->GetRootObject().GetSprite("bgImage");
-		if (bgImg != NULL)
+		idSWFSpriteInstance* bgImg = loadGUI->GetRootObject().GetSprite( "bgImage" );
+		if( bgImg != NULL )
 		{
-			bgImg->SetMaterial(mat);
+			bgImg->SetMaterial( mat );
 		}
 
-		idSWFSpriteInstance* overlay = loadGUI->GetRootObject().GetSprite("overlay");
+		idSWFSpriteInstance* overlay = loadGUI->GetRootObject().GetSprite( "overlay" );
 
-		const idDeclEntityDef* mapDef = static_cast<const idDeclEntityDef*>(declManager->FindType(DECL_MAPDEF, mapName, false));
-		if (mapDef != NULL)
+		const idDeclEntityDef* mapDef = static_cast<const idDeclEntityDef*>( declManager->FindType( DECL_MAPDEF, mapName, false ) );
+		if( mapDef != NULL )
 		{
-			isHellMap = mapDef->dict.GetBool("hellMap", false);
+			isHellMap = mapDef->dict.GetBool( "hellMap", false );
 
-			if (isHellMap && overlay != NULL)
+			if( isHellMap && overlay != NULL )
 			{
-				overlay->SetVisible(false);
+				overlay->SetVisible( false );
 			}
 
 			idStr desc;
@@ -322,63 +322,63 @@ void idCommonLocal::LoadLoadingGui( const char* mapName, bool& hellMap )
 			idStr displayName;
 			idSWFTextInstance* txtVal = NULL;
 
-			txtVal = loadGUI->GetRootObject().GetNestedText("txtRegLoad");
-			displayName = idLocalization::GetString(mapDef->dict.GetString("name", mapName));
+			txtVal = loadGUI->GetRootObject().GetNestedText( "txtRegLoad" );
+			displayName = idLocalization::GetString( mapDef->dict.GetString( "name", mapName ) );
 
-			if (txtVal != NULL)
+			if( txtVal != NULL )
 			{
-				txtVal->SetText("#str_00408");
-				txtVal->SetStrokeInfo(true, 2.0f, 1.0f);
+				txtVal->SetText( "#str_00408" );
+				txtVal->SetStrokeInfo( true, 2.0f, 1.0f );
 			}
 
 			const idMatchParameters& matchParameters = session->GetActingGameStateLobbyBase().GetMatchParms();
-			if (matchParameters.gameMode == GAME_MODE_SINGLEPLAYER)
+			if( matchParameters.gameMode == GAME_MODE_SINGLEPLAYER )
 			{
-				desc = idLocalization::GetString(mapDef->dict.GetString("desc", ""));
-				subTitle = idLocalization::GetString(mapDef->dict.GetString("subTitle", ""));
+				desc = idLocalization::GetString( mapDef->dict.GetString( "desc", "" ) );
+				subTitle = idLocalization::GetString( mapDef->dict.GetString( "subTitle", "" ) );
 			}
 			else
 			{
 				const idStrList& modes = common->GetModeDisplayList();
-				subTitle = modes[idMath::ClampInt(0, modes.Num() - 1, matchParameters.gameMode)];
+				subTitle = modes[idMath::ClampInt( 0, modes.Num() - 1, matchParameters.gameMode )];
 
 				const char* modeDescs[] = { "#str_swf_deathmatch_desc", "#str_swf_tourney_desc", "#str_swf_team_deathmatch_desc", "#str_swf_lastman_desc", "#str_swf_ctf_desc" };
-				desc = idLocalization::GetString(modeDescs[matchParameters.gameMode]);
+				desc = idLocalization::GetString( modeDescs[matchParameters.gameMode] );
 			}
 
-			if (!isHellMap)
+			if( !isHellMap )
 			{
-				txtVal = loadGUI->GetRootObject().GetNestedText("txtName");
+				txtVal = loadGUI->GetRootObject().GetNestedText( "txtName" );
 			}
 			else
 			{
-				txtVal = loadGUI->GetRootObject().GetNestedText("txtHellName");
+				txtVal = loadGUI->GetRootObject().GetNestedText( "txtHellName" );
 			}
-			if (txtVal != NULL)
+			if( txtVal != NULL )
 			{
-				txtVal->SetText(displayName);
-				txtVal->SetStrokeInfo(true, 2.0f, 1.0f);
-			}
-
-			txtVal = loadGUI->GetRootObject().GetNestedText("txtSub");
-			if (txtVal != NULL && !isHellMap)
-			{
-				txtVal->SetText(subTitle);
-				txtVal->SetStrokeInfo(true, 1.75f, 0.75f);
+				txtVal->SetText( displayName );
+				txtVal->SetStrokeInfo( true, 2.0f, 1.0f );
 			}
 
-			txtVal = loadGUI->GetRootObject().GetNestedText("txtDesc");
-			if (txtVal != NULL)
+			txtVal = loadGUI->GetRootObject().GetNestedText( "txtSub" );
+			if( txtVal != NULL && !isHellMap )
 			{
-				if (isHellMap)
+				txtVal->SetText( subTitle );
+				txtVal->SetStrokeInfo( true, 1.75f, 0.75f );
+			}
+
+			txtVal = loadGUI->GetRootObject().GetNestedText( "txtDesc" );
+			if( txtVal != NULL )
+			{
+				if( isHellMap )
 				{
-					txtVal->SetText(va("\n%s", desc.c_str()));
+					txtVal->SetText( va( "\n%s", desc.c_str() ) );
 				}
 				else
 				{
-					txtVal->SetText(desc);
+					txtVal->SetText( desc );
 				}
-				txtVal->SetStrokeInfo(true, 1.75f, 0.75f);
+				txtVal->SetStrokeInfo( true, 1.75f, 0.75f );
 			}
 		}
 	}

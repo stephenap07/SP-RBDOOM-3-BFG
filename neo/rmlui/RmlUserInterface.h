@@ -10,8 +10,8 @@ public:
 
 namespace Rml
 {
-	class ElementDocument;
-	class Context;
+class ElementDocument;
+class Context;
 }
 
 class RmlUserInterface

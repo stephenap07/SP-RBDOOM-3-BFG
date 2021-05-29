@@ -75,7 +75,7 @@ public:
 	/// This will only be called if 'transform' properties are encountered. If no transform applies to the current element, nullptr
 	/// is submitted. Then it expects the renderer to use an identity matrix or otherwise omit the multiplication with the transform.
 	/// @param[in] transform The new transform to apply, or nullptr if no transform applies to the current element.
-	void SetTransform(const Rml::Matrix4f* transform) override;
+	void SetTransform( const Rml::Matrix4f* transform ) override;
 
 	void RenderClipMask();
 
