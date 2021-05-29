@@ -8,6 +8,12 @@ public:
 	virtual bool InhibitsControl() = 0;
 };
 
+namespace Rml
+{
+	class ElementDocument;
+	class Context;
+}
+
 class RmlUserInterface
 {
 public:
@@ -48,12 +54,6 @@ public:
 
 	virtual void				SetInhibitsControl( bool inhibit ) = 0;
 };
-
-namespace Rml
-{
-class ElementDocument;
-class Context;
-}
 
 class RmlUserInterfaceManager
 {

@@ -347,6 +347,10 @@ struct FontManager::CachedFont
 
 	FontInfo fontInfo;
 	GlyphHashMap cachedGlyphs;
+
+	idList<idKeyValue>  cachedGlyphs2;
+	idHashIndex			cachedGlyphsHashed;
+
 	TrueTypeFont* trueTypeFont;
 	// an handle to a master font in case of sub distance field font
 	FontHandle masterFontHandle;

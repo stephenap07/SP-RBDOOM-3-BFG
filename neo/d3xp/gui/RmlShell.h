@@ -10,6 +10,14 @@ class EventListenerInstancer;
 class ElementDocument;
 }
 
+struct RmlUiState
+{
+	const char* name = "";
+	bool inhibitsControl = false;
+	bool isPausingGame = false;
+	bool cursorEnabled = true;
+};
+
 class UI_Shell
 {
 public:
@@ -69,8 +77,8 @@ public:
 private:
 
 	Rml::EventListenerInstancer*	_eventListenerInstancer;
-	idStr							_nextScreen;
-	idStr							_currentScreen;
+	int								_nextScreen;
+	int								_currentScreen;
 
 	RmlUserInterfaceLocal*			_ui;
 	idSoundWorld*					_soundWorld;

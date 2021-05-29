@@ -6035,7 +6035,7 @@ void idGameLocal::Shell_SyncWithSession()
 	{
 		case idSession::PRESS_START:
 			shellHandler->SetShellState( SHELL_STATE_PRESS_START );
-			rmlShell->SetNextScreen( "startmenu" );
+			//rmlShell->SetNextScreen( "startmenu" );
 			break;
 		case idSession::INGAME:
 			shellHandler->SetShellState( SHELL_STATE_PAUSED );

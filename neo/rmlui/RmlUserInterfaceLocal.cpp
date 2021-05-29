@@ -211,7 +211,7 @@ void RmlUserInterfaceLocal::Redraw( int time, bool hud )
 {
 	if( rmlManager->InLevelLoad() )
 	{
-		return;
+		//return;
 	}
 
 	_context->SetDimensions( Rml::Vector2i( renderSystem->GetWidth(), renderSystem->GetHeight() ) );

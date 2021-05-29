@@ -114,11 +114,6 @@ public:
 	virtual float				CursorY() = 0;
 };
 
-namespace Rml
-{
-class Context;
-}
-
 class idUserInterfaceManager
 {
 public:

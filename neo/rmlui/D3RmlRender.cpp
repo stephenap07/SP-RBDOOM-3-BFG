@@ -41,6 +41,8 @@ If you have questions concerning this license or the applicable additional terms
 
 extern RmlUserInterfaceManagerLocal rmlManagerLocal;
 
+extern idDeviceContext* rmlDc;
+
 /*
 ===============
 idRmlRender
@@ -79,6 +81,9 @@ void idRmlRender::Init()
 	_verts = new idDrawVert[kMaxInitialVerts];
 	_tris = new triIndex_t[kMaxInitialTris];
 
+	origin.Zero();
+	mat.Identity();
+
 	_guiSolid = declManager->FindMaterial( "_white", false );
 }
 
@@ -105,8 +110,16 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	idDrawVert* temp = &_verts[_numVerts];
 	for( int i = 0; i < numVerts; i++ )
 	{
-		idVec3 pos = idVec3( vertices[i].position.x * scaleToVirtual.x, vertices[i].position.y * scaleToVirtual.y, 0 );
-		pos += idVec3( translation.x * scaleToVirtual.x, translation.y * scaleToVirtual.y, 0 );
+		idVec3 pos = idVec3( vertices[i].position.x, vertices[i].position.y, 0 );
+		pos += idVec3(translation.x, translation.y, 0);
+
+		// transform
+		pos *= mat;
+		pos += origin;
+
+		pos.x *= scaleToVirtual.x;
+		pos.y *= scaleToVirtual.y;
+
 		temp[i].xyz = pos;
 		temp[i].SetTexCoord( vertices[i].tex_coord.x, vertices[i].tex_coord.y );
 		temp[i].SetColor( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) ) );
@@ -147,7 +160,36 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	_numIndexes = 0;
 }
 
+void idRmlRender::SetTransform(const Rml::Matrix4f* transform)
+{
+	origin.Zero();
+	mat.Identity();
+
+	if (!transform)
+	{
+		return;
+	}
+
+	//auto transposedMat = transform->Transpose();
+
+	auto rmlVec1 = transform->GetColumn( 0 );
+	auto rmlVec2 = transform->GetColumn( 1 );
+	auto rmlVec3 = transform->GetColumn( 2 );
+	auto rmlVec4 = transform->GetColumn( 3 );
+
+	origin.Set( rmlVec4.x, rmlVec4.y, rmlVec4.z );
+
+	idVec3 vecX( rmlVec1.x, rmlVec1.y, rmlVec1.z );
+	idVec3 vecY( rmlVec2.x, rmlVec2.y, rmlVec2.z );
+	idVec3 vecZ( rmlVec3.x, rmlVec3.y, rmlVec3.z );
+
+	mat = idMat3(vecX, vecY, vecZ);
+
+	//mat.OrthoNormalizeSelf();
+}
+
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
+
 void idRmlRender::RenderClipMask()
 {
 	// Usually, scissor regions are handled  with actual scissor render commands.
@@ -159,33 +201,56 @@ void idRmlRender::RenderClipMask()
 	ALIGNTYPE16 idDrawVert localVerts[4];
 
 	localVerts[0].Clear();
-	localVerts[0].xyz[0] = _clipRects.x * scaleToVirtual.x;
-	localVerts[0].xyz[1] = _clipRects.y * scaleToVirtual.y;
+	localVerts[0].xyz[0] = _clipRects.x;
+	localVerts[0].xyz[1] = _clipRects.y;
 	localVerts[0].xyz[2] = 0.0f;
+
+	localVerts[0].xyz *= mat;
+	localVerts[0].xyz += origin;
+
+	localVerts[0].xyz.x *= scaleToVirtual.x;
+	localVerts[0].xyz.y *= scaleToVirtual.y;
+
 	localVerts[0].SetTexCoord( 0.0f, 1.0f );
 	localVerts[0].SetColor( PackColor( idVec4() ) );
 	localVerts[0].ClearColor2();
 
 	localVerts[1].Clear();
-	localVerts[1].xyz[0] = ( _clipRects.x + _clipRects.w ) * scaleToVirtual.x;
-	localVerts[1].xyz[1] = _clipRects.y * scaleToVirtual.y;
+	localVerts[1].xyz[0] = _clipRects.x + _clipRects.w ;
+	localVerts[1].xyz[1] = _clipRects.y;
 	localVerts[1].xyz[2] = 0.0f;
+
+	localVerts[1].xyz *= mat;
+	localVerts[1].xyz += origin;
+
+	localVerts[1].xyz.x *= scaleToVirtual.x;
+	localVerts[1].xyz.y *= scaleToVirtual.y;
+
 	localVerts[1].SetTexCoord( 1.0f, 1.0f );
 	localVerts[1].SetColor( PackColor( idVec4() ) );
 	localVerts[1].ClearColor2();
 
 	localVerts[2].Clear();
-	localVerts[2].xyz[0] = ( _clipRects.x + _clipRects.w ) * scaleToVirtual.x;
-	localVerts[2].xyz[1] = ( _clipRects.y + _clipRects.h ) * scaleToVirtual.y;
+	localVerts[2].xyz[0] = ( _clipRects.x + _clipRects.w );
+	localVerts[2].xyz[1] = ( _clipRects.y + _clipRects.h );
 	localVerts[2].xyz[2] = 0.0f;
+	localVerts[2].xyz -= origin;
+	localVerts[2].xyz *= mat;
+	localVerts[2].xyz += origin;
+	localVerts[2].xyz.x *= scaleToVirtual.x;
+	localVerts[2].xyz.y *= scaleToVirtual.y;
 	localVerts[2].SetTexCoord( 1.0f, 0.0f );
 	localVerts[2].SetColor( PackColor( idVec4() ) );
 	localVerts[2].ClearColor2();
 
 	localVerts[3].Clear();
-	localVerts[3].xyz[0] = _clipRects.x * scaleToVirtual.x;
-	localVerts[3].xyz[1] = ( _clipRects.y + _clipRects.h ) * scaleToVirtual.y;
+	localVerts[3].xyz[0] = _clipRects.x;
+	localVerts[3].xyz[1] = ( _clipRects.y + _clipRects.h );
 	localVerts[3].xyz[2] = 0.0f;
+	localVerts[3].xyz *= mat;
+	localVerts[3].xyz += origin;
+	localVerts[3].xyz.x *= scaleToVirtual.x;
+	localVerts[3].xyz.y *= scaleToVirtual.y;
 	localVerts[3].SetTexCoord( 0.0f, 0.0f );
 	localVerts[3].SetColor( PackColor( idVec4() ) );
 	localVerts[3].ClearColor2();

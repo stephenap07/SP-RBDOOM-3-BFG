@@ -37,6 +37,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RmlUi/Core/EventListener.h"
 #include "RmlUi/Core/EventListenerInstancer.h"
+#include "RmlUi/Core/TransformPrimitive.h"
 
 class UI_Shell;
 class MyEventListener : public Rml::EventListener
@@ -130,11 +131,6 @@ void MyEventListener::ProcessEvent( Rml::Event& event )
 			_shell->SetNextScreen( token.c_str() );
 		}
 
-		if( !token.Icmp( "game" ) )
-		{
-			cmdSystem->AppendCommandText( "map test4\n" );
-		}
-
 		if( !token.Icmp( "map" ) )
 		{
 			src.ReadToken( &token );
@@ -145,6 +141,57 @@ void MyEventListener::ProcessEvent( Rml::Event& event )
 		{
 			src.ReadToken( &token );
 			_shell->PlaySound( token.c_str() );
+		}
+
+		if( !token.Icmp("inhibitControl") )
+		{
+			src.ReadToken(&token);
+			if( !token.Cmp("=") )
+			{
+				src.ReadToken(&token);
+			}
+			if (!token.Icmp("true"))
+			{
+				_shell->SetInhibitsControl(true);
+			}
+			else if (!token.Icmp("false"))
+			{
+				_shell->SetInhibitsControl(false);
+			}
+		}
+
+		if (!token.Icmp("pauseGame"))
+		{
+			src.ReadToken(&token);
+			if (!token.Cmp("="))
+			{
+				src.ReadToken(&token);
+			}
+			if (!token.Icmp("true"))
+			{
+				_shell->SetIsPausingGame(true);
+			}
+			else if (!token.Icmp("false"))
+			{
+				_shell->SetIsPausingGame(false);
+			}
+		}
+
+		if (!token.Icmp("enableCursor"))
+		{
+			src.ReadToken(&token);
+			if (!token.Cmp("="))
+			{
+				src.ReadToken(&token);
+			}
+			if (!token.Icmp("true"))
+			{
+				_shell->SetCursorEnabled(true);
+			}
+			else if (!token.Icmp("false"))
+			{
+				_shell->SetCursorEnabled(false);
+			}
 		}
 	}
 }
@@ -160,6 +207,8 @@ static MyEventListenerInstancer eventListenerInstancer;
 
 UI_Shell::UI_Shell()
 	: _eventListenerInstancer( &eventListenerInstancer )
+	, _nextScreen(-1)
+	, _currentScreen(-1)
 	, _ui( nullptr )
 	, _isActive( false )
 	, _isPausingGame( false )
@@ -234,42 +283,55 @@ void UI_Shell::Redraw( int time )
 	_ui->Redraw( time );
 }
 
+struct ShellScreen
+{
+	idStr name;
+	bool isInhibitingControl = false;
+	bool isPausingGame = false;
+	bool isCursorEnabled = true;
+};
+
+static ShellScreen screens[] = {
+	{"game", false, false, false},
+	{"startmenu", true, false, true},
+	{"options", true, false, true},
+	{"pause", true, true, true}
+};
+
 void UI_Shell::SetNextScreen( const char* screen )
 {
-	if( !_currentScreen.Icmp( screen ) )
+	if( _currentScreen >= 0 && !screens[_currentScreen].name.Icmp(screen) )
 	{
 		return;
 	}
 
-	_nextScreen = screen;
+	bool foundResult = false;
+
+	for( int i = 0; i < sizeof(screens) / sizeof(int); i++ )
+	{
+		if( !screens[i].name.Icmp(screen) )
+		{
+			_nextScreen = i;
+			foundResult = true;
+			break;
+		}
+	}
+
+	if (!foundResult)
+	{
+		_nextScreen = -1;
+	}
 }
 
 void UI_Shell::TransitionNextScreen()
 {
-	if( _nextScreen.IsEmpty() )
+	if (_nextScreen < 0)
 	{
 		return;
 	}
 
-	if( !_nextScreen.Icmp( "game" ) )
-	{
-		SetInhibitsControl( false );
-		SetIsPausingGame( false );
-		SetCursorEnabled( false );
-	}
-	else if( !_nextScreen.Icmp( "startmenu" ) )
-	{
-		SetInhibitsControl( true );
-		SetIsPausingGame( false );
-		SetCursorEnabled( true );
-	}
-
-	if( !_nextScreen.IsEmpty() )
-	{
-		LoadDocument( _nextScreen.c_str() );
-		_currentScreen = _nextScreen;
-		_nextScreen.Empty();
-	}
+	LoadDocument( screens[_nextScreen].name.c_str() );
+	_currentScreen = _nextScreen;
 }
 
 Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
@@ -289,16 +351,13 @@ Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
 
 	Rml::ElementDocument* document = rmlManager->GetDocument( _ui->Context(), docPath.c_str() );
 
-	if( !_currentScreen.IsEmpty() )
-	{
-		idStr currentDocPath = "guis/rml/shell/";
-		currentDocPath.AppendPath( _currentScreen );
-		currentDocPath.Append( ".rml" );
+	idStr currentDocPath = "guis/rml/shell/";
+	currentDocPath.AppendPath( screens[_currentScreen].name );
+	currentDocPath.Append( ".rml" );
 
-		if( currentDocPath != docPath )
-		{
-			rmlManager->CloseDocument( _ui->Context(), currentDocPath.c_str() );
-		}
+	if( currentDocPath != docPath )
+	{
+		rmlManager->CloseDocument( _ui->Context(), currentDocPath.c_str() );
 	}
 
 	if( document )
@@ -307,6 +366,11 @@ Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
 		return document;
 	}
 
+	// Reset these variables to default values.
+	SetInhibitsControl(false);
+	SetIsPausingGame(false);
+	SetCursorEnabled(false);
+
 	document = rmlManager->LoadDocument( _ui->Context(), docPath.c_str() );
 
 	if( document == nullptr )
@@ -314,6 +378,16 @@ Rml::ElementDocument* UI_Shell::LoadDocument( const char* windowName )
 		//event_handler = old_event_handler;
 		common->Warning( "Failed to load document %s\n", docPath.c_str() );
 		return nullptr;
+	}
+
+	if( !idStr::Icmp(windowName, "startmenu") )
+	{
+		using Rml::Transform;
+		auto el = document->GetElementById("start_game");
+		auto p1 = Transform::MakeProperty({ Rml::Transforms::Rotate2D{10.f}, Rml::Transforms::TranslateX{100.f} });
+		auto p2 = Transform::MakeProperty({ Rml::Transforms::Scale2D{3.f} });
+		el->Animate("transform", p1, 1.8f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut }, -1, true);
+		el->AddAnimationKey("transform", p2, 1.3f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut });
 	}
 
 	document->Show();

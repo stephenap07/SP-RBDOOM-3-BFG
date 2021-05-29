@@ -10,6 +10,8 @@
 #include "rmlui/RmlSystem.h"
 #include "ui/DeviceContext.h"
 
+constexpr int kMaxDocuments = 128;
+
 class RmlUserInterfaceLocal : public RmlUserInterface
 {
 public:
@@ -198,7 +200,10 @@ private:
 
 	idList<RmlUserInterfaceLocal*>	_guis;
 	idList<RmlImage>				_imagesToReload;
+
+	HandleManagerT<kMaxDocuments>	_docHandleManager;
 	idList<Document>				_documents;
+	idList<idStr>					_docNames;
 
 	idRmlSystem						_rmlSystem;
 	idRmlRender						_rmlRender;
