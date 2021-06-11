@@ -31,6 +31,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Game_local.h"
 
+#include "RmlUi/Core/Context.h"
+#include "RmlUi/Core/Core.h"
+
 /*
 ===============================================================================
 
@@ -222,6 +225,36 @@ void AddRenderGui( const char* name, idUserInterface** gui, const idDict* args )
 
 /*
 ================
+AddRenderRml
+================
+*/
+void AddRenderRml( const char* name, RmlUserInterface** rml, const idDict* args )
+{
+	//const idKeyValue* kv = args->MatchPrefix("rml_parm", NULL);
+	*rml = rmlManager->Find( name, true );
+	( *rml )->SetNextScreen( name );
+	{
+		Rml::StringList textureNames = Rml::GetTextureSourceList();
+
+		for( const auto& texturePath : textureNames )
+		{
+			const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
+
+			// TODO(Stephen): See what happens if you don't reload the images here.
+			if( material )
+			{
+				material->ReloadImages( false );
+			}
+			else
+			{
+				common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
+			}
+		}
+	}
+}
+
+/*
+================
 idGameEdit::ParseSpawnArgsToRenderEntity
 
 parse the static model parameters
@@ -347,6 +380,15 @@ void idGameEdit::ParseSpawnArgsToRenderEntity( const idDict* args, renderEntity_
 		if( temp[ 0 ] != '\0' )
 		{
 			AddRenderGui( temp, &renderEntity->gui[ i ], args );
+		}
+	}
+
+	for( i = 0; i < MAX_RENDERENTITY_GUI; i++ )
+	{
+		temp = args->GetString( i == 0 ? "rml" : va( "rml%d", i + 1 ) );
+		if( temp[0] != '\0' )
+		{
+			AddRenderRml( temp, &renderEntity->rml[i], args );
 		}
 	}
 }
@@ -1694,6 +1736,21 @@ idEntity::GetRenderEntity
 renderEntity_t* idEntity::GetRenderEntity()
 {
 	return &renderEntity;
+}
+
+bool idEntity::HasInteractiveGui() const
+{
+	if( renderEntity.gui[0] && renderEntity.gui[0]->IsInteractive() )
+	{
+		return true;
+	}
+
+	if( renderEntity.rml[0] && renderEntity.rml[0]->IsCursorEnabled() ) // TODO(Stephen): Make rml interactive through other means like key presses.
+	{
+		return true;
+	}
+
+	return false;
 }
 
 /*

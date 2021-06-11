@@ -21,7 +21,7 @@ public:
 	virtual ~RmlUserInterfaceLocal();
 
 	// Begin RmlUserInterface
-	bool						Init( const char* name ) override;
+	bool						Init( const char* name, idSoundWorld* soundWorld ) override;
 
 	// handles an event, can return an action string, the caller interprets
 	// any return and acts accordingly
@@ -33,7 +33,11 @@ public:
 	// repaints the ui
 	void						Redraw( int time, bool hud = false ) override;
 
-	RmlUi*						AddUi( RmlUi* ui );
+	Rml::ElementDocument*		LoadDocument(const char* filePath) override;
+
+	bool						IsDocumentOpen(const char* name) override;
+
+	void						CloseDocument(const char* name) override;
 
 	void						Reload();
 
@@ -53,18 +57,22 @@ public:
 		return _cursorY;
 	}
 
-	bool						IsCursorEnabled()
+	bool						IsCursorEnabled() const override
 	{
 		return _cursorEnabled;
 	}
 
-	void						SetCursorEnabled( bool cursorEnabled )
+	void						SetCursorEnabled( bool cursorEnabled ) override
 	{
 		_cursorEnabled = cursorEnabled;
 	}
 
 	// Activated the gui.
 	const char*					Activate( bool activate, int time ) override;
+
+	Rml::ElementDocument*		SetNextScreen( const char* _nextScreen ) override;
+
+	void						HideAllDocuments() override;
 
 	// End RmlUserInterface
 
@@ -127,13 +135,35 @@ public:
 		_inhibitsControl = inhibit;
 	}
 
+	idVec2						GetScreenSize() const override;
+
+	void						SetSize(int width, int height) override;
+
+	void						SetUseScreenResolution(bool useScreen) override;
+
+	int							PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false ) override;
+
+	void						StopSound( int channel = SCHANNEL_ANY ) override;
+
 protected:
+
+	struct Document
+	{
+		Rml::ElementDocument* _doc = nullptr;
+		ID_TIME_T _timeStamp = 0;
+		idStr _name;
+	};
+
+	Rml::ElementDocument* GetDocument(const char* name);
 
 	Rml::Context*				_context;
 
 	idStr						_name;
 	ID_TIME_T					_timeStamp;
 
+	bool						_useScreenResolution;
+	int							_width;
+	int							_height;
 	float						_cursorX;
 	float						_cursorY;
 	bool						_cursorEnabled;
@@ -143,7 +173,9 @@ protected:
 
 	int							_refs;
 
-	idList<RmlUi*>				_rmlUi;
+	idSoundWorld*				_soundWorld;
+
+	idList<Document>			_documents;
 };
 
 struct RmlImage
@@ -166,10 +198,7 @@ public:
 	void						Init() override;
 	void						Shutdown() override;
 	RmlUserInterface*			Find( const char* name, bool autoload ) override;
-	Rml::ElementDocument*		LoadDocument( Rml::Context* context, const char* name ) override;
-	void						CloseDocument( Rml::Context* context, const char* name ) override;
-	bool						IsDocumentOpen( Rml::Context* context, const char* name ) override;
-	Rml::ElementDocument*		GetDocument( Rml::Context* context, const char* name ) override;
+	RmlUserInterface*			Find(const Rml::Context* context) override;
 
 	void						BeginLevelLoad() override;
 	void						EndLevelLoad( const char* mapName ) override;

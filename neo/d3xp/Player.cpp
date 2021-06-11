@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "../framework/Common_local.h"
 #include "PredictedValue_impl.h"
 
+#include "RmlUi/Core/Context.h"
+
 
 idCVar flashlight_batteryDrainTimeMS( "flashlight_batteryDrainTimeMS", "30000", CVAR_INTEGER, "amount of time (in MS) it takes for full battery to drain (-1 == no battery drain)" );
 idCVar flashlight_batteryChargeTimeMS( "flashlight_batteryChargeTimeMS", "3000", CVAR_INTEGER, "amount of time (in MS) it takes to fully recharge battery" );
@@ -6557,7 +6559,7 @@ void idPlayer::UpdateFocus()
 			}
 		}
 
-		if( !ent->GetRenderEntity() || !ent->GetRenderEntity()->gui[ 0 ] || !ent->GetRenderEntity()->gui[ 0 ]->IsInteractive() )
+		if( !ent->GetRenderEntity() || !ent->HasInteractiveGui() )
 		{
 			continue;
 		}
@@ -6575,6 +6577,22 @@ void idPlayer::UpdateFocus()
 			renderEntity_t* focusGUIrenderEntity = ent->GetRenderEntity();
 			if( !focusGUIrenderEntity )
 			{
+				continue;
+			}
+
+			if( focusGUIrenderEntity->rml[0] )
+			{
+				RmlUserInterface* rmlUi = focusGUIrenderEntity->rml[0];
+
+				// clamp the mouse to the corner
+				ev = sys->GenerateMouseMoveEvent( -2000, -2000 );
+				command = rmlUi->HandleEvent( &ev, gameLocal.time );
+
+				// move to an absolute position
+				ev = sys->GenerateMouseMoveEvent( pt.x * rmlUi->Context()->GetDimensions().x, pt.y * rmlUi->Context()->GetDimensions().y );
+				command = rmlUi->HandleEvent( &ev, gameLocal.time );
+				focusTime = gameLocal.time + FOCUS_GUI_TIME;
+
 				continue;
 			}
 

@@ -1,5 +1,5 @@
-#ifndef __GUI_TESTGUI_H__
-#define __GUI_TESTGUI_H__
+#ifndef __GUI_RMLSHELL_H__
+#define __GUI_RMLSHELL_H__
 
 
 class RmlUserInterfaceLocal;
@@ -9,14 +9,6 @@ namespace Rml
 class EventListenerInstancer;
 class ElementDocument;
 }
-
-struct RmlUiState
-{
-	const char* name = "";
-	bool inhibitsControl = false;
-	bool isPausingGame = false;
-	bool cursorEnabled = true;
-};
 
 class UI_Shell
 {
@@ -60,27 +52,19 @@ public:
 
 	void					Redraw( int time );
 
-	void					SetNextScreen( const char* screen );
-
-	void					TransitionNextScreen();
-
-	Rml::ElementDocument*	LoadDocument( const char* windowName );
-
-	RmlUserInterfaceLocal*	Ui()
+	RmlUserInterface*	Ui()
 	{
 		return _ui;
 	}
 
-	int PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false );
-	void StopSound( int channel = SCHANNEL_ANY );
+	void					SetNextScreen(const char* name);
 
 private:
 
-	Rml::EventListenerInstancer*	_eventListenerInstancer;
 	int								_nextScreen;
 	int								_currentScreen;
 
-	RmlUserInterfaceLocal*			_ui;
+	RmlUserInterface*				_ui;
 	idSoundWorld*					_soundWorld;
 
 	bool							_isActive;

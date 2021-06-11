@@ -1480,6 +1480,7 @@ guiPoint_t idRenderWorldLocal::GuiTrace( qhandle_t entityHandle, const idVec3 st
 			pt.x = ( cursor * axis[0] ) / ( axisLen[0] * axisLen[0] );
 			pt.y = ( cursor * axis[1] ) / ( axisLen[1] * axisLen[1] );
 			pt.guiId = shader->GetEntityGui();
+			pt.rmlId = shader->GetRmlEntityGui();
 
 			return pt;
 		}

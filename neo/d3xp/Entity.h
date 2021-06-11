@@ -276,6 +276,7 @@ public:
 	// visuals
 	virtual void			Present();
 	virtual renderEntity_t* GetRenderEntity();
+	bool					HasInteractiveGui() const;
 	virtual int				GetModelDefHandle();
 	virtual void			SetModel( const char* modelname );
 	void					SetSkin( const idDeclSkin* skin );

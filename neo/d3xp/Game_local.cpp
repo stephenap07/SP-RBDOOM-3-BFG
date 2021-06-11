@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Game_local.h"
 
+#include "rmlui/RmlUserInterface.h"
+
 #ifdef GAME_DLL
 
 	idSys* 						sys = NULL;
@@ -5794,15 +5796,21 @@ void idGameLocal::Shell_Init( const char* filename, idSoundWorld* sw )
 {
 	if( idStr::Icmp( filename, "game" ) == 0 )
 	{
-		rmlShell->SetNextScreen( "game" );
+		rmlShell->Ui()->HideAllDocuments();
+		rmlShell->Ui()->SetNextScreen( "game" );
 	}
 	else if( idStr::Icmp( filename, "pause" ) == 0 )
 	{
-		rmlShell->SetNextScreen( "pause" );
+		rmlShell->Ui()->HideAllDocuments();
+		rmlShell->Ui()->SetNextScreen( "pause" );
 	}
 	else if( idStr::Icmp( filename, "shell" ) == 0 )
 	{
-		rmlShell->Init( sw );
+		if (rmlShell->Ui())
+		{
+			rmlShell->Ui()->HideAllDocuments();
+		}
+		rmlShell->Init(sw);
 	}
 
 	//if( shellHandler != NULL )
@@ -6010,6 +6018,10 @@ void idGameLocal::Shell_ResetMenu()
 {
 	if( rmlShell != nullptr )
 	{
+		if (rmlShell->Ui())
+		{
+			rmlShell->Ui()->HideAllDocuments();
+		}
 		rmlShell->SetNextScreen( "startmenu" );
 	}
 
@@ -6042,12 +6054,14 @@ void idGameLocal::Shell_SyncWithSession()
 			//rmlShell->SetNextScreen( "game" );
 			if( rmlShell->IsPausingGame() )
 			{
+				rmlShell->Ui()->HideAllDocuments();
 				rmlShell->SetNextScreen( "pause" );
 				rmlShell->SetInhibitsControl( true );
 				rmlShell->SetCursorEnabled( true );
 			}
 			else
 			{
+				rmlShell->Ui()->HideAllDocuments();
 				rmlShell->SetNextScreen( "game" );
 				rmlShell->SetInhibitsControl( false );
 				rmlShell->SetCursorEnabled( false );
@@ -6055,6 +6069,7 @@ void idGameLocal::Shell_SyncWithSession()
 			break;
 		case idSession::IDLE:
 			shellHandler->SetShellState( SHELL_STATE_IDLE );
+			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "startmenu" );
 			break;
 		case idSession::PARTY_LOBBY:
@@ -6068,14 +6083,17 @@ void idGameLocal::Shell_SyncWithSession()
 			break;
 		case idSession::LOADING:
 			shellHandler->SetShellState( SHELL_STATE_LOADING );
+			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "loading" );
 			break;
 		case idSession::CONNECTING:
 			shellHandler->SetShellState( SHELL_STATE_CONNECTING );
+			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "loading" );
 			break;
 		case idSession::BUSY:
 			shellHandler->SetShellState( SHELL_STATE_BUSY );
+			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "loading" );
 			break;
 	}

@@ -32,6 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RmlUserInterfaceLocal.h"
 #include "RmlFileSystem.h"
+#include "GlobalRmlEventListener.h"
 
 #include "renderer/GLState.h"
 #include "renderer/GuiModel.h"
@@ -45,6 +46,32 @@ idDeviceContext* rmlDc;
 
 extern idCVar sys_lang;
 
+class GlobalRmlEventListenerInstancer : public Rml::EventListenerInstancer
+{
+public:
+	GlobalRmlEventListenerInstancer()
+	: ui(nullptr)
+	{
+	}
+
+	void SetUi(RmlUserInterface* _ui)
+	{
+		ui = _ui;
+	}
+
+	Rml::EventListener* InstanceEventListener(const Rml::String& value, Rml::Element* element) override
+	{
+		return new GlobalRmlEventListener( ui, value, element );
+	}
+
+private:
+
+	RmlUserInterface* ui;
+};
+
+static GlobalRmlEventListenerInstancer eventListenerInstancer;
+
+
 /*
 ===============
 RmlUserInterfaceLocal
@@ -57,12 +84,16 @@ RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 	: _context( nullptr )
 	, _name()
 	, _timeStamp( 0 )
+	, _useScreenResolution(true)
+	, _width(SCREEN_WIDTH)
+	, _height(SCREEN_HEIGHT)
 	, _cursorX( 0 )
 	, _cursorY( 0 )
 	, _cursorEnabled( true )
 	, _isActive( false )
 	, _isPausingGame( false )
 	, _inhibitsControl( false )
+	, _soundWorld( nullptr )
 	, _refs( 1 )
 {
 }
@@ -71,17 +102,23 @@ RmlUserInterfaceLocal::~RmlUserInterfaceLocal()
 {
 }
 
-bool RmlUserInterfaceLocal::Init( const char* name )
+bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
 {
 	_context = Rml::GetContext( name );
+	_soundWorld = soundWorld;
+	_isActive = true;
+
 	if( !_context )
 	{
-		_context = Rml::CreateContext( name, Rml::Vector2i( renderSystem->GetWidth(), renderSystem->GetHeight() ) );
+		const auto dim = GetScreenSize();
+		_context = Rml::CreateContext( name, Rml::Vector2i( dim.x, dim.y ) );
 	}
+
 	if( _context )
 	{
 		_context->EnableMouseCursor( true );
 	}
+
 	return _context != nullptr;
 }
 
@@ -214,27 +251,122 @@ void RmlUserInterfaceLocal::Redraw( int time, bool hud )
 		//return;
 	}
 
-	_context->SetDimensions( Rml::Vector2i( renderSystem->GetWidth(), renderSystem->GetHeight() ) );
+	const auto dim = GetScreenSize();
+	_context->SetDimensions( Rml::Vector2i( dim.x, dim.y ) );
 	_context->Update();
 	( ( idRmlRender* )Rml::GetRenderInterface() )->PreRender();
 	_context->Render();
 	DrawCursor();
 }
 
-RmlUi* RmlUserInterfaceLocal::AddUi( RmlUi* ui )
+Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument(const char* filePath)
 {
-	_rmlUi.Append( ui );
-	return ui;
+	if (!_context)
+	{
+		return nullptr;
+	}
+
+	Rml::ElementDocument* foundDoc(GetDocument(filePath));
+	if (foundDoc)
+	{
+		return foundDoc;
+	}
+
+	ID_TIME_T timeStamp(0);
+	fileSystem->ReadFile(filePath, nullptr, &timeStamp);
+
+	Rml::ElementDocument* document = nullptr;
+	if (timeStamp != FILE_NOT_FOUND_TIMESTAMP)
+	{
+		eventListenerInstancer.SetUi(this);
+		document = _context->LoadDocument(filePath);
+
+		if (document)
+		{
+			_documents.Append({ document, timeStamp, filePath });
+		}
+	}
+
+	return document;
+}
+
+bool RmlUserInterfaceLocal::IsDocumentOpen(const char* name)
+{
+	for (int i = 0; i < _documents.Num(); i++)
+	{
+		if (_context == _documents[i]._doc->GetContext() && !idStr::Icmp(_documents[i]._name, name))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void RmlUserInterfaceLocal::CloseDocument( const char* name)
+{
+	idList<int> toRemove;
+	for (int i = 0; i < _documents.Num(); i++)
+	{
+		if (_context == _documents[i]._doc->GetContext() && !idStr::Icmp(_documents[i]._name, name))
+		{
+			_documents[i]._doc->Close();
+			toRemove.Append(i);
+		}
+	}
+
+	while (toRemove.Num() > 0)
+	{
+		_documents.RemoveIndex(toRemove[0]);
+		toRemove.RemoveIndex(0);
+	}
 }
 
 void RmlUserInterfaceLocal::Reload()
 {
+	for (int i = 0; i < _documents.Num(); i++)
+	{
+		ID_TIME_T timeStamp(0);
+		fileSystem->ReadFile(_documents[i]._name.c_str(), nullptr, &timeStamp);
+		if (timeStamp != _documents[i]._timeStamp)
+		{
+			// file needs a reload.
+			common->Printf("Reloading %s\n", _documents[i]._name.c_str());
+			bool show = _documents[i]._doc->IsVisible();
+			Rml::Context* context = _documents[i]._doc->GetContext();
+			context->UnloadDocument(_documents[i]._doc);
+			eventListenerInstancer.SetUi(this);
+			_documents[i]._doc = context->LoadDocument(_documents[i]._name.c_str());
+			if (show && _documents[i]._doc)
+			{
+				_documents[i]._doc->Show();
+			}
+		}
+	}
 }
 
 const char* RmlUserInterfaceLocal::Activate( bool activate, int time )
 {
 	_isActive = activate;
 	return nullptr;
+}
+
+Rml::ElementDocument* RmlUserInterfaceLocal::SetNextScreen( const char* _nextScreen )
+{
+	auto doc = LoadDocument( _nextScreen );
+	if( doc )
+	{
+		doc->Show();
+	}
+	return doc;
+}
+
+void RmlUserInterfaceLocal::HideAllDocuments()
+{
+	for (int i = 0; i < _documents.Num(); i++)
+	{
+		_documents[i]._doc->Hide();
+	}
 }
 
 size_t RmlUserInterfaceLocal::Size()
@@ -257,6 +389,69 @@ void RmlUserInterfaceLocal::DrawCursor()
 	float x = _cursorX * scaleToVirtual.x;
 	float y = _cursorY * scaleToVirtual.y;
 	rmlDc->DrawCursor( &x, &y, 36.0f * scaleToVirtual.x, bounds );
+}
+
+idVec2 RmlUserInterfaceLocal::GetScreenSize() const
+{
+	if (_useScreenResolution)
+	{
+		return idVec2(renderSystem->GetWidth(), renderSystem->GetHeight());
+	}
+
+	return idVec2(_width, _height);
+}
+
+void RmlUserInterfaceLocal::SetSize(int width, int height)
+{
+	_width = width;
+	_height = height;
+}
+
+void RmlUserInterfaceLocal::SetUseScreenResolution(bool useScreen)
+{
+	_useScreenResolution = useScreen;
+}
+
+int RmlUserInterfaceLocal::PlaySound( const char* sound, int channel, bool blocking )
+{
+	if( !IsActive() )
+	{
+		return -1;
+	}
+	if( _soundWorld )
+	{
+		return _soundWorld->PlayShaderDirectly( sound, channel );
+	}
+	else
+	{
+		idLib::Warning( "No playing sound world on soundSystem in swf play sound!" );
+		return -1;
+	}
+}
+
+void RmlUserInterfaceLocal::StopSound( int channel )
+{
+	if( _soundWorld )
+	{
+		_soundWorld->PlayShaderDirectly( NULL, channel );
+	}
+	else
+	{
+		idLib::Warning( "No playing sound world on soundSystem in rml play sound!" );
+	}
+}
+
+Rml::ElementDocument* RmlUserInterfaceLocal::GetDocument(const char* name)
+{
+	for (int i = 0; i < _documents.Num(); i++)
+	{
+		if (_context == _documents[i]._doc->GetContext() && !idStr::Icmp(_documents[i]._name, name))
+		{
+			return _documents[i]._doc;
+		}
+	}
+
+	return nullptr;
 }
 
 /*
@@ -301,6 +496,8 @@ void RmlUserInterfaceManagerLocal::Init()
 		Rml::LoadFontFace( Rml::String( "newfonts/" ) + face.filename, face.fallbackFace );
 	}
 
+	Rml::Factory::RegisterEventListenerInstancer(&eventListenerInstancer);
+
 	_dc.Init();
 
 	rmlDc = &_dc;
@@ -337,81 +534,19 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool aut
 
 	if( autoload )
 	{
-		ui->Init( name );
+		ui->Init( name, common->MenuSW() );
 	}
 
 	return ui;
 }
 
-Rml::ElementDocument* RmlUserInterfaceManagerLocal::LoadDocument( Rml::Context* context, const char* name )
+RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const Rml::Context* context )
 {
-	if( !context )
+	for( int i = 0; i < _guis.Num(); i++ )
 	{
-		return nullptr;
-	}
-
-	Rml::ElementDocument* foundDoc( GetDocument( context, name ) );
-	if( foundDoc )
-	{
-		return foundDoc;
-	}
-
-	ID_TIME_T timeStamp( 0 );
-	fileSystem->ReadFile( name, nullptr, &timeStamp );
-
-	Rml::ElementDocument* document = nullptr;
-	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
-	{
-		document = context->LoadDocument( name );
-
-		if( document )
+		if( _guis[i]->Context() == context )
 		{
-			_documents.Append( {document, timeStamp, name} );
-		}
-	}
-
-	return document;
-}
-
-void RmlUserInterfaceManagerLocal::CloseDocument( Rml::Context* context, const char* name )
-{
-	idList<int> toRemove;
-	for( int i = 0; i < _documents.Num(); i++ )
-	{
-		if( context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
-		{
-			_documents[i]._doc->Close();
-			toRemove.Append( i );
-		}
-	}
-
-	while( toRemove.Num() > 0 )
-	{
-		_documents.RemoveIndex( toRemove[0] );
-		toRemove.RemoveIndex( 0 );
-	}
-}
-
-bool RmlUserInterfaceManagerLocal::IsDocumentOpen( Rml::Context* context, const char* name )
-{
-	for( int i = 0; i < _documents.Num(); i++ )
-	{
-		if( context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-Rml::ElementDocument* RmlUserInterfaceManagerLocal::GetDocument( Rml::Context* context, const char* name )
-{
-	for( int i = 0; i < _documents.Num(); i++ )
-	{
-		if( context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
-		{
-			return _documents[i]._doc;
+			return _guis[i];
 		}
 	}
 
@@ -430,23 +565,9 @@ void RmlUserInterfaceManagerLocal::EndLevelLoad( const char* mapName )
 
 void RmlUserInterfaceManagerLocal::Reload( bool all )
 {
-	for( int i = 0; i < _documents.Num(); i++ )
+	for( int i = 0; i < _guis.Num(); i++ )
 	{
-		ID_TIME_T timeStamp( 0 );
-		fileSystem->ReadFile( _documents[i]._name.c_str(), nullptr, &timeStamp );
-		if( timeStamp != _documents[i]._timeStamp )
-		{
-			// file needs a reload.
-			common->Printf( "Reloading %s\n", _documents[i]._name.c_str() );
-			bool show = _documents[i]._doc->IsVisible();
-			Rml::Context* context = _documents[i]._doc->GetContext();
-			context->UnloadDocument( _documents[i]._doc );
-			_documents[i]._doc = context->LoadDocument( _documents[i]._name.c_str() );
-			if( show && _documents[i]._doc )
-			{
-				_documents[i]._doc->Show();
-			}
-		}
+		_guis[i]->Reload();
 	}
 }
 

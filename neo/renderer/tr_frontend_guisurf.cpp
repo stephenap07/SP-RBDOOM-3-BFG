@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "RenderCommon.h"
 #include "Model_local.h"
 
+#include "RmlUi/Core/Context.h"
+
 /*
 ==========================================================================================
 
@@ -193,6 +195,76 @@ static void R_RenderGuiSurf( idUserInterface* gui, const drawSurf_t* drawSurf )
 }
 
 /*
+=================
+R_RenderRmlSurf
+
+Create a texture space on the given surface and
+call the GUI generator to create quads for it.
+=================
+*/
+static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
+{
+	SCOPED_PROFILE_EVENT( "R_RenderRmlSurf" );
+
+	// for testing the performance hit
+	if( r_skipGuiShaders.GetInteger() == 1 )
+	{
+		return;
+	}
+
+	// don't allow an infinite recursion loop
+	if( tr.guiRecursionLevel == 4 )
+	{
+		return;
+	}
+
+	tr.pc.c_guiSurfs++;
+
+	// create the new matrix to draw on this surface
+	idVec3 origin, axis[3];
+	R_SurfaceToTextureAxis( drawSurf->frontEndGeo, origin, axis );
+
+	float guiModelMatrix[16];
+	float modelMatrix[16];
+
+	const float screenWidth = gui->Context()->GetDimensions().x;
+	const float screenHeight = gui->Context()->GetDimensions().y;
+
+	guiModelMatrix[0 * 4 + 0] = axis[0][0] * ( 1.0f / screenWidth );
+	guiModelMatrix[1 * 4 + 0] = axis[1][0] * ( 1.0f / screenHeight );
+	guiModelMatrix[2 * 4 + 0] = axis[2][0];
+	guiModelMatrix[3 * 4 + 0] = origin[0];
+
+	guiModelMatrix[0 * 4 + 1] = axis[0][1] * ( 1.0f / screenWidth );
+	guiModelMatrix[1 * 4 + 1] = axis[1][1] * ( 1.0f / screenHeight );
+	guiModelMatrix[2 * 4 + 1] = axis[2][1];
+	guiModelMatrix[3 * 4 + 1] = origin[1];
+
+	guiModelMatrix[0 * 4 + 2] = axis[0][2] * ( 1.0f / screenWidth );
+	guiModelMatrix[1 * 4 + 2] = axis[1][2] * ( 1.0f / screenHeight );
+
+	guiModelMatrix[2 * 4 + 2] = axis[2][2];
+	guiModelMatrix[3 * 4 + 2] = origin[2];
+
+	guiModelMatrix[0 * 4 + 3] = 0.0f;
+	guiModelMatrix[1 * 4 + 3] = 0.0f;
+	guiModelMatrix[2 * 4 + 3] = 0.0f;
+	guiModelMatrix[3 * 4 + 3] = 1.0f;
+
+	R_MatrixMultiply( guiModelMatrix, drawSurf->space->modelMatrix, modelMatrix );
+
+	tr.guiRecursionLevel++;
+
+	// call the gui, which will call the 2D drawing functions
+	tr.guiModel->Clear();
+	gui->Redraw( tr.viewDef->renderView.time[0] );
+	tr.guiModel->EmitToCurrentView( modelMatrix, drawSurf->space->weaponDepthHack );
+	tr.guiModel->Clear();
+
+	tr.guiRecursionLevel--;
+}
+
+/*
 ================
 R_AddInGameGuis
 ================
@@ -227,6 +299,33 @@ void R_AddInGameGuis( const drawSurf_t* const drawSurfs[], const int numDrawSurf
 			// did we ever use this to forward an entity color to a gui that didn't set color?
 			//	memcpy( tr.guiShaderParms, shaderParms, sizeof( tr.guiShaderParms ) );
 			R_RenderGuiSurf( gui, drawSurf );
+		}
+	}
+
+	// check for rml surfaces
+	for( int i = 0; i < numDrawSurfs; i++ )
+	{
+		const drawSurf_t* drawSurf = drawSurfs[i];
+		RmlUserInterface* gui = drawSurf->material->RmlGui();
+
+		int guiNum = drawSurf->material->GetRmlEntityGui() - 1;
+		if( guiNum >= 0 && guiNum < MAX_RENDERENTITY_GUI )
+		{
+			if( drawSurf->space->entityDef != NULL )
+			{
+				gui = drawSurf->space->entityDef->parms.rml[guiNum];
+			}
+		}
+
+		if( gui == NULL )
+		{
+			continue;
+		}
+
+		idBounds ndcBounds;
+		if( !R_PreciseCullSurface( drawSurf, ndcBounds ) )
+		{
+			R_RenderRmlSurf( gui, drawSurf );
 		}
 	}
 }

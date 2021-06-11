@@ -50,6 +50,7 @@ If you have questions concerning this license or the applicable additional terms
 class idImage;
 class idCinematic;
 class idUserInterface;
+class RmlUserInterface;
 
 // moved from image.h for default parm
 typedef enum
@@ -179,7 +180,6 @@ typedef struct
 	texgen_t			texgen;
 	bool				hasMatrix;
 	int					matrix[2][3];	// we only allow a subset of the full projection matrix
-	bool                isCubeMap = false;
 
 	// dynamic image variables
 	dynamicidImage_t	dynamic;
@@ -537,7 +537,7 @@ public:
 	// as noShadow
 	bool				IsDrawn() const
 	{
-		return ( numStages > 0 || entityGui != 0 || gui != NULL );
+		return ( numStages > 0 || entityGui != 0 || rmlEntityGui != 0 || gui != NULL || rmlGui != NULL );
 	}
 
 	// returns true if the material will draw any non light interaction stages
@@ -549,7 +549,7 @@ public:
 	// returns true if material has a gui
 	bool				HasGui() const
 	{
-		return ( entityGui != 0 || gui != NULL );
+		return ( entityGui != 0 || gui != NULL || rmlGui != NULL || rmlEntityGui != 0 );
 	}
 
 	// returns true if the material will generate another view, either as
@@ -654,13 +654,19 @@ public:
 		return gui;
 	}
 
+	// returns the rml interface
+	RmlUserInterface*       RmlGui() const
+	{
+		return rmlGui;
+	}
+
 	// a discrete surface will never be merged with other surfaces by dmap, which is
 	// necessary to prevent mutliple gui surfaces, mirrors, autosprites, and some other
 	// special effects from being combined into a single surface
 	// guis, merging sprites or other effects, mirrors and remote views are always discrete
 	bool				IsDiscrete() const
 	{
-		return ( entityGui || gui || deform != DFRM_NONE || sort == SS_SUBVIEW ||
+		return ( entityGui || gui || rmlGui || rmlEntityGui || deform != DFRM_NONE || sort == SS_SUBVIEW ||
 				 ( surfaceFlags & SURF_DISCRETE ) != 0 );
 	}
 
@@ -835,6 +841,11 @@ public:
 		return entityGui;
 	}
 
+	int					GetRmlEntityGui() const
+	{
+		return rmlEntityGui;
+	}
+
 	decalInfo_t			GetDecalInfo() const
 	{
 		return decalInfo;
@@ -989,8 +1000,10 @@ private:
 	idImage* 			fastPathSpecularImage;
 
 	int					entityGui;			// draw a gui with the idUserInterface from the renderEntity_t
+	int					rmlEntityGui;
 	// non zero will draw gui, gui2, or gui3 from renderEnitty_t
 	mutable idUserInterface*	gui;			// non-custom guis are shared by all users of a material
+	mutable RmlUserInterface*   rmlGui;
 
 	bool				noFog;				// surface does not create fog interactions
 

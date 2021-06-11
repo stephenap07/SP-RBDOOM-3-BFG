@@ -34,6 +34,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 
+#include "RmlUi/Core/ElementDocument.h"
+#include "../../../../RmlUi/Include/RmlUi/Core/Core.h"
+
 /*
 
 Any errors during parsing just set MF_DEFAULTED and return, rather than throwing
@@ -106,6 +109,7 @@ void idMaterial::CommonInit()
 	lightFalloffImage = NULL;
 	shouldCreateBackSides = false;
 	entityGui = 0;
+	rmlEntityGui = 0;
 	fogLight = false;
 	blendLight = false;
 	ambientLight = false;
@@ -115,6 +119,7 @@ void idMaterial::CommonInit()
 	unsmoothedTangents = false;
 	mikktspace = false; // RB
 	gui = NULL;
+	rmlGui = nullptr;
 	memset( deformRegisters, 0, sizeof( deformRegisters ) );
 	editorAlpha = 1.0;
 	spectrum = 0;
@@ -2243,12 +2248,6 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 		common->Warning( "material '%s' had stage with no image", GetName() );
 		ts->image = globalImages->defaultImage;
 	}
-
-	if( ts->image &&
-			ts->image->GetOpts().textureType == TT_CUBIC )
-	{
-		ts->isCubeMap = true;
-	}
 }
 
 /*
@@ -2743,6 +2742,46 @@ void idMaterial::ParseMaterial( idLexer& src )
 			else
 			{
 				gui = uiManager->FindGui( token.c_str(), true );
+			}
+			continue;
+		}
+		else if( !token.Icmp( "rmlSurf" ) )
+		{
+			src.ReadTokenOnLine( &token );
+			if( !token.Icmp( "entity" ) )
+			{
+				rmlEntityGui = 1;
+			}
+			else if( !token.Icmp( "entity2" ) )
+			{
+				rmlEntityGui = 2;
+			}
+			else if( !token.Icmp( "entity3" ) )
+			{
+				rmlEntityGui = 3;
+			}
+			else
+			{
+				rmlGui = rmlManager->Find( token.c_str(), true );
+				rmlGui->SetNextScreen( token.c_str() );
+				//Rml::ElementDocument* document = rmlManager->GetDocument(rmlGui->Context(), token.c_str());
+				//if (!document)
+				{
+					Rml::StringList textureNames = Rml::GetTextureSourceList();
+
+					for( const auto& texturePath : textureNames )
+					{
+						const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
+						if( material )
+						{
+							material->ReloadImages( false );
+						}
+						else
+						{
+							common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
+						}
+					}
+				}
 			}
 			continue;
 		}

@@ -138,6 +138,7 @@ typedef struct renderEntity_s
 
 	// networking: see WriteGUIToSnapshot / ReadGUIFromSnapshot
 	class idUserInterface* gui[ MAX_RENDERENTITY_GUI ];
+	class RmlUserInterface* rml[ MAX_RENDERENTITY_GUI ];
 
 	struct renderView_s*		remoteRenderView;		// any remote camera surfaces will use this
 
@@ -287,6 +288,7 @@ typedef struct
 {
 	float				x, y;			// 0.0 to 1.0 range if trace hit a gui, otherwise -1
 	int					guiId;			// id of gui ( 0, 1, or 2 ) that the trace happened against
+	int					rmlId;			// id of rml gui that the trace happened against
 } guiPoint_t;
 
 

@@ -2440,7 +2440,7 @@ bool FindEntityGUIs( idEntity* ent, const modelSurface_t** surfaces,  int maxSur
 		{
 			continue;
 		}
-		if( shader->GetEntityGui() > 0 )
+		if( shader->GetEntityGui() > 0 || shader->GetRmlEntityGui() > 0 )
 		{
 			surfaces[ guiSurfaces++ ] = surf;
 		}

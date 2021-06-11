@@ -170,8 +170,6 @@ void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
 		return;
 	}
 
-	//auto transposedMat = transform->Transpose();
-
 	auto rmlVec1 = transform->GetColumn( 0 );
 	auto rmlVec2 = transform->GetColumn( 1 );
 	auto rmlVec3 = transform->GetColumn( 2 );
@@ -184,8 +182,6 @@ void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
 	idVec3 vecZ( rmlVec3.x, rmlVec3.y, rmlVec3.z );
 
 	mat = idMat3( vecX, vecY, vecZ );
-
-	//mat.OrthoNormalizeSelf();
 }
 
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
@@ -265,7 +261,6 @@ void idRmlRender::RenderClipMask()
 	else
 	{
 		// Continually decrement the scissor value as the scissor rect heirarchy gets deeper. Unknown what happens when UI window start overlapping. Could be bad.
-		// Note that I don't think the scissor rects get applied when the UI windows are projected in a 3d view that rml css provides.
 		glState = GLS_COLORMASK | GLS_ALPHAMASK | GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_KEEP | GLS_STENCIL_OP_PASS_DECR;
 	}
 
@@ -288,7 +283,7 @@ void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
 
 bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source )
 {
-	const idMaterial* material = declManager->FindMaterial( source.c_str(), true );
+	const idMaterial* material = declManager->FindMaterial( source.c_str() );
 	material->SetSort( SS_GUI );
 
 	if( !material )
@@ -297,15 +292,31 @@ bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i
 	}
 
 	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
-	texture_dimensions.x = material->GetImageWidth();
-	texture_dimensions.y = material->GetImageHeight();
+
+	// If this material isn't an actual image on disk, then image dimensions from an on-disk image doesn't make sense.
+	if( material->GetStage( 0 )->texture.image )
+	{
+		texture_dimensions.x = material->GetImageWidth();
+		texture_dimensions.y = material->GetImageHeight();
+	}
+	else
+	{
+		texture_dimensions.x = 800;
+		texture_dimensions.y = 600;
+	}
 
 	return true;
 }
 
+static void GenerateRmlImage( idImage* image )
+{
+	// nothing
+	return;
+}
+
 bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions )
 {
-	idImage* image = globalImages->AllocImage( va( "_rmlImage%d", _texGen ) );
+	idImage* image = globalImages->ImageFromFunction( va( "_rmlImage%d", _texGen ), GenerateRmlImage );
 
 	const idMaterial* material = declManager->FindMaterial( va( "_rmlImage%d", _texGen ) );
 	material->SetSort( SS_GUI );

@@ -56,42 +56,41 @@ double idRmlSystem::GetElapsedTime()
 	return static_cast<double>( Sys_Milliseconds() ) / 1000.0;
 }
 
-
 bool idRmlSystem::LogMessage( Rml::Log::Type type, const Rml::String& message )
 {
 	if( type == Rml::Log::LT_ERROR )
 	{
-		common->Warning( "[RML] %s\n", message.c_str() );
+		common->Warning( "[RML] %s", message.c_str() );
 		return true;
 	}
 
 	if( type == Rml::Log::LT_INFO )
 	{
-		common->Printf( "[RML|INFO] %s\n", message.c_str() );
+		common->Printf( "[RML|INFO] %s", message.c_str() );
 		return true;
 	}
 
 	if( type == Rml::Log::LT_ASSERT )
 	{
-		common->Printf( "[RML|INFO] %s\n", message.c_str() );
+		common->Printf( "[RML|INFO] %s", message.c_str() );
 		return true;
 	}
 
 	if( type == Rml::Log::LT_ALWAYS )
 	{
-		common->Printf( "[RML|INFO] %s\n", message.c_str() );
+		common->Printf( "[RML|INFO] %s", message.c_str() );
 		return true;
 	}
 
 	if( type == Rml::Log::LT_DEBUG )
 	{
-		common->DPrintf( "[RML|INFO] %s\n", message.c_str() );
+		common->DPrintf( "[RML|INFO] %s", message.c_str() );
 		return true;
 	}
 
 	if( type == Rml::Log::LT_WARNING )
 	{
-		common->Warning( "[RML|INFO] %s\n", message.c_str() );
+		common->Warning( "[RML|INFO] %s", message.c_str() );
 		return true;
 	}
 
