@@ -32,10 +32,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "GlobalRmlEventListener.h"
 
-GlobalRmlEventListener::GlobalRmlEventListener( RmlUserInterface* _ui, const Rml::String& value, Rml::Element* element)
-	: ui(_ui)
-	, value(value)
-	, element(element)
+GlobalRmlEventListener::GlobalRmlEventListener( RmlUserInterface* _ui, const Rml::String& value, Rml::Element* element )
+	: ui( _ui )
+	, value( value )
+	, element( element )
 {
 }
 
@@ -73,7 +73,7 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			src.ReadToken( &token );
 			ui->SetNextScreen( token.c_str() );
 			event.GetTargetElement()->GetOwnerDocument()->Hide();
-			ui->CloseDocument(event.GetTargetElement()->GetOwnerDocument()->GetSourceURL().c_str());
+			ui->CloseDocument( event.GetTargetElement()->GetOwnerDocument()->GetSourceURL().c_str() );
 		}
 
 		if( !token.Icmp( "load" ) )
@@ -145,38 +145,38 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			}
 		}
 
-		if( !token.Icmp("set") )
+		if( !token.Icmp( "set" ) )
 		{
 			// Set internal variables
-			src.ReadToken(&token);
-			if (!token.Icmp("windowWidth"))
+			src.ReadToken( &token );
+			if( !token.Icmp( "windowWidth" ) )
 			{
-				src.ReadToken(&token);
-				if (!token.Icmp("="))
+				src.ReadToken( &token );
+				if( !token.Icmp( "=" ) )
 				{
 					// value
-					ui->SetUseScreenResolution(false); // use custom resolution
-					src.ReadToken(&token);
-					if (token.type == TT_NUMBER)
+					ui->SetUseScreenResolution( false ); // use custom resolution
+					src.ReadToken( &token );
+					if( token.type == TT_NUMBER )
 					{
 						width = token.GetIntValue();
-						ui->SetSize(width, height);
+						ui->SetSize( width, height );
 					}
 				}
 			}
 
-			if (!token.Icmp("windowHeight"))
+			if( !token.Icmp( "windowHeight" ) )
 			{
-				src.ReadToken(&token);
-				if (!token.Icmp("="))
+				src.ReadToken( &token );
+				if( !token.Icmp( "=" ) )
 				{
 					// value
-					ui->SetUseScreenResolution(false); // use custom resolution
-					src.ReadToken(&token);
-					if (token.type == TT_NUMBER)
+					ui->SetUseScreenResolution( false ); // use custom resolution
+					src.ReadToken( &token );
+					if( token.type == TT_NUMBER )
 					{
 						height = token.GetIntValue();
-						ui->SetSize(width, height);
+						ui->SetSize( width, height );
 					}
 				}
 			}

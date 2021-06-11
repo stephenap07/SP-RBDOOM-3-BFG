@@ -57,7 +57,7 @@ public:
 		return _ui;
 	}
 
-	void					SetNextScreen(const char* name);
+	void					SetNextScreen( const char* name );
 
 private:
 

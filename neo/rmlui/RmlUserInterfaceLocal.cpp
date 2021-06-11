@@ -50,16 +50,16 @@ class GlobalRmlEventListenerInstancer : public Rml::EventListenerInstancer
 {
 public:
 	GlobalRmlEventListenerInstancer()
-	: ui(nullptr)
+		: ui( nullptr )
 	{
 	}
 
-	void SetUi(RmlUserInterface* _ui)
+	void SetUi( RmlUserInterface* _ui )
 	{
 		ui = _ui;
 	}
 
-	Rml::EventListener* InstanceEventListener(const Rml::String& value, Rml::Element* element) override
+	Rml::EventListener* InstanceEventListener( const Rml::String& value, Rml::Element* element ) override
 	{
 		return new GlobalRmlEventListener( ui, value, element );
 	}
@@ -84,9 +84,9 @@ RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 	: _context( nullptr )
 	, _name()
 	, _timeStamp( 0 )
-	, _useScreenResolution(true)
-	, _width(SCREEN_WIDTH)
-	, _height(SCREEN_HEIGHT)
+	, _useScreenResolution( true )
+	, _width( SCREEN_WIDTH )
+	, _height( SCREEN_HEIGHT )
 	, _cursorX( 0 )
 	, _cursorY( 0 )
 	, _cursorEnabled( true )
@@ -128,141 +128,141 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 
 	if( event->IsMouseEvent() )
 	{
-		HandleMouseEvent(event, keyModState);
+		HandleMouseEvent( event, keyModState );
 	}
 	else if( event->IsMouseAbsoluteEvent() )
 	{
-		HandleAbsoluteMouseEvent(event, keyModState);
+		HandleAbsoluteMouseEvent( event, keyModState );
 	}
 
 	if( event->evValue >= K_MOUSE1 && event->evValue <= K_MOUSE16 )
 	{
-		HandleMouseButtonEvent(event, keyModState);
+		HandleMouseButtonEvent( event, keyModState );
 	}
 
 	if( event->evValue == K_MWHEELDOWN || event->evValue == K_MWHEELUP )
 	{
-		HandleMouseWheelEvent(event, keyModState);
+		HandleMouseWheelEvent( event, keyModState );
 	}
 
 	if( event->IsCharEvent() )
 	{
-		HandleCharEvent(event, keyModState);
+		HandleCharEvent( event, keyModState );
 	}
 
 	return nullptr;
 }
 
-void RmlUserInterfaceLocal::HandleCharEvent(const sysEvent_t* event, int keyModState)
+void RmlUserInterfaceLocal::HandleCharEvent( const sysEvent_t* event, int keyModState )
 {
-	Rml::Input::KeyIdentifier key = idRmlSystem::TranslateKey(event->evValue);
+	Rml::Input::KeyIdentifier key = idRmlSystem::TranslateKey( event->evValue );
 
-	_context->ProcessKeyDown(key, keyModState);
+	_context->ProcessKeyDown( key, keyModState );
 }
 
-void RmlUserInterfaceLocal::HandleMouseWheelEvent(const sysEvent_t* event, int keyModState)
+void RmlUserInterfaceLocal::HandleMouseWheelEvent( const sysEvent_t* event, int keyModState )
 {
-	float mouseWheel = (event->evValue == K_MWHEELDOWN) ? 1.0f : -1.0f;
-	_context->ProcessMouseWheel(mouseWheel, keyModState);
+	float mouseWheel = ( event->evValue == K_MWHEELDOWN ) ? 1.0f : -1.0f;
+	_context->ProcessMouseWheel( mouseWheel, keyModState );
 }
 
-void RmlUserInterfaceLocal::HandleMouseButtonEvent(const sysEvent_t* event, int keyModState)
+void RmlUserInterfaceLocal::HandleMouseButtonEvent( const sysEvent_t* event, int keyModState )
 {
 	int mouseButton = 0;
 
-	switch (event->evValue)
+	switch( event->evValue )
 	{
-	case K_MOUSE1:
-		mouseButton = 0;
-		break;
-	case K_MOUSE2:
-		mouseButton = 1;
-		break;
-	case K_MOUSE3:
-		mouseButton = 2;
-		break;
-	case K_MOUSE4:
-		mouseButton = 3;
-		break;
-	default:
-		mouseButton = 0;
+		case K_MOUSE1:
+			mouseButton = 0;
+			break;
+		case K_MOUSE2:
+			mouseButton = 1;
+			break;
+		case K_MOUSE3:
+			mouseButton = 2;
+			break;
+		case K_MOUSE4:
+			mouseButton = 3;
+			break;
+		default:
+			mouseButton = 0;
 	}
 
-	if (event->evValue2)
+	if( event->evValue2 )
 	{
-		_context->ProcessMouseButtonDown(mouseButton, keyModState);
+		_context->ProcessMouseButtonDown( mouseButton, keyModState );
 	}
 	else
 	{
-		_context->ProcessMouseButtonUp(mouseButton, keyModState);
+		_context->ProcessMouseButtonUp( mouseButton, keyModState );
 	}
 }
 
-void RmlUserInterfaceLocal::HandleAbsoluteMouseEvent(const sysEvent_t* event, int keyModState)
+void RmlUserInterfaceLocal::HandleAbsoluteMouseEvent( const sysEvent_t* event, int keyModState )
 {
 	_cursorX = event->evValue;
 	_cursorY = event->evValue2;
 
 	const float pixelAspect = renderSystem->GetPixelAspect();
-	const float sysWidth = renderSystem->GetWidth() * (pixelAspect > 1.0f ? pixelAspect : 1.0f);
-	const float sysHeight = renderSystem->GetHeight() / (pixelAspect < 1.0f ? pixelAspect : 1.0f);
-	float scale = 1.0f * sysHeight / (float)_context->GetDimensions().y;
+	const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
+	const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
+	float scale = 1.0f * sysHeight / ( float )_context->GetDimensions().y;
 	float invScale = 1.0f / scale;
-	float tx = 0.5f * (sysWidth - (_context->GetDimensions().x * scale));
-	float ty = 0.5f * (sysHeight - (_context->GetDimensions().y * scale));
+	float tx = 0.5f * ( sysWidth - ( _context->GetDimensions().x * scale ) );
+	float ty = 0.5f * ( sysHeight - ( _context->GetDimensions().y * scale ) );
 
-	_cursorX = idMath::Ftoi((static_cast<float>(event->evValue) - tx) * invScale);
-	_cursorY = idMath::Ftoi((static_cast<float>(event->evValue2) - ty) * invScale);
+	_cursorX = idMath::Ftoi( ( static_cast<float>( event->evValue ) - tx ) * invScale );
+	_cursorY = idMath::Ftoi( ( static_cast<float>( event->evValue2 ) - ty ) * invScale );
 
-	if (_cursorX < 0)
+	if( _cursorX < 0 )
 	{
 		_cursorX = 0;
 	}
 
-	if (_cursorY < 0)
+	if( _cursorY < 0 )
 	{
 		_cursorY = 0;
 	}
 
-	if ((_cursorX + 1) > _context->GetDimensions().x)
+	if( ( _cursorX + 1 ) > _context->GetDimensions().x )
 	{
 		_cursorX = _context->GetDimensions().x - 1;
 	}
 
-	if ((_cursorY + 1) > _context->GetDimensions().y)
+	if( ( _cursorY + 1 ) > _context->GetDimensions().y )
 	{
 		_cursorY = _context->GetDimensions().y - 1;
 	}
 
-	_context->ProcessMouseMove(_cursorX, _cursorY, keyModState);
+	_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
 }
 
-void RmlUserInterfaceLocal::HandleMouseEvent(const sysEvent_t* event, int keyModState)
+void RmlUserInterfaceLocal::HandleMouseEvent( const sysEvent_t* event, int keyModState )
 {
 	_cursorX += event->evValue;
 	_cursorY += event->evValue2;
 
-	if (_cursorX < 0)
+	if( _cursorX < 0 )
 	{
 		_cursorX = 0;
 	}
 
-	if (_cursorY < 0)
+	if( _cursorY < 0 )
 	{
 		_cursorY = 0;
 	}
 
-	if ((_cursorX + 1) > _context->GetDimensions().x)
+	if( ( _cursorX + 1 ) > _context->GetDimensions().x )
 	{
 		_cursorX = _context->GetDimensions().x - 1;
 	}
 
-	if ((_cursorY + 1) > _context->GetDimensions().y)
+	if( ( _cursorY + 1 ) > _context->GetDimensions().y )
 	{
 		_cursorY = _context->GetDimensions().y - 1;
 	}
 
-	_context->ProcessMouseMove(_cursorX, _cursorY, keyModState);
+	_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
 }
 
 void RmlUserInterfaceLocal::HandleNamedEvent( const char* eventName )
@@ -284,42 +284,42 @@ void RmlUserInterfaceLocal::Redraw( int time, bool hud )
 	DrawCursor();
 }
 
-Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument(const char* filePath)
+Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath )
 {
-	if (!_context)
+	if( !_context )
 	{
 		return nullptr;
 	}
 
-	Rml::ElementDocument* foundDoc(GetDocument(filePath));
-	if (foundDoc)
+	Rml::ElementDocument* foundDoc( GetDocument( filePath ) );
+	if( foundDoc )
 	{
 		return foundDoc;
 	}
 
-	ID_TIME_T timeStamp(0);
-	fileSystem->ReadFile(filePath, nullptr, &timeStamp);
+	ID_TIME_T timeStamp( 0 );
+	fileSystem->ReadFile( filePath, nullptr, &timeStamp );
 
 	Rml::ElementDocument* document = nullptr;
-	if (timeStamp != FILE_NOT_FOUND_TIMESTAMP)
+	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
 	{
-		eventListenerInstancer.SetUi(this);
-		document = _context->LoadDocument(filePath);
+		eventListenerInstancer.SetUi( this );
+		document = _context->LoadDocument( filePath );
 
-		if (document)
+		if( document )
 		{
-			_documents.Append({ document, timeStamp, filePath });
+			_documents.Append( { document, timeStamp, filePath } );
 		}
 	}
 
 	return document;
 }
 
-bool RmlUserInterfaceLocal::IsDocumentOpen(const char* name)
+bool RmlUserInterfaceLocal::IsDocumentOpen( const char* name )
 {
-	for (int i = 0; i < _documents.Num(); i++)
+	for( int i = 0; i < _documents.Num(); i++ )
 	{
-		if (_context == _documents[i]._doc->GetContext() && !idStr::Icmp(_documents[i]._name, name))
+		if( _context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
 		{
 			return true;
 		}
@@ -328,41 +328,41 @@ bool RmlUserInterfaceLocal::IsDocumentOpen(const char* name)
 	return false;
 }
 
-void RmlUserInterfaceLocal::CloseDocument( const char* name)
+void RmlUserInterfaceLocal::CloseDocument( const char* name )
 {
 	idList<int> toRemove;
-	for (int i = 0; i < _documents.Num(); i++)
+	for( int i = 0; i < _documents.Num(); i++ )
 	{
-		if (_context == _documents[i]._doc->GetContext() && !idStr::Icmp(_documents[i]._name, name))
+		if( _context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
 		{
 			_documents[i]._doc->Close();
-			toRemove.Append(i);
+			toRemove.Append( i );
 		}
 	}
 
-	while (toRemove.Num() > 0)
+	while( toRemove.Num() > 0 )
 	{
-		_documents.RemoveIndex(toRemove[0]);
-		toRemove.RemoveIndex(0);
+		_documents.RemoveIndex( toRemove[0] );
+		toRemove.RemoveIndex( 0 );
 	}
 }
 
 void RmlUserInterfaceLocal::Reload()
 {
-	for (int i = 0; i < _documents.Num(); i++)
+	for( int i = 0; i < _documents.Num(); i++ )
 	{
-		ID_TIME_T timeStamp(0);
-		fileSystem->ReadFile(_documents[i]._name.c_str(), nullptr, &timeStamp);
-		if (timeStamp != _documents[i]._timeStamp)
+		ID_TIME_T timeStamp( 0 );
+		fileSystem->ReadFile( _documents[i]._name.c_str(), nullptr, &timeStamp );
+		if( timeStamp != _documents[i]._timeStamp )
 		{
 			// file needs a reload.
-			common->Printf("Reloading %s\n", _documents[i]._name.c_str());
+			common->Printf( "Reloading %s\n", _documents[i]._name.c_str() );
 			bool show = _documents[i]._doc->IsVisible();
 			Rml::Context* context = _documents[i]._doc->GetContext();
-			context->UnloadDocument(_documents[i]._doc);
-			eventListenerInstancer.SetUi(this);
-			_documents[i]._doc = context->LoadDocument(_documents[i]._name.c_str());
-			if (show && _documents[i]._doc)
+			context->UnloadDocument( _documents[i]._doc );
+			eventListenerInstancer.SetUi( this );
+			_documents[i]._doc = context->LoadDocument( _documents[i]._name.c_str() );
+			if( show && _documents[i]._doc )
 			{
 				_documents[i]._doc->Show();
 			}
@@ -388,7 +388,7 @@ Rml::ElementDocument* RmlUserInterfaceLocal::SetNextScreen( const char* _nextScr
 
 void RmlUserInterfaceLocal::HideAllDocuments()
 {
-	for (int i = 0; i < _documents.Num(); i++)
+	for( int i = 0; i < _documents.Num(); i++ )
 	{
 		_documents[i]._doc->Hide();
 	}
@@ -418,21 +418,21 @@ void RmlUserInterfaceLocal::DrawCursor()
 
 idVec2 RmlUserInterfaceLocal::GetScreenSize() const
 {
-	if (_useScreenResolution)
+	if( _useScreenResolution )
 	{
-		return idVec2(renderSystem->GetWidth(), renderSystem->GetHeight());
+		return idVec2( renderSystem->GetWidth(), renderSystem->GetHeight() );
 	}
 
-	return idVec2(_width, _height);
+	return idVec2( _width, _height );
 }
 
-void RmlUserInterfaceLocal::SetSize(int width, int height)
+void RmlUserInterfaceLocal::SetSize( int width, int height )
 {
 	_width = width;
 	_height = height;
 }
 
-void RmlUserInterfaceLocal::SetUseScreenResolution(bool useScreen)
+void RmlUserInterfaceLocal::SetUseScreenResolution( bool useScreen )
 {
 	_useScreenResolution = useScreen;
 }
@@ -466,11 +466,11 @@ void RmlUserInterfaceLocal::StopSound( int channel )
 	}
 }
 
-Rml::ElementDocument* RmlUserInterfaceLocal::GetDocument(const char* name)
+Rml::ElementDocument* RmlUserInterfaceLocal::GetDocument( const char* name )
 {
-	for (int i = 0; i < _documents.Num(); i++)
+	for( int i = 0; i < _documents.Num(); i++ )
 	{
-		if (_context == _documents[i]._doc->GetContext() && !idStr::Icmp(_documents[i]._name, name))
+		if( _context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
 		{
 			return _documents[i]._doc;
 		}
@@ -521,7 +521,7 @@ void RmlUserInterfaceManagerLocal::Init()
 		Rml::LoadFontFace( Rml::String( "newfonts/" ) + face.filename, face.fallbackFace );
 	}
 
-	Rml::Factory::RegisterEventListenerInstancer(&eventListenerInstancer);
+	Rml::Factory::RegisterEventListenerInstancer( &eventListenerInstancer );
 
 	_dc.Init();
 

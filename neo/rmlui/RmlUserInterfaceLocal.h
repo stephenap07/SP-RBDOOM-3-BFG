@@ -56,15 +56,15 @@ public:
 	// any return and acts accordingly
 	const char*					HandleEvent( const sysEvent_t* event, int time, bool* updateVisuals = NULL ) override;
 
-	void HandleCharEvent(const sysEvent_t* event, int keyModState);
+	void HandleCharEvent( const sysEvent_t* event, int keyModState );
 
-	void HandleMouseWheelEvent(const sysEvent_t* event, int keyModState);
+	void HandleMouseWheelEvent( const sysEvent_t* event, int keyModState );
 
-	void HandleMouseButtonEvent(const sysEvent_t* event, int keyModState);
+	void HandleMouseButtonEvent( const sysEvent_t* event, int keyModState );
 
-	void HandleAbsoluteMouseEvent(const sysEvent_t* event, int keyModState);
+	void HandleAbsoluteMouseEvent( const sysEvent_t* event, int keyModState );
 
-	void HandleMouseEvent(const sysEvent_t* event, int keyModState);
+	void HandleMouseEvent( const sysEvent_t* event, int keyModState );
 
 	// handles a named event
 	void						HandleNamedEvent( const char* eventName ) override;
@@ -72,11 +72,11 @@ public:
 	// repaints the ui
 	void						Redraw( int time, bool hud = false ) override;
 
-	Rml::ElementDocument*		LoadDocument(const char* filePath) override;
+	Rml::ElementDocument*		LoadDocument( const char* filePath ) override;
 
-	bool						IsDocumentOpen(const char* name) override;
+	bool						IsDocumentOpen( const char* name ) override;
 
-	void						CloseDocument(const char* name) override;
+	void						CloseDocument( const char* name ) override;
 
 	void						Reload();
 
@@ -176,9 +176,9 @@ public:
 
 	idVec2						GetScreenSize() const override;
 
-	void						SetSize(int width, int height) override;
+	void						SetSize( int width, int height ) override;
 
-	void						SetUseScreenResolution(bool useScreen) override;
+	void						SetUseScreenResolution( bool useScreen ) override;
 
 	int							PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false ) override;
 
@@ -193,7 +193,7 @@ protected:
 		idStr _name;
 	};
 
-	Rml::ElementDocument* GetDocument(const char* name);
+	Rml::ElementDocument* GetDocument( const char* name );
 
 	Rml::Context*				_context;
 
@@ -237,7 +237,7 @@ public:
 	void						Init() override;
 	void						Shutdown() override;
 	RmlUserInterface*			Find( const char* name, bool autoload ) override;
-	RmlUserInterface*			Find(const Rml::Context* context) override;
+	RmlUserInterface*			Find( const Rml::Context* context ) override;
 
 	void						BeginLevelLoad() override;
 	void						EndLevelLoad( const char* mapName ) override;

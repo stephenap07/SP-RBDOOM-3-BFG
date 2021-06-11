@@ -5806,11 +5806,11 @@ void idGameLocal::Shell_Init( const char* filename, idSoundWorld* sw )
 	}
 	else if( idStr::Icmp( filename, "shell" ) == 0 )
 	{
-		if (rmlShell->Ui())
+		if( rmlShell->Ui() )
 		{
 			rmlShell->Ui()->HideAllDocuments();
 		}
-		rmlShell->Init(sw);
+		rmlShell->Init( sw );
 	}
 
 	//if( shellHandler != NULL )
@@ -6018,7 +6018,7 @@ void idGameLocal::Shell_ResetMenu()
 {
 	if( rmlShell != nullptr )
 	{
-		if (rmlShell->Ui())
+		if( rmlShell->Ui() )
 		{
 			rmlShell->Ui()->HideAllDocuments();
 		}

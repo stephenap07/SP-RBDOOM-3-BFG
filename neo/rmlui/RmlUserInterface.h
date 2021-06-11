@@ -63,9 +63,9 @@ public:
 
 	virtual Rml::ElementDocument*	LoadDocument( const char* filePath ) = 0;
 
-	virtual bool					IsDocumentOpen( const char* name) = 0;
+	virtual bool					IsDocumentOpen( const char* name ) = 0;
 
-	virtual void					CloseDocument( const char* name) = 0;
+	virtual void					CloseDocument( const char* name ) = 0;
 
 	// cursor
 	virtual bool					IsCursorEnabled( ) const = 0;
@@ -99,8 +99,8 @@ public:
 	// Window specific
 
 	virtual idVec2					GetScreenSize() const = 0;
-	virtual void					SetSize(int width, int height) = 0;
-	virtual void					SetUseScreenResolution(bool useScreen) = 0;
+	virtual void					SetSize( int width, int height ) = 0;
+	virtual void					SetUseScreenResolution( bool useScreen ) = 0;
 
 	// Sound
 	virtual int						PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false ) = 0;
