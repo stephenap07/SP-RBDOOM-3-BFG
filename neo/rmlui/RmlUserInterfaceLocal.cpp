@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2012 Robert Beckebans
+Copyright (C) 2021 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -128,116 +128,141 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 
 	if( event->IsMouseEvent() )
 	{
-		_cursorX += event->evValue;
-		_cursorY += event->evValue2;
-
-		if( _cursorX < 0 )
-		{
-			_cursorX = 0;
-		}
-
-		if( _cursorY < 0 )
-		{
-			_cursorY = 0;
-		}
-
-		if( ( _cursorX + 1 ) > _context->GetDimensions().x )
-		{
-			_cursorX = _context->GetDimensions().x - 1;
-		}
-
-		if( ( _cursorY + 1 ) > _context->GetDimensions().y )
-		{
-			_cursorY = _context->GetDimensions().y - 1;
-		}
-
-		_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
+		HandleMouseEvent(event, keyModState);
 	}
 	else if( event->IsMouseAbsoluteEvent() )
 	{
-		_cursorX = event->evValue;
-		_cursorY = event->evValue2;
-
-		const float pixelAspect = renderSystem->GetPixelAspect();
-		const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
-		const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
-		float scale = 1.0f * sysHeight / ( float )_context->GetDimensions().y;
-		float invScale = 1.0f / scale;
-		float tx = 0.5f * ( sysWidth - ( _context->GetDimensions().x * scale ) );
-		float ty = 0.5f * ( sysHeight - ( _context->GetDimensions().y * scale ) );
-
-		_cursorX = idMath::Ftoi( ( static_cast<float>( event->evValue ) - tx ) * invScale );
-		_cursorY = idMath::Ftoi( ( static_cast<float>( event->evValue2 ) - ty ) * invScale );
-
-		if( _cursorX < 0 )
-		{
-			_cursorX = 0;
-		}
-
-		if( _cursorY < 0 )
-		{
-			_cursorY = 0;
-		}
-
-		if( ( _cursorX + 1 ) > _context->GetDimensions().x )
-		{
-			_cursorX = _context->GetDimensions().x - 1;
-		}
-
-		if( ( _cursorY + 1 ) > _context->GetDimensions().y )
-		{
-			_cursorY = _context->GetDimensions().y - 1;
-		}
-
-		_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
+		HandleAbsoluteMouseEvent(event, keyModState);
 	}
 
 	if( event->evValue >= K_MOUSE1 && event->evValue <= K_MOUSE16 )
 	{
-		int mouseButton = 0;
-
-		switch( event->evValue )
-		{
-			case K_MOUSE1:
-				mouseButton = 0;
-				break;
-			case K_MOUSE2:
-				mouseButton = 1;
-				break;
-			case K_MOUSE3:
-				mouseButton = 2;
-				break;
-			case K_MOUSE4:
-				mouseButton = 3;
-				break;
-			default:
-				mouseButton = 0;
-		}
-
-		if( event->evValue2 )
-		{
-			_context->ProcessMouseButtonDown( mouseButton, keyModState );
-		}
-		else
-		{
-			_context->ProcessMouseButtonUp( mouseButton, keyModState );
-		}
+		HandleMouseButtonEvent(event, keyModState);
 	}
 
 	if( event->evValue == K_MWHEELDOWN || event->evValue == K_MWHEELUP )
 	{
-		float mouseWheel = ( event->evValue == K_MWHEELDOWN ) ? 1.0f : -1.0f;
-		_context->ProcessMouseWheel( mouseWheel, keyModState );
+		HandleMouseWheelEvent(event, keyModState);
 	}
 
 	if( event->IsCharEvent() )
 	{
-		Rml::Input::KeyIdentifier key = idRmlSystem::TranslateKey( event->evValue );
-
-		_context->ProcessKeyDown( key, keyModState );
+		HandleCharEvent(event, keyModState);
 	}
 
 	return nullptr;
+}
+
+void RmlUserInterfaceLocal::HandleCharEvent(const sysEvent_t* event, int keyModState)
+{
+	Rml::Input::KeyIdentifier key = idRmlSystem::TranslateKey(event->evValue);
+
+	_context->ProcessKeyDown(key, keyModState);
+}
+
+void RmlUserInterfaceLocal::HandleMouseWheelEvent(const sysEvent_t* event, int keyModState)
+{
+	float mouseWheel = (event->evValue == K_MWHEELDOWN) ? 1.0f : -1.0f;
+	_context->ProcessMouseWheel(mouseWheel, keyModState);
+}
+
+void RmlUserInterfaceLocal::HandleMouseButtonEvent(const sysEvent_t* event, int keyModState)
+{
+	int mouseButton = 0;
+
+	switch (event->evValue)
+	{
+	case K_MOUSE1:
+		mouseButton = 0;
+		break;
+	case K_MOUSE2:
+		mouseButton = 1;
+		break;
+	case K_MOUSE3:
+		mouseButton = 2;
+		break;
+	case K_MOUSE4:
+		mouseButton = 3;
+		break;
+	default:
+		mouseButton = 0;
+	}
+
+	if (event->evValue2)
+	{
+		_context->ProcessMouseButtonDown(mouseButton, keyModState);
+	}
+	else
+	{
+		_context->ProcessMouseButtonUp(mouseButton, keyModState);
+	}
+}
+
+void RmlUserInterfaceLocal::HandleAbsoluteMouseEvent(const sysEvent_t* event, int keyModState)
+{
+	_cursorX = event->evValue;
+	_cursorY = event->evValue2;
+
+	const float pixelAspect = renderSystem->GetPixelAspect();
+	const float sysWidth = renderSystem->GetWidth() * (pixelAspect > 1.0f ? pixelAspect : 1.0f);
+	const float sysHeight = renderSystem->GetHeight() / (pixelAspect < 1.0f ? pixelAspect : 1.0f);
+	float scale = 1.0f * sysHeight / (float)_context->GetDimensions().y;
+	float invScale = 1.0f / scale;
+	float tx = 0.5f * (sysWidth - (_context->GetDimensions().x * scale));
+	float ty = 0.5f * (sysHeight - (_context->GetDimensions().y * scale));
+
+	_cursorX = idMath::Ftoi((static_cast<float>(event->evValue) - tx) * invScale);
+	_cursorY = idMath::Ftoi((static_cast<float>(event->evValue2) - ty) * invScale);
+
+	if (_cursorX < 0)
+	{
+		_cursorX = 0;
+	}
+
+	if (_cursorY < 0)
+	{
+		_cursorY = 0;
+	}
+
+	if ((_cursorX + 1) > _context->GetDimensions().x)
+	{
+		_cursorX = _context->GetDimensions().x - 1;
+	}
+
+	if ((_cursorY + 1) > _context->GetDimensions().y)
+	{
+		_cursorY = _context->GetDimensions().y - 1;
+	}
+
+	_context->ProcessMouseMove(_cursorX, _cursorY, keyModState);
+}
+
+void RmlUserInterfaceLocal::HandleMouseEvent(const sysEvent_t* event, int keyModState)
+{
+	_cursorX += event->evValue;
+	_cursorY += event->evValue2;
+
+	if (_cursorX < 0)
+	{
+		_cursorX = 0;
+	}
+
+	if (_cursorY < 0)
+	{
+		_cursorY = 0;
+	}
+
+	if ((_cursorX + 1) > _context->GetDimensions().x)
+	{
+		_cursorX = _context->GetDimensions().x - 1;
+	}
+
+	if ((_cursorY + 1) > _context->GetDimensions().y)
+	{
+		_cursorY = _context->GetDimensions().y - 1;
+	}
+
+	_context->ProcessMouseMove(_cursorX, _cursorY, keyModState);
 }
 
 void RmlUserInterfaceLocal::HandleNamedEvent( const char* eventName )
