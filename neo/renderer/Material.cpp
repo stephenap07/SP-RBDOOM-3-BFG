@@ -2764,8 +2764,6 @@ void idMaterial::ParseMaterial( idLexer& src )
 			{
 				rmlGui = rmlManager->Find( token.c_str(), true );
 				rmlGui->SetNextScreen( token.c_str() );
-				//Rml::ElementDocument* document = rmlManager->GetDocument(rmlGui->Context(), token.c_str());
-				//if (!document)
 				{
 					Rml::StringList textureNames = Rml::GetTextureSourceList();
 
