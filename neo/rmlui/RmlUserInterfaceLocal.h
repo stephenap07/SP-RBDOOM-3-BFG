@@ -52,25 +52,15 @@ public:
 	// Begin RmlUserInterface
 	bool						Init( const char* name, idSoundWorld* soundWorld ) override;
 
-	// handles an event, can return an action string, the caller interprets
+	// Handles an event, can return an action string, the caller interprets
 	// any return and acts accordingly
-	const char*					HandleEvent( const sysEvent_t* event, int time, bool* updateVisuals = NULL ) override;
+	const char*					HandleEvent( const sysEvent_t* event, int time ) override;
 
-	void HandleCharEvent( const sysEvent_t* event, int keyModState );
-
-	void HandleMouseWheelEvent( const sysEvent_t* event, int keyModState );
-
-	void HandleMouseButtonEvent( const sysEvent_t* event, int keyModState );
-
-	void HandleAbsoluteMouseEvent( const sysEvent_t* event, int keyModState );
-
-	void HandleMouseEvent( const sysEvent_t* event, int keyModState );
-
-	// handles a named event
+	// Handles a named event
 	void						HandleNamedEvent( const char* eventName ) override;
 
-	// repaints the ui
-	void						Redraw( int time, bool hud = false ) override;
+	// Repaints the ui
+	void						Redraw( int time ) override;
 
 	Rml::ElementDocument*		LoadDocument( const char* filePath ) override;
 
@@ -78,7 +68,6 @@ public:
 
 	void						CloseDocument( const char* name ) override;
 
-	void						Reload();
 
 	void						SetCursor( float x, float y ) override
 	{
@@ -113,6 +102,36 @@ public:
 
 	void						HideAllDocuments() override;
 
+	bool						IsActive() override
+	{
+		return _isActive;
+	}
+
+	bool						IsPausingGame() override
+	{
+		return _isPausingGame;
+	}
+
+	virtual void				SetIsPausingGame( bool pause ) override
+	{
+		_isPausingGame = pause;
+	}
+
+	bool						InhibitsControl() override
+	{
+		return _inhibitsControl;
+	}
+
+	idVec2						GetScreenSize() const override;
+
+	void						SetSize( int width, int height ) override;
+
+	void						SetUseScreenResolution( bool useScreen ) override;
+
+	int							PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false ) override;
+
+	void						StopSound( int channel = SCHANNEL_ANY ) override;
+
 	// End RmlUserInterface
 
 	size_t						Size();
@@ -126,6 +145,8 @@ public:
 	{
 		return _timeStamp;
 	}
+
+	void						Reload();
 
 	void						ClearRefs()
 	{
@@ -149,42 +170,26 @@ public:
 
 	void						DrawCursor();
 
-	bool						IsActive() override
-	{
-		return _isActive;
-	}
-
-	bool						IsPausingGame() override
-	{
-		return _isPausingGame;
-	}
-
-	virtual void				SetIsPausingGame( bool pause ) override
-	{
-		_isPausingGame = pause;
-	}
-
-	bool						InhibitsControl() override
-	{
-		return _inhibitsControl;
-	}
-
 	void						SetInhibitsControl( bool inhibit )
 	{
 		_inhibitsControl = inhibit;
 	}
 
-	idVec2						GetScreenSize() const override;
-
-	void						SetSize( int width, int height ) override;
-
-	void						SetUseScreenResolution( bool useScreen ) override;
-
-	int							PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false ) override;
-
-	void						StopSound( int channel = SCHANNEL_ANY ) override;
-
 protected:
+
+
+	// Event handling
+	void						HandleCharEvent( const sysEvent_t* event, int keyModState );
+
+	void						HandleMouseWheelEvent( const sysEvent_t* event, int keyModState );
+
+	void						HandleMouseButtonEvent( const sysEvent_t* event, int keyModState );
+
+	void						HandleAbsoluteMouseEvent( const sysEvent_t* event, int keyModState );
+
+	void BoundCursorToScreen();
+
+	void						HandleMouseEvent( const sysEvent_t* event, int keyModState );
 
 	struct Document
 	{

@@ -897,6 +897,7 @@ private:
 	// if there is a focusGUIent, the attack button will be changed into mouse clicks
 	idEntity* 				focusGUIent;
 	idUserInterface* 		focusUI;				// focusGUIent->renderEntity.gui, gui2, or gui3
+	RmlUserInterface*		focusRml;
 	idAI* 					focusCharacter;
 	int						talkCursor;				// show the state of the focusCharacter (0 == can't talk/dead, 1 == ready to talk, 2 == busy talking)
 	int						focusTime;
@@ -987,6 +988,7 @@ private:
 	void					UpdateFocus();
 	void					UpdateLocation();
 	idUserInterface* 		ActiveGui();
+	RmlUserInterface*		ActiveRml();
 
 	// mp
 	void					Respawn_Shared();

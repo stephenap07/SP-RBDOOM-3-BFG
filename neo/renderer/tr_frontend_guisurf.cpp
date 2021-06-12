@@ -227,8 +227,8 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 	float guiModelMatrix[16];
 	float modelMatrix[16];
 
-	const float screenWidth = gui->Context()->GetDimensions().x;
-	const float screenHeight = gui->Context()->GetDimensions().y;
+	const float screenWidth = gui->GetScreenSize().x;
+	const float screenHeight = gui->GetScreenSize().y;
 
 	guiModelMatrix[0 * 4 + 0] = axis[0][0] * ( 1.0f / screenWidth );
 	guiModelMatrix[1 * 4 + 0] = axis[1][0] * ( 1.0f / screenHeight );
@@ -257,7 +257,7 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 
 	// call the gui, which will call the 2D drawing functions
 	tr.guiModel->Clear();
-	gui->Redraw( tr.viewDef->renderView.time[0] );
+	gui->Redraw( tr.viewDef->renderView.time[0] / 1000 );
 	tr.guiModel->EmitToCurrentView( modelMatrix, drawSurf->space->weaponDepthHack );
 	tr.guiModel->Clear();
 

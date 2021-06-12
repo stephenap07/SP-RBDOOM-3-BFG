@@ -55,6 +55,9 @@ constexpr int kMaxInitialQuads = 1024;
 constexpr int kMaxInitialVerts = kMaxInitialQuads * 4;
 constexpr int kMaxInitialTris = kMaxInitialQuads * 6;
 
+constexpr int kRmlStencilRef = 128;
+constexpr int kRmlStencilMask = 255;
+
 extern idGuiModel* tr_guiModel;
 
 idRmlRender::idRmlRender()
@@ -138,10 +141,15 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 
 	if( _enableScissor )
 	{
-		glState = GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_GEQUAL | GLS_STENCIL_MAKE_REF( 128 - _numMasks ) | GLS_STENCIL_MAKE_MASK( 255 );
+		glState = GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_GEQUAL | GLS_STENCIL_MAKE_REF( kRmlStencilRef - _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
 	}
 
 	const idMaterial* material = reinterpret_cast<const idMaterial*>( texture );
+
+	if( material )
+	{
+		material->SetSort( SS_GUI );
+	}
 
 	idDrawVert* verts = tr_guiModel->AllocTris(
 							numVerts,
@@ -253,10 +261,10 @@ void idRmlRender::RenderClipMask()
 
 	uint64_t glState = 0;
 
-	if( _enableScissor && _numMasks == 0 )
+	if( _numMasks == 0 )
 	{
 		// Nothing written to the stencil buffer yet. Initially seed it with the first clipping rectangle
-		glState = GLS_COLORMASK | GLS_ALPHAMASK | GLS_STENCIL_FUNC_ALWAYS | GLS_STENCIL_MAKE_REF( 128 ) | GLS_STENCIL_MAKE_MASK( 255 );
+		glState = GLS_COLORMASK | GLS_ALPHAMASK | GLS_STENCIL_FUNC_ALWAYS | GLS_STENCIL_MAKE_REF( kRmlStencilRef ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
 	}
 	else
 	{
@@ -264,7 +272,6 @@ void idRmlRender::RenderClipMask()
 		glState = GLS_COLORMASK | GLS_ALPHAMASK | GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_KEEP | GLS_STENCIL_OP_PASS_DECR;
 	}
 
-	// TODO(Stephen) I should use a built-in material
 	idDrawVert* maskVerts = tr_guiModel->AllocTris(
 								4,
 								quadPicIndexes,
@@ -284,12 +291,13 @@ void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
 bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source )
 {
 	const idMaterial* material = declManager->FindMaterial( source.c_str() );
-	material->SetSort( SS_GUI );
 
 	if( !material )
 	{
 		return false;
 	}
+
+	material->SetSort( SS_GUI );
 
 	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
 
@@ -301,8 +309,8 @@ bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i
 	}
 	else
 	{
-		texture_dimensions.x = 800;
-		texture_dimensions.y = 600;
+		texture_dimensions.x = SCREEN_WIDTH;
+		texture_dimensions.y = SCREEN_HEIGHT;
 	}
 
 	return true;
@@ -371,6 +379,22 @@ void idRmlRender::PreRender()
 
 void idRmlRender::PostRender()
 {
+}
+
+void idRmlRender::DrawCursor( int x, int y, int w, int h )
+{
+	const idVec2 scaleToVirtual( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
+								 ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
+	idVec2 bounds;
+	bounds.x = w * scaleToVirtual.x;
+	bounds.y = h * scaleToVirtual.y;
+	float sx = x * scaleToVirtual.x;
+	float sy = y * scaleToVirtual.y;
+	renderSystem->SetGLState( GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_GEQUAL | GLS_STENCIL_MAKE_REF( kRmlStencilRef ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask ) );
+	rmlDc->PushClipRect( idRectangle( 0, 0, w, h ) );
+	rmlDc->DrawCursor( &sx, &sy, 36.0f * scaleToVirtual.x, bounds );
+	rmlDc->PopClipRect();
+	renderSystem->SetGLState( 0 );
 }
 
 void RmlImage::Free()

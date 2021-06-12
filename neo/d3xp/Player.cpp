@@ -1620,6 +1620,8 @@ idPlayer::idPlayer():
 	focusVehicle			= NULL;
 	cursor					= NULL;
 
+	focusRml				= nullptr;
+
 	oldMouseX				= 0;
 	oldMouseY				= 0;
 
@@ -5555,9 +5557,12 @@ idUserInterface* idPlayer::ActiveGui()
 		return NULL;
 	}
 
-	// TODO(Stephen): check if inventory is open and return null?
-
 	return focusUI;
+}
+
+RmlUserInterface* idPlayer::ActiveRml()
+{
+	return focusRml;
 }
 
 /*
@@ -5794,6 +5799,12 @@ void idPlayer::Weapon_GUI()
 				focusGUIent->UpdateVisuals();
 			}
 		}
+		RmlUserInterface* rml = ActiveRml();
+		if( rml )
+		{
+			sysEvent_t ev = sys->GenerateMouseButtonEvent( 1, isDown );
+			command = rml->HandleEvent( &ev, gameLocal.time / 1000 );
+		}
 		if( common->IsClient() )
 		{
 			// we predict enough, but don't want to execute commands
@@ -5878,7 +5889,7 @@ void idPlayer::UpdateWeapon()
 		weapon.GetEntity()->LowerWeapon();
 		dragEntity.Update( this );
 	}
-	else if( ActiveGui() )
+	else if( ActiveGui() || ActiveRml() )
 	{
 		// gui handling overrides weapon use
 		Weapon_GUI();
@@ -6404,6 +6415,7 @@ void idPlayer::ClearFocus()
 	focusCharacter	= NULL;
 	focusGUIent		= NULL;
 	focusUI			= NULL;
+	focusRml		= nullptr;
 	focusVehicle	= NULL;
 	talkCursor		= 0;
 }
@@ -6580,20 +6592,36 @@ void idPlayer::UpdateFocus()
 				continue;
 			}
 
-			if( focusGUIrenderEntity->rml[0] )
+			RmlUserInterface* rml( nullptr );
+			if( pt.rmlId == 1 )
 			{
-				RmlUserInterface* rmlUi = focusGUIrenderEntity->rml[0];
+				rml = focusGUIrenderEntity->rml[0];
+			}
+			else if( pt.rmlId == 2 )
+			{
+				rml = focusGUIrenderEntity->rml[1];
+			}
+			else if( pt.rmlId == 3 )
+			{
+				rml = focusGUIrenderEntity->rml[2];
+			}
+
+			if( rml )
+			{
+				ClearFocus();
+				focusRml = rml;
+				focusGUIent = ent;
 
 				// clamp the mouse to the corner
-				ev = sys->GenerateMouseMoveEvent( -2000, -2000 );
-				command = rmlUi->HandleEvent( &ev, gameLocal.time );
+				rml->SetCursor( 0, 0 );
+				auto rmlDim = rml->GetScreenSize();
 
 				// move to an absolute position
-				ev = sys->GenerateMouseMoveEvent( pt.x * rmlUi->Context()->GetDimensions().x, pt.y * rmlUi->Context()->GetDimensions().y );
-				command = rmlUi->HandleEvent( &ev, gameLocal.time );
+				ev = sys->GenerateMouseMoveEvent( pt.x * rmlDim.x, pt.y * rmlDim.y );
+				command = rml->HandleEvent( &ev, gameLocal.time / 1000 );
 				focusTime = gameLocal.time + FOCUS_GUI_TIME;
 
-				continue;
+				break;
 			}
 
 			if( pt.guiId == 1 )

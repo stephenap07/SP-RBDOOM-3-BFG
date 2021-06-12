@@ -251,6 +251,9 @@ void AddRenderRml( const char* name, RmlUserInterface** rml, const idDict* args 
 			}
 		}
 	}
+
+	// Load up the generated textures.
+	( *rml )->Redraw( 0 );
 }
 
 /*

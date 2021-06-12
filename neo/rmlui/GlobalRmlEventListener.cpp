@@ -94,6 +94,12 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			ui->PlaySound( token.c_str() );
 		}
 
+		if( !token.Icmp( "localSound" ) )
+		{
+			src.ReadToken( &token );
+			common->SW()->PlayShaderDirectly( token.c_str() );
+		}
+
 		if( !token.Icmp( "inhibitControl" ) )
 		{
 			src.ReadToken( &token );

@@ -84,6 +84,8 @@ public:
 
 	void PostRender();
 
+	void DrawCursor( int x, int y, int w, int h );
+
 private:
 
 	bool				_enableScissor;

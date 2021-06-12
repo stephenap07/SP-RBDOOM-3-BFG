@@ -51,15 +51,15 @@ public:
 
 	virtual bool					Init( const char* name, idSoundWorld* soundWorld ) = 0;
 
-	// handles an event, can return an action string, the caller interprets
+	// Handles an event, can return an action string, the caller interprets
 	// any return and acts accordingly
-	virtual const char*				HandleEvent( const sysEvent_t* event, int time, bool* updateVisuals = NULL ) = 0;
+	virtual const char*				HandleEvent( const sysEvent_t* event, int time ) = 0;
 
-	// handles a named event
+	// Handles a named event
 	virtual void					HandleNamedEvent( const char* eventName ) = 0;
 
-	// repaints the ui
-	virtual void					Redraw( int time, bool hud = false ) = 0;
+	// Repaints the ui
+	virtual void					Redraw( int time ) = 0;
 
 	virtual Rml::ElementDocument*	LoadDocument( const char* filePath ) = 0;
 
@@ -67,7 +67,7 @@ public:
 
 	virtual void					CloseDocument( const char* name ) = 0;
 
-	// cursor
+	// Cursor
 	virtual bool					IsCursorEnabled( ) const = 0;
 	virtual void					SetCursorEnabled( bool _enabled = true ) = 0;
 

@@ -122,7 +122,7 @@ bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
 	return _context != nullptr;
 }
 
-const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int time, bool* updateVisuals )
+const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int time )
 {
 	int keyModState = idRmlSystem::GetKeyModifier();
 
@@ -214,6 +214,13 @@ void RmlUserInterfaceLocal::HandleAbsoluteMouseEvent( const sysEvent_t* event, i
 	_cursorX = idMath::Ftoi( ( static_cast<float>( event->evValue ) - tx ) * invScale );
 	_cursorY = idMath::Ftoi( ( static_cast<float>( event->evValue2 ) - ty ) * invScale );
 
+	BoundCursorToScreen();
+
+	_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
+}
+
+void RmlUserInterfaceLocal::BoundCursorToScreen()
+{
 	if( _cursorX < 0 )
 	{
 		_cursorX = 0;
@@ -233,8 +240,6 @@ void RmlUserInterfaceLocal::HandleAbsoluteMouseEvent( const sysEvent_t* event, i
 	{
 		_cursorY = _context->GetDimensions().y - 1;
 	}
-
-	_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
 }
 
 void RmlUserInterfaceLocal::HandleMouseEvent( const sysEvent_t* event, int keyModState )
@@ -242,25 +247,7 @@ void RmlUserInterfaceLocal::HandleMouseEvent( const sysEvent_t* event, int keyMo
 	_cursorX += event->evValue;
 	_cursorY += event->evValue2;
 
-	if( _cursorX < 0 )
-	{
-		_cursorX = 0;
-	}
-
-	if( _cursorY < 0 )
-	{
-		_cursorY = 0;
-	}
-
-	if( ( _cursorX + 1 ) > _context->GetDimensions().x )
-	{
-		_cursorX = _context->GetDimensions().x - 1;
-	}
-
-	if( ( _cursorY + 1 ) > _context->GetDimensions().y )
-	{
-		_cursorY = _context->GetDimensions().y - 1;
-	}
+	BoundCursorToScreen();
 
 	_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
 }
@@ -269,7 +256,7 @@ void RmlUserInterfaceLocal::HandleNamedEvent( const char* eventName )
 {
 }
 
-void RmlUserInterfaceLocal::Redraw( int time, bool hud )
+void RmlUserInterfaceLocal::Redraw( int time )
 {
 	if( rmlManager->InLevelLoad() )
 	{
@@ -279,7 +266,14 @@ void RmlUserInterfaceLocal::Redraw( int time, bool hud )
 	const auto dim = GetScreenSize();
 	_context->SetDimensions( Rml::Vector2i( dim.x, dim.y ) );
 	_context->Update();
-	( ( idRmlRender* )Rml::GetRenderInterface() )->PreRender();
+	idRmlRender* renderer = ( ( idRmlRender* )Rml::GetRenderInterface() );
+	renderer->PreRender();
+
+	// render the clip mask over the entire gui region first.
+	renderer->SetScissorRegion( 0, 0, _width, _height );
+	renderer->EnableScissorRegion( true );
+	renderer->RenderClipMask();
+
 	_context->Render();
 	DrawCursor();
 }
@@ -355,7 +349,7 @@ void RmlUserInterfaceLocal::Reload()
 		fileSystem->ReadFile( _documents[i]._name.c_str(), nullptr, &timeStamp );
 		if( timeStamp != _documents[i]._timeStamp )
 		{
-			// file needs a reload.
+			// File needs a reload.
 			common->Printf( "Reloading %s\n", _documents[i]._name.c_str() );
 			bool show = _documents[i]._doc->IsVisible();
 			Rml::Context* context = _documents[i]._doc->GetContext();
@@ -406,14 +400,8 @@ void RmlUserInterfaceLocal::DrawCursor()
 		return;
 	}
 
-	const idVec2 scaleToVirtual( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-								 ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
-	idVec2 bounds;
-	bounds.x = _context->GetDimensions().x * scaleToVirtual.x;
-	bounds.y = _context->GetDimensions().y * scaleToVirtual.y;
-	float x = _cursorX * scaleToVirtual.x;
-	float y = _cursorY * scaleToVirtual.y;
-	rmlDc->DrawCursor( &x, &y, 36.0f * scaleToVirtual.x, bounds );
+	idRmlRender* renderer = static_cast<idRmlRender*>( Rml::GetRenderInterface() );
+	renderer->DrawCursor( _cursorX, _cursorY, _context->GetDimensions().x, _context->GetDimensions().y );
 }
 
 idVec2 RmlUserInterfaceLocal::GetScreenSize() const

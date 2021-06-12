@@ -52,12 +52,12 @@ public:
 
 	void					Redraw( int time );
 
-	RmlUserInterface*	Ui()
+	void					SetNextScreen( const char* name );
+
+	RmlUserInterface*		Ui()
 	{
 		return _ui;
 	}
-
-	void					SetNextScreen( const char* name );
 
 private:
 

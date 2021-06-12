@@ -122,6 +122,11 @@ bool UI_Shell::HandleEvent( const sysEvent_t* event, int time )
 
 void UI_Shell::Redraw( int time )
 {
+	if( !_ui->IsActive() )
+	{
+		return;
+	}
+
 	_ui->Redraw( time );
 }
 
