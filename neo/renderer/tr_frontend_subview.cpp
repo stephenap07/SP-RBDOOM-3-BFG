@@ -629,6 +629,9 @@ bool R_GenerateSurfaceSubview( const drawSurf_t* drawSurf )
 				case DI_XRAY_RENDER:
 					R_XrayRender( drawSurf, const_cast<textureStage_t*>( &stage->texture ), scissor );
 					break;
+
+				case DI_GUI_RENDER:
+					return false; // don't generate a surface for gui renders. They attach to an existing surface.
 			}
 		}
 		return true;

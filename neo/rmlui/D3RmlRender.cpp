@@ -125,8 +125,8 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 
 		temp[i].xyz = pos;
 		temp[i].SetTexCoord( vertices[i].tex_coord.x, vertices[i].tex_coord.y );
-		temp[i].SetColor( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) ) );
-		temp[i].SetColor2( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) ) );
+		temp[i].SetColor( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) / 255.0f ) );
+		//temp[i].SetColor2( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) / 255.0f ) );
 
 		_numVerts++;
 

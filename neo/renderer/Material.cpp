@@ -1693,6 +1693,17 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 			ts->texgen = TG_SCREEN;
 			continue;
 		}
+
+		if( !token.Icmp( "guiRenderMap" ) )
+		{
+			// Emit fullscreen view of the gui to this dynamically generated texture
+			ts->dynamic = DI_GUI_RENDER;
+			ts->width = src.ParseInt();
+			ts->height = src.ParseInt();
+			//ts->texgen = TG_SCREEN;
+			continue;
+		}
+
 		if( !token.Icmp( "screen" ) )
 		{
 			ts->texgen = TG_SCREEN;

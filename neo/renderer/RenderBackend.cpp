@@ -4082,6 +4082,8 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 
 			// see if we are a new-style stage
 			newShaderStage_t* newStage = pStage->newStage;
+			Framebuffer* previousFramebuffer = Framebuffer::GetActiveFramebuffer();
+
 			if( newStage != NULL )
 			{
 				//--------------------------

@@ -234,7 +234,7 @@ idGuiModel::EmitFullScreen
 Creates a view that covers the screen and emit the surfaces
 ================
 */
-void idGuiModel::EmitFullScreen()
+void idGuiModel::EmitFullScreen(const char* captureToImage)
 {
 	if( surfaces[0].numIndexes == 0 )
 	{
@@ -245,6 +245,12 @@ void idGuiModel::EmitFullScreen()
 
 	viewDef_t* viewDef = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *viewDef ), FRAME_ALLOC_VIEW_DEF );
 	viewDef->is2Dgui = true;
+
+	if( captureToImage )
+	{
+		tr.CropRenderSize( 800, 600 );
+	}
+
 	tr.GetCroppedViewport( &viewDef->viewport );
 
 	bool stereoEnabled = ( renderSystem->GetStereo3DMode() != STEREO3D_OFF );
@@ -332,6 +338,12 @@ void idGuiModel::EmitFullScreen()
 
 	// add the command to draw this view
 	R_AddDrawViewCmd( viewDef, true );
+
+	if( captureToImage )
+	{
+		tr.CaptureRenderToImage( captureToImage, true );
+		tr.UnCrop();
+	}
 }
 
 // RB begin

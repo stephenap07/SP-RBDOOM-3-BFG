@@ -98,7 +98,8 @@ typedef enum
 	DI_CUBE_RENDER,
 	DI_MIRROR_RENDER,
 	DI_XRAY_RENDER,
-	DI_REMOTE_RENDER
+	DI_REMOTE_RENDER,
+	DI_GUI_RENDER
 } dynamicidImage_t;
 
 // note: keep opNames[] in sync with changes
@@ -275,6 +276,8 @@ typedef struct
 	int					glslProgram;
 	int					numFragmentProgramImages;
 	idImage* 			fragmentProgramImages[MAX_FRAGMENT_IMAGES];
+
+	idImage*			imageTarget;
 } newShaderStage_t;
 
 typedef struct

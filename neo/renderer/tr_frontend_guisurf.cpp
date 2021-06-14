@@ -220,6 +220,39 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 
 	tr.pc.c_guiSurfs++;
 
+	bool renderToTexture = false;
+
+	for( int i = 0; i < drawSurf->material->GetNumStages(); i++ )
+	{
+		shaderStage_t* stage = const_cast<shaderStage_t*>(drawSurf->material->GetStage(i));
+
+		if( stage->texture.dynamic == DI_GUI_RENDER )
+		{
+			tr.guiRecursionLevel++;
+
+			stage->texture.dynamicFrameCount = tr.frameCount;
+			if( stage->texture.image == nullptr )
+			{
+				stage->texture.image = globalImages->scratchImage;
+			}
+
+			// Call the gui, which will call the 2D drawing functions
+			tr.guiModel->Clear();
+			gui->Redraw( tr.viewDef->renderView.time[0] / 1000 );
+			tr.guiModel->EmitFullScreen( stage->texture.image->GetName() );
+			tr.guiModel->Clear();
+
+			tr.guiRecursionLevel--;
+
+			renderToTexture = true;
+		}
+	}
+
+	if (renderToTexture)
+	{
+		return;
+	}
+
 	// create the new matrix to draw on this surface
 	idVec3 origin, axis[3];
 	R_SurfaceToTextureAxis( drawSurf->frontEndGeo, origin, axis );
