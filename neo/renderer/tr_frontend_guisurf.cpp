@@ -315,6 +315,10 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 			viewDef->drawSurfs = ( drawSurf_t** )R_FrameAlloc( viewDef->maxDrawSurfs * sizeof( viewDef->drawSurfs[0] ), FRAME_ALLOC_DRAW_SURFACE_POINTER );
 			viewDef->numDrawSurfs = 0;
 
+			int shaderTime = tr.frameShaderTime * 1000;
+			viewDef->renderView.time[0] = shaderTime;
+			viewDef->renderView.time[1] = shaderTime;
+
 			// allocate vertices
 
 			vertCacheHandle_t vertexBlock = vertexCache.AllocVertex( NULL, 4 );
@@ -410,6 +414,7 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 			newSurf->scissorRect = viewDef->scissor;
 			newSurf->sort = newSurf->material->GetSort();
 			newSurf->renderZFail = 0;
+
 			// process the shader expressions for conditionals / color / texcoords
 			const float* constRegs = newSurf->material->ConstantRegisters();
 			if( constRegs )
@@ -432,10 +437,6 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 			}
 
 			R_LinkDrawSurfToView( newSurf, viewDef );
-
-			int shaderTime = tr.frameShaderTime * 1000;
-			viewDef->renderView.time[0] = shaderTime;
-			viewDef->renderView.time[1] = shaderTime;
 
 			viewDef->superView = tr.viewDef;
 
