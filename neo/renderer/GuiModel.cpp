@@ -234,7 +234,7 @@ idGuiModel::EmitFullScreen
 Creates a view that covers the screen and emit the surfaces
 ================
 */
-void idGuiModel::EmitFullScreen(const char* captureToImage)
+void idGuiModel::EmitFullScreen( textureStage_t* textureStage )
 {
 	if( surfaces[0].numIndexes == 0 )
 	{
@@ -246,12 +246,18 @@ void idGuiModel::EmitFullScreen(const char* captureToImage)
 	viewDef_t* viewDef = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *viewDef ), FRAME_ALLOC_VIEW_DEF );
 	viewDef->is2Dgui = true;
 
-	if( captureToImage )
+	if( textureStage )
 	{
-		tr.CropRenderSize( 800, 600 );
+		viewDef->targetRender = globalFramebuffers.glowFBO[0];
+		viewDef->viewport.x1 = 0;
+		viewDef->viewport.y1 = 0;
+		viewDef->viewport.x2 = textureStage->width;
+		viewDef->viewport.y2 = textureStage->height;
 	}
-
-	tr.GetCroppedViewport( &viewDef->viewport );
+	else
+	{
+		tr.GetCroppedViewport( &viewDef->viewport );
+	}
 
 	bool stereoEnabled = ( renderSystem->GetStereo3DMode() != STEREO3D_OFF );
 	if( stereoEnabled )
@@ -269,22 +275,30 @@ void idGuiModel::EmitFullScreen(const char* captureToImage)
 		}
 	}
 
+	idVec2 screenSize( renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight() );
+
+	if( textureStage )
+	{
+		screenSize.x = textureStage->width;
+		screenSize.y = textureStage->height;
+	}
+
 	viewDef->scissor.x1 = 0;
 	viewDef->scissor.y1 = 0;
 	viewDef->scissor.x2 = viewDef->viewport.x2 - viewDef->viewport.x1;
 	viewDef->scissor.y2 = viewDef->viewport.y2 - viewDef->viewport.y1;
 
 	// RB: IMPORTANT - the projectionMatrix has a few changes to make it work with Vulkan
-	viewDef->projectionMatrix[0 * 4 + 0] = 2.0f / renderSystem->GetVirtualWidth();
+	viewDef->projectionMatrix[0 * 4 + 0] = 2.0f / screenSize.x;
 	viewDef->projectionMatrix[0 * 4 + 1] = 0.0f;
 	viewDef->projectionMatrix[0 * 4 + 2] = 0.0f;
 	viewDef->projectionMatrix[0 * 4 + 3] = 0.0f;
 
 	viewDef->projectionMatrix[1 * 4 + 0] = 0.0f;
 #if defined(USE_VULKAN)
-	viewDef->projectionMatrix[1 * 4 + 1] = 2.0f / renderSystem->GetVirtualHeight();
+	viewDef->projectionMatrix[1 * 4 + 1] = 2.0f / screenSize.y;
 #else
-	viewDef->projectionMatrix[1 * 4 + 1] = -2.0f / renderSystem->GetVirtualHeight();
+	viewDef->projectionMatrix[1 * 4 + 1] = -2.0f / screenSize.y;
 #endif
 	viewDef->projectionMatrix[1 * 4 + 2] = 0.0f;
 	viewDef->projectionMatrix[1 * 4 + 3] = 0.0f;
@@ -329,6 +343,8 @@ void idGuiModel::EmitFullScreen(const char* captureToImage)
 #endif
 
 	viewDef_t* oldViewDef = tr.viewDef;
+	viewDef->superView = oldViewDef;
+
 	tr.viewDef = viewDef;
 
 	EmitSurfaces( viewDef->worldSpace.modelMatrix, viewDef->worldSpace.modelViewMatrix,
@@ -337,13 +353,18 @@ void idGuiModel::EmitFullScreen(const char* captureToImage)
 	tr.viewDef = oldViewDef;
 
 	// add the command to draw this view
-	R_AddDrawViewCmd( viewDef, true );
-
-	if( captureToImage )
+	if( textureStage )
 	{
-		tr.CaptureRenderToImage( captureToImage, true );
-		tr.UnCrop();
+		textureStage->dynamicFrameCount = tr.frameCount;
+
+		viewDef->targetRender = globalFramebuffers.glowFBO[0];
+		//if (textureStage->image == NULL)
+		//{
+		//	textureStage->image = globalImages->glowImage[0];
+		//}
 	}
+
+	R_AddDrawViewCmd( viewDef, true );
 }
 
 // RB begin

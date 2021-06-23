@@ -406,26 +406,7 @@ static void R_RemoteRender( const drawSurf_t* surf, textureStage_t* stage )
 	viewDef_t* parms = ( viewDef_t* )R_FrameAlloc( sizeof( *parms ) );
 	*parms = *tr.viewDef;
 
-	if( 0 )
-	{
-		idMat3 viewaxis = parms->renderView.viewaxis;
-		idMat3 remoteViewAxis = surf->space->entityDef->parms.remoteRenderView->viewaxis;
-		const idVec3 orig = parms->renderView.vieworg;
-		float fov_x = parms->renderView.fov_x;
-		float fov_y = parms->renderView.fov_y;
-
-		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
-		parms->renderView.fov_x = fov_x;
-		parms->renderView.fov_y = fov_y;
-
-		// direction vector in camera space.
-		idVec3 dirToPortal = surf->space->entityDef->parms.origin - orig;
-	}
-	else
-	{
-		parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
-	}
-
+	parms->renderView = *surf->space->entityDef->parms.remoteRenderView;
 	parms->renderView.viewID = 0;	// clear to allow player bodies to show up, and suppress view weapons
 	parms->initialViewAreaOrigin = parms->renderView.vieworg;
 	parms->isSubview = true;
@@ -631,7 +612,8 @@ bool R_GenerateSurfaceSubview( const drawSurf_t* drawSurf )
 					break;
 
 				case DI_GUI_RENDER:
-					return false; // don't generate a surface for gui renders. They attach to an existing surface.
+				case DI_RENDER_TARGET:
+					return false;
 			}
 		}
 		return true;

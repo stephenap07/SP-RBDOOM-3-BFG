@@ -103,6 +103,7 @@ enum textureFormat_t
 	FMT_RGBA32F,		// 128 bpp
 	FMT_R32F,			// 32 bpp
 	FMT_R11G11B10F,		// 32 bpp
+	FMT_R8,
 	// RB end
 };
 
@@ -593,6 +594,10 @@ public:
 	idImage*			currentRenderHDRImageQuarter;
 	idImage*			currentRenderHDRImage64;
 	idImage*			bloomRenderImage[2];
+	idImage*			glowImage[2];					// contains any glowable surface information.
+	idImage*			glowDepthImage;
+	idImage*			accumTransparencyImage;
+	idImage*			revealTransparencyImage;
 	idImage*			envprobeHDRImage;
 	idImage*			envprobeDepthImage;
 	idImage*			heatmap5Image;

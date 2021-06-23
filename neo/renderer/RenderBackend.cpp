@@ -3807,7 +3807,6 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 			// shadow buffer solution would work but stencil shadows do not because
 			// stencil shadows only affect surfaces that contribute to the view depth
 			// buffer and translucent surfaces do not contribute to the view depth buffer.
-
 			RenderInteractions( vLight->translucentInteractions, vLight, GLS_DEPTHFUNC_LESS, false, false );
 
 			renderLog.CloseBlock();
@@ -3860,6 +3859,11 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 	}
 
 	renderLog.OpenBlock( "Render_GenericShaderPasses", colorBlue );
+
+	if( viewDef->targetRender )
+	{
+		viewDef->targetRender->Bind();
+	}
 
 	GL_SelectTexture( 0 );
 
@@ -4082,7 +4086,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 
 			// see if we are a new-style stage
 			newShaderStage_t* newStage = pStage->newStage;
-			Framebuffer* previousFramebuffer = Framebuffer::GetActiveFramebuffer();
 
 			if( newStage != NULL )
 			{
@@ -4272,6 +4275,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			{
 				GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * shader->GetPolygonOffset() );
 			}
+
 			renderLog.CloseBlock();
 		}
 
@@ -5752,6 +5756,10 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 			globalFramebuffers.hdrFBO->Bind();
 		}
 	}
+	else if( viewDef->targetRender )
+	{
+		viewDef->targetRender->Bind();
+	}
 	else
 	{
 		Framebuffer::Unbind();
@@ -6120,6 +6128,11 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 	const drawSurfsCommand_t* cmd = ( const drawSurfsCommand_t* )data;
 
 	viewDef = cmd->viewDef;
+
+	if( viewDef->targetRender )
+	{
+		viewDef->targetRender->Bind();
+	}
 
 	// we will need to do a new copyTexSubImage of the screen
 	// when a SS_POST_PROCESS material is used

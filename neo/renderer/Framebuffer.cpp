@@ -36,8 +36,15 @@ idList<Framebuffer*>	Framebuffer::framebuffers;
 
 globalFramebuffers_t globalFramebuffers;
 
+Framebuffer* Framebuffer::Find( const char* name )
+{
+	for( int i = 0; i < framebuffers.Num(); i++ )
+	{
+		if( idStr::Icmp( framebuffers[i]->fboName, name ) == 0 )
+		{
+			return framebuffers[i];
+		}
+	}
 
-
-
-
-
+	return nullptr;
+}

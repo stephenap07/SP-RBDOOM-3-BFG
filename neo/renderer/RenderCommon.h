@@ -662,6 +662,8 @@ struct viewDef_t
 	idImage* 			irradianceImage;			// cubemap image used for diffuse IBL by backend
 	idImage* 			radianceImages[3];			// cubemap image used for specular IBL by backend
 	idVec4				radianceImageBlends;		// blending weights
+
+	Framebuffer*		targetRender = nullptr;				// The framebuffer to render to
 };
 
 

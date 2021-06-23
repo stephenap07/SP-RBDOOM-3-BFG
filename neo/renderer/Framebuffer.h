@@ -31,6 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 
 static const int MAX_SHADOWMAP_RESOLUTIONS = 5;
 static const int MAX_BLOOM_BUFFERS = 2;
+static const int MAX_GLOW_BUFFERS = 2;
 static const int MAX_SSAO_BUFFERS = 2;
 static const int MAX_HIERARCHICAL_ZBUFFERS = 6; // native resolution + 5 MIP LEVELS
 
@@ -56,6 +57,8 @@ public:
 	static void				Shutdown();
 
 	static void				CheckFramebuffers();
+
+	static Framebuffer*		Find( const char* name );
 
 	void					Bind();
 	bool					IsBound();
@@ -133,6 +136,8 @@ struct globalFramebuffers_t
 	Framebuffer*				hdr64FBO;
 	Framebuffer*				envprobeFBO;
 	Framebuffer*				bloomRenderFBO[MAX_BLOOM_BUFFERS];
+	Framebuffer*				glowFBO[MAX_GLOW_BUFFERS];
+	Framebuffer*				transparencyFBO;
 	Framebuffer*				ambientOcclusionFBO[MAX_SSAO_BUFFERS];
 	Framebuffer*				csDepthFBO[MAX_HIERARCHICAL_ZBUFFERS];
 	Framebuffer*				geometryBufferFBO;

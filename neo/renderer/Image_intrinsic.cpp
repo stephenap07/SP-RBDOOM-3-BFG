@@ -245,6 +245,28 @@ static void R_HDR_RGBA16FImage_ResNative( idImage* image )
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_RGBA16F );//, msaaSamples );
 }
 
+static void R_HDR_RGBA16FImage_ResGui( idImage* image )
+{
+	// FIXME
+#if defined(USE_HDR_MSAA)
+	int msaaSamples = glConfig.multisamples;
+#else
+	int msaaSamples = 0;
+#endif
+	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F ); //, msaaSamples );
+}
+
+static void R_HDR_RGBA16FImage_ResNative_Linear( idImage* image )
+{
+	// FIXME
+#if defined(USE_HDR_MSAA)
+	int msaaSamples = glConfig.multisamples;
+#else
+	int msaaSamples = 0;
+#endif
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_RGBA16F ); //, msaaSamples );
+}
+
 static void R_HDR_RGBA16FImage_ResNative_NoMSAA( idImage* image )
 {
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_RGBA16F );
@@ -294,7 +316,23 @@ static void R_HierarchicalZBufferImage_ResNative( idImage* image )
 {
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST_MIPMAP, TR_CLAMP, TD_R32F );
 }
+
+static void R_R8Image_ResNative_Linear( idImage* image )
+{
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_LOOKUP_TABLE_MONO );
+}
 // RB end
+
+static void R_HDR_RGBA8Image_ResNative( idImage* image )
+{
+	// FIXME
+#if defined(USE_HDR_MSAA)
+	int msaaSamples = glConfig.multisamples;
+#else
+	int msaaSamples = 0;
+#endif
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_LOOKUP_TABLE_RGBA ); //, msaaSamples );
+}
 
 static void R_AlphaNotchImage( idImage* image )
 {
@@ -1004,6 +1042,13 @@ void idImageManager::CreateIntrinsicImages()
 
 	bloomRenderImage[0] = globalImages->ImageFromFunction( "_bloomRender0", R_HDR_RGBA16FImage_ResQuarter_Linear );
 	bloomRenderImage[1] = globalImages->ImageFromFunction( "_bloomRender1", R_HDR_RGBA16FImage_ResQuarter_Linear );
+
+	glowImage[0] = globalImages->ImageFromFunction( "_glowImage0", R_HDR_RGBA16FImage_ResGui );
+	glowImage[1] = globalImages->ImageFromFunction( "_glowImage1", R_HDR_RGBA16FImage_ResGui );
+	glowDepthImage = globalImages->ImageFromFunction( "_glowDepthImage", R_DepthImage );
+
+	accumTransparencyImage = globalImages->ImageFromFunction( "_accumTransparencyImage", R_HDR_RGBA16FImage_ResNative_Linear );
+	revealTransparencyImage = globalImages->ImageFromFunction( "_revealTransparencyImage", R_R8Image_ResNative_Linear );
 
 	heatmap5Image = ImageFromFunction( "_heatmap5", R_CreateHeatmap5ColorsImage );
 	heatmap7Image = ImageFromFunction( "_heatmap7", R_CreateHeatmap7ColorsImage );

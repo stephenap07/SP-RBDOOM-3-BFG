@@ -59,7 +59,7 @@ public:
 	void		BeginFrame();
 
 	void		EmitToCurrentView( float modelMatrix[16], bool depthHack );
-	void		EmitFullScreen(const char* captureToImage = nullptr);
+	void		EmitFullScreen( textureStage_t* textureStage = nullptr );
 	void		EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16], bool depthHack, bool allowFullScreenStereoDepth, bool linkAsEntity );
 
 	// RB

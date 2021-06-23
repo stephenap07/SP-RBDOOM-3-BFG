@@ -270,7 +270,7 @@ void RmlUserInterfaceLocal::Redraw( int time )
 	renderer->PreRender();
 
 	// render the clip mask over the entire gui region first.
-	renderer->SetScissorRegion( 0, 0, _width, _height );
+	renderer->SetScissorRegion( 0, 0, dim.x, dim.y );
 	renderer->EnableScissorRegion( true );
 	renderer->RenderClipMask();
 

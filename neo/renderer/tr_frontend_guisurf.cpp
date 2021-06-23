@@ -202,6 +202,7 @@ Create a texture space on the given surface and
 call the GUI generator to create quads for it.
 =================
 */
+static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
 static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 {
 	SCOPED_PROFILE_EVENT( "R_RenderRmlSurf" );
@@ -224,31 +225,235 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 
 	for( int i = 0; i < drawSurf->material->GetNumStages(); i++ )
 	{
-		shaderStage_t* stage = const_cast<shaderStage_t*>(drawSurf->material->GetStage(i));
+		shaderStage_t* stage = const_cast<shaderStage_t*>( drawSurf->material->GetStage( i ) );
 
 		if( stage->texture.dynamic == DI_GUI_RENDER )
 		{
 			tr.guiRecursionLevel++;
 
 			stage->texture.dynamicFrameCount = tr.frameCount;
-			if( stage->texture.image == nullptr )
-			{
-				stage->texture.image = globalImages->scratchImage;
-			}
 
 			// Call the gui, which will call the 2D drawing functions
-			tr.guiModel->Clear();
+			//tr.CropRenderSize( stage->texture.width, stage->texture.height );
+			gui->SetUseScreenResolution( false );
+			gui->SetSize( stage->texture.width, stage->texture.height );
 			gui->Redraw( tr.viewDef->renderView.time[0] / 1000 );
-			tr.guiModel->EmitFullScreen( stage->texture.image->GetName() );
+			tr.guiModel->EmitFullScreen( &stage->texture );
 			tr.guiModel->Clear();
+			//tr.UnCrop();
 
 			tr.guiRecursionLevel--;
 
 			renderToTexture = true;
 		}
+
+		if( stage->texture.dynamic == DI_RENDER_TARGET )
+		{
+			stage->texture.dynamicFrameCount = tr.frameCount;
+
+			viewDef_t* viewDef = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *viewDef ), FRAME_ALLOC_VIEW_DEF );
+			viewDef->is2Dgui = true;
+
+			//tr.CropRenderSize(stage->texture.width, stage->texture.height);
+			{
+				viewDef->viewport.x1 = 0;
+				viewDef->viewport.y1 = 0;
+				viewDef->viewport.x2 = stage->texture.width;
+				viewDef->viewport.y2 = stage->texture.height;
+			}
+
+			//tr.GetCroppedViewport(&viewDef->viewport);
+
+			viewDef->scissor.x1 = 0;
+			viewDef->scissor.y1 = 0;
+			viewDef->scissor.x2 = viewDef->viewport.x2 - viewDef->viewport.x1;
+			viewDef->scissor.y2 = viewDef->viewport.y2 - viewDef->viewport.y1;
+
+			// RB: IMPORTANT - the projectionMatrix has a few changes to make it work with Vulkan
+			viewDef->projectionMatrix[0 * 4 + 0] = 2.0f / stage->texture.width;
+			viewDef->projectionMatrix[0 * 4 + 1] = 0.0f;
+			viewDef->projectionMatrix[0 * 4 + 2] = 0.0f;
+			viewDef->projectionMatrix[0 * 4 + 3] = 0.0f;
+
+			viewDef->projectionMatrix[1 * 4 + 0] = 0.0f;
+#if defined(USE_VULKAN)
+			viewDef->projectionMatrix[1 * 4 + 1] = 2.0f / renderSystem->GetVirtualHeight();
+#else
+			viewDef->projectionMatrix[1 * 4 + 1] = -2.0f / stage->texture.height;
+#endif
+			viewDef->projectionMatrix[1 * 4 + 2] = 0.0f;
+			viewDef->projectionMatrix[1 * 4 + 3] = 0.0f;
+
+			viewDef->projectionMatrix[2 * 4 + 0] = 0.0f;
+			viewDef->projectionMatrix[2 * 4 + 1] = 0.0f;
+			viewDef->projectionMatrix[2 * 4 + 2] = -1.0f;
+			viewDef->projectionMatrix[2 * 4 + 3] = 0.0f;
+
+			viewDef->projectionMatrix[3 * 4 + 0] = -1.0f; // RB: was -2.0f
+#if defined(USE_VULKAN)
+			viewDef->projectionMatrix[3 * 4 + 1] = -1.0f;
+#else
+			viewDef->projectionMatrix[3 * 4 + 1] = 1.0f;
+#endif
+			viewDef->projectionMatrix[3 * 4 + 2] = 0.0f; // RB: was 1.0f
+			viewDef->projectionMatrix[3 * 4 + 3] = 1.0f;
+
+			// make a tech5 renderMatrix for faster culling
+			idRenderMatrix::Transpose( *( idRenderMatrix* )viewDef->projectionMatrix, viewDef->projectionRenderMatrix );
+
+			viewDef->worldSpace.modelMatrix[0 * 4 + 0] = 1.0f;
+			viewDef->worldSpace.modelMatrix[1 * 4 + 1] = 1.0f;
+			viewDef->worldSpace.modelMatrix[2 * 4 + 2] = 1.0f;
+			viewDef->worldSpace.modelMatrix[3 * 4 + 3] = 1.0f;
+
+			viewDef->worldSpace.modelViewMatrix[0 * 4 + 0] = 1.0f;
+			viewDef->worldSpace.modelViewMatrix[1 * 4 + 1] = 1.0f;
+			viewDef->worldSpace.modelViewMatrix[2 * 4 + 2] = 1.0f;
+			viewDef->worldSpace.modelViewMatrix[3 * 4 + 3] = 1.0f;
+
+			viewDef->maxDrawSurfs = 1;
+			viewDef->drawSurfs = ( drawSurf_t** )R_FrameAlloc( viewDef->maxDrawSurfs * sizeof( viewDef->drawSurfs[0] ), FRAME_ALLOC_DRAW_SURFACE_POINTER );
+			viewDef->numDrawSurfs = 0;
+
+			// allocate vertices
+
+			vertCacheHandle_t vertexBlock = vertexCache.AllocVertex( NULL, 4 );
+			vertCacheHandle_t indexBlock = vertexCache.AllocIndex( NULL, 6 );
+			idDrawVert* vertexPointer = ( idDrawVert* )vertexCache.MappedVertexBuffer( vertexBlock );
+			triIndex_t* indexPointer = ( triIndex_t* )vertexCache.MappedIndexBuffer( indexBlock );
+
+			for( int i = 0; i < 6; i++ )
+			{
+				indexPointer[i] = quadPicIndexes[i];
+			}
+
+			{
+				auto currentColorNativeBytesOrder = LittleLong( PackColor( colorWhite ) );
+				ALIGNTYPE16 idDrawVert localVerts[4];
+
+				float x1 = 0.0f;
+				float y1 = 0.0f;
+				float x2 = stage->texture.width;
+				float y2 = stage->texture.height;
+
+				float s1 = 0.0f;
+				float t1 = 0.0f;
+				float s2 = 1.0f;
+				float t2 = 1.0f;
+
+				// top left
+				localVerts[0].Clear();
+				localVerts[0].xyz[0] = x1;
+				localVerts[0].xyz[1] = y2;
+				localVerts[0].xyz[2] = 0.0f;
+				localVerts[0].SetTexCoord( s1, t2 );
+				localVerts[0].SetNativeOrderColor( currentColorNativeBytesOrder );
+				localVerts[0].ClearColor2();
+
+				// top right
+				localVerts[1].Clear();
+				localVerts[1].xyz[0] = x2;
+				localVerts[1].xyz[1] = y2;
+				localVerts[1].xyz[2] = 0.0f;
+				localVerts[1].SetTexCoord( s2, t2 );
+				localVerts[1].SetNativeOrderColor( currentColorNativeBytesOrder );
+				localVerts[1].ClearColor2();
+
+				// bottom right
+				localVerts[2].Clear();
+				localVerts[2].xyz[0] = x2;
+				localVerts[2].xyz[1] = y1;
+				localVerts[2].xyz[2] = 0.0f;
+				localVerts[2].SetTexCoord( s2, t1 );
+				localVerts[2].SetNativeOrderColor( currentColorNativeBytesOrder );
+				localVerts[2].ClearColor2();
+
+				// bottom left
+				localVerts[3].Clear();
+				localVerts[3].xyz[0] = x1;
+				localVerts[3].xyz[1] = y1;
+				localVerts[3].xyz[2] = 0.0f;
+				localVerts[3].SetTexCoord( s1, t1 );
+				localVerts[3].SetNativeOrderColor( currentColorNativeBytesOrder );
+				localVerts[3].ClearColor2();
+
+				WriteDrawVerts16( vertexPointer, localVerts, 4 );
+			}
+
+			//WriteDrawVerts16(vertexPointer, tr.unitSquareTriangles->verts, 4);
+
+			viewEntity_t* guiSpace = ( viewEntity_t* )R_ClearedFrameAlloc( sizeof( *guiSpace ), FRAME_ALLOC_VIEW_ENTITY );
+
+			memcpy( guiSpace->modelMatrix, viewDef->worldSpace.modelMatrix, sizeof( guiSpace->modelMatrix ) );
+			memcpy( guiSpace->modelViewMatrix, viewDef->worldSpace.modelViewMatrix, sizeof( guiSpace->modelViewMatrix ) );
+			guiSpace->weaponDepthHack = false;
+			guiSpace->isGuiSurface = true;
+
+			//---------------------------
+			// make a tech5 renderMatrix
+			//---------------------------
+			idRenderMatrix viewMat;
+			idRenderMatrix::Transpose( *( idRenderMatrix* )viewDef->worldSpace.modelViewMatrix, viewMat );
+			idRenderMatrix::Multiply( viewDef->projectionRenderMatrix, viewMat, guiSpace->mvp );
+
+			drawSurf_t* newSurf = ( drawSurf_t* )R_FrameAlloc( sizeof( *newSurf ), FRAME_ALLOC_DRAW_SURFACE );
+			newSurf->numIndexes = 6; // for a fullscreen quad.
+			newSurf->ambientCache = vertexBlock;
+			// build a vertCacheHandle_t that points inside the allocated block
+			newSurf->indexCache = indexBlock + ( ( int64 )( 0 ) << VERTCACHE_OFFSET_SHIFT );
+			newSurf->shadowCache = 0;
+			newSurf->jointCache = 0;
+			newSurf->frontEndGeo = NULL;
+			newSurf->space = guiSpace;
+			newSurf->material = stage->texture.renderTargetMaterial;
+			newSurf->extraGLState = newSurf->extraGLState;
+			newSurf->scissorRect = viewDef->scissor;
+			newSurf->sort = newSurf->material->GetSort();
+			newSurf->renderZFail = 0;
+			// process the shader expressions for conditionals / color / texcoords
+			const float* constRegs = newSurf->material->ConstantRegisters();
+			if( constRegs )
+			{
+				// shader only uses constant values
+				newSurf->shaderRegisters = constRegs;
+			}
+			else
+			{
+				float* regs = ( float* )R_FrameAlloc( newSurf->material->GetNumRegisters() * sizeof( float ), FRAME_ALLOC_SHADER_REGISTER );
+				newSurf->shaderRegisters = regs;
+
+				float localShaderParms[MAX_ENTITY_SHADER_PARMS];
+				for( int i = 0; i < MAX_ENTITY_SHADER_PARMS; i++ )
+				{
+					localShaderParms[i] = 1.0f;
+				}
+
+				newSurf->material->EvaluateRegisters( regs, localShaderParms, viewDef->renderView.shaderParms, viewDef->renderView.time[1] * 0.001f, NULL );
+			}
+
+			R_LinkDrawSurfToView( newSurf, viewDef );
+
+			int shaderTime = tr.frameShaderTime * 1000;
+			viewDef->renderView.time[0] = shaderTime;
+			viewDef->renderView.time[1] = shaderTime;
+
+			viewDef->superView = tr.viewDef;
+
+			// TODO(Stephen) make this configurable in the renderTarget material
+			viewDef->targetRender = globalFramebuffers.glowFBO[1];
+
+			stage->texture.dynamicFrameCount = tr.frameCount;
+			stage->texture.image = globalImages->glowImage[1];
+
+			R_AddDrawViewCmd( viewDef, true );
+
+			//tr.UnCrop();
+
+			renderToTexture = true;
+		}
 	}
 
-	if (renderToTexture)
+	if( renderToTexture )
 	{
 		return;
 	}

@@ -99,7 +99,8 @@ typedef enum
 	DI_MIRROR_RENDER,
 	DI_XRAY_RENDER,
 	DI_REMOTE_RENDER,
-	DI_GUI_RENDER
+	DI_GUI_RENDER,
+	DI_RENDER_TARGET,
 } dynamicidImage_t;
 
 // note: keep opNames[] in sync with changes
@@ -186,6 +187,8 @@ typedef struct
 	dynamicidImage_t	dynamic;
 	int					width, height;
 	int					dynamicFrameCount;
+
+	const idMaterial*	renderTargetMaterial = nullptr;
 } textureStage_t;
 
 // the order BUMP / DIFFUSE / SPECULAR is necessary for interactions to draw correctly on low end cards
@@ -276,8 +279,6 @@ typedef struct
 	int					glslProgram;
 	int					numFragmentProgramImages;
 	idImage* 			fragmentProgramImages[MAX_FRAGMENT_IMAGES];
-
-	idImage*			imageTarget;
 } newShaderStage_t;
 
 typedef struct
@@ -657,7 +658,7 @@ public:
 		return gui;
 	}
 
-	// returns the rml interface
+	// Returns the rml object.
 	RmlUserInterface*       RmlGui() const
 	{
 		return rmlGui;
@@ -1007,6 +1008,8 @@ private:
 	// non zero will draw gui, gui2, or gui3 from renderEnitty_t
 	mutable idUserInterface*	gui;			// non-custom guis are shared by all users of a material
 	mutable RmlUserInterface*   rmlGui;
+
+	idStr				renderTarget;
 
 	bool				noFog;				// surface does not create fog interactions
 
