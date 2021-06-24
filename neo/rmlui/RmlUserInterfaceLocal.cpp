@@ -134,13 +134,11 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 	{
 		HandleAbsoluteMouseEvent( event, keyModState );
 	}
-
-	if( event->evValue >= K_MOUSE1 && event->evValue <= K_MOUSE16 )
+	else if( event->evValue >= K_MOUSE1 && event->evValue <= K_MOUSE16 )
 	{
 		HandleMouseButtonEvent( event, keyModState );
 	}
-
-	if( event->evValue == K_MWHEELDOWN || event->evValue == K_MWHEELUP )
+	else if( event->evValue == K_MWHEELDOWN || event->evValue == K_MWHEELUP )
 	{
 		HandleMouseWheelEvent( event, keyModState );
 	}
