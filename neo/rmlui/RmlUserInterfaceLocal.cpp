@@ -38,6 +38,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "renderer/GuiModel.h"
 #include "renderer/Image.h"
 
+#include "RmlRenderDecorator.h"
 
 RmlUserInterfaceManagerLocal rmlManagerLocal;
 RmlUserInterfaceManager* rmlManager = &rmlManagerLocal;
@@ -70,6 +71,8 @@ private:
 };
 
 static GlobalRmlEventListenerInstancer eventListenerInstancer;
+
+static idRmlRenderDecoratorInstancer decoratorInstancer;
 
 
 /*
@@ -514,6 +517,9 @@ void RmlUserInterfaceManagerLocal::Init()
 	rmlDc = &_dc;
 
 	_inLevelLoad = false;
+
+	decoratorInstancer.Init();
+	Rml::Factory::RegisterDecoratorInstancer( "renderScene", &decoratorInstancer );
 }
 
 void RmlUserInterfaceManagerLocal::Shutdown()

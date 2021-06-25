@@ -39,7 +39,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "RmlUi/Core/EventListenerInstancer.h"
 #include "RmlUi/Core/TransformPrimitive.h"
 
-#include "RmlRenderDecorator.h"
 #include "rmlui/GlobalRmlEventListener.h"
 
 class UI_Shell;
@@ -57,8 +56,6 @@ UI_Shell::UI_Shell()
 {
 }
 
-idRmlRenderDecoratorInstancer decoratorInstancer;
-
 bool UI_Shell::Init( idSoundWorld* soundWorld )
 {
 	_ui = rmlManager->Find( "shell", true );
@@ -66,9 +63,6 @@ bool UI_Shell::Init( idSoundWorld* soundWorld )
 	_inhibitsControl = true;
 	_isActive = true;
 	_isPausingGame = false;
-
-	decoratorInstancer.Init();
-	Rml::Factory::RegisterDecoratorInstancer( "renderScene", &decoratorInstancer );
 
 	auto document = _ui->SetNextScreen( "guis/rml/shell/startmenu.rml" );
 	if( document )

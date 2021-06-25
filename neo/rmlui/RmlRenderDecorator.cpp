@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "RmlRenderDecorator.h"
+#include "../renderer/RenderCommon.h"
 
 #include "RmlUi/Core/Element.h"
 #include <RmlUi/Core/PropertyDefinition.h>
@@ -63,6 +64,8 @@ public:
 
 	void Draw( int time, idVec4 drawRect )
 	{
+		viewDef_t* oldView = tr.viewDef;
+
 		PreRender();
 		Render( time );
 
@@ -85,7 +88,14 @@ public:
 
 		refdef.time[0] = time;
 		refdef.time[1] = time;
+
+		if (oldView)
+		{
+			refdef.renderTarget = oldView->targetRender;
+		}
 		world->RenderScene( &refdef );
+
+		tr.viewDef = oldView;
 	}
 
 private:
@@ -127,6 +137,7 @@ private:
 				worldEntity.shaderParms[3] = 1;
 				modelDef = world->AddEntityDef( &worldEntity );
 			}
+
 			world->GenerateAllInteractions();
 			needsRender = false;
 		}
