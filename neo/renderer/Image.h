@@ -331,6 +331,9 @@ public:
 	}
 	void		ActuallyLoadImage( bool fromBackEnd );
 
+	// Adds the image to the list of images to load on the main thread to the gpu.
+	void		DeferredLoadImage();
+
 	//---------------------------------------------
 	// Platform specific implementations
 	//---------------------------------------------
@@ -636,6 +639,9 @@ public:
 
 	idList<idImage*, TAG_IDLIB_LIST_IMAGE>	images;
 	idHashIndex			imageHash;
+
+	// Transient list of images to load on the main thread to the gpu. Freed after images are loaded.
+	idList<idImage*, TAG_IDLIB_LIST_IMAGE> imagesToLoad;
 
 	bool				insideLevelLoad;			// don't actually load images now
 	bool				preloadingMapImages;		// unless this is set
