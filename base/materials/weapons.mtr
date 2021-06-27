@@ -29,7 +29,8 @@ muzzleflash
 	}
 }
 
-textures/weapons/shotgun
+models/weapons/shotgun
 {
-	diffusemap "textures/weapons/shotgun/color.png"	
+	qer_editorimage textures/weapons/shotgun/color
+	diffusemap textures/weapons/shotgun/color	
 }
