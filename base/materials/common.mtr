@@ -206,11 +206,62 @@ textures/common/entityGui2 {
 }
 
 textures/common/entityGui3 {
-	qer_editorimage	textures/editor/entityGui3.tga
+	qer_editorimage	textures/editor/entityG
+	ui3.tga
 	discrete
 	guiSurf	entity3
 	playerclip
 }
+
+textures/common/entityRml {
+	qer_editorimage	textures/editor/entityGui.tga
+	discrete
+	playerclip
+	rmlSurf	entity
+}
+
+textures/fullscreen/crt
+{
+	// Render a CRT screen over a given image. Render to framebuffer.
+	{
+		//Stencil
+		//{
+		//	Ref 130
+		//	Comp Always
+		//	Pass Replace
+		//}
+
+		program     	mattiascrt.vfp
+	 	vertexParm  0   time, 640, 480
+		fragmentMap 0   _glowImage0
+	}
+}
+
+textures/common/entityRmlRenderMap
+{
+	qer_editorimage	textures/editor/entityGui.tga
+	discrete
+	playerclip
+	rmlSurf	entity
+
+	// Render the gui to the render target.
+	{
+		guiRenderMap	640 480			// width, height of render image
+		//map _glowImage0
+		//scale 		1, 	-1				// The render views are upside down otherwise
+		//translate 	0, -1
+	}
+
+	// Perform a shader operation on the generated render target.
+	{
+		blend blend
+		renderTargetMap textures/fullscreen/crt 640 480 // Full-screen material, width height
+		map 			_glowImage1 					// The image resulted from the shader operation
+		//scale 			1 , -1							// The render view ars upside down otherwise
+		//translate 		0, -1
+	}
+}
+
 //======================================================================
 //                      GUIs End
 //======================================================================
@@ -369,4 +420,12 @@ textures/common/water
 	water
 	
 	qer_editorimage 	textures/editor/water.tga
+}
+
+textures/common/guiWhite
+{
+	{
+		blend blend
+		map _white
+	}
 }

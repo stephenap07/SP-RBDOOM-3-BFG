@@ -1,3 +1,55 @@
+textures/stephenTest/glow
+{
+	noshadows
+	translucent
+	nonsolid
+	deform flare 		16
+	qer_editorimage		textures/editor/flare.tga
+	{
+		if ( parm7 == 0 )
+		blend		add
+		map		_quadratic
+		colored
+		vertexcolor
+	}
+}
+
+stephenTest/red
+{
+	translucent
+
+    // stencil writing stage
+	{
+		blend blend
+		map textures/common/red
+		alpha 0.4
+	}
+}
+
+stephenTest/green
+{
+	translucent
+
+	// stencil testing stage
+	{
+		blend blend
+		map textures/common/green
+		alpha 0.3
+	}
+}
+
+stephenTest/blue
+{
+	translucent
+	
+	// second stencil testing stage 
+	{
+		blend blend
+		map textures/common/blue
+		alpha 0.2
+	}
+}
+
 stephenTest/stencilWrite
 {
 	sort far
@@ -19,7 +71,7 @@ stephenTest/stencilWrite
 	}
 }
 
-stephenTest/red
+stephenTest/stencilRed
 {
 	sort medium
     // stencil writing stage
@@ -36,7 +88,7 @@ stephenTest/red
 	}
 }
 
-stephenTest/green
+stephenTest/stencilGreen
 {
 	sort medium
 	
@@ -55,7 +107,7 @@ stephenTest/green
 	}
 }
 
-stephenTest/blue
+stephenTest/stencilBlue
 {
 	sort close
 	
@@ -164,5 +216,139 @@ material models/items/flashlight/beam1 {
 		scale	 4 , 4
 		rotate time * -.02
 		scroll	time * .001 , time * .001
+	}
+}
+
+material mortar_a
+{
+	
+}
+
+material sh_house_dp
+{
+	mikktspace
+	unsmoothedTangents
+	diffusemap textures/sh/door_sh_house_dp_Diffuse.png
+	normalmap textures/sh/door_sh_house_dp_Normal.png
+	specularmap textures/sh/door_sh_house_dp_Specular.png
+}
+
+material sh_wood_clear_coat
+{
+	mikktspace
+	unsmoothedTangents
+	diffusemap textures/sh/door_sh_wood_clear_coat_Diffuse.png
+	normalmap textures/sh/door_sh_wood_clear_coat_Normal.png
+	specularmap textures/sh/door_sh_wood_clear_coat_Glossiness.png
+}
+
+guis/rml/shell/textures/clouds
+{
+    translucent
+    noshadows
+    twosided
+
+    {
+        program     	fogwithlights.vfp
+        vertexParm  0   time, 800, 600
+        fragmentMap 0   _scratch
+    }
+}
+
+guis/rml/shell/textures/vornoi
+{
+    translucent
+    noshadows
+    twosided
+
+    {
+        program     	vornoipattern.vfp
+        vertexParm  0   time, 800, 600
+        fragmentMap 0   _scratch
+    }
+}
+
+textures/test/trans
+{
+	noSelfShadow
+	noshadows
+	twosided
+	translucent
+	glass
+	forceoverlays
+
+	{
+		blend add
+		map textures/common/blue
+	}
+}
+
+textures/glass/glass1
+{
+	noSelfShadow
+	noshadows
+	twosided
+	translucent
+	glass
+	forceoverlays
+
+	qer_editorimage textures/glass/glass1
+	
+	{
+        Program           heatHaze.vfp
+        vertexParm        0       time * 0 , time * 0 // texture scrolling
+        vertexParm        1       .4         // magnitude of the distortion
+        fragmentProgram	  heatHaze.vfp
+        fragmentMap       0       _currentRender
+        fragmentMap       1       textures/sfx/vp1   // the normal map for distortion     
+    }
+	
+	{	
+		maskcolor				
+	    map	makealpha(textures/glass/glass1)
+	}	
+
+	{
+	    blend gl_dst_alpha, gl_one
+	    maskalpha
+       	cubeMap		env/gen2
+			red		Parm0
+	        green   Parm1
+	        blue	Parm2
+        texgen		reflect
+
+	}	
+}
+
+textures/glass/glass1_nvp
+ {
+	noSelfShadow
+	
+	twosided
+	translucent
+	glass
+	forceoverlays
+
+	qer_editorimage textures/glass/glass1
+	{
+                Program           heatHaze.vfp
+                vertexParm              0       time * .1 , time * .1 // texture scrolling
+                vertexParm              1       1         // magnitude of the distortion
+                fragmentProgram			heatHaze.vfp
+                fragmentMap             0       _currentRender
+                fragmentMap             1       textures/sfx/vp1   // the normal map for distortion
+             
+    }
+
+	{	
+		maskcolor				
+	    map	makealpha(textures/glass/glass1)
+	}	
+
+	{
+	    blend 		gl_dst_alpha, gl_one
+	    maskalpha
+       	cubeMap		_envprobeHDR
+        texgen		reflect
 	}
 }

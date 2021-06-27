@@ -30,10 +30,19 @@ material guis/simplekey {
 	}
 }
 
-material guis/assets/userinterface_skin {
+guis/assets/userinterface_skin
+{
 	{
 		blend blend
-		map guis/assets/userinterface_skin.png
 		clamp
+		map guis/assets/userinterface_skin.png
 	}
+}
+
+guis/rml/shell/textures/invader
+{
+    translucent
+    noshadows
+    twosided
+	diffusemap textures/invader.tga
 }

@@ -1,20 +1,3 @@
-entityDef worldspawn
-{
-  "editor_color" "0 .5 .8"
-  "editor_mins"  "?"
-  "editor_maxs"  "?"
-  "no_stamina"   "1"
-  "spawnclass"   "idWorldspawn"
-}
-
-entityDef light
-{
-  "editor_color" "0 1 0"
-  "editor_mins"  "-8 -8 -8"
-  "editor_maxs"  "8 8 8"
-  "spawnclass"   "idLight"
-}
-
 entityDef info_player_start
 {
   "editor_color"     "1 0 0"

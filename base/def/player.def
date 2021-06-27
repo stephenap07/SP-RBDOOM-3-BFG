@@ -47,8 +47,8 @@ entityDef player_base
     "pm_staminarate"                "0.75"
     "pm_crouchheight"               "38"
     "pm_crouchviewheight"           "32"
-    "pm_normalheight"               "74"
-    "pm_normalviewheight"           "68"
+    "pm_normalheight"               "85"
+    "pm_normalviewheight"           "80"
     "pm_deadheight"                 "20"
     "pm_deadviewheight"             "10"
     "pm_crouchrate"                 "0.87"
@@ -62,10 +62,10 @@ entityDef player_doommarine
 {
     "inherit"                       "player_base"
 
-    "text_infoTitle"                    "#str_02908"
-    "text_noPDA"                        "#str_02034"
-    "text_PDANeeded"                    "#str_02909"
-    "text_firstPDA"                     "#str_02035"
+    "text_infoTitle"                 "#str_02908"
+    "text_noPDA"                     "#str_02034"
+    "text_PDANeeded"                 "#str_02909"
+    "text_firstPDA"                  "#str_02035"
 }
 
 entityDef player_doommarine_mp

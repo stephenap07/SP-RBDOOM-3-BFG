@@ -28,7 +28,6 @@ lights/blinkingRoundLight
 
 lights/blinkingGrateLight
 {
-	lightFalloffImage	makeintensity( lights/round_light_simple_falloff.tga )
 	{
 		forceHighQuality
 		map lights/lightgratelight.tga
@@ -41,7 +40,6 @@ lights/blinkingGrateLight
 
 lights/defaultProjectedLight
 {
-	lightFalloffImage	_noFalloff
 	{
 		forceHighQuality
 		map lights/square_light_simple.tga
@@ -50,10 +48,9 @@ lights/defaultProjectedLight
 	}
 }
 
-lights/ambientLight2
+lights/squarelight
 {
-	ambientLight
-	lightFalloffImage	makeintensity( lights/square_light_simple.tga )
+	lightFalloffImage	makeintensity( lights/squarelight1a.tga )
 	{
 		forceHighQuality
 		map lights/square_light_simple.tga
@@ -62,22 +59,9 @@ lights/ambientLight2
 	}
 }
 
-lights/ambientLight3
+lights/square_light_simple
 {
-	ambientLight
-	lightFalloffImage	makeintensity( lights/lightfalloff.png )
-	{
-		forceHighQuality
-		map lights/lightfalloff.png
-		colored
-		zeroClamp
-	}
-}
-
-lights/fullambient
-{
-	ambientLight
-	lightFalloffImage	makeintensity( lights/square_light_simple.tga )
+	lightFalloffImage	makeintensity( lights/squarelight1a.tga )
 	{
 		forceHighQuality
 		map lights/square_light_simple.tga
@@ -93,5 +77,31 @@ lights/basicFogLight
 	{
 		forceHighQuality
 		map lights/square_light_simple.tga
+	}
+}
+
+fogs/basicFog
+{
+	fogLight			// tell the engine it is fog and not a light
+	noShadows
+	{
+		map		_fog	// the internal fog image
+		colored			// take rgba from entity shaderparms
+	}
+}
+
+lights/fogBlend
+{
+	blendLight
+	noShadows
+
+	lightFalloffImage	makeintensity( lights/square_light_simple.tga )
+
+	{
+		blend blend
+		forceHighQuality
+		map lights/square_light_simple.tga
+		alphazeroclamp			// make sure it doesn't bleed over the edges
+		colored					// take rgba from entity shaderparms
 	}
 }

@@ -1,6 +1,6 @@
 textures/walls/dev512
 {
-    diffusemap textures/walls/dev512.png
+    diffusemap textures/walls/dev512
     stone
 }
 
@@ -12,7 +12,7 @@ textures/walls/dev64
 
 textures/walls/devOrange512
 {
-    diffusemap textures/walls/devOrange512.png
+    diffusemap textures/walls/devOrange512
 }
 
 textures/walls/wright_tile
@@ -27,7 +27,8 @@ textures/walls/wright_tile
 
 textures/walls/wright_tile_plaster
 {
-    qer_editorimage textures/white_plaster/white_plaster_baseColor
+    mikktspace
+    qer_editorimage textures/white_plaster/white_plaster_editor.tga
 	diffusemap    textures/white_plaster/white_plaster_baseColor
     specularmap   textures/white_plaster/white_plaster_specularlevel
     bumpmap       textures/white_plaster/white_plaster_normal
@@ -37,6 +38,23 @@ textures/walls/wright_tile_plaster
         map combineRgba(textures/white_plaster/white_plaster_roughness,
                         textures/white_plaster/white_plaster_specularlevel,
                         _black)
+    }
+
+    stone
+}
+
+
+textures/concrete
+{
+    qer_editorimage textures/walls/plane_BaseColor.tga
+    diffusemap      textures/walls/plane_BaseColor.png
+    bumpmap         textures/walls/plane_Normal.png
+
+    {
+        blend rmaomap 
+        map combineRgba(textures/walls/plane_Roughness.png,
+                        textures/walls/plane_Metallic.png,
+                        textures/walls/plane_Ao.png)
     }
 
     stone

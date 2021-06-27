@@ -53,3 +53,11 @@ textures/cameragui
 {
     "guisurf" "guis/camera.gui"
 }
+
+textures/rmlTest
+{
+	sort "-3"
+	qer_editorimage	guisurfs/guisurface.tga
+	rmlSurf guis/rml/shell/test.rml
+	discrete
+}
