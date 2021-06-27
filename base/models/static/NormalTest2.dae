@@ -30,7 +30,7 @@
     </effect>
   </library_effects>
   <library_images/>
-  <library_materials>
+  <library_`s>
     <material id="textures_test_cube2-material" name="textures/test/cube2">
       <instance_effect url="#textures_test_cube2-effect"/>
     </material>
