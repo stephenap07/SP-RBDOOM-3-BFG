@@ -28,3 +28,8 @@ muzzleflash
 		blue 	muzzleflashrandom[ time * 3.33 ] * muzzleflashtable[ (time + parm4) * 4 * Parm3 ] * Parm2
 	}
 }
+
+textures/weapons/shotgun
+{
+	diffusemap "textures/weapons/shotgun/color.png"	
+}
