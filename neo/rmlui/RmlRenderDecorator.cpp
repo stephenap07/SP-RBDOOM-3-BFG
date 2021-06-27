@@ -89,10 +89,7 @@ public:
 		refdef.time[0] = time;
 		refdef.time[1] = time;
 
-		if (oldView)
-		{
-			refdef.renderTarget = oldView->targetRender;
-		}
+		tr.viewDef = oldView;
 		world->RenderScene( &refdef );
 
 		tr.viewDef = oldView;

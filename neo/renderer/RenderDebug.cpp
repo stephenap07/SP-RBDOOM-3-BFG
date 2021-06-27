@@ -119,6 +119,11 @@ void RenderDebug_local::DebugLine( const idVec4& color, const idVec3& start, con
 
 void RenderDebug_local::SubmitDebugLines()
 {
+	if( _numActiveDebugLine <= 0 )
+	{
+		return;
+	}
+
 	// Each debug line will have 4 vertices.
 	vertCacheHandle_t vertexHandle = vertexCache.AllocVertex( nullptr, 2 * ( _numActiveDebugLine + 1 ) );
 	vertCacheHandle_t indexHandle = vertexCache.AllocIndex( nullptr, 2 * ( _numActiveDebugLine + 1 ) );

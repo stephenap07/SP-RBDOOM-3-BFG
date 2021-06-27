@@ -1009,8 +1009,6 @@ private:
 	mutable idUserInterface*	gui;			// non-custom guis are shared by all users of a material
 	mutable RmlUserInterface*   rmlGui;
 
-	idStr				renderTarget;
-
 	bool				noFog;				// surface does not create fog interactions
 
 	int					spectrum;			// for invisible writing, used for both lights and surfaces

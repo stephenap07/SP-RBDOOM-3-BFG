@@ -426,7 +426,14 @@ idImage*	idImageManager::ImageFromFile( const char* _name, textureFilter_t filte
 			if( ( !insideLevelLoad  || preloadingMapImages ) && !image->IsLoaded() )
 			{
 				image->referencedOutsideLevelLoad = ( !insideLevelLoad && !preloadingMapImages );
-				image->ActuallyLoadImage( false );	// load is from front end
+				if (idLib::IsMainThread())
+				{
+					image->ActuallyLoadImage(false);	// load is from front end
+				}
+				else
+				{
+					image->DeferredLoadImage();
+				}
 				declManager->MediaPrint( "%ix%i %s (reload for mixed referneces)\n", image->GetUploadWidth(), image->GetUploadHeight(), image->GetName() );
 			}
 			return image;

@@ -172,10 +172,12 @@ void Framebuffer::Init()
 	//  General framebuffers
 	for( int i = 0; i < MAX_GLOW_BUFFERS; i++ )
 	{
-		globalFramebuffers.glowFBO[i] = new Framebuffer( va( "_glowImage%i", i ), SCREEN_WIDTH, SCREEN_HEIGHT );
+		globalFramebuffers.glowFBO[i] = new Framebuffer( va( "_glowImage%i", i ), screenWidth, screenHeight );
 		globalFramebuffers.glowFBO[i]->Bind();
-		globalFramebuffers.glowFBO[i]->AddColorBuffer( GL_RGBA16F, 0 );
+		globalFramebuffers.glowFBO[i]->AddColorBuffer( GL_RGBA8, 0 );
 		globalFramebuffers.glowFBO[i]->AttachImage2D( GL_TEXTURE_2D, globalImages->glowImage[i], 0 );
+		globalFramebuffers.glowFBO[i]->AddStencilBuffer(GL_STENCIL_INDEX); // stencil buffer for gui masks
+		//globalFramebuffers.glowFBO[i]->AddDepthBuffer(GL_DEPTH24_STENCIL8); // probably don't need depth?
 		globalFramebuffers.glowFBO[i]->Check();
 	}
 
@@ -488,6 +490,37 @@ void Framebuffer::AddDepthBuffer( int format, int multiSamples )
 	if( notCreatedYet )
 	{
 		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer );
+	}
+
+	GL_CheckErrors();
+}
+
+void Framebuffer::AddStencilBuffer(int format, int multiSamples)
+{
+	stencilFormat = format;
+
+	bool notCreatedYet = stencilBuffer == 0;
+	if (notCreatedYet)
+	{
+		glGenRenderbuffers( 1, &stencilBuffer );
+	}
+
+	glBindRenderbuffer( GL_RENDERBUFFER, stencilBuffer );
+
+	if (multiSamples > 0)
+	{
+		glRenderbufferStorageMultisample( GL_RENDERBUFFER, multiSamples, format, width, height );
+
+		msaaSamples = true;
+	}
+	else
+	{
+		glRenderbufferStorage( GL_RENDERBUFFER, format, width, height );
+	}
+
+	if (notCreatedYet)
+	{
+		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, stencilBuffer );
 	}
 
 	GL_CheckErrors();

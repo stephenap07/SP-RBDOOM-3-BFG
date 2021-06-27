@@ -143,6 +143,10 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	{
 		glState = GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_GEQUAL | GLS_STENCIL_MAKE_REF( kRmlStencilRef - _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
 	}
+	else
+	{
+		//glState |= GLS_STENCIL_
+	}
 
 	const idMaterial* material = reinterpret_cast<const idMaterial*>( texture );
 
@@ -364,12 +368,14 @@ void idRmlRender::EnableScissorRegion( bool enable )
 
 	if( !_enableScissor )
 	{
+		// Clear the stencil buffer.
+
 		return;
 	}
 
-	_numMasks++;
-
 	RenderClipMask();
+
+	_numMasks++;
 }
 
 void idRmlRender::PreRender()

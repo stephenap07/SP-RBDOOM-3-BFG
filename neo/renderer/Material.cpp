@@ -2804,11 +2804,6 @@ void idMaterial::ParseMaterial( idLexer& src )
 			}
 			continue;
 		}
-		else if( !token.Icmp( "renderTarget" ) )
-		{
-			renderTarget = "_glowImage0";
-			continue;
-		}
 		// sort
 		else if( !token.Icmp( "sort" ) )
 		{

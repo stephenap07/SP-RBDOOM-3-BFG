@@ -4189,7 +4189,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				// use special shaders for bink cinematics
 				if( pStage->texture.cinematic )
 				{
-					if( ( stageGLState & GLS_OVERRIDE ) != 0 )
+					if( ( stageGLState & GLS_OVERRIDE ) != 0 || viewDef->targetRender )
 					{
 						// This is a hack... Only SWF Guis set GLS_OVERRIDE
 						// Old style guis do not, and we don't want them to use the new GUI renederProg
@@ -4216,7 +4216,8 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 						}
 						else
 						{
-							if( viewDef->is2Dgui )
+							// For now, don't render to linear unless it's being directly rendererd to either the backbuffer or an offline framebuffer
+							if( viewDef->is2Dgui || viewDef->targetRender )
 							{
 								// RB: 2D fullscreen drawing like warp or damage blend effects
 								renderProgManager.BindShader_TextureVertexColor_sRGB();
@@ -5743,7 +5744,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	bool useHDR = r_useHDR.GetBool() && !_viewDef->is2Dgui;
 
 	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
-	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
+	GL_Clear( _viewDef->targetRender != nullptr, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
 
 	if( useHDR )
 	{

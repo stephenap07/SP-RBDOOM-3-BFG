@@ -256,6 +256,17 @@ static void R_HDR_RGBA16FImage_ResGui( idImage* image )
 	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F ); //, msaaSamples );
 }
 
+static void R_RGBA8Image_ResGui(idImage* image)
+{
+	// FIXME
+#if defined(USE_HDR_MSAA)
+	int msaaSamples = glConfig.multisamples;
+#else
+	int msaaSamples = 0;
+#endif
+	image->GenerateImage(NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F); //, msaaSamples );
+}
+
 static void R_HDR_RGBA16FImage_ResNative_Linear( idImage* image )
 {
 	// FIXME
@@ -1043,8 +1054,8 @@ void idImageManager::CreateIntrinsicImages()
 	bloomRenderImage[0] = globalImages->ImageFromFunction( "_bloomRender0", R_HDR_RGBA16FImage_ResQuarter_Linear );
 	bloomRenderImage[1] = globalImages->ImageFromFunction( "_bloomRender1", R_HDR_RGBA16FImage_ResQuarter_Linear );
 
-	glowImage[0] = globalImages->ImageFromFunction( "_glowImage0", R_HDR_RGBA16FImage_ResGui );
-	glowImage[1] = globalImages->ImageFromFunction( "_glowImage1", R_HDR_RGBA16FImage_ResGui );
+	glowImage[0] = globalImages->ImageFromFunction( "_glowImage0", R_RGBA8Image_ResGui );
+	glowImage[1] = globalImages->ImageFromFunction( "_glowImage1", R_RGBA8Image_ResGui );
 	glowDepthImage = globalImages->ImageFromFunction( "_glowDepthImage", R_DepthImage );
 
 	accumTransparencyImage = globalImages->ImageFromFunction( "_accumTransparencyImage", R_HDR_RGBA16FImage_ResNative_Linear );
