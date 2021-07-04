@@ -26,7 +26,7 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "renderer/TextBufferManager.h"
+#include "../renderer/TextBufferManager.h"
 
 #ifndef __GAME_PLAYERVIEW_H__
 #define __GAME_PLAYERVIEW_H__

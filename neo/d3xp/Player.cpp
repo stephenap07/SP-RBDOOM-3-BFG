@@ -3887,23 +3887,24 @@ void idPlayer::FireWeapon()
 				}
 				SelectWeapon( previousWeapon, false );
 			}
-			if( ( weapon_bloodstone >= 0 ) && ( currentWeapon == weapon_bloodstone ) && inventory.weapons & ( 1 << weapon_bloodstone_active1 ) && weapon.GetEntity()->GetStatus() == WP_READY )
-			{
-				// tell it to switch to the previous weapon. Only do this once to prevent
-				// weapon toggling messing up the previous weapon
-				if( idealWeapon == weapon_bloodstone )
-				{
-					if( previousWeapon == weapon_bloodstone || previousWeapon == -1 )
-					{
-						NextBestWeapon();
-					}
-					else
-					{
-						//Since this is a toggle weapon just select itself and it will toggle to the last weapon
-						SelectWeapon( weapon_bloodstone, false );
-					}
-				}
-			}
+			// jmarshall - bloodstone
+			//if( ( weapon_bloodstone >= 0 ) && ( currentWeapon == weapon_bloodstone ) && inventory.weapons & ( 1 << weapon_bloodstone_active1 ) && weapon.GetEntity()->GetStatus() == WP_READY )
+			//{
+			//	// tell it to switch to the previous weapon. Only do this once to prevent
+			//	// weapon toggling messing up the previous weapon
+			//	if( idealWeapon == weapon_bloodstone )
+			//	{
+			//		if( previousWeapon == weapon_bloodstone || previousWeapon == -1 )
+			//		{
+			//			NextBestWeapon();
+			//		}
+			//		else
+			//		{
+			//			//Since this is a toggle weapon just select itself and it will toggle to the last weapon
+			//			SelectWeapon( weapon_bloodstone, false );
+			//		}
+			//	}
+			//}
 		}
 		else
 		{
@@ -4139,11 +4140,6 @@ bool idPlayer::GiveItem( idItem* item, unsigned int giveFlags )
 	int					numPickup;
 
 	if( common->IsMultiplayer() && spectating )
-	{
-		return false;
-	}
-
-	if( idStr::FindText( item->GetName(), "weapon_flashlight_new" ) > -1 )
 	{
 		return false;
 	}
@@ -5920,7 +5916,7 @@ idPlayer::UpdateFlashLight
 void idPlayer::UpdateFlashlight()
 {
 	// TODO(Stephen) I don't want this flashlight stuff hard coded here.
-	return;
+	//return;
 
 	if( idealWeapon == weapon_flashlight )
 	{
@@ -5994,7 +5990,7 @@ void idPlayer::UpdateFlashlight()
 	// always make sure the weapon is correctly setup before accessing it
 	if( !flashlight.GetEntity()->IsLinked() )
 	{
-		flashlight.GetEntity()->GetWeaponDef( "weapon_flashlight_new", 0 );
+		flashlight.GetEntity()->GetWeaponDef( "weapon_flashlight", 0 );
 		flashlight.GetEntity()->SetIsPlayerFlashlight( true );
 
 		// adjust position / orientation of flashlight
@@ -12399,7 +12395,7 @@ void idPlayer::RemoveAllButEssentialWeapons()
 	{
 		// This list probably ought to be placed int the player's def
 		if( kv->GetValue() == "weapon_fists" || kv->GetValue() == "weapon_soulcube" || kv->GetValue() == "weapon_pda"
-				|| kv->GetValue() == "weapon_flashlight" || kv->GetValue() == "weapon_flashlight_new" )
+				|| kv->GetValue() == "weapon_flashlight" )
 		{
 			continue;
 		}

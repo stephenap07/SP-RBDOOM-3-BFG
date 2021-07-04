@@ -129,11 +129,13 @@ It prototypes variables used in class instanciation and type checking.
 Use this on single inheritance concrete classes only.
 ================
 */
-#define CLASS_PROTOTYPE( nameofclass )									\
-public:																	\
-	static	idTypeInfo						Type;						\
-	static	idClass							*CreateInstance();	\
-	virtual	idTypeInfo						*GetType() const;		\
+#define CLASS_PROTOTYPE( nameofclass )																	\
+public:																									\
+	static	idTypeInfo						Type;														\
+	static	idClass							*CreateInstance();											\
+	virtual	idTypeInfo						*GetType() const;											\
+	virtual intptr_t						Invoke(const char* functionName, void* param1) override;	\
+	virtual bool							HasNativeFunction(const char* functionName) override;		\
 	static	idEventFunc<nameofclass>		eventCallbacks[]
 
 /*
@@ -247,6 +249,32 @@ public:
 	void						FindUninitializedMemory();
 
 	virtual void				SharedThink() { }
+
+	// jmarshall
+	template< typename T >
+	T*							Cast(void)
+	{
+		return this ? (IsType(T::Type) ? static_cast<T*>(this) : NULL) : NULL;
+	}
+
+	template< typename T >
+	const T*					Cast(void) const
+	{
+		return this ? (IsType(T::Type) ? static_cast<const T*>(this) : NULL) : NULL;
+	}
+
+	virtual void				StateThreadChanged(void) { };
+	
+
+	virtual idClass*			InvokeChild()
+	{
+		return NULL;
+	}
+	virtual intptr_t			Invoke(const char* functionName, void* param1);
+	virtual bool				HasNativeFunction(const char* functionName);
+
+	// jmarshall end
+
 	void						Save( idSaveGame* savefile ) const {};
 	void						Restore( idRestoreGame* savefile ) {};
 

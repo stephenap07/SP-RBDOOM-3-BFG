@@ -14,7 +14,7 @@ class spGamePortal : public idEntity
 public:
 	CLASS_PROTOTYPE( spGamePortal );
 
-	enum class portalState_t : uint16_t
+	enum
 	{
 		PORTAL_OPENING,
 		PORTAL_OPENED,
@@ -36,7 +36,7 @@ public:
 	void			Think( void );
 	bool			IsActive( void )
 	{
-		return( portalState < portalState_t::PORTAL_CLOSING );
+		return( portalState < PORTAL_CLOSING );
 	}
 
 	void			AddProximityEntity( const idEntity* other );
@@ -62,7 +62,7 @@ protected:
 private:
 
 	qhandle_t			areaPortal;		// 0 = no portal
-	portalState_t		portalState;
+	int					portalState;
 	bool				bNoTeleport;    // Is purely a visual portal.  Will not try to teleport anything near it
 
 	// If this is true, it flips the teleportation mechanism so the player is facing

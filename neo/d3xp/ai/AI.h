@@ -463,7 +463,7 @@ protected:
 public:
 	int						ReactionTo( const idEntity* ent );
 protected:
-	bool					CheckForEnemy();
+	//void					CheckForEnemy( float useFov );
 	void					EnemyDead();
 	virtual bool			CanPlayChatterSounds() const;
 	void					SetChatSound();
@@ -526,7 +526,6 @@ protected:
 	// effects
 	const idDeclParticle*	SpawnParticlesOnJoint( particleEmitter_t& pe, const char* particleName, const char* jointName );
 	void					SpawnParticles( const char* keyName );
-	bool					ParticlesActive();
 
 	// turning
 	bool					FacingIdeal();

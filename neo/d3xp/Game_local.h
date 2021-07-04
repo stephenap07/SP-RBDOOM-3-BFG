@@ -91,6 +91,7 @@ void gameError( const char* fmt, ... );
 
 #include "gamesys/Event.h"
 #include "gamesys/Class.h"
+#include "gamesys/State.h"
 #include "gamesys/SysCvar.h"
 #include "gamesys/SysCmds.h"
 #include "gamesys/SaveGame.h"
@@ -953,6 +954,12 @@ const int	CINEMATIC_SKIP_DELAY	= SEC2MS( 2.0f );
 
 #include "ai/AI.h"
 #include "anim/Anim_Testmodel.h"
+
+// weapons
+#include "weapons/Weapon_fist.h"
+#include "weapons/Weapon_unarmed.h"
+#include "weapons/Weapon_flashlight.h"
+#include "weapons/Weapon_shotgun.h"
 
 // menus
 #include "menus/MenuWidget.h"

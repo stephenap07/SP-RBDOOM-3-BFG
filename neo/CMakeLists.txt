@@ -466,6 +466,7 @@ else (RAPIDJSON_FOUND)
 endif (RAPIDJSON_FOUND)
 
 add_subdirectory(idlib)
+add_subdirectory(typeinfo)
 add_subdirectory(libs/lua-5.4.1)
 
 file(GLOB AAS_INCLUDES aas/*.h)
@@ -838,6 +839,9 @@ set(GAMED3XP_SOURCES
 file(GLOB GAMED3XP_AI_INCLUDES d3xp/ai/*.h)
 file(GLOB GAMED3XP_AI_SOURCES d3xp/ai/*.cpp)
 
+file(GLOB GAMED3XP_WEAPONS_INCLUDES d3xp/weapons/*.h)
+file(GLOB GAMED3XP_WEAPONS_SOURCES d3xp/weapons/*.cpp)
+
 file(GLOB GAMED3XP_ANIM_INCLUDES d3xp/anim/*.h)
 file(GLOB GAMED3XP_ANIM_SOURCES d3xp/anim/*.cpp)
 
@@ -847,7 +851,9 @@ set(GAMED3XP_GAMESYS_SOURCES
 	d3xp/gamesys/Class.cpp
 	#d3xp/gamesys/DebugGraph.cpp
 	d3xp/gamesys/Event.cpp
+	d3xp/gamesys/GameTypeInfo.cpp
 	d3xp/gamesys/SaveGame.cpp
+	d3xp/gamesys/State.cpp
 	d3xp/gamesys/SysCmds.cpp
 	d3xp/gamesys/SysCvar.cpp
 	#d3xp/gamesys/TypeInfo.cpp
@@ -1248,6 +1254,9 @@ source_group("game-d3xp" FILES ${GAMED3XP_SOURCES})
 source_group("game-d3xp\\ai" FILES ${GAMED3XP_AI_INCLUDES})
 source_group("game-d3xp\\ai" FILES ${GAMED3XP_AI_SOURCES})
 
+source_group("game-d3xp\\weapons" FILES ${GAMED3XP_WEAPONS_INCLUDES})
+source_group("game-d3xp\\weapons" FILES ${GAMED3XP_WEAPONS_SOURCES})
+
 source_group("game-d3xp\\anim" FILES ${GAMED3XP_ANIM_INCLUDES})
 source_group("game-d3xp\\anim" FILES ${GAMED3XP_ANIM_SOURCES})
 
@@ -1408,7 +1417,8 @@ set(RBDOOM3_INCLUDES
 			${IMGUI_EDITOR_LIGHT_INCLUDES}
 			
 			${GAMED3XP_INCLUDES}
-			${GAMED3XP_AI_INCLUDES} 
+			${GAMED3XP_AI_INCLUDES}
+			${GAMED3XP_WEAPONS_INCLUDES}
 			${GAMED3XP_ANIM_INCLUDES} 
 			${GAMED3XP_GAMESYS_INCLUDES} 
 			${GAMED3XP_MENUS_INCLUDES}
@@ -1458,6 +1468,7 @@ set(RBDOOM3_SOURCES
 			
 			${GAMED3XP_SOURCES}
 			${GAMED3XP_AI_SOURCES}
+			${GAMED3XP_WEAPONS_SOURCES}
 			${GAMED3XP_ANIM_SOURCES}
 			${GAMED3XP_GAMESYS_SOURCES}
 			${GAMED3XP_MENUS_SOURCES}
@@ -1635,7 +1646,7 @@ if(MSVC)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/ShadowShared.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/RenderLog.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/Vulkan/vma.cpp)
-		#list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES d3xp/gamesys/Class.cpp)
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES d3xp/gamesys/Class.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/framework/precompiled.cpp)
 	
 		foreach( src_file ${RBDOOM3_PRECOMPILED_SOURCES} )
@@ -1678,8 +1689,18 @@ if(MSVC)
 	#			   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/libs/curl/lib
     #               COMMENT "Compiling libcURL")
 
-	add_dependencies(RBDoom3BFG idlib)
+	add_dependencies(RBDoom3BFG idlib typeinfogen)
 	add_dependencies(RBDoom3BFG lua_static)
+
+	# call typeinfogen to generate neo/d3xp/gamesys/GameTypeInfo.h
+	add_custom_command(
+			TARGET RBDoom3BFG
+			PRE_BUILD
+			DEPENDS typeinfogen
+			COMMAND typeinfogen
+			WORKING_DIRECTORY ..
+			COMMENT "Generating neo/d3xp/gamesys/GameTypeInfo.h"
+			)
 
 	target_include_directories(RBDoom3BFG PUBLIC
 					${RMLUI_INCLUDE})

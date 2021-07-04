@@ -33,6 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RmlUi/Core/Context.h"
 #include "RmlUi/Core/Core.h"
+#include "Entity.h"
 
 /*
 ===============================================================================
@@ -1630,6 +1631,50 @@ void idEntity::BecomeReplicated()
 	{
 		GetPhysics()->ResetInterpolationState( GetPhysics()->GetOrigin(), GetPhysics()->GetAxis() );
 	}
+}
+
+/*
+==============
+idEntity::GetFloat
+==============
+*/
+float idEntity::GetFloat(const char* key)
+{
+	return spawnArgs.GetFloat(key, "0");
+}
+
+/*
+==============
+idEntity::GetKey
+==============
+*/
+const char* idEntity::GetKey(const char* key)
+{
+	const char* value;
+
+	spawnArgs.GetString(key, "", &value);
+
+	return value;
+}
+
+/*
+==============
+idEntity::GetInt
+==============
+*/
+int idEntity::GetInt(const char* key)
+{
+	return spawnArgs.GetInt(key, "0");
+}
+
+/*
+==============
+idEntity::GetBool
+==============
+*/
+bool idEntity::GetBool(const char* key)
+{
+	return spawnArgs.GetBool(key, "0");
 }
 
 /*

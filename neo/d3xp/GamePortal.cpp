@@ -19,7 +19,7 @@ END_CLASS
 
 spGamePortal::spGamePortal()
 	: areaPortal( 0 )
-	, portalState( portalState_t::PORTAL_OPENED )
+	, portalState( PORTAL_OPENED )
 	, bNoTeleport( false )
 	, slavePortals()
 	, masterPortal()
@@ -52,12 +52,12 @@ void spGamePortal::Spawn()
 	// Setup the initial state for the portal
 	if( spawnArgs.GetBool( "startActive" ) ) // Start Active
 	{
-		portalState = portalState_t::PORTAL_OPENED;
+		portalState = PORTAL_OPENED;
 	}
 	else   // Start closed
 	{
 		Hide();
-		portalState = portalState_t::PORTAL_CLOSED;
+		portalState = PORTAL_CLOSED;
 		GetPhysics()->SetContents( 0 ); //rww - if closed, ensure things will not hit and go through
 	}
 
@@ -107,7 +107,7 @@ void spGamePortal::Think( void )
 
 	idEntity::Think();
 
-	if( portalState == portalState_t::PORTAL_CLOSED || bNoTeleport )
+	if( portalState == PORTAL_CLOSED || bNoTeleport )
 	{
 		return;
 	}

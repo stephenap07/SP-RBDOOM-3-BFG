@@ -5751,7 +5751,7 @@ idGameLocal::InhibitControls
 */
 bool idGameLocal::InhibitControls()
 {
-	return ( Shell_InhibitsControl() || IsPDAOpen() || IsPlayerChatting() || ( common->IsMultiplayer() && mpGame.IsScoreboardActive() ) || IsInventoryOpen() );
+	return ( Shell_InhibitsControl() || IsPDAOpen() || IsPlayerChatting() || ( common->IsMultiplayer() && mpGame.IsScoreboardActive() ) );
 }
 
 /*
