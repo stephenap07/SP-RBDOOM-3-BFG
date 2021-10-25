@@ -197,6 +197,8 @@ public:
 	}
 	unsigned int			GetGeometryCRC() const;
 
+	bool					IsOriginBrush() const;
+
 protected:
 	int						numSides;
 	idList<idMapBrushSide*, TAG_IDLIB_LIST_MAP> sides;
@@ -421,6 +423,7 @@ class idMapEntity
 
 public:
 	idDict					epairs;
+	idVec3					originOffset{ vec3_origin };
 
 public:
 	idMapEntity()
@@ -453,6 +456,8 @@ public:
 	void					RemovePrimitiveData();
 
 protected:
+	void					CalculateBrushOrigin();
+
 	idList<idMapPrimitive*, TAG_IDLIB_LIST_MAP>	primitives;
 };
 

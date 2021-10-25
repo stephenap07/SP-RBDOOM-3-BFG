@@ -26,9 +26,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
-
+#pragma hdrstop
 
 #include "../Game_local.h"
 
@@ -866,7 +865,14 @@ void idAI::Spawn()
 	while( kv )
 	{
 		jointName = kv->GetKey();
-		jointName.StripLeadingOnce( "look_joint " );
+
+		// RB: TrenchBroom interop use look_joint.<name> instead so we can build this up using the FGD files
+		if( !jointName.StripLeadingOnce( "look_joint " ) )
+		{
+			jointName.StripLeadingOnce( "look_joint." );
+		}
+		// RB end
+
 		joint = animator.GetJointHandle( jointName );
 		if( joint == INVALID_JOINT )
 		{

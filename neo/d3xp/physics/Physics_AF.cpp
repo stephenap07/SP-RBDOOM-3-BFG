@@ -26,8 +26,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 #include "../Game_local.h"
 
@@ -3439,7 +3439,7 @@ void idAFConstraint_Contact::Setup( idAFBody* b1, idAFBody* b2, contactInfo_t& c
 
 	e[0] = CONTACT_LCP_EPSILON;
 	lo[0] = 0.0f;
-	hi[0] = idMath::INFINITY;
+	hi[0] = idMath::INFINITUM;
 	boxConstraint = NULL;
 	boxIndex[0] = -1;
 }

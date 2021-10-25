@@ -577,8 +577,8 @@ void idCommonLocal::Frame()
 			// RB end, DG end
 		{
 			// RB: don't release the mouse when opening a PDA or menu
-			// SRS - don't release when console open in a game (otherwise may be out of frame on return) but always release at main menu
-			if( ( console->Active() && !game ) || !mapSpawned || ImGuiTools::ReleaseMouseForTools() )
+			// SRS - but always release at main menu after exiting game or demo
+			if( console->Active() || !mapSpawned || ImGuiTools::ReleaseMouseForTools() )
 			{
 				Sys_GrabMouseCursor( false );
 			}
@@ -884,7 +884,9 @@ void idCommonLocal::Frame()
 		gameReturn_t ret = gameThread.RunGameAndDraw( numGameFrames, userCmdMgr, IsClient(), gameFrame - numGameFrames );
 
 		// foresthale 2014-05-12: also check com_editors as many of them are not particularly thread-safe (editLights for example)
-		if( com_smp.GetInteger() == 0 || com_editors != 0 )
+		// SRS - if com_editors is active make sure com_smp != -1, otherwise skip and call SwapCommandBuffers_FinishRendering later
+		frameTiming.startRenderTime = Sys_Microseconds();
+		if( com_smp.GetInteger() == 0 || ( com_smp.GetInteger() > 0 && com_editors != 0 ) )
 		{
 			// in non-smp mode, run the commands we just generated, instead of
 			// frame-delayed ones from a background thread
@@ -895,7 +897,6 @@ void idCommonLocal::Frame()
 		// Run the render back end, getting the GPU busy with new commands
 		// ASAP to minimize the pipeline bubble.
 		//----------------------------------------
-		frameTiming.startRenderTime = Sys_Microseconds();
 		renderSystem->RenderCommandBuffers( renderCommands );
 		if( com_sleepRender.GetInteger() > 0 )
 		{
@@ -910,6 +911,8 @@ void idCommonLocal::Frame()
 			// RB: this is the same as Doom 3 renderSystem->EndFrame()
 			renderSystem->SwapCommandBuffers_FinishRendering( &time_frontend, &time_backend, &time_shadows, &time_gpu, &stats_backend, &stats_frontend );
 		}
+		// SRS - Use finishSyncTime_EndFrame to record timing after sync for com_smp = -1, and just before gameThread.WaitForThread() for com_smp = 1
+		frameTiming.finishSyncTime_EndFrame = Sys_Microseconds();
 
 		// make sure the game / draw thread has completed
 		// This may block if the game is taking longer than the render back end

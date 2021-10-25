@@ -1116,6 +1116,7 @@ extern idCVar r_useSeamlessCubeMap;
 extern idCVar r_skipStaticInteractions;		// skip interactions created at level load
 extern idCVar r_skipDynamicInteractions;	// skip interactions created after level load
 extern idCVar r_skipPostProcess;			// skip all post-process renderings
+extern idCVar r_skipBloom;					// Admer: skip bloom
 extern idCVar r_skipSuppress;				// ignore the per-view suppressions
 extern idCVar r_skipInteractions;			// skip all light/surface interaction drawing
 extern idCVar r_skipFrontEnd;				// bypasses all front end work, but 2D gui rendering still draws
@@ -1327,8 +1328,8 @@ struct glimpParms_t
 };
 
 // Eric: If on Linux using Vulkan use the sdl_vkimp.cpp methods
-// SRS - Add OSX case
-#if ( defined(__linux__) || defined(__APPLE__) ) && defined(USE_VULKAN)
+// SRS - Generalized Vulkan SDL platform
+#if defined(VULKAN_USE_PLATFORM_SDL)
 #include <vector>
 
 #define CLAMP(x, lo, hi)    ((x) < (lo) ? (lo) : (x) > (hi) ? (hi) : (x))

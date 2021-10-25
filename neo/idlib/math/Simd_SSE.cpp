@@ -27,8 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 #include "Simd_Generic.h"
 #include "Simd_SSE.h"
 
@@ -38,7 +38,7 @@ If you have questions concerning this license or the applicable additional terms
 //                                                        E
 //===============================================================
 
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 
 #include <xmmintrin.h>
 
@@ -974,5 +974,5 @@ void VPCALL idSIMD_SSE::UntransformJoints( idJointMat* jointMats, const int* par
 	}
 }
 
-#endif // #if defined(USE_INTRINSICS)
+#endif // #if defined(USE_INTRINSICS_SSE)
 

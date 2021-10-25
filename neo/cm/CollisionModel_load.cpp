@@ -46,9 +46,8 @@ If you have questions concerning this license or the applicable additional terms
 ===============================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
-
+#pragma hdrstop
 
 #include "CollisionModel_local.h"
 
@@ -66,7 +65,6 @@ idHashIndex* 					cm_edgeHash;
 
 idBounds						cm_modelBounds;
 int								cm_vertexShift;
-
 
 idCVar preLoad_Collision( "preLoad_Collision", "1", CVAR_SYSTEM | CVAR_BOOL, "preload collision beginlevelload" );
 
@@ -3076,7 +3074,7 @@ void idCollisionModelManagerLocal::ConvertPatch( cm_model_t* model, const idMapP
 idCollisionModelManagerLocal::ConvertBrushSides
 ================
 */
-void idCollisionModelManagerLocal::ConvertBrushSides( cm_model_t* model, const idMapBrush* mapBrush, int primitiveNum )
+void idCollisionModelManagerLocal::ConvertBrushSides( cm_model_t* model, const idMapBrush* mapBrush, int primitiveNum, const idVec3& originOffset )
 {
 	int i, j;
 	idMapBrushSide* mapSide;
@@ -3090,6 +3088,10 @@ void idCollisionModelManagerLocal::ConvertBrushSides( cm_model_t* model, const i
 	{
 		planes[i] = mapBrush->GetSide( i )->GetPlane();
 		planes[i].FixDegeneracies( DEGENERATE_DIST_EPSILON );
+
+		// Admer: also offset em
+		idVec3 reverseOriginOffset = originOffset * -1.0f;
+		planes[i].TranslateSelf( reverseOriginOffset );
 	}
 
 	// create a collision polygon for each brush side
@@ -3123,7 +3125,7 @@ void idCollisionModelManagerLocal::ConvertBrushSides( cm_model_t* model, const i
 idCollisionModelManagerLocal::ConvertBrush
 ================
 */
-void idCollisionModelManagerLocal::ConvertBrush( cm_model_t* model, const idMapBrush* mapBrush, int primitiveNum )
+void idCollisionModelManagerLocal::ConvertBrush( cm_model_t* model, const idMapBrush* mapBrush, int primitiveNum, const idVec3& originOffset )
 {
 	int i, j, contents;
 	idBounds bounds;
@@ -3142,6 +3144,10 @@ void idCollisionModelManagerLocal::ConvertBrush( cm_model_t* model, const idMapB
 	{
 		planes[i] = mapBrush->GetSide( i )->GetPlane();
 		planes[i].FixDegeneracies( DEGENERATE_DIST_EPSILON );
+
+		// Admer: also offset em
+		idVec3 reverseOriginOffset = originOffset * -1.0f;
+		planes[i].TranslateSelf( reverseOriginOffset );
 	}
 
 	// we are only getting the bounds for the brush so there's no need
@@ -3709,6 +3715,7 @@ void idCollisionModelManagerLocal::WriteBinaryModelToFile( cm_model_t* model, id
 	file->WriteBig( model->numSharpEdges );
 	file->WriteBig( model->numRemovedPolys );
 	file->WriteBig( model->numMergedPolys );
+
 	for( int i = 0; i < model->numVertices; i++ )
 	{
 		file->WriteBig( model->vertices[i].p );
@@ -3982,6 +3989,7 @@ cm_model_t* idCollisionModelManagerLocal::CollisionModelForMapEntity( const idMa
 
 	cm_model_t* model;
 	idBounds bounds;
+	idVec3 originOffset = mapEnt->originOffset;
 	const char* name;
 	int i, brushCount;
 
@@ -4036,7 +4044,7 @@ cm_model_t* idCollisionModelManagerLocal::CollisionModelForMapEntity( const idMa
 		mapPrim = mapEnt->GetPrimitive( i );
 		if( mapPrim->GetType() == idMapPrimitive::TYPE_BRUSH )
 		{
-			ConvertBrush( model, static_cast<idMapBrush*>( mapPrim ), i );
+			ConvertBrush( model, static_cast<idMapBrush*>( mapPrim ), i, originOffset );
 			continue;
 		}
 
@@ -4096,7 +4104,7 @@ cm_model_t* idCollisionModelManagerLocal::CollisionModelForMapEntity( const idMa
 		}
 		if( mapPrim->GetType() == idMapPrimitive::TYPE_BRUSH )
 		{
-			ConvertBrushSides( model, static_cast<idMapBrush*>( mapPrim ), i );
+			ConvertBrushSides( model, static_cast<idMapBrush*>( mapPrim ), i, originOffset );
 			continue;
 		}
 

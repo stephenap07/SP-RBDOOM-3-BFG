@@ -647,11 +647,11 @@ idMapBrush* idMapBrush::ParseValve220( idLexer& src, const idVec3& origin )
 		scale[0] = src.ParseFloat();
 		scale[1] = src.ParseFloat();
 
-		if( scale[0] < idMath::FLT_EPSILON )
+		if( scale[0] < idMath::FLOAT_EPSILON )
 		{
 			scale[0] = 1.0f;
 		}
-		if( scale[1] < idMath::FLT_EPSILON )
+		if( scale[1] < idMath::FLOAT_EPSILON )
 		{
 			scale[1] = 1.0f;
 		}
@@ -795,6 +795,25 @@ unsigned int idMapBrush::GetGeometryCRC() const
 }
 
 /*
+===============
+idMapBrush::IsOriginBrush
+===============
+*/
+bool idMapBrush::IsOriginBrush() const
+{
+	for( int i = 0; i < GetNumSides(); i++ )
+	{
+		const idMaterial* material = declManager->FindMaterial( sides[i]->GetMaterial() );
+		if( material && material->GetContentFlags() & CONTENTS_ORIGIN )
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/*
 ================
 idMapEntity::Parse
 ================
@@ -933,6 +952,8 @@ idMapEntity* idMapEntity::Parse( idLexer& src, bool worldSpawn, float version )
 		}
 	}
 	while( 1 );
+
+	mapEnt->CalculateBrushOrigin();
 
 	return mapEnt;
 }
@@ -1286,6 +1307,47 @@ unsigned int idMapEntity::GetGeometryCRC() const
 	return crc;
 }
 
+/*
+===============
+idMapEntity::CalculateBrushOrigin
+===============
+*/
+void idMapEntity::CalculateBrushOrigin()
+{
+	// Collect the origin brushes
+	idList<idMapBrush*> originBrushes;
+	for( int i = 0; i < primitives.Num(); i++ )
+	{
+		if( primitives[i]->GetType() == idMapPrimitive::TYPE_BRUSH )
+		{
+			idMapBrush* brush = static_cast<idMapBrush*>( primitives[i] );
+			if( brush->IsOriginBrush() )
+			{
+				originBrushes.Append( brush );
+			}
+		}
+	}
+
+	if( !originBrushes.Num() )
+	{
+		return;
+	}
+
+	// Accumulate and average the origin brushes centres
+	for( int i = 0; i < originBrushes.Num(); i++ )
+	{
+		MapPolygonMesh mesh;
+		idBounds bounds;
+
+		mesh.ConvertFromBrush( originBrushes[i], 0, 0 );
+		mesh.GetBounds( bounds );
+
+		originOffset += bounds.GetCenter();
+	}
+
+	originOffset /= static_cast<float>( originBrushes.Num() );
+}
+
 class idSort_CompareMapEntity : public idSort_Quick< idMapEntity*, idSort_CompareMapEntity >
 {
 public:
@@ -1321,6 +1383,7 @@ bool idMapFile::Parse( const char* filename, bool ignoreRegion, bool osPath )
 
 	name = filename;
 	name.StripFileExtension();
+	name.StripFileExtension(); // RB: there might be .map.map
 	fullName = name;
 	hasPrimitiveData = false;
 
@@ -1522,6 +1585,55 @@ bool idMapFile::Parse( const char* filename, bool ignoreRegion, bool osPath )
 				}
 			}
 		}
+	}
+
+	// RB: <name>_extraents.map allows to add and override existing entities
+	idMapFile extrasMap;
+	fullName = name;
+	//fullName.StripFileExtension();
+	fullName += "_extra_ents.map";
+
+	if( extrasMap.Parse( fullName, ignoreRegion, osPath ) )
+	{
+		for( i = 0; i < extrasMap.entities.Num(); i++ )
+		{
+			idMapEntity* extraEnt = extrasMap.entities[i];
+
+			const idKeyValue* kv = extraEnt->epairs.FindKey( "name" );
+			if( kv && kv->GetValue().Length() )
+			{
+				mapEnt = FindEntity( kv->GetValue().c_str() );
+				if( mapEnt )
+				{
+					// allow override old settings
+					for( int j = 0; j < extraEnt->epairs.GetNumKeyVals(); j++ )
+					{
+						const idKeyValue* pair = extraEnt->epairs.GetKeyVal( j );
+						if( pair && pair->GetValue().Length() )
+						{
+							mapEnt->epairs.Set( pair->GetKey(), pair->GetValue() );
+						}
+					}
+
+					continue;
+				}
+			}
+
+			{
+				mapEnt = new( TAG_SYSTEM ) idMapEntity();
+				entities.Append( mapEnt );
+
+				// don't grab brushes or polys
+				mapEnt->epairs.Copy( extraEnt->epairs );
+			}
+		}
+
+#if 0
+		fullName = name;
+		fullName += "_extra_debug.map";
+
+		Write( fullName, ".map" );
+#endif
 	}
 
 	hasPrimitiveData = true;

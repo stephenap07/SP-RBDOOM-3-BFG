@@ -85,6 +85,9 @@ const int ENTITYNUM_WORLD		= MAX_GENTITIES - 2;
 const int ENTITYNUM_MAX_NORMAL	= MAX_GENTITIES - 2;
 const int ENTITYNUM_FIRST_NON_REPLICATED	= ENTITYNUM_MAX_NORMAL - 256;
 
+// Admer: brush origin offsets for better TrenchBroom support
+constexpr const char* BRUSH_ORIGIN_KEY = "__brushOrigin";
+
 //============================================================================
 
 void gameError( const char* fmt, ... );
@@ -655,8 +658,6 @@ private:
 	int						mapSpawnCount;			// it's handy to know which entities are part of the map
 
 	idLocationEntity** 		locationEntities;		// for location names, etc
-
-	idList<EnvironmentProbe*> environmentProbes;	// RB
 
 	idCamera* 				camera;
 	const idMaterial* 		globalMaterial;			// for overriding everything

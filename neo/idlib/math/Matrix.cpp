@@ -26,8 +26,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 //===============================================================
 //
@@ -154,7 +154,7 @@ idAngles idMat3::ToAngles() const
 {
 	idAngles angles;
 	float s = idMath::Sqrt( mat[0][0] * mat[0][0] + mat[0][1] * mat[0][1] );
-	if( s > idMath::FLT_EPSILON )
+	if( s > idMath::FLOAT_EPSILON )
 	{
 		angles.pitch = RAD2DEG( - idMath::ATan( mat[0][2], s ) );
 		angles.yaw = RAD2DEG( idMath::ATan( mat[0][1], mat[0][0] ) );

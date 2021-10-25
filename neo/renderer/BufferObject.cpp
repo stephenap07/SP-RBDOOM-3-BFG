@@ -27,8 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 #include "RenderCommon.h"
 
 idCVar r_showBuffers( "r_showBuffers", "0", CVAR_INTEGER, "" );
@@ -54,7 +54,7 @@ bool IsWriteCombined( void* base )
 }
 #endif
 
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 
 void CopyBuffer( byte* dst, const byte* src, int numBytes )
 {

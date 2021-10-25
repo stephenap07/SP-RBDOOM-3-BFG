@@ -26,8 +26,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 const int SMALLEST_NON_DENORMAL					= 1 << IEEE_FLT_MANTISSA_BITS;
 const int NAN_VALUE								= 0x7f800000;
@@ -47,11 +47,11 @@ const float	idMath::M_DEG2RAD		= PI / 180.0f;
 const float	idMath::M_RAD2DEG		= 180.0f / PI;
 const float	idMath::M_SEC2MS		= 1000.0f;
 const float	idMath::M_MS2SEC		= 0.001f;
-const float	idMath::INFINITY		= 1e30f;
-const float idMath::FLT_EPSILON		= 1.192092896e-07f;
+const float	idMath::INFINITUM		= 1e30f;
+const float idMath::FLOAT_EPSILON		= 1.192092896e-07f;
 const float idMath::FLT_SMALLEST_NON_DENORMAL	= * reinterpret_cast< const float* >( & SMALLEST_NON_DENORMAL );	// 1.1754944e-038f
 
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 const __m128 idMath::SIMD_SP_zero				= { 0.0f, 0.0f, 0.0f, 0.0f };
 const __m128 idMath::SIMD_SP_255				= { 255.0f, 255.0f, 255.0f, 255.0f };
 const __m128 idMath::SIMD_SP_min_char			= { -128.0f, -128.0f, -128.0f, -128.0f };

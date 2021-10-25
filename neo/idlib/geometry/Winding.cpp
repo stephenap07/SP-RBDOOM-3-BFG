@@ -26,8 +26,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 //===============================================================
 //
@@ -1538,7 +1538,7 @@ float idWinding::PlaneDistance( const idPlane& plane ) const
 	int		i;
 	float	d, min, max;
 
-	min = idMath::INFINITY;
+	min = idMath::INFINITUM;
 	max = -min;
 	for( i = 0; i < numPoints; i++ )
 	{

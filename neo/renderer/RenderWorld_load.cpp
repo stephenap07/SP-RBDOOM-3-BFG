@@ -27,8 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 #include "RenderCommon.h"
 
@@ -247,10 +247,10 @@ idRenderModel* idRenderWorldLocal::ParseModel( idLexer* src, const char* mapName
 		// center the texture coordinates for each island for maximum 16-bit precision
 		for( int j = 1; j <= numIslands; j++ )
 		{
-			float minS = idMath::INFINITY;
-			float minT = idMath::INFINITY;
-			float maxS = -idMath::INFINITY;
-			float maxT = -idMath::INFINITY;
+			float minS = idMath::INFINITUM;
+			float minT = idMath::INFINITUM;
+			float maxS = -idMath::INFINITUM;
+			float maxT = -idMath::INFINITUM;
 			for( int k = 0; k < tri->numVerts; k++ )
 			{
 				if( vertIslands[k] == j )

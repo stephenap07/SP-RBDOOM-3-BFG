@@ -37,12 +37,12 @@ If you have questions concerning this license or the applicable additional terms
 ===============================================================================
 */
 
-#ifdef INFINITY
-	#undef INFINITY
+#ifdef INFINITUM
+	#undef INFINITUM
 #endif
 
-#ifdef FLT_EPSILON
-	#undef FLT_EPSILON
+#ifdef FLOAT_EPSILON
+	#undef FLOAT_EPSILON
 #endif
 
 #define DEG2RAD(a)				( (a) * idMath::M_DEG2RAD )
@@ -458,11 +458,11 @@ public:
 	static const float			M_RAD2DEG;					// radians to degrees multiplier
 	static const float			M_SEC2MS;					// seconds to milliseconds multiplier
 	static const float			M_MS2SEC;					// milliseconds to seconds multiplier
-	static const float			INFINITY;					// huge number which should be larger than any valid number used
-	static const float			FLT_EPSILON;				// smallest positive number such that 1.0+FLT_EPSILON != 1.0
+	static const float			INFINITUM;					// huge number which should be larger than any valid number used
+	static const float			FLOAT_EPSILON;				// smallest positive number such that 1.0+FLOAT_EPSILON != 1.0
 	static const float			FLT_SMALLEST_NON_DENORMAL;	// smallest non-denormal 32-bit floating point value
 
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 	static const __m128				SIMD_SP_zero;
 	static const __m128				SIMD_SP_255;
 	static const __m128				SIMD_SP_min_char;
@@ -510,7 +510,7 @@ idMath::InvSqrt
 ID_INLINE float idMath::InvSqrt( float x )
 {
 
-	return ( x > FLT_SMALLEST_NON_DENORMAL ) ? sqrtf( 1.0f / x ) : INFINITY;
+	return ( x > FLT_SMALLEST_NON_DENORMAL ) ? sqrtf( 1.0f / x ) : INFINITUM;
 
 }
 
@@ -521,7 +521,7 @@ idMath::InvSqrt16
 */
 ID_INLINE float idMath::InvSqrt16( float x )
 {
-	return ( x > FLT_SMALLEST_NON_DENORMAL ) ? sqrtf( 1.0f / x ) : INFINITY;
+	return ( x > FLT_SMALLEST_NON_DENORMAL ) ? sqrtf( 1.0f / x ) : INFINITUM;
 }
 
 /*
@@ -1316,7 +1316,7 @@ ID_INLINE int idMath::Ftoi( float f )
 	// If a converted result is larger than the maximum signed doubleword integer,
 	// the floating-point invalid exception is raised, and if this exception is masked,
 	// the indefinite integer value (80000000H) is returned.
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 	__m128 x = _mm_load_ss( &f );
 	return _mm_cvttss_si32( x );
 #elif 0 // round chop (C/C++ standard)
@@ -1340,7 +1340,7 @@ idMath::Ftoi8
 */
 ID_INLINE char idMath::Ftoi8( float f )
 {
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 	__m128 x = _mm_load_ss( &f );
 	x = _mm_max_ss( x, SIMD_SP_min_char );
 	x = _mm_min_ss( x, SIMD_SP_max_char );
@@ -1367,7 +1367,7 @@ idMath::Ftoi16
 */
 ID_INLINE short idMath::Ftoi16( float f )
 {
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 	__m128 x = _mm_load_ss( &f );
 	x = _mm_max_ss( x, SIMD_SP_min_short );
 	x = _mm_min_ss( x, SIMD_SP_max_short );
@@ -1419,7 +1419,7 @@ ID_INLINE byte idMath::Ftob( float f )
 	// If a converted result is negative the value (0) is returned and if the
 	// converted result is larger than the maximum byte the value (255) is returned.
 
-#if defined(USE_INTRINSICS)
+#if defined(USE_INTRINSICS_SSE)
 	__m128 x = _mm_load_ss( &f );
 	x = _mm_max_ss( x, SIMD_SP_zero );
 	x = _mm_min_ss( x, SIMD_SP_255 );

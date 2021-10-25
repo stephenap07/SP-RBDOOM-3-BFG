@@ -26,8 +26,8 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#pragma hdrstop
 #include "RenderCommon.h"
+#pragma hdrstop
 
 /*
 ================================================================================================
@@ -58,7 +58,8 @@ const char* renderLogMainBlockLabels[] =
 	ASSERT_ENUM_STRING( MRB_DRAW_DEBUG_TOOLS,				11 ),
 	ASSERT_ENUM_STRING( MRB_CAPTURE_COLORBUFFER,			12 ),
 	ASSERT_ENUM_STRING( MRB_POSTPROCESS,					13 ),
-	ASSERT_ENUM_STRING( MRB_TOTAL,							14 )
+	ASSERT_ENUM_STRING( MRB_DRAW_GUI,                       14),
+	ASSERT_ENUM_STRING( MRB_TOTAL,							15 )
 };
 
 #if defined( USE_VULKAN )
@@ -604,38 +605,37 @@ idRenderLog::OpenMainBlock
 */
 void idRenderLog::OpenMainBlock( renderLogMainBlock_t block )
 {
-	mainBlock = block;
-
-#if defined( USE_VULKAN )
-	if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
-	{
-		return;
-	}
-
-	VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
-	VkQueryPool queryPool = vkcontext.queryPools[ vkcontext.frameParity ];
-
-	uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 0 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
-	vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, queryIndex );
-
-// SRS - For OSX use elapsed time query for Apple OpenGL 4.1 using GL_TIME_ELAPSED vs GL_TIMESTAMP (which is not implemented on OSX)
-#elif defined(__APPLE__)
-
-	// SRS - OSX AMD drivers have a rendering bug (flashing colours) with an elasped time query when Shadow Mapping is on - turn off query for that case unless r_skipAMDWorkarounds is set
-	if( glConfig.timerQueryAvailable && ( !r_useShadowMapping.GetBool() || glConfig.vendor != VENDOR_AMD || r_skipAMDWorkarounds.GetBool() ) )
-	{
-		if( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ] == 0 )
-		{
-			glGenQueries( 1, &glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ] );
-		}
-
-		glBeginQuery( GL_TIME_ELAPSED_EXT, glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ] );
-	}
-
-#else
-
+	// SRS - Use glConfig.timerQueryAvailable flag to control timestamp capture for all platforms
 	if( glConfig.timerQueryAvailable )
 	{
+		mainBlock = block;
+
+#if defined( USE_VULKAN )
+		if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
+		{
+			return;
+		}
+
+		VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
+		VkQueryPool queryPool = vkcontext.queryPools[ vkcontext.frameParity ];
+
+		uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 0 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
+		vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, queryIndex );
+
+#elif defined(__APPLE__)
+		// SRS - For OSX use elapsed time query for Apple OpenGL 4.1 using GL_TIME_ELAPSED vs GL_TIMESTAMP (which is not implemented on OSX)
+		// SRS - OSX AMD drivers have a rendering bug (flashing colours) with an elasped time query when Shadow Mapping is on - turn off query for that case unless r_skipAMDWorkarounds is set
+		if( !r_useShadowMapping.GetBool() || glConfig.vendor != VENDOR_AMD || r_skipAMDWorkarounds.GetBool() )
+		{
+			if( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ] == 0 )
+			{
+				glGenQueries( 1, &glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ] );
+			}
+
+			glBeginQuery( GL_TIME_ELAPSED_EXT, glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ] );
+		}
+
+#else
 		if( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 ] == 0 )
 		{
 			glCreateQueries( GL_TIMESTAMP, 2, &glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 ] );
@@ -643,8 +643,8 @@ void idRenderLog::OpenMainBlock( renderLogMainBlock_t block )
 
 		glQueryCounter( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 0 ], GL_TIMESTAMP );
 		glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ][ mainBlock * 2 + 0 ]++;
-	}
 #endif
+	}
 }
 
 /*
@@ -654,37 +654,36 @@ idRenderLog::CloseMainBlock
 */
 void idRenderLog::CloseMainBlock()
 {
-#if defined( USE_VULKAN )
-
-	if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
-	{
-		return;
-	}
-
-	VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
-	VkQueryPool queryPool = vkcontext.queryPools[ vkcontext.frameParity ];
-
-	uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 1 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
-	vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, queryIndex );
-
-// SRS - For OSX use elapsed time query for Apple OpenGL 4.1 using GL_TIME_ELAPSED vs GL_TIMESTAMP (which is not implemented on OSX)
-#elif defined(__APPLE__)
-
-	// SRS - OSX AMD drivers have a rendering bug (flashing colours) with an elasped time query when Shadow Mapping is on - turn off query for that case unless r_skipAMDWorkarounds is set
-	if( glConfig.timerQueryAvailable && ( !r_useShadowMapping.GetBool() || glConfig.vendor != VENDOR_AMD || r_skipAMDWorkarounds.GetBool() ) )
-	{
-		glEndQuery( GL_TIME_ELAPSED_EXT );
-		glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ][ mainBlock * 2 + 1 ]++;
-	}
-
-#else
-
+	// SRS - Use glConfig.timerQueryAvailable flag to control timestamp capture for all platforms
 	if( glConfig.timerQueryAvailable )
 	{
+
+#if defined( USE_VULKAN )
+		if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
+		{
+			return;
+		}
+
+		VkCommandBuffer commandBuffer = vkcontext.commandBuffer[ vkcontext.frameParity ];
+		VkQueryPool queryPool = vkcontext.queryPools[ vkcontext.frameParity ];
+
+		uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 1 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
+		vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, queryIndex );
+
+#elif defined(__APPLE__)
+		// SRS - For OSX use elapsed time query for Apple OpenGL 4.1 using GL_TIME_ELAPSED vs GL_TIMESTAMP (which is not implemented on OSX)
+		// SRS - OSX AMD drivers have a rendering bug (flashing colours) with an elasped time query when Shadow Mapping is on - turn off query for that case unless r_skipAMDWorkarounds is set
+		if( !r_useShadowMapping.GetBool() || glConfig.vendor != VENDOR_AMD || r_skipAMDWorkarounds.GetBool() )
+		{
+			glEndQuery( GL_TIME_ELAPSED_EXT );
+			glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ][ mainBlock * 2 + 1 ]++;
+		}
+
+#else
 		glQueryCounter( glcontext.renderLogMainBlockTimeQueryIds[ glcontext.frameParity ][ mainBlock * 2 + 1 ], GL_TIMESTAMP );
 		glcontext.renderLogMainBlockTimeQueryIssued[ glcontext.frameParity ][ mainBlock * 2 + 1 ]++;
-	}
 #endif
+	}
 }
 
 #endif

@@ -28,8 +28,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 
 #include "RenderCommon.h"
@@ -2722,6 +2722,12 @@ void idMaterial::ParseMaterial( idLexer& src )
 		else if( !token.Icmp( "unsmoothedTangents" ) )
 		{
 			unsmoothedTangents = true;
+			continue;
+		}
+		else if( !token.Icmp( "origin" ) )
+		{
+			SetMaterialFlag( MF_ORIGIN );
+			contentFlags = CONTENTS_ORIGIN;
 			continue;
 		}
 		// RB: mikktspace

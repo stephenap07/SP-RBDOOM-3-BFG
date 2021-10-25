@@ -1,8 +1,14 @@
 cmake_minimum_required(VERSION 3.2)
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 project(RBDoom3BFG)
 
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+if(CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER_EQUAL 6)
+	# set MSVC startup project
+	set_property (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT RBDoom3BFG)
+endif()
+	
 option(FORCE_COLOR_OUTPUT
 		"Always produce ANSI-colored output (GNU/Clang only)." OFF)
 
@@ -62,24 +68,31 @@ option(USE_SYSTEM_RAPIDJSON
 
 set(CPU_TYPE "" CACHE STRING "When set, passes this string as CPU-ID which will be embedded into the binary.")
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+# SRS - Turn on optimization when cross-compiling from Apple arm64 to x86_64
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" OR CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
 	set(CPU_OPTIMIZATION "-mmmx -msse -msse2" CACHE STRING "Which CPU specific optimitations should be used beside the compiler's default?")
 endif()
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "((powerpc|ppc)64le)|(mips64)")
-	option(USE_INTRINSICS "Compile using intrinsics (e.g mmx, sse, msse2)" OFF)
+# SRS - Turn off MMX/SSE intrinsics when cross-compiling from Apple x86_64 to arm64
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)|(e2k)|(E2K)" AND NOT CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+	option(USE_INTRINSICS_SSE "Compile using SSE intrinsics (e.g mmx, sse, msse2)" ON)
 else()
-	option(USE_INTRINSICS "Compile using intrinsics (e.g mmx, sse, msse2)" ON)
+	option(USE_INTRINSICS_SSE "Compile using SSE intrinsics (e.g mmx, sse, msse2)" OFF)
 endif()
 
 if(FFMPEG AND BINKDEC)
 	message(FATAL_ERROR "Only one of FFMPEG and BINKDEC (or neither) can be enabled at a time")
 endif()
 
-
 if(UNIX)
 	set(OPENAL ON)
 	
+    # SRS - Disable precompiled headers when cross-compiling on OSX, e.g. when creating universal binaries
+    if((CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64" AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64" ) OR
+       (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64"  AND CMAKE_OSX_ARCHITECTURES MATCHES "x86_64"))
+        set(USE_PRECOMPILED_HEADERS OFF)
+    endif()
+
 	if(USE_VULKAN)
 		SET(SDL2 ON)
 		
@@ -97,13 +110,10 @@ endif()
 if (FORCE_COLOR_OUTPUT)
 	if (CMAKE_COMPILER_IS_GNUCC)
 		add_compile_options(-fdiagnostics-color=always)
-	# SRS - Add test for AppleClang
-	elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+	elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-fcolor-diagnostics)
 	endif ()
 endif ()
-
-
 
 if(MSVC)
 	#message(STATUS CMAKE_ROOT: ${CMAKE_ROOT})
@@ -121,8 +131,8 @@ else()
 	message(STATUS CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE})
 endif()
 
-# SRS - Add test for AppleClang
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+
 	add_definitions(-pipe)
 	#add_definitions(-Wall)
 	add_definitions(-Werror=format-security)
@@ -145,9 +155,6 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_CO
 	if (CPU_OPTIMIZATION)
 		add_definitions(${CPU_OPTIMIZATION})
 	endif()
-	if (USE_INTRINSICS)
-		add_definitions(-DUSE_INTRINSICS)
-	endif()
 	if(WIN32)
 		# require msvcr70.dll or newer for _aligned_malloc etc
 		# I think it is from Visual C++ .NET 2002, so it should be available on any remotely modern system.
@@ -164,8 +171,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_CO
 	#endif()
 	
 	add_compile_options(-Wno-pragmas -Wno-unused-variable -Wno-switch -Wno-unused-value -Winvalid-pch -Wno-multichar)
-	# SRS - Add test for AppleClang
-	if(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
 		# add clang-specific settings for warnings (the second one make sure clang doesn't complain
 		# about unknown -W flags, like -Wno-unused-but-set-variable)
 		# SRS - Add -Wno-deprecated-register and -Wno-expansion-to-defined to list of warning settings
@@ -184,9 +190,13 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_CO
 
 	# SRS - Make sure OSX can find system headers and add support for minimum OSX runtime version
 	if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-		# SRS - Also add -fasm-blocks otherwise Xcode complains
-		add_definitions(-fasm-blocks -isysroot "${CMAKE_OSX_SYSROOT}")
-		if("${CMAKE_OSX_DEPLOYMENT_TARGET}")
+		# SRS - Also add -fasm-blocks otherwise Xcode complains and -Qunused-arguments to silence MMX/SSE unused arg warnings when compiling for Apple arm64
+		add_definitions(-fasm-blocks -Qunused-arguments)
+        if(CMAKE_OSX_SYSROOT)
+            add_definitions(-isysroot "${CMAKE_OSX_SYSROOT}")
+            message(STATUS "Using macOS sysroot: " ${CMAKE_OSX_SYSROOT})
+        endif()
+		if(CMAKE_OSX_DEPLOYMENT_TARGET)
 			add_definitions(-mmacosx-version-min="${CMAKE_OSX_DEPLOYMENT_TARGET}")
 		endif()
 	endif()
@@ -194,9 +204,9 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_CO
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb -D_DEBUG -O0")
     #set(CMAKE_C_FLAGS_DEBUGALL "${CMAKE_C_FLAGS_DEBUGALL} -g -ggdb -D_DEBUG")
     #set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_PROFILE} -g -ggdb -D_DEBUG -O1 -fno-omit-frame-pointer")
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -ffast-math -fno-unsafe-math-optimizations -fomit-frame-pointer")
-	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -g -O3 -ffast-math -fno-unsafe-math-optimizations -fomit-frame-pointer")
-	set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -Os -ffast-math -fno-unsafe-math-optimizations -fomit-frame-pointer")
+	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -ffp-contract=off -fomit-frame-pointer -fno-math-errno -fno-trapping-math")
+	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -g -O3 -ffp-contract=off -fomit-frame-pointer -fno-math-errno -fno-trapping-math")
+	set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -Os -ffp-contract=off -fomit-frame-pointer -fno-math-errno -fno-trapping-math")
 	
 	set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 	#set(CMAKE_CXX_FLAGS_DEBUGALL ${CMAKE_C_FLAGS_DEBUGALL})
@@ -266,7 +276,6 @@ elseif(MSVC)
 		set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /SAFESEH:NO")
 		set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} /SAFESEH:NO")
 	# endif()
-	
 
 	add_definitions(-DWIN32 
 					-D_WINDOWS
@@ -274,16 +283,11 @@ elseif(MSVC)
 					-D_CRT_NONSTDC_NO_DEPRECATE
 					-D_CRT_SECURE_NO_WARNINGS
 					-D_MBCS
-					#-DUSE_OPENAL
 					-DUSE_EXCEPTIONS)
-        ## Check for Version ##
-        if( WINRT OR WINDOWS10 ) # Windows RT
-			add_definitions(-DUSE_WINRT)
-        endif()
 
-        if (USE_INTRINSICS)
-			add_definitions(-DUSE_INTRINSICS)
-        endif()
+	if( WINRT OR WINDOWS10 ) # Windows RT
+		add_definitions(-DUSE_WINRT)
+	endif()
 					
 	if(NOT CMAKE_CL_64)
 		add_definitions(-D_USE_32BIT_TIME_T)
@@ -297,6 +301,11 @@ elseif(MSVC)
 		# 2: Use MFC in a Shared DLL 
 		set(CMAKE_MFC_FLAG 2)
 	endif()
+
+endif()
+
+if (USE_INTRINSICS_SSE)
+	add_definitions(-DUSE_INTRINSICS_SSE)
 endif()
 
 #if(STANDALONE)
@@ -316,7 +325,7 @@ else (ZLIB_FOUND)
 endif (ZLIB_FOUND)
 
 if(USE_SYSTEM_LIBPNG)
-find_package(PNG REQUIRED)
+	find_package(PNG REQUIRED)
 endif (USE_SYSTEM_LIBPNG)
 
 if (PNG_FOUND)
@@ -327,9 +336,8 @@ else (PNG_FOUND)
     set(PNG_LIBRARY "" )
 endif (PNG_FOUND)
 
-
 if(USE_SYSTEM_LIBJPEG)
-find_package(JPEG REQUIRED)
+	find_package(JPEG REQUIRED)
 endif(USE_SYSTEM_LIBJPEG)
 
 if (JPEG_FOUND)
@@ -350,6 +358,16 @@ if(USE_VULKAN)
 
 	# RB: moved this above the general Vulkan part so glslang does not include Vulkan SDK headers
 	# which causes all kinds of weird segmentation faults because struct sizes don't match
+ 
+    # SRS - Set default VULKAN_SDK location if environment variable not defined on OSX
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT DEFINED ENV{VULKAN_SDK})
+        if(NOT USE_MoltenVK)
+            # SRS - Vulkan SDK installer copies standard vulkan headers and libs to /usr/local on OSX
+            set(ENV{VULKAN_SDK} /usr/local)
+        else()
+            message(FATAL_ERROR "Must define VULKAN_SDK location if USE_MoltenVK option enabled!")
+        endif()
+    endif()
 
 	if(SPIRV_SHADERC)
 		add_definitions(-DSPIRV_SHADERC)
@@ -382,7 +400,7 @@ if(USE_VULKAN)
 		set(GLSLANG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/glslang)
 		add_subdirectory(${GLSLANG_DIR})
 	
-		include_directories(${GLSLANG_DIR}/glslang)
+		include_directories(${GLSLANG_DIR})
 		
 		#link_directories($ENV{VULKAN_SDK}/Lib)
 	endif()
@@ -396,37 +414,29 @@ if(USE_VULKAN)
 	if(NOT Vulkan_FOUND)
 		message(FATAL_ERROR "Could not find Vulkan library!")
 	else()
-		# SRS - Optionally use MoltenVK headers/library for runtime config functions on OSX
-		if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND USE_MoltenVK)
-			add_definitions(-DUSE_MoltenVK)
-			include_directories($ENV{VULKAN_SDK}/../MoltenVK/include)
-			set(Vulkan_LIBRARY $ENV{VULKAN_SDK}/lib/libMoltenVK.dylib)
+        add_definitions(-DUSE_VULKAN)
+        include_directories($ENV{VULKAN_SDK}/include)
+
+		if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+            # SRS - Enable Beta extensions for VULKAN_SDK portability subset features on OSX
+            add_definitions(-DVK_ENABLE_BETA_EXTENSIONS)
+            # SRS - Optionally use MoltenVK headers/library for runtime config functions on OSX
+            if(USE_MoltenVK)
+                add_definitions(-DUSE_MoltenVK)
+                include_directories($ENV{VULKAN_SDK}/../MoltenVK/include)
+                set(Vulkan_LIBRARY $ENV{VULKAN_SDK}/../MoltenVK/dylib/macOS/libMoltenVK.dylib CACHE FILEPATH "Path to MoltenVK library." FORCE)
+            endif()
 		endif()
 		message(STATUS "Using Vulkan: " ${Vulkan_LIBRARY})
 	endif()
 	
-	add_definitions(-DUSE_VULKAN)
-	include_directories($ENV{VULKAN_SDK}/include)
-
 	# Eric: For use with SDL2/Vulkan
 	if(UNIX)
-		find_package(X11_XCB)
-		if(X11_XCB_FOUND)
-			add_definitions(-DHAVE_X11_XCB)
-			list(APPEND SUBSYSTEMS [X11])
-			# SRS - Added PKG_ preface to X11_XCB_INCLUDE_DIRS for OSX, not sure about UNIX
-			if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-				include_directories(${PKG_X11_XCB_INCLUDE_DIRS})
-			else()
-				include_directories(${X11_XCB_INCLUDE_DIRS})
-			endif()
-		endif()
-		add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+        # SRS - For UNIX-like target OSs use the generic SDL Vulkan platform
+        add_definitions(-DVULKAN_USE_PLATFORM_SDL)
 	elseif(WIN32)
 		add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 	endif()
-
-	
 
 else()
 
@@ -677,9 +687,6 @@ set(SOUND_INCLUDES
 	sound/WaveFile.h)
 	
 set(SOUND_SOURCES
-	#sound/snd_cache.cpp
-	#sound/snd_decoder.cpp
-	#sound/snd_efxfile.cpp
 	sound/snd_emitter.cpp
 	sound/snd_shader.cpp
 	sound/snd_system.cpp
@@ -881,9 +888,6 @@ file(GLOB COMPILER_AAS_SOURCES tools/compilers/aas/*.cpp)
 
 file(GLOB COMPILER_DMAP_INCLUDES tools/compilers/dmap/*.h)
 file(GLOB COMPILER_DMAP_SOURCES tools/compilers/dmap/*.cpp)
-
-file(GLOB COMPILER_RENDERBUMP_INCLUDES tools/compilers/renderbump/*.h)
-file(GLOB COMPILER_RENDERBUMP_SOURCES tools/compilers/renderbump/*.cpp)
 
 file(GLOB COMPILER_ROQVQ_INCLUDES tools/compilers/roqvq/*.h)
 file(GLOB COMPILER_ROQVQ_SOURCES tools/compilers/roqvq/*.cpp)
@@ -1301,9 +1305,6 @@ source_group("tools\\compilers\\aas" FILES ${COMPILER_AAS_SOURCES})
 source_group("tools\\compilers\\dmap" FILES ${COMPILER_DMAP_INCLUDES})
 source_group("tools\\compilers\\dmap" FILES ${COMPILER_DMAP_SOURCES})
 
-source_group("tools\\compilers\\renderbump" FILES ${COMPILER_RENDERBUMP_INCLUDES})
-source_group("tools\\compilers\\renderbump" FILES ${COMPILER_RENDERBUMP_SOURCES})
-
 source_group("tools\\compilers\\roqvq" FILES ${COMPILER_ROQVQ_INCLUDES})
 source_group("tools\\compilers\\roqvq" FILES ${COMPILER_ROQVQ_SOURCES})
 
@@ -1511,9 +1512,8 @@ if(MSVC)
 		list(APPEND RBDOOM3_INCLUDES ${RENDERER_VULKAN_INCLUDES})
 		list(APPEND RBDOOM3_SOURCES ${RENDERER_VULKAN_SOURCES})
 		
-		set(Vulkan_LIBRARIES
-			${Vulkan_LIBRARY}
-			)
+		set(Vulkan_LIBRARIES 
+			${Vulkan_LIBRARY})
 
 		if(SPIRV_SHADERC)
 			list(APPEND Vulkan_LIBRARIES shaderc_combined)
@@ -1726,6 +1726,11 @@ if(MSVC)
 		${CMAKE_DL_LIBS}
 		)
 		
+	# set MSVC default debug directory on executable	
+	if(CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER_EQUAL 8)
+		set_target_properties(RBDoom3BFG PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/..")
+	endif()
+	
 	#CMAKE_BINARY_DIR
 	if(CMAKE_CL_64)
 		install(TARGETS RBDoom3BFG
@@ -1733,8 +1738,8 @@ if(MSVC)
 	else()
 		install(TARGETS RBDoom3BFG
 			RUNTIME DESTINATION .)
-	endif()
-	
+	endif()	
+
 else()
 
 	list(APPEND RBDOOM3_SOURCES
@@ -1772,15 +1777,13 @@ else()
 		if(OPENAL)
 			find_package(OpenAL REQUIRED)
 			add_definitions(-DUSE_OPENAL)
+   
+            # SRS - Added support for OpenAL Soft headers on OSX (vs default macOS SDK headers)
+            if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT OPENAL_INCLUDE_DIR MATCHES "SDKs/MacOSX.*\.sdk")
+                include_directories(${OPENAL_INCLUDE_DIR})
+                add_definitions(-DUSE_OPENAL_SOFT_INCLUDES)
+            endif()
 
-			#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/openal-soft/include)
-			
-			#if(CMAKE_CL_64)
-			#	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/openal-soft/lib/win64)
-			#else()
-			#	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/openal-soft/lib/win32)
-			#endif()
-			
 			list(APPEND RBDOOM3_INCLUDES ${OPENAL_INCLUDES})
 			list(APPEND RBDOOM3_SOURCES
 				${OPENAL_SOURCES}
@@ -1796,11 +1799,9 @@ else()
             list(APPEND RBDOOM3_INCLUDES ${RENDERER_VULKAN_INCLUDES})
             list(APPEND RBDOOM3_SOURCES ${RENDERER_VULKAN_SOURCES})
             
-            set(Vulkan_LIBRARIES
-                ${Vulkan_LIBRARY}
-				${X11_XCB_LIBRARIES}
-				)
-				
+            set(Vulkan_LIBRARIES 
+            	${Vulkan_LIBRARY})
+
 			# SRS - Added UNIX/OSX support for shaderc
 			if(SPIRV_SHADERC)
 				list(APPEND Vulkan_LIBRARIES shaderc_combined)

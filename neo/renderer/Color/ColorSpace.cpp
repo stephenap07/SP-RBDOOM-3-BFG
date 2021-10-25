@@ -25,8 +25,8 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 /*
 ================================================================================================
@@ -551,8 +551,8 @@ void idColorSpace::ConvertNormalMapToStereographicHeightMap( byte* heightMap, co
 		scale0 = 1.0f - scale1;
 	}
 
-	float minHeight = idMath::INFINITY;
-	float maxHeight = -idMath::INFINITY;
+	float minHeight = idMath::INFINITUM;
+	float maxHeight = -idMath::INFINITUM;
 	for( int j = 0; j < height; j++ )
 	{
 		for( int i = 0; i < width; i++ )

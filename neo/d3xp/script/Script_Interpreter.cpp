@@ -27,8 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 
 #include "../Game_local.h"
@@ -1306,7 +1306,7 @@ bool idInterpreter::Execute()
 				if( *var_b.floatPtr == 0.0f )
 				{
 					Warning( "Divide by zero" );
-					*var_c.floatPtr = idMath::INFINITY;
+					*var_c.floatPtr = idMath::INFINITUM;
 				}
 				else
 				{
@@ -1578,7 +1578,7 @@ bool idInterpreter::Execute()
 				if( *var_a.floatPtr == 0.0f )
 				{
 					Warning( "Divide by zero" );
-					*var_b.floatPtr = idMath::INFINITY;
+					*var_b.floatPtr = idMath::INFINITUM;
 				}
 				else
 				{
@@ -1593,7 +1593,7 @@ bool idInterpreter::Execute()
 				if( *var_a.floatPtr == 0.0f )
 				{
 					Warning( "Divide by zero" );
-					var_b.vectorPtr->Set( idMath::INFINITY, idMath::INFINITY, idMath::INFINITY );
+					var_b.vectorPtr->Set( idMath::INFINITUM, idMath::INFINITUM, idMath::INFINITUM );
 				}
 				else
 				{

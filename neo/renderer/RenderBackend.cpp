@@ -29,8 +29,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 #include "framework/Common_local.h"
 #include "RenderCommon.h"
@@ -2271,8 +2271,8 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		return;
 	}
 
-	renderLog.OpenMainBlock( MRB_AMBIENT_PASS );
-	renderLog.OpenBlock( "Render_AmbientPass", colorBlue );
+	renderLog.OpenMainBlock( fillGbuffer ? MRB_FILL_GEOMETRY_BUFFER : MRB_AMBIENT_PASS );
+	renderLog.OpenBlock( fillGbuffer ? "Fill_GeometryBuffer" : "Render_AmbientPass", colorBlue );
 
 	if( fillGbuffer )
 	{
@@ -5634,6 +5634,10 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	// needed for editor rendering
 	GL_SetDefaultState();
 
+	// SRS - Save glConfig.timerQueryAvailable state so it can be disabled for RC_DRAW_VIEW_GUI then restored after it is finished
+	const bool timerQueryAvailable = glConfig.timerQueryAvailable;
+	bool drawView3D_timestamps = false;
+
 	for( ; cmds != NULL; cmds = ( const emptyCommand_t* )cmds->next )
 	{
 		switch( cmds->commandId )
@@ -5641,17 +5645,33 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 			case RC_NOP:
 				break;
 
-			case RC_DRAW_VIEW_3D:
 			case RC_DRAW_VIEW_GUI:
-				DrawView( cmds, 0 );
-				if( ( ( const drawSurfsCommand_t* )cmds )->viewDef->viewEntitys )
+				if( drawView3D_timestamps )
 				{
-					c_draw3d++;
+					// SRS - Capture separate timestamps for overlay GUI rendering when RC_DRAW_VIEW_3D timestamps are active
+					renderLog.OpenMainBlock( MRB_DRAW_GUI );
+					renderLog.OpenBlock( "Render_DrawViewGUI", colorBlue );
+					// SRS - Disable detailed timestamps during overlay GUI rendering so they do not overwrite timestamps from 3D rendering
+					glConfig.timerQueryAvailable = false;
+
+					DrawView( cmds, 0 );
+
+					// SRS - Restore timestamp capture state after overlay GUI rendering is finished
+					glConfig.timerQueryAvailable = timerQueryAvailable;
+					renderLog.CloseBlock();
+					renderLog.CloseMainBlock();
 				}
 				else
 				{
-					c_draw2d++;
+					DrawView( cmds, 0 );
 				}
+				c_draw2d++;
+				break;
+
+			case RC_DRAW_VIEW_3D:
+				drawView3D_timestamps = true;
+				DrawView( cmds, 0 );
+				c_draw3d++;
 				break;
 
 			case RC_SET_BUFFER:
@@ -5931,6 +5951,11 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 #if !defined(USE_VULKAN)
 
+// SRS - For OSX OpenGL record the final portion of GPU time while no other elapsed time query is active (after final shader pass and before post processing)
+#if defined(__APPLE__)
+	renderLog.OpenMainBlock( MRB_GPU_TIME );
+#endif
+
 	// RB: convert back from HDR to LDR range
 	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) )
 	{
@@ -5989,7 +6014,15 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		Tonemap( _viewDef );
 	}
 
-	Bloom( _viewDef );
+	if( !r_skipBloom.GetBool() )
+	{
+		Bloom( _viewDef );
+	}
+
+#if defined(__APPLE__)
+	renderLog.CloseMainBlock();
+#endif
+
 #endif
 
 	renderLog.CloseBlock();

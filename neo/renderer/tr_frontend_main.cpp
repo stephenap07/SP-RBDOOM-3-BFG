@@ -27,8 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 #include "RenderCommon.h"
 
@@ -409,7 +409,7 @@ static void R_SetupSplitFrustums( viewDef_t* viewDef )
 
 	for( int i = 0; i < 6; i++ )
 	{
-		tr.viewDef->frustumSplitDistances[i] = idMath::INFINITY;
+		tr.viewDef->frustumSplitDistances[i] = idMath::INFINITUM;
 	}
 
 	for( int i = 1; i <= ( r_shadowMapSplits.GetInteger() + 1 ) && i < MAX_FRUSTUMS; i++ )

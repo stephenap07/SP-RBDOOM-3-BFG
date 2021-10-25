@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2021 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -1288,12 +1288,10 @@ void idGameLocal::PopulateEnvironmentProbes()
 
 	for( ent = spawnedEntities.Next(); ent != NULL; ent = ent->spawnNode.Next() )
 	{
-		if( !ent->IsType( EnvironmentProbe::Type ) )
+		if( ent->IsType( EnvironmentProbe::Type ) )
 		{
-			continue;
+			numEnvprobes++;
 		}
-
-		numEnvprobes++;
 	}
 
 	if( numEnvprobes > 0 )
@@ -1312,11 +1310,12 @@ void idGameLocal::PopulateEnvironmentProbes()
 
 	int	numAreas = gameRenderWorld->NumAreas();
 
-	for( int i = 0 ; i < numAreas ; i++ )
+	for( int i = 0; i < numAreas; i++ )
 	{
 		idBounds areaBounds = gameRenderWorld->AreaBounds( i );
 
 		idVec3 point = areaBounds.GetCenter();
+		point.SnapInt();
 
 		int areaNum = gameRenderWorld->PointInArea( point );
 		if( areaNum < 0 )
@@ -1329,13 +1328,17 @@ void idGameLocal::PopulateEnvironmentProbes()
 		args.Set( "classname", "env_probe" );
 		args.Set( "origin", point.ToString() );
 
+		idStr name;
+		name.Format( "env_probe_area_%i", i );
+		name = gameEdit->GetUniqueEntityName( name );
+
+		args.Set( "name", name );
+
 		gameLocal.SpawnEntityDef( args, &ent );
 		if( !ent )
 		{
 			gameLocal.Error( "Couldn't spawn 'env_probe'" );
 		}
-
-		//environmentProbes.Append( probe );
 	}
 }
 // RB end
@@ -4102,6 +4105,9 @@ void idGameLocal::SpawnMapEntities()
 		{
 			// precache any media specified in the map entity
 			CacheDictionaryMedia( &args );
+
+			// Admer: brush origin offsets:
+			args.SetVector( BRUSH_ORIGIN_KEY, mapEnt->originOffset );
 
 			SpawnEntityDef( args );
 			num++;

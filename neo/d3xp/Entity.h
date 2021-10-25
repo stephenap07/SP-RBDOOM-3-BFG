@@ -591,6 +591,8 @@ public:
 	idStr					GetNextKey( const char* prefix, const char* lastMatch );
 // jmarshall end
 
+	idVec3					GetOriginBrushOffset() const;
+
 	void					Event_GetName();
 	void					Event_SetName( const char* name );
 	void					Event_FindTargets();

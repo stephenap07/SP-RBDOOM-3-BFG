@@ -692,6 +692,11 @@ void idEntity::Spawn()
 	if( temp != NULL && *temp != '\0' )
 	{
 		SetModel( temp );
+
+		// Entities without models don't have origin brushes,
+		// so it makes sense to apply this only IF there is a model
+		origin += GetOriginBrushOffset();
+		SetOrigin( origin );
 	}
 
 	if( spawnArgs.GetString( "bind", "", &temp ) )
@@ -4683,6 +4688,11 @@ idEntity::ShowEditingDialog
 */
 void idEntity::ShowEditingDialog()
 {
+}
+
+idVec3 idEntity::GetOriginBrushOffset() const
+{
+	return spawnArgs.GetVector( BRUSH_ORIGIN_KEY, "0 0 0" );
 }
 
 /***********************************************************************

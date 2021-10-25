@@ -15,7 +15,7 @@ Thank you for downloading RBDOOM-3-BFG.
 
 _______________________________________
 
-11 May 2021 - RBDOOM-3-BFG 1.3.0 - Download it from the [RBDOOM-3-BFG ModDB Page](https://www.moddb.com/mods/rbdoom-3-bfg) 
+30 October 2021 - RBDOOM-3-BFG 1.3.0 - Download it from the [RBDOOM-3-BFG ModDB Page](https://www.moddb.com/mods/rbdoom-3-bfg) 
 _______________________________
 
 <img src="https://i.imgur.com/ykY9tMs.png">
@@ -341,11 +341,13 @@ Using the models argument will also export all needed models by entity declarati
 
 * Windows builds still require OpenGL 4.5 but they run in compatibility profile instead of core profile
 
-* Support for the MIPS64 architecture (thanks to Ramil Sattarov)
+* Initial support for the MIPS64 architecture (thanks to Ramil Sattarov)
+
+* Initial support for the LoongArch64 architecture (thanks to Ramil Sattarov)
 
 * Initial support for the PPC64 architecture (thanks to Trung Lê)
 
-* Initial support for the Rasperi PI4 (thanks to Alejandro Piñeiro)
+* Initial support for the Raspberry Pi 4 (thanks to Alejandro Piñeiro)
 
 * Updated Mac OS support (thanks to Steve Saunders)
 
@@ -357,7 +359,31 @@ Using the models argument will also export all needed models by entity declarati
 
 * Fixed bug that GOG builds default to Japanese instead of English
 
+* Support for Steam and GOG base path detection for Windows if sys_useSteamPath or sys_useGOGPath is set to 1 (default 0)
 
+* Changed CMake MSVC setup to enable debugging without manually changing paths (thanks to Patrick Raynor)
+
+* Allow _extra_ents.map files next to the original .map files so new entities can be added to existing maps or old entities can be tweaked with new values
+
+[ASSETS]
+
+* This release is the first time that contains changes to the base/ folder and is not a pure executable patch
+
+* base/materials/*.mtr contain the Doom 3 BFG material files with some minor fixes so TrenchBroom can load them
+
+* base/def/*.def are the Doom 3 BFG entity definition files so DarkRadiant is functional
+
+* base/maps/game/mars_city1_extra_ents.map contains a fog light fix in the first hangar scene
+
+* base/maps/game/*_extra_ents.map files contain additional env_probe entities and light entity tweaks
+
+* base/maps/game/*.lightgrid files and base/env/game/<map>/*.exr contain the new precomputed PBR light data
+
+* New entity definition env_probe
+
+* New material textures/common/origin so mappers can create brushes that set the entity origin
+
+* Changed light entity definition to support Quake 1 light styles
 
 _______________________________________
 
@@ -400,6 +426,7 @@ This is a maintenance release without Vulkan support even though it contains a l
 * Many smaller compiler related fixes like VS 2017 and VS 2019 support.
   If it fails to compile with GCC then it should at least build with Clang on Linux
 
+* Initial support for the E2K (MCST Elbrus 2000) architecture (thanks to Ramil Sattarov)
 
 _______________________________________
 
