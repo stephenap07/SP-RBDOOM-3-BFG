@@ -49,6 +49,7 @@ UI_Shell::UI_Shell()
 	: _nextScreen( -1 )
 	, _currentScreen( -1 )
 	, _ui( nullptr )
+	, _soundWorld( nullptr )
 	, _isActive( false )
 	, _isPausingGame( false )
 	, _inhibitsControl( false )
@@ -90,6 +91,9 @@ bool UI_Shell::Init( idSoundWorld* soundWorld )
 			common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
 		}
 	}
+
+	// TODO(Stephen): Add additional event listeners. Default global event listeners are more about system listeners.
+	//_ui->Context()->AddEventListener()
 
 	return true;
 }

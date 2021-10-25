@@ -66,6 +66,7 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 		if( !token.Icmp( "exit" ) )
 		{
 			common->Quit();
+			break;
 		}
 
 		if( !token.Icmp( "goto" ) )
@@ -74,30 +75,40 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			ui->SetNextScreen( token.c_str() );
 			event.GetTargetElement()->GetOwnerDocument()->Hide();
 			ui->CloseDocument( event.GetTargetElement()->GetOwnerDocument()->GetSourceURL().c_str() );
+
+			continue;
 		}
 
 		if( !token.Icmp( "load" ) )
 		{
 			src.ReadToken( &token );
 			ui->SetNextScreen( token.c_str() );
+
+			continue;
 		}
 
 		if( !token.Icmp( "map" ) )
 		{
 			src.ReadToken( &token );
 			cmdSystem->AppendCommandText( va( "map %s\n", token.c_str() ) );
+
+			continue;
 		}
 
 		if( !token.Icmp( "playsound" ) )
 		{
 			src.ReadToken( &token );
 			ui->PlaySound( token.c_str() );
+
+			continue;
 		}
 
 		if( !token.Icmp( "localSound" ) )
 		{
 			src.ReadToken( &token );
 			common->SW()->PlayShaderDirectly( token.c_str() );
+
+			continue;
 		}
 
 		if( !token.Icmp( "inhibitControl" ) )
@@ -115,6 +126,8 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			{
 				ui->SetInhibitsControl( false );
 			}
+
+			continue;
 		}
 
 		if( !token.Icmp( "pauseGame" ) )
@@ -132,6 +145,8 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			{
 				ui->SetIsPausingGame( false );
 			}
+
+			continue;
 		}
 
 		if( !token.Icmp( "enableCursor" ) )
@@ -149,6 +164,8 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			{
 				ui->SetCursorEnabled( false );
 			}
+
+			continue;
 		}
 
 		if( !token.Icmp( "set" ) )
@@ -186,6 +203,8 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 					}
 				}
 			}
+
+			continue;
 		}
 	}
 }

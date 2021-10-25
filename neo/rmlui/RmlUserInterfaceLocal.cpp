@@ -154,6 +154,10 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 	return nullptr;
 }
 
+void RmlUserInterfaceLocal::HandleNamedEvent(const char* eventName)
+{
+}
+
 void RmlUserInterfaceLocal::HandleCharEvent( const sysEvent_t* event, int keyModState )
 {
 	Rml::Input::KeyIdentifier key = idRmlSystem::TranslateKey( event->evValue );
@@ -207,10 +211,10 @@ void RmlUserInterfaceLocal::HandleAbsoluteMouseEvent( const sysEvent_t* event, i
 	const float pixelAspect = renderSystem->GetPixelAspect();
 	const float sysWidth = renderSystem->GetWidth() * ( pixelAspect > 1.0f ? pixelAspect : 1.0f );
 	const float sysHeight = renderSystem->GetHeight() / ( pixelAspect < 1.0f ? pixelAspect : 1.0f );
-	float scale = 1.0f * sysHeight / ( float )_context->GetDimensions().y;
-	float invScale = 1.0f / scale;
-	float tx = 0.5f * ( sysWidth - ( _context->GetDimensions().x * scale ) );
-	float ty = 0.5f * ( sysHeight - ( _context->GetDimensions().y * scale ) );
+	const float scale = 1.0f * sysHeight / ( float )_context->GetDimensions().y;
+	const float invScale = 1.0f / scale;
+	const float tx = 0.5f * ( sysWidth - ( _context->GetDimensions().x * scale ) );
+	const float ty = 0.5f * ( sysHeight - ( _context->GetDimensions().y * scale ) );
 
 	_cursorX = idMath::Ftoi( ( static_cast<float>( event->evValue ) - tx ) * invScale );
 	_cursorY = idMath::Ftoi( ( static_cast<float>( event->evValue2 ) - ty ) * invScale );
@@ -251,10 +255,6 @@ void RmlUserInterfaceLocal::HandleMouseEvent( const sysEvent_t* event, int keyMo
 	BoundCursorToScreen();
 
 	_context->ProcessMouseMove( _cursorX, _cursorY, keyModState );
-}
-
-void RmlUserInterfaceLocal::HandleNamedEvent( const char* eventName )
-{
 }
 
 void RmlUserInterfaceLocal::Redraw( int time )

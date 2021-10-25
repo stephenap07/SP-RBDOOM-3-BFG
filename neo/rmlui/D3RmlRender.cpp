@@ -113,7 +113,9 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	idDrawVert* temp = &_verts[_numVerts];
 	for( int i = 0; i < numVerts; i++ )
 	{
-		idVec3 pos = idVec3( vertices[i].position.x, vertices[i].position.y, 0 );
+		const Rml::Vertex localVertex = vertices[i];
+
+		idVec3 pos = idVec3(localVertex.position.x, localVertex.position.y, 0 );
 		pos += idVec3( translation.x, translation.y, 0 );
 
 		// transform
@@ -123,10 +125,11 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 		pos.x *= scaleToVirtual.x;
 		pos.y *= scaleToVirtual.y;
 
-		temp[i].xyz = pos;
-		temp[i].SetTexCoord( vertices[i].tex_coord.x, vertices[i].tex_coord.y );
-		temp[i].SetColor( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) / 255.0f ) );
-		//temp[i].SetColor2( PackColor( idVec4( vertices[i].colour.red, vertices[i].colour.blue, vertices[i].colour.green, vertices[i].colour.alpha ) / 255.0f ) );
+		idDrawVert& localDrawVert = temp[i];
+
+		localDrawVert.xyz = pos;
+		localDrawVert.SetTexCoord(localVertex.tex_coord.x, localVertex.tex_coord.y );
+		localDrawVert.SetColor( PackColor( idVec4(localVertex.colour.red, localVertex.colour.blue, localVertex.colour.green, localVertex.colour.alpha ) / 255.0f ) );
 
 		_numVerts++;
 
