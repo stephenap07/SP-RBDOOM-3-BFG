@@ -21,6 +21,9 @@ option(SDL2
 option(OPENAL
 		"Use OpenAL soft instead of XAudio2" OFF)
 
+option(STEAMAUDIO
+		"Use steamaudio" ON)
+
 option(FFMPEG
 		"Use FMPEG to render Bink videos" ON)
 
@@ -1105,6 +1108,8 @@ file(GLOB SDL_SOURCES sys/sdl/*.cpp)
 
 file(GLOB SDF_INCLUDE libs/sdf/*.h)
 
+file(GLOB STEAMAUDIO_INCLUDE libs/steamaudio/include/*.h)
+
 # Eric: Utilize either the Vulkan or GL implementation of SDL
 if(UNIX)
 	if(USE_VULKAN)
@@ -1209,6 +1214,8 @@ source_group("libs\\freetype" FILES ${FREETYPE_SOURCES})
 source_group("libs\\freetype" FILES ${FREETYPE_AMALGAMATION_INCLUDE})
 
 source_group("libs\\sdf" FILES ${SDF_INCLUDE})
+
+source_group("libs\\steamaudio" FILES ${STEAMAUDIO_INCLUDE})
 
 source_group("sound" FILES ${SOUND_INCLUDES})
 source_group("sound" FILES ${SOUND_SOURCES})
@@ -1565,6 +1572,33 @@ if(MSVC)
 			${XAUDIO2_SOURCES}
 			${DOOMCLASSIC_XAUDIO2_SOURCES})
 	endif()
+
+	if(STEAMAUDIO)
+		add_definitions(-DUSE_STEAMAUDIO)
+
+		include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/steamaudio/include)
+		
+		if(CMAKE_CL_64)
+			link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/steamaudio/lib/windows-x64)
+		else()
+			link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/steamaudio/lib/windows-x86)
+		endif()
+
+		list(APPEND RBDOOM3_INCLUDES ${STEAMAUDIO_INCLUDE})
+	
+		set(STEAMAUDIO_LIBRARIES
+			phonon)
+
+		if(CMAKE_CL_64)
+			install(FILES libs/steamaudio/lib/windows-x64/GPUUtilities.dll DESTINATION .)
+			install(FILES libs/steamaudio/lib/windows-x64/phonon.dll DESTINATION .)
+			install(FILES libs/steamaudio/lib/windows-x64/TrueAudioNext.dll DESTINATION .)
+		else()
+			install(FILES libs/steamaudio/lib/windows-x86/GPUUtilities.dll DESTINATION .)
+			install(FILES libs/steamaudio/lib/windows-x86/phonon.dll DESTINATION .)
+			install(FILES libs/steamaudio/lib/windows-x86/TrueAudioNext.dll DESTINATION .)
+		endif()
+	endif()
 	
 	if(FFMPEG)
 		add_definitions(-DUSE_FFMPEG)
@@ -1717,6 +1751,7 @@ if(MSVC)
 		${Vulkan_LIBRARIES}
 		${OpenGL_LIBRARIES}
 		${OpenAL_LIBRARIES}
+		${STEAMAUDIO_LIBRARIES}
 		${FFmpeg_LIBRARIES}
         ${ZLIB_LIBRARY}
         ${PNG_LIBRARY}
