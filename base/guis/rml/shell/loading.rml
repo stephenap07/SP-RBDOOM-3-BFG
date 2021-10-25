@@ -1,0 +1,52 @@
+<rml>
+<head>
+	<link type="text/template" href="../window.rml"/>
+	<link type="text/css" href="icon.rcss"/>
+	<title>Inventory</title>
+	<style>
+		body
+		{
+			width: 100%;
+			height: 100%;
+
+			z-index: -1;
+		}
+		
+		/* Hide the window icon. */
+        div#title_bar div#icon
+        {
+            display: none;
+        }
+
+        .center_content
+		{
+			z-index: 2;
+    		padding: 20px;
+    		width: 800px; 
+    		height: 200px;
+    		position: absolute;
+    		top: 50%; margin-top:-100px;
+    		left: 50%; margin-left:-400px;
+    		font-weight: bold;
+    		text-transform: uppercase;
+    		color: #ccc; text-align:center; vertical-align:middle
+		}
+
+
+		#lowerleft
+		{
+  		  	margin-bottom: 1px;
+    		margin-left : 1px;
+    		background-color: red;
+    		color: white;
+    		position: fixed;
+    		bottom: 0;
+    		font-size: 30px;
+		}
+
+	</style>
+</head>
+<body>
+	*****Loading*****
+</body>
+</rml>

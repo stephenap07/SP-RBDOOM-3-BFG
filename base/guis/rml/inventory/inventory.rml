@@ -1,0 +1,43 @@
+<rml>
+<head>
+	<link type="text/template" href="../window.rml"/>
+	<link type="text/css" href="icon.rcss"/>
+	<title>Inventory</title>
+	<style>
+		body
+		{
+			width: 100%;
+			height: 100%;
+
+			z-index: -1;
+		}
+		
+		/* Hide the window icon. */
+        div#title_bar div#icon
+        {
+            display: none;
+        }
+
+        div#menu_content
+        {
+        	z-index: 2;
+
+			width: auto;
+			height: auto;
+
+			overflow: hidden auto;
+
+			text-align: center;
+        }
+
+	</style>
+</head>
+<body>
+	<div id="menu_content">
+		<button id="start_game" onclick="startgame; goto game">Start Game</button><br />
+		<button id="options">Options</button><br />
+		<button id="help">Help</button><br />
+		<button id="exit" onclick="exit">Exit</button>
+	</div>
+</body>
+</rml>

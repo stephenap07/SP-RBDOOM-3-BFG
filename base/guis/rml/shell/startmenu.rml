@@ -1,0 +1,85 @@
+<rml>
+<head>
+	<link type="text/template" href="../window.rml"/>
+	<link type="text/css" href="icon.rcss"/>
+	<title>Start Menu</title>
+	<style>
+		body
+		{
+			width: 100%;
+			height: 100%;
+
+			z-index: -1;
+		}
+		
+		/* Hide the window icon. */
+        div#title_bar div#icon
+        {
+            display: none;
+        }
+
+		div#menu_content
+		{
+			z-index: 2;
+    		background-color: yellow;
+    		width: 800px; 
+    		height: 200px;
+    		position: absolute;
+    		top: 50%; margin-top:-100px;
+    		left: 50%; margin-left:-400px;
+    		font-weight: bold;
+    		text-transform: uppercase;
+    		color: #ccc; text-align:center; vertical-align:middle
+		}
+
+		#start_game
+		{
+			opacity: 0.8;
+			transform: rotate(370deg) translateX(100dp) scale(2.2);
+			transform-origin: 30% 80% 0;
+		}
+
+		.container
+		{
+			width: 100%;
+			height: 100%;
+
+			z-index: -1;
+		}
+
+		.container_img
+		{
+			height: 100%;
+			width: 100%;
+			image-color: rgba(130, 112, 55, 255);
+		}
+
+		@decorator render : renderscene
+		{
+			model-name: "models/static/black_leather_chair.dae";
+			model-rotate: "270, 10, 0";
+			model-origin: "0, 50, 0";
+		}
+
+		model
+		{
+			display: block;
+			width: 100%;
+			height: 100%;
+			z-index: 1;
+
+			decorator: render;
+		}
+	</style>
+</head>
+<body onshow="inhibitControl=true; pauseGame=false; enableCursor=true">
+
+	<img src="/textures/common/guiWhite" class="container_img" />
+
+	<div id="menu_content">
+		<button id="start_game" onclick="goto guis/rml/shell/game.rml; map fourroom" onmousedown="playsound gui/btn_pda_advance" onmouseover="playsound gui/btn_roll_over">Start</button><br />
+		<button id="options" onclick="goto guis/rml/shell/options.rml" onmousedown="playsound gui/btn_pda_advance" onmouseover="playsound gui/btn_roll_over">Options</button><br />
+		<button id="exit" onmousedown="playsound gui/btn_pda_advance" onclick="exit" onmouseover="playsound gui/btn_roll_over">Exit</button>
+	</div>
+</body>
+</rml>

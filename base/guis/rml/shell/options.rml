@@ -1,0 +1,49 @@
+<rml>
+	<head>
+		<link type="text/template" href="../window.rml"/>
+		<link type="text/css" href="icon.rcss"/>
+		<style>
+			body
+			{
+				width: 100%;
+				height: 100%;
+				z-index: -1;
+			}
+
+			div#menu_content
+			{
+				z-index: 2;
+    			width: 800px; 
+    			height: 200px;
+    			position: absolute;
+    			top: 50%; margin-top:-100px;
+    			left: 50%; margin-left:-400px;
+    			font-weight: bold;
+    			text-transform: uppercase;
+    			color: #ccc; text-align:center; vertical-align:middle
+			}
+		</style>
+	</head>
+	<body onshow="inhibitControl=true; pauseGame=false; enableCursor=true">
+		<div id="menu_content">
+			<form onsubmit="store; goto guis/rml/shell/startmenu.rml" onchange="enable_accept">
+				<div>
+					<p>
+						Graphics<br />
+						<label><input id="good" type="radio" name="graphics" value="good" /> Good</label><br />
+						<label><input id="ok" type="radio" name="graphics" value="ok" checked="true" /> OK</label><br />
+						<label><input id="bad" type="radio" name="graphics" value="bad" onchange="bad_graphics" /> Bad</label><br />
+					</p>
+					<p id="bad_warning" style="display: none;">Are you sure about this? Bad graphics are just plain <em>bad.</em></p>
+					<p>
+						Audio<br />
+						<label><input id="reverb" type="checkbox" name="reverb" value="true" checked="true" /> Reverb</label><br />
+						<label><input id="3d" type="checkbox" name="3d" value="true" /> 3D Spatialisation</label>
+					</p>
+				</div>
+				<input type="submit" id="accept" value="accept" disabled>Accept</input>
+				<input type="submit" value="cancel">Cancel</input>
+			</form>
+		</div>
+	</body>
+</rml>
