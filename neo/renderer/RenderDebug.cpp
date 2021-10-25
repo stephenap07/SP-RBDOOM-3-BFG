@@ -94,6 +94,11 @@ void RenderDebug_local::SubmitForDrawing()
 
 void RenderDebug_local::DebugText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align, const int lifetime, bool depthTest )
 {
+	if( _numActiveDebugText >= kMaxDebugTextModels )
+	{
+		return;
+	}
+
 	auto man = renderSystem->GetTextBufferManager();
 	auto textHandle = man->createTextBuffer( 0, BufferType::Dynamic );
 	man->setPenPosition( textHandle, 0, 0 );
@@ -113,6 +118,11 @@ void RenderDebug_local::DebugText( const char* text, const idVec3& origin, float
 
 void RenderDebug_local::DebugLine( const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime, const bool depthTest )
 {
+	if( _numActiveDebugLine >= kMaxDebugLineModels )
+	{
+		return;
+	}
+
 	_debugLine[_numActiveDebugLine] = { color, start, end, depthTest, lifetime };
 	++_numActiveDebugLine;
 }
