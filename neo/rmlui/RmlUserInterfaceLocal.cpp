@@ -599,7 +599,7 @@ void RmlUserInterfaceManagerLocal::PostRender()
 			img.dimensions.y,
 			textureFilter_t::TF_NEAREST,
 			textureRepeat_t::TR_CLAMP,
-			textureUsage_t::TD_LOOKUP_TABLE_RGBA );
+			textureUsage_t::TD_RGBA32F );
 		if( img.referencedOutsideLevelLoad )
 		{
 			img.image->SetReferencedOutsideLevelLoad();

@@ -129,7 +129,9 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 
 		localDrawVert.xyz = pos;
 		localDrawVert.SetTexCoord(localVertex.tex_coord.x, localVertex.tex_coord.y );
-		localDrawVert.SetColor( PackColor( idVec4(localVertex.colour.red, localVertex.colour.blue, localVertex.colour.green, localVertex.colour.alpha ) / 255.0f ) );
+		idVec4 color = idVec4(localVertex.colour.red, localVertex.colour.green, localVertex.colour.blue, localVertex.colour.alpha);
+		dword packedColor = PackColor(color);
+		localDrawVert.SetColor( packedColor );
 
 		_numVerts++;
 
@@ -144,7 +146,7 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 
 	if( _enableScissor )
 	{
-		glState = GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_GEQUAL | GLS_STENCIL_MAKE_REF( kRmlStencilRef - _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
+		glState = GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_EQUAL | GLS_STENCIL_MAKE_REF( kRmlStencilRef - _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
 	}
 	else
 	{
@@ -152,6 +154,11 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	}
 
 	const idMaterial* material = reinterpret_cast<const idMaterial*>( texture );
+
+	if (!material)
+	{
+		material = _guiSolid;
+	}
 
 	if( material )
 	{
@@ -288,6 +295,9 @@ void idRmlRender::RenderClipMask()
 								STEREO_DEPTH_TYPE_NONE );
 
 	WriteDrawVerts16( maskVerts, localVerts, 4 );
+
+	// TODO(Stephen): Make render debug masks configurable.
+	//DrawRect(_clipRects, colorRed);
 }
 
 void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
@@ -404,6 +414,26 @@ void idRmlRender::DrawCursor( int x, int y, int w, int h )
 	rmlDc->DrawCursor( &sx, &sy, 36.0f * scaleToVirtual.x, bounds );
 	rmlDc->PopClipRect();
 	renderSystem->SetGLState( 0 );
+}
+
+void idRmlRender::DrawRect(const idRectangle& rect, const idVec4& color)
+{
+	const idVec2 scaleToVirtual((float)renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
+		(float)renderSystem->GetVirtualHeight() / renderSystem->GetHeight());
+
+	renderSystem->SetColor(color);
+
+	float x = rect.x * scaleToVirtual.x;
+	float y = rect.y * scaleToVirtual.y;
+	float w = fabs(rect.w) * scaleToVirtual.x;
+	float h = fabs(rect.h) * scaleToVirtual.y;
+
+	float size = 1;
+
+	renderSystem->DrawStretchPic(x, y, size, h, 0, 0, 0, 0, _guiSolid);
+	renderSystem->DrawStretchPic(x + w - size, y, size, h, 0, 0, 0, 0, _guiSolid);
+	renderSystem->DrawStretchPic(x, y, w, size, 0, 0, 0, 0, _guiSolid);
+	renderSystem->DrawStretchPic(x, y + h - size, w, size, 0, 0, 0, 0, _guiSolid);
 }
 
 void RmlImage::Free()

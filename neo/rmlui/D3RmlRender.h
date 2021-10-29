@@ -86,6 +86,8 @@ public:
 
 	void DrawCursor( int x, int y, int w, int h );
 
+	void DrawRect(const idRectangle& rect, const idVec4& color);
+
 private:
 
 	bool				_enableScissor;
