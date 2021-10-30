@@ -176,7 +176,7 @@ void Framebuffer::Init()
 		globalFramebuffers.glowFBO[i]->Bind();
 		globalFramebuffers.glowFBO[i]->AddColorBuffer( GL_RGBA8, 0 );
 		globalFramebuffers.glowFBO[i]->AttachImage2D( GL_TEXTURE_2D, globalImages->glowImage[i], 0 );
-		globalFramebuffers.glowFBO[i]->AddStencilBuffer(GL_STENCIL_INDEX); // stencil buffer for gui masks
+		globalFramebuffers.glowFBO[i]->AddStencilBuffer( GL_STENCIL_INDEX ); // stencil buffer for gui masks
 		//globalFramebuffers.glowFBO[i]->AddDepthBuffer(GL_DEPTH24_STENCIL8); // probably don't need depth?
 		globalFramebuffers.glowFBO[i]->Check();
 	}
@@ -495,19 +495,19 @@ void Framebuffer::AddDepthBuffer( int format, int multiSamples )
 	GL_CheckErrors();
 }
 
-void Framebuffer::AddStencilBuffer(int format, int multiSamples)
+void Framebuffer::AddStencilBuffer( int format, int multiSamples )
 {
 	stencilFormat = format;
 
 	bool notCreatedYet = stencilBuffer == 0;
-	if (notCreatedYet)
+	if( notCreatedYet )
 	{
 		glGenRenderbuffers( 1, &stencilBuffer );
 	}
 
 	glBindRenderbuffer( GL_RENDERBUFFER, stencilBuffer );
 
-	if (multiSamples > 0)
+	if( multiSamples > 0 )
 	{
 		glRenderbufferStorageMultisample( GL_RENDERBUFFER, multiSamples, format, width, height );
 
@@ -518,7 +518,7 @@ void Framebuffer::AddStencilBuffer(int format, int multiSamples)
 		glRenderbufferStorage( GL_RENDERBUFFER, format, width, height );
 	}
 
-	if (notCreatedYet)
+	if( notCreatedYet )
 	{
 		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, stencilBuffer );
 	}

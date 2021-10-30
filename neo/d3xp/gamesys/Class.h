@@ -252,26 +252,26 @@ public:
 
 	// jmarshall
 	template< typename T >
-	T*							Cast(void)
+	T*							Cast( void )
 	{
-		return this ? (IsType(T::Type) ? static_cast<T*>(this) : NULL) : NULL;
+		return this ? ( IsType( T::Type ) ? static_cast<T*>( this ) : NULL ) : NULL;
 	}
 
 	template< typename T >
-	const T*					Cast(void) const
+	const T*					Cast( void ) const
 	{
-		return this ? (IsType(T::Type) ? static_cast<const T*>(this) : NULL) : NULL;
+		return this ? ( IsType( T::Type ) ? static_cast<const T*>( this ) : NULL ) : NULL;
 	}
 
-	virtual void				StateThreadChanged(void) { };
-	
+	virtual void				StateThreadChanged( void ) { };
+
 
 	virtual idClass*			InvokeChild()
 	{
 		return NULL;
 	}
-	virtual intptr_t			Invoke(const char* functionName, void* param1);
-	virtual bool				HasNativeFunction(const char* functionName);
+	virtual intptr_t			Invoke( const char* functionName, void* param1 );
+	virtual bool				HasNativeFunction( const char* functionName );
 
 	// jmarshall end
 

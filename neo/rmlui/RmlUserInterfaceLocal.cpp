@@ -154,7 +154,7 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 	return nullptr;
 }
 
-void RmlUserInterfaceLocal::HandleNamedEvent(const char* eventName)
+void RmlUserInterfaceLocal::HandleNamedEvent( const char* eventName )
 {
 }
 

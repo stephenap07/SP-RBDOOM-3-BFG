@@ -316,11 +316,11 @@ stateResult_t rvStateThread::Execute( void )
 		{
 			if( call->parms.stage )
 			{
-				gameLocal.Printf( "%s: %s (%d)\n", ((idEntity *)owner)->GetClassname(), call->state.c_str(), call->parms.stage );
+				gameLocal.Printf( "%s: %s (%d)\n", ( ( idEntity* )owner )->GetClassname(), call->state.c_str(), call->parms.stage );
 			}
 			else
 			{
-				gameLocal.Printf( "%s: %s\n", ((idEntity*)owner)->GetClassname(), call->state.c_str() );
+				gameLocal.Printf( "%s: %s\n", ( ( idEntity* )owner )->GetClassname(), call->state.c_str() );
 			}
 		}
 
@@ -341,7 +341,8 @@ stateResult_t rvStateThread::Execute( void )
 				return SRESULT_ERROR;
 		}
 
-		if (lastResult == SRESULT_DONE) {
+		if( lastResult == SRESULT_DONE )
+		{
 			owner->StateThreadChanged();
 		}
 

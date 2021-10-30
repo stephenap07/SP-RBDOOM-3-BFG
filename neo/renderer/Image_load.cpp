@@ -603,7 +603,7 @@ void idImage::ActuallyLoadImage( bool fromBackEnd )
 
 void idImage::DeferredLoadImage()
 {
-	globalImages->imagesToLoad.AddUnique(this);
+	globalImages->imagesToLoad.AddUnique( this );
 }
 
 /*

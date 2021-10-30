@@ -1643,9 +1643,9 @@ void idEntity::BecomeReplicated()
 idEntity::GetFloat
 ==============
 */
-float idEntity::GetFloat(const char* key)
+float idEntity::GetFloat( const char* key )
 {
-	return spawnArgs.GetFloat(key, "0");
+	return spawnArgs.GetFloat( key, "0" );
 }
 
 /*
@@ -1653,11 +1653,11 @@ float idEntity::GetFloat(const char* key)
 idEntity::GetKey
 ==============
 */
-const char* idEntity::GetKey(const char* key)
+const char* idEntity::GetKey( const char* key )
 {
 	const char* value;
 
-	spawnArgs.GetString(key, "", &value);
+	spawnArgs.GetString( key, "", &value );
 
 	return value;
 }
@@ -1667,9 +1667,9 @@ const char* idEntity::GetKey(const char* key)
 idEntity::GetInt
 ==============
 */
-int idEntity::GetInt(const char* key)
+int idEntity::GetInt( const char* key )
 {
-	return spawnArgs.GetInt(key, "0");
+	return spawnArgs.GetInt( key, "0" );
 }
 
 /*
@@ -1677,9 +1677,9 @@ int idEntity::GetInt(const char* key)
 idEntity::GetBool
 ==============
 */
-bool idEntity::GetBool(const char* key)
+bool idEntity::GetBool( const char* key )
 {
-	return spawnArgs.GetBool(key, "0");
+	return spawnArgs.GetBool( key, "0" );
 }
 
 /*

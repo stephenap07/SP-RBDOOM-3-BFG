@@ -69,12 +69,12 @@ bool UI_Shell::Init( idSoundWorld* soundWorld )
 	if( document )
 	{
 		auto el = document->GetElementById( "start_game" );
-		if (el)
+		if( el )
 		{
-			auto p1 = Rml::Transform::MakeProperty({ Rml::Transforms::Rotate2D{10.f}, Rml::Transforms::TranslateX{100.f} });
-			auto p2 = Rml::Transform::MakeProperty({ Rml::Transforms::Scale2D{3.f} });
-			el->Animate("transform", p1, 1.8f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut }, -1, true);
-			el->AddAnimationKey("transform", p2, 1.3f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut });
+			auto p1 = Rml::Transform::MakeProperty( { Rml::Transforms::Rotate2D{10.f}, Rml::Transforms::TranslateX{100.f} } );
+			auto p2 = Rml::Transform::MakeProperty( { Rml::Transforms::Scale2D{3.f} } );
+			el->Animate( "transform", p1, 1.8f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut }, -1, true );
+			el->AddAnimationKey( "transform", p2, 1.3f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut } );
 		}
 	}
 

@@ -256,7 +256,7 @@ static void R_HDR_RGBA16FImage_ResGui( idImage* image )
 	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F ); //, msaaSamples );
 }
 
-static void R_RGBA8Image_ResGui(idImage* image)
+static void R_RGBA8Image_ResGui( idImage* image )
 {
 	// FIXME
 #if defined(USE_HDR_MSAA)
@@ -264,7 +264,7 @@ static void R_RGBA8Image_ResGui(idImage* image)
 #else
 	int msaaSamples = 0;
 #endif
-	image->GenerateImage(NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F); //, msaaSamples );
+	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F ); //, msaaSamples );
 }
 
 static void R_HDR_RGBA16FImage_ResNative_Linear( idImage* image )

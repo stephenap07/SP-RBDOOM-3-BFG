@@ -921,10 +921,10 @@ void idCommonLocal::Frame()
 		// Load the generated textures to the GPU.
 		rmlManager->PostRender();
 
-		for (int i = 0; i < globalImages->imagesToLoad.Num(); i++)
+		for( int i = 0; i < globalImages->imagesToLoad.Num(); i++ )
 		{
 			// This is a "deferred" load of textures to the gpu.
-			globalImages->imagesToLoad[i]->ActuallyLoadImage(false);
+			globalImages->imagesToLoad[i]->ActuallyLoadImage( false );
 		}
 
 		globalImages->imagesToLoad.Clear();

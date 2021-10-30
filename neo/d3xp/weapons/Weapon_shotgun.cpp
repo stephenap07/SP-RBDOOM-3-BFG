@@ -211,15 +211,15 @@ stateResult_t idWeaponShotgun::Reload( stateParms_t* parms )
 	{
 		case RELOAD_NOTSET:
 
-			if (ammoClip < clip_size)
+			if( ammoClip < clip_size )
 			{
-				owner->Event_PlayAnim(ANIMCHANNEL_ALL, "reload_loop", false);
+				owner->Event_PlayAnim( ANIMCHANNEL_ALL, "reload_loop", false );
 				parms->stage = RELOAD_WAIT;
 				return SRESULT_WAIT;
 			}
 			else
 			{
-				owner->Event_PlayAnim(ANIMCHANNEL_ALL, "reload_end", false);
+				owner->Event_PlayAnim( ANIMCHANNEL_ALL, "reload_end", false );
 				parms->stage = RELOAD_END;
 				return SRESULT_WAIT;
 			}

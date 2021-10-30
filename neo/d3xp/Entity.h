@@ -273,13 +273,13 @@ public:
 	void					UpdatePVSAreas( const idVec3& pos );
 	void					BecomeReplicated();
 
-	float					GetFloat(const char* key);
-	const char*				GetKey(const char* key);
-	int						GetInt(const char* key);
-	bool					GetBool(const char* key);
+	float					GetFloat( const char* key );
+	const char*				GetKey( const char* key );
+	int						GetInt( const char* key );
+	bool					GetBool( const char* key );
 
 	// jmarshall
-	virtual void			InflictedDamageEvent(idEntity* target) { }
+	virtual void			InflictedDamageEvent( idEntity* target ) { }
 	// jmarshall end
 
 	// visuals
@@ -310,7 +310,7 @@ public:
 	void					ClearPVSAreas();
 	bool					PhysicsTeamInPVS( pvsHandle_t pvsHandle );
 
-	virtual void			CallNativeEvent(idStr& name) { }
+	virtual void			CallNativeEvent( idStr& name ) { }
 
 	// animation
 	virtual bool			UpdateAnimationControllers();

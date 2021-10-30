@@ -426,9 +426,9 @@ idImage*	idImageManager::ImageFromFile( const char* _name, textureFilter_t filte
 			if( ( !insideLevelLoad  || preloadingMapImages ) && !image->IsLoaded() )
 			{
 				image->referencedOutsideLevelLoad = ( !insideLevelLoad && !preloadingMapImages );
-				if (idLib::IsMainThread())
+				if( idLib::IsMainThread() )
 				{
-					image->ActuallyLoadImage(false);	// load is from front end
+					image->ActuallyLoadImage( false );	// load is from front end
 				}
 				else
 				{

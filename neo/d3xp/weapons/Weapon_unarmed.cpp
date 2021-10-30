@@ -44,7 +44,7 @@ idWeaponUnarmed::Lower
 */
 stateResult_t idWeaponUnarmed::Lower( stateParms_t* parms )
 {
-	SetState("Holstered");
+	SetState( "Holstered" );
 	return SRESULT_DONE;
 }
 
@@ -65,7 +65,7 @@ idWeaponUnarmed::Fire
 */
 stateResult_t idWeaponUnarmed::Fire( stateParms_t* parms )
 {
-	common->Printf("Hello");
+	common->Printf( "Hello" );
 	return SRESULT_DONE;
 }
 

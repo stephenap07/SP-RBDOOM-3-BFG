@@ -514,7 +514,8 @@ void idTypeInfoGen::ParseScope( const char* scope, bool isTemplate, idParser& sr
 			while( indent > 1 && src.ReadToken( &token ) );
 
 		}
-		else if (token == "TYPEINFO_IGNORE") {
+		else if( token == "TYPEINFO_IGNORE" )
+		{
 			forceIgnore = true;
 		}
 		else if( token == "}" )
@@ -914,7 +915,7 @@ void idTypeInfoGen::ParseScope( const char* scope, bool isTemplate, idParser& sr
 					}
 				}
 
-				if( classValid  && !forceIgnore)
+				if( classValid  && !forceIgnore )
 				{
 					typeInfo->functions.Append( function );
 				}
