@@ -46,35 +46,42 @@ class UI_Shell;
 // UI Code
 
 UI_Shell::UI_Shell()
-	: _nextScreen( -1 )
-	, _currentScreen( -1 )
-	, _ui( nullptr )
-	, _soundWorld( nullptr )
-	, _isActive( false )
-	, _isPausingGame( false )
-	, _inhibitsControl( false )
-	, _showCursor( false )
+	: _ui(nullptr)
 {
 }
 
-bool UI_Shell::Init( idSoundWorld* soundWorld )
+bool UI_Shell::Init( )
 {
 	_ui = rmlManager->Find( "shell", true );
-	_soundWorld = soundWorld;
-	_inhibitsControl = true;
-	_isActive = true;
-	_isPausingGame = false;
 
-	auto document = _ui->SetNextScreen( "guis/rml/shell/startmenu.rml" );
-	if( document )
+	if( !_ui )
+	{ 
+		return false;
+	}
+
+	_ui->SetInhibitsControl(true);
+	_ui->Activate(true, 0);
+	_ui->SetIsPausingGame(false);
+
+	return SetNextScreen("startmenu");
+}
+
+Rml::ElementDocument* UI_Shell::SetNextScreen( const char* name )
+{
+	idStr path( va( "guis/rml/shell/%s.rml", name ) );
+
+	Rml::ElementDocument* document = _ui->SetNextScreen( path.c_str() );
+
+	if (document && idStr::Icmp(name, "start"))
 	{
-		auto el = document->GetElementById( "start_game" );
-		if( el )
+		// Initialize the start screen
+		auto el = document->GetElementById("start_game");
+		if (el)
 		{
-			auto p1 = Rml::Transform::MakeProperty( { Rml::Transforms::Rotate2D{10.f}, Rml::Transforms::TranslateX{100.f} } );
-			auto p2 = Rml::Transform::MakeProperty( { Rml::Transforms::Scale2D{3.f} } );
-			el->Animate( "transform", p1, 1.8f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut }, -1, true );
-			el->AddAnimationKey( "transform", p2, 1.3f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut } );
+			auto p1 = Rml::Transform::MakeProperty({ Rml::Transforms::Rotate2D{10.f}, Rml::Transforms::TranslateX{100.f} });
+			auto p2 = Rml::Transform::MakeProperty({ Rml::Transforms::Scale2D{3.f} });
+			el->Animate("transform", p1, 1.8f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut }, -1, true);
+			el->AddAnimationKey("transform", p2, 1.3f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut });
 		}
 	}
 
@@ -82,63 +89,21 @@ bool UI_Shell::Init( idSoundWorld* soundWorld )
 	// Originally this was allocated with the non-overriden 'new' function. Annoying.
 	Rml::StringList textureNames = Rml::GetTextureSourceList();
 
-	for( const auto& texturePath : textureNames )
+	for (const auto& texturePath : textureNames)
 	{
-		const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
-		if( material )
+		const idMaterial* material = declManager->FindMaterial(texturePath.c_str());
+		if (material)
 		{
-			material->ReloadImages( false );
+			if (idLib::IsMainThread())
+			{
+				material->ReloadImages(false);
+			}
 		}
 		else
 		{
-			common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
+			common->Warning("Failed to load rml texture %s", texturePath.c_str());
 		}
 	}
 
-	// TODO(Stephen): Add additional event listeners. Default global event listeners are more about system listeners.
-	//_ui->Context()->AddEventListener()
-
-	return true;
-}
-
-bool UI_Shell::IsActive()
-{
-	return _ui->Context() && _isActive;
-}
-
-bool UI_Shell::IsCursorEnabled() const
-{
-	return _ui->IsCursorEnabled();
-}
-
-void UI_Shell::SetCursorEnabled( bool showCursor )
-{
-	_ui->SetCursorEnabled( showCursor );
-}
-
-bool UI_Shell::HandleEvent( const sysEvent_t* event, int time )
-{
-	return _ui->HandleEvent( event, time );
-}
-
-void UI_Shell::Redraw( int time )
-{
-	if( !_ui->IsActive() )
-	{
-		return;
-	}
-
-	_ui->Redraw( time );
-}
-
-void UI_Shell::SetNextScreen( const char* name )
-{
-	idStr path( va( "guis/rml/shell/%s.rml", name ) );
-
-	if( !_ui )
-	{
-		return;
-	}
-
-	_ui->SetNextScreen( path.c_str() );
+	return document;
 }

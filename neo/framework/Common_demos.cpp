@@ -288,6 +288,7 @@ void idCommonLocal::StartPlayingRenderDemo( idStr demoName )
 	soundSystem->BeginLevelLoad();          // SRS - Free sound media from previous level before loading demo assets
 	declManager->BeginLevelLoad();          // SRS - Clear declaration manager data before loading demo assets
 	uiManager->BeginLevelLoad();            // SRS - Clear gui manager data before loading demo assets
+	rmlManager->BeginLevelLoad();
 
 	AdvanceRenderDemo( true );              // SRS - Call AdvanceRenderDemo() once to load map and initial assets (like level load)
 
@@ -295,6 +296,7 @@ void idCommonLocal::StartPlayingRenderDemo( idStr demoName )
 	soundSystem->EndLevelLoad();
 	declManager->EndLevelLoad();
 	uiManager->EndLevelLoad( "" );          // SRS - FIXME: No gui assets are currently saved/reloaded in demo file, fix later?
+	rmlManager->EndLevelLoad( "" );
 
 	Game()->StartDemoPlayback( renderWorld );
 

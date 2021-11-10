@@ -30,13 +30,14 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __RMLUSERINTERFACELOCAL_H__
 #define __RMLUSERINTERFACELOCAL_H__
 
-#include "RmlUserInterface.h"
+#include "rmlui/RmlUserInterface.h"
 
 #include "RmlUi/Core.h"
-#include "RmlFileSystem.h"
-#include "D3RmlRender.h"
 
+#include "rmlui/D3RmlRender.h"
+#include "rmlui/RmlFileSystem.h"
 #include "rmlui/RmlSystem.h"
+
 #include "ui/DeviceContext.h"
 
 constexpr int kMaxDocuments = 128;
@@ -59,9 +60,12 @@ public:
 	// Handles a named event
 	void						HandleNamedEvent( const char* eventName ) override;
 
+	void						Reload() override;
+
 	// Repaints the ui
 	void						Redraw( int time ) override;
 
+	// Loads the document and sets up the event listeners.
 	Rml::ElementDocument*		LoadDocument( const char* filePath ) override;
 
 	bool						IsDocumentOpen( const char* name ) override;
@@ -146,8 +150,6 @@ public:
 		return _timeStamp;
 	}
 
-	void						Reload();
-
 	void						ClearRefs()
 	{
 		_refs = 0;
@@ -198,7 +200,7 @@ protected:
 		idStr _name;
 	};
 
-	Rml::ElementDocument* GetDocument( const char* name );
+	Document					GetDocument( const char* name );
 
 	Rml::Context*				_context;
 
@@ -251,6 +253,9 @@ public:
 		return _inLevelLoad;
 	}
 
+	// Load all the materials.
+	void						Preload( const char* mapName ) override;
+
 	// Reloads changed guis, or all guis.
 	void						Reload( bool all ) override;
 
@@ -258,7 +263,7 @@ public:
 	void						PostRender() override;
 
 	// Class owns data
-	void						AddMaterialToReload( RmlImage* rmlImage );
+	void						AddMaterialToReload( const RmlImage& rmlImage );
 
 private:
 

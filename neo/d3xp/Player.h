@@ -249,19 +249,6 @@ private:
 	idArray< idPredictedValue< int >, MAX_WEAPONS >			clip;
 };
 
-
-// TODO(STEPHEN): Add save game functionality.
-// Put this in a separate class in a separate file.
-struct idNewInventory
-{
-	idNewInventory()
-		: items()
-	{
-	}
-
-	idList<idDict*>		items;
-};
-
 typedef struct
 {
 	int		time;

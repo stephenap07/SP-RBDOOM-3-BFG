@@ -2294,6 +2294,7 @@ void idRenderSystemLocal::Preload( const idPreloadManifest& manifest, const char
 	globalImages->Preload( manifest, true );
 	uiManager->Preload( mapName );
 	renderModelManager->Preload( manifest );
+	rmlManager->Preload( mapName );
 }
 
 /*

@@ -267,16 +267,17 @@ void RmlUserInterfaceLocal::Redraw( int time )
 	const auto dim = GetScreenSize();
 	_context->SetDimensions( Rml::Vector2i( dim.x, dim.y ) );
 	_context->Update();
-	idRmlRender* renderer = ( ( idRmlRender* )Rml::GetRenderInterface() );
+	idRmlRender* renderer = ( idRmlRender* )Rml::GetRenderInterface();
 	renderer->PreRender();
 
 	// render the clip mask over the entire gui region first.
-	renderer->SetScissorRegion( 0, 0, dim.x, dim.y );
 	renderer->EnableScissorRegion( true );
-	renderer->RenderClipMask();
+	renderer->SetScissorRegion( 0, 0, dim.x, dim.y );
 
 	_context->Render();
 	DrawCursor();
+
+	renderer->PostRender();
 }
 
 Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath )
@@ -286,14 +287,20 @@ Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath 
 		return nullptr;
 	}
 
-	Rml::ElementDocument* foundDoc( GetDocument( filePath ) );
-	if( foundDoc )
-	{
-		return foundDoc;
-	}
+	// This touches the filesystem, not sure if this really should be doing this sort
+	// of thing in the middle of the game. Need to preload as much as possible.
+	ID_TIME_T timeStamp(0);
+	fileSystem->ReadFile(filePath, nullptr, &timeStamp);
 
-	ID_TIME_T timeStamp( 0 );
-	fileSystem->ReadFile( filePath, nullptr, &timeStamp );
+	Document foundDoc( GetDocument( filePath ) );
+	if( foundDoc._doc )
+	{
+		if (timeStamp <= foundDoc._timeStamp)
+		{
+			// The already loaded document doesn't need an update.
+			return foundDoc._doc;
+		}
+	}
 
 	Rml::ElementDocument* document = nullptr;
 	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
@@ -348,7 +355,7 @@ void RmlUserInterfaceLocal::Reload()
 	{
 		ID_TIME_T timeStamp( 0 );
 		fileSystem->ReadFile( _documents[i]._name.c_str(), nullptr, &timeStamp );
-		if( timeStamp != _documents[i]._timeStamp )
+		if( timeStamp > _documents[i]._timeStamp )
 		{
 			// File needs a reload.
 			common->Printf( "Reloading %s\n", _documents[i]._name.c_str() );
@@ -376,6 +383,7 @@ Rml::ElementDocument* RmlUserInterfaceLocal::SetNextScreen( const char* _nextScr
 	auto doc = LoadDocument( _nextScreen );
 	if( doc )
 	{
+		common->Printf( "Loaded %s ", _nextScreen );
 		doc->Show();
 	}
 	return doc;
@@ -432,6 +440,7 @@ int RmlUserInterfaceLocal::PlaySound( const char* sound, int channel, bool block
 	{
 		return -1;
 	}
+
 	if( _soundWorld )
 	{
 		return _soundWorld->PlayShaderDirectly( sound, channel );
@@ -455,17 +464,17 @@ void RmlUserInterfaceLocal::StopSound( int channel )
 	}
 }
 
-Rml::ElementDocument* RmlUserInterfaceLocal::GetDocument( const char* name )
+RmlUserInterfaceLocal::Document RmlUserInterfaceLocal::GetDocument( const char* name )
 {
 	for( int i = 0; i < _documents.Num(); i++ )
 	{
 		if( _context == _documents[i]._doc->GetContext() && !idStr::Icmp( _documents[i]._name, name ) )
 		{
-			return _documents[i]._doc;
+			return _documents[i];
 		}
 	}
 
-	return nullptr;
+	return Document();
 }
 
 /*
@@ -551,6 +560,7 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool aut
 
 	if( autoload )
 	{
+		// TODO(Stephen): This is reinitialized every time. Need a better way to declare guis and then create instances of them.
 		ui->Init( name, common->MenuSW() );
 	}
 
@@ -580,6 +590,24 @@ void RmlUserInterfaceManagerLocal::EndLevelLoad( const char* mapName )
 	_inLevelLoad = false;
 }
 
+void RmlUserInterfaceManagerLocal::Preload(const char* mapName)
+{
+	Rml::StringList textureNames = Rml::GetTextureSourceList();
+
+	for (const auto& texturePath : textureNames)
+	{
+		const idMaterial* material = declManager->FindMaterial(texturePath.c_str());
+		if (material)
+		{
+			material->ReloadImages(false);
+		}
+		else
+		{
+			common->Warning("Failed to load rml texture %s", texturePath.c_str());
+		}
+	}
+}
+
 void RmlUserInterfaceManagerLocal::Reload( bool all )
 {
 	for( int i = 0; i < _guis.Num(); i++ )
@@ -590,6 +618,12 @@ void RmlUserInterfaceManagerLocal::Reload( bool all )
 
 void RmlUserInterfaceManagerLocal::PostRender()
 {
+	if( !idLib::IsMainThread() )
+	{
+		common->FatalError( "This must be called from the main thread." );
+		return;
+	}
+
 	for( int i = 0; i < _imagesToReload.Num(); i++ )
 	{
 		RmlImage& img = _imagesToReload[i];
@@ -615,9 +649,9 @@ void RmlUserInterfaceManagerLocal::PostRender()
 	_imagesToReload.Clear();
 }
 
-void RmlUserInterfaceManagerLocal::AddMaterialToReload( RmlImage* rmlImage )
+void RmlUserInterfaceManagerLocal::AddMaterialToReload( const RmlImage& rmlImage )
 {
-	_imagesToReload.Append( *rmlImage );
+	_imagesToReload.Append( rmlImage );
 }
 
 CONSOLE_COMMAND( reloadRml, "Reload updated rml gui files", NULL )

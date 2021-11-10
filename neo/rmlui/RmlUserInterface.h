@@ -58,6 +58,8 @@ public:
 	// Handles a named event
 	virtual void					HandleNamedEvent( const char* eventName ) = 0;
 
+	virtual void					Reload( ) = 0;
+
 	// Repaints the ui
 	virtual void					Redraw( int time ) = 0;
 
@@ -123,6 +125,7 @@ public:
 	virtual bool					InLevelLoad() const = 0;
 
 	// Reloads changed guis, or all guis.
+	virtual void					Preload( const char* mapName ) = 0;
 	virtual void					Reload( bool all ) = 0;
 
 	virtual void					PostRender() = 0;

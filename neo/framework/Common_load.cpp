@@ -484,6 +484,7 @@ void idCommonLocal::ExecuteMapChange()
 	soundSystem->BeginLevelLoad();
 	declManager->BeginLevelLoad();
 	uiManager->BeginLevelLoad();
+	rmlManager->BeginLevelLoad();
 	ms = Sys_Milliseconds() - sm;
 	common->Printf( "%6d msec to free assets\n", ms );
 
@@ -608,6 +609,7 @@ void idCommonLocal::ExecuteMapChange()
 	soundSystem->EndLevelLoad();
 	declManager->EndLevelLoad();
 	uiManager->EndLevelLoad( currentMapName );
+	rmlManager->EndLevelLoad( currentMapName );
 	fileSystem->EndLevelLoad();
 
 	if( !mapSpawnData.savegameFile && !IsMultiplayer() )

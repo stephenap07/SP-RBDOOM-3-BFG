@@ -2789,24 +2789,9 @@ void idMaterial::ParseMaterial( idLexer& src )
 			}
 			else
 			{
+				// This token is the same name as the rml document.
 				rmlGui = rmlManager->Find( token.c_str(), true );
 				rmlGui->SetNextScreen( token.c_str() );
-				{
-					Rml::StringList textureNames = Rml::GetTextureSourceList();
-
-					for( const auto& texturePath : textureNames )
-					{
-						const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
-						if( material )
-						{
-							material->ReloadImages( false );
-						}
-						else
-						{
-							common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
-						}
-					}
-				}
 			}
 			continue;
 		}

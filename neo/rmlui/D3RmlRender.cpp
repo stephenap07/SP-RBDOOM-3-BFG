@@ -43,6 +43,8 @@ extern RmlUserInterfaceManagerLocal rmlManagerLocal;
 
 extern idDeviceContext* rmlDc;
 
+extern idGuiModel* tr_guiModel;
+
 /*
 ===============
 idRmlRender
@@ -55,15 +57,24 @@ constexpr int kMaxInitialQuads = 1024;
 constexpr int kMaxInitialVerts = kMaxInitialQuads * 4;
 constexpr int kMaxInitialTris = kMaxInitialQuads * 6;
 
-constexpr int kRmlStencilRef = 128;
+constexpr uint64_t kRmlStencilRef = 128;
 constexpr int kRmlStencilMask = 255;
 
-extern idGuiModel* tr_guiModel;
+idCVar rmlShowStencilMasks( "rml_show_stencil_masks", "0", CVAR_INTEGER, "Draw a red rectangles around the stencil masks" );
+
+// Helper function to get the scaling vector for the guis.
+inline idVec2 GetScaleToVirtual()
+{
+	return idVec2( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
+				   ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
+}
+
 
 idRmlRender::idRmlRender()
 	: _enableScissor( false )
 	, _clipRects()
 	, _cursorImages()
+	, _guiSolid( nullptr )
 	, _numMasks( 0 )
 	, _verts( nullptr )
 	, _tris( nullptr )
@@ -81,6 +92,7 @@ idRmlRender::~idRmlRender()
 
 void idRmlRender::Init()
 {
+	_numMasks = 0;
 	_verts = new idDrawVert[kMaxInitialVerts];
 	_tris = new triIndex_t[kMaxInitialTris];
 
@@ -107,15 +119,14 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 		}
 	}
 
-	const idVec2 scaleToVirtual( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-								 ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
+	const idVec2 scaleToVirtual( GetScaleToVirtual() );
 
 	idDrawVert* temp = &_verts[_numVerts];
 	for( int i = 0; i < numVerts; i++ )
 	{
 		const Rml::Vertex localVertex = vertices[i];
 
-		idVec3 pos = idVec3(localVertex.position.x, localVertex.position.y, 0 );
+		idVec3 pos = idVec3( localVertex.position.x, localVertex.position.y, 0 );
 		pos += idVec3( translation.x, translation.y, 0 );
 
 		// transform
@@ -128,9 +139,9 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 		idDrawVert& localDrawVert = temp[i];
 
 		localDrawVert.xyz = pos;
-		localDrawVert.SetTexCoord(localVertex.tex_coord.x, localVertex.tex_coord.y );
-		idVec4 color = idVec4(localVertex.colour.red, localVertex.colour.green, localVertex.colour.blue, localVertex.colour.alpha);
-		dword packedColor = PackColor(color);
+		localDrawVert.SetTexCoord( localVertex.tex_coord.x, localVertex.tex_coord.y );
+		idVec4 color = idVec4( localVertex.colour.red, localVertex.colour.green, localVertex.colour.blue, localVertex.colour.alpha );
+		dword packedColor = PackColor( color );
 		localDrawVert.SetColor( packedColor );
 
 		_numVerts++;
@@ -142,20 +153,9 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 		}
 	}
 
-	uint64_t glState = 0;
-
-	if( _enableScissor )
-	{
-		glState = GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_EQUAL | GLS_STENCIL_MAKE_REF( kRmlStencilRef - _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
-	}
-	else
-	{
-		//glState |= GLS_STENCIL_
-	}
-
 	const idMaterial* material = reinterpret_cast<const idMaterial*>( texture );
 
-	if (!material)
+	if( !material )
 	{
 		material = _guiSolid;
 	}
@@ -165,13 +165,7 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 		material->SetSort( SS_GUI );
 	}
 
-	idDrawVert* verts = tr_guiModel->AllocTris(
-							numVerts,
-							tris,
-							numIndexes,
-							material,
-							glState,
-							STEREO_DEPTH_TYPE_NONE );
+	idDrawVert* verts = tr_guiModel->AllocTris( numVerts, tris, numIndexes, material, GenerateGlState(), STEREO_DEPTH_TYPE_NONE );
 
 	if( verts )
 	{
@@ -207,103 +201,6 @@ void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
 }
 
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
-
-void idRmlRender::RenderClipMask()
-{
-	// Usually, scissor regions are handled  with actual scissor render commands.
-	// We're using stencil masks to do the same thing because it works in worldspace a
-	// lot better than screen space scissor rects.
-	const idVec2 scaleToVirtual( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-								 ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
-
-	ALIGNTYPE16 idDrawVert localVerts[4];
-
-	localVerts[0].Clear();
-	localVerts[0].xyz[0] = _clipRects.x;
-	localVerts[0].xyz[1] = _clipRects.y;
-	localVerts[0].xyz[2] = 0.0f;
-
-	localVerts[0].xyz *= mat;
-	localVerts[0].xyz += origin;
-
-	localVerts[0].xyz.x *= scaleToVirtual.x;
-	localVerts[0].xyz.y *= scaleToVirtual.y;
-
-	localVerts[0].SetTexCoord( 0.0f, 1.0f );
-	localVerts[0].SetColor( PackColor( idVec4() ) );
-	localVerts[0].ClearColor2();
-
-	localVerts[1].Clear();
-	localVerts[1].xyz[0] = _clipRects.x + _clipRects.w ;
-	localVerts[1].xyz[1] = _clipRects.y;
-	localVerts[1].xyz[2] = 0.0f;
-
-	localVerts[1].xyz *= mat;
-	localVerts[1].xyz += origin;
-
-	localVerts[1].xyz.x *= scaleToVirtual.x;
-	localVerts[1].xyz.y *= scaleToVirtual.y;
-
-	localVerts[1].SetTexCoord( 1.0f, 1.0f );
-	localVerts[1].SetColor( PackColor( idVec4() ) );
-	localVerts[1].ClearColor2();
-
-	localVerts[2].Clear();
-	localVerts[2].xyz[0] = ( _clipRects.x + _clipRects.w );
-	localVerts[2].xyz[1] = ( _clipRects.y + _clipRects.h );
-	localVerts[2].xyz[2] = 0.0f;
-	localVerts[2].xyz -= origin;
-	localVerts[2].xyz *= mat;
-	localVerts[2].xyz += origin;
-	localVerts[2].xyz.x *= scaleToVirtual.x;
-	localVerts[2].xyz.y *= scaleToVirtual.y;
-	localVerts[2].SetTexCoord( 1.0f, 0.0f );
-	localVerts[2].SetColor( PackColor( idVec4() ) );
-	localVerts[2].ClearColor2();
-
-	localVerts[3].Clear();
-	localVerts[3].xyz[0] = _clipRects.x;
-	localVerts[3].xyz[1] = ( _clipRects.y + _clipRects.h );
-	localVerts[3].xyz[2] = 0.0f;
-	localVerts[3].xyz *= mat;
-	localVerts[3].xyz += origin;
-	localVerts[3].xyz.x *= scaleToVirtual.x;
-	localVerts[3].xyz.y *= scaleToVirtual.y;
-	localVerts[3].SetTexCoord( 0.0f, 0.0f );
-	localVerts[3].SetColor( PackColor( idVec4() ) );
-	localVerts[3].ClearColor2();
-
-	uint64_t glState = 0;
-
-	if( _numMasks == 0 )
-	{
-		// Nothing written to the stencil buffer yet. Initially seed it with the first clipping rectangle
-		glState = GLS_COLORMASK | GLS_ALPHAMASK | GLS_STENCIL_FUNC_ALWAYS | GLS_STENCIL_MAKE_REF( kRmlStencilRef ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
-	}
-	else
-	{
-		// Continually decrement the scissor value as the scissor rect heirarchy gets deeper. Unknown what happens when UI window start overlapping. Could be bad.
-		glState = GLS_COLORMASK | GLS_ALPHAMASK | GLS_STENCIL_OP_FAIL_KEEP | GLS_STENCIL_OP_ZFAIL_KEEP | GLS_STENCIL_OP_PASS_DECR;
-	}
-
-	idDrawVert* maskVerts = tr_guiModel->AllocTris(
-								4,
-								quadPicIndexes,
-								6,
-								reinterpret_cast<const idMaterial*>( _guiSolid ),
-								glState,
-								STEREO_DEPTH_TYPE_NONE );
-
-	WriteDrawVerts16( maskVerts, localVerts, 4 );
-
-	// TODO(Stephen): Make render debug masks configurable.
-	//DrawRect(_clipRects, colorRed);
-}
-
-void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
-{
-	_clipRects = idRectangle( x, y, width, height );
-}
 
 bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source )
 {
@@ -361,7 +258,7 @@ bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml
 	rmlImage.data = mem;
 	rmlImage.dimensions = idVec2( source_dimensions.x, source_dimensions.y );
 	rmlImage.referencedOutsideLevelLoad = true; // might need to arrange this in some other way.
-	rmlManagerLocal.AddMaterialToReload( &rmlImage );
+	rmlManagerLocal.AddMaterialToReload( rmlImage );
 
 	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
 
@@ -370,25 +267,122 @@ bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml
 	return material != nullptr;
 }
 
+uint64 idRmlRender::GenerateGlState() const
+{
+	// Don't write to the depth mask.
+	uint64 glState( 0 );
+
+	// Stencil
+	if( _enableScissor )
+	{
+		// Only draw to the backbuffer if the stencil buffer matches the existing stencil buffer value. This is good for masking.
+		glState |= GLS_STENCIL_FUNC_EQUAL | GLS_STENCIL_MAKE_REF( 128 + _numMasks ) | GLS_STENCIL_MAKE_MASK( 255 );
+	}
+
+	return glState;
+}
+
+/*
+===============
+
+Clip Masking/Scissor testing.
+
+===============
+*/
+
 void idRmlRender::EnableScissorRegion( bool enable )
 {
 	_enableScissor = enable;
+}
 
-	if( _clipRects.w <= 0 || _clipRects.h <= 0 )
-	{
-		return;
-	}
-
-	if( !_enableScissor )
-	{
-		// Clear the stencil buffer.
-
-		return;
-	}
-
-	RenderClipMask();
-
+void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
+{
+	_clipRects = idRectangle( x, y, width, height );
 	_numMasks++;
+	RenderClipMask();
+}
+
+void idRmlRender::RenderClipMask()
+{
+	// Usually, scissor regions are handled  with actual scissor render commands.
+	// We're using stencil masks to do the same thing because it works in worldspace a
+	// lot better than screen space scissor rects.
+	const idVec2 scaleToVirtual( GetScaleToVirtual() );
+
+	ALIGNTYPE16 idDrawVert localVerts[4];
+
+	localVerts[0].Clear();
+	localVerts[0].xyz[0] = _clipRects.x;
+	localVerts[0].xyz[1] = _clipRects.y;
+	localVerts[0].xyz[2] = 0.0f;
+
+	localVerts[0].xyz *= mat;
+	localVerts[0].xyz += origin;
+
+	localVerts[0].xyz.x *= scaleToVirtual.x;
+	localVerts[0].xyz.y *= scaleToVirtual.y;
+
+	localVerts[0].SetTexCoord( 0.0f, 1.0f );
+	localVerts[0].SetColor( PackColor( idVec4() ) );
+	localVerts[0].ClearColor2();
+
+	localVerts[1].Clear();
+	localVerts[1].xyz[0] = _clipRects.x + _clipRects.w;
+	localVerts[1].xyz[1] = _clipRects.y;
+	localVerts[1].xyz[2] = 0.0f;
+
+	localVerts[1].xyz *= mat;
+	localVerts[1].xyz += origin;
+
+	localVerts[1].xyz.x *= scaleToVirtual.x;
+	localVerts[1].xyz.y *= scaleToVirtual.y;
+
+	localVerts[1].SetTexCoord( 1.0f, 1.0f );
+	localVerts[1].SetColor( PackColor( idVec4() ) );
+	localVerts[1].ClearColor2();
+
+	localVerts[2].Clear();
+	localVerts[2].xyz[0] = ( _clipRects.x + _clipRects.w );
+	localVerts[2].xyz[1] = ( _clipRects.y + _clipRects.h );
+	localVerts[2].xyz[2] = 0.0f;
+	localVerts[2].xyz -= origin;
+	localVerts[2].xyz *= mat;
+	localVerts[2].xyz += origin;
+	localVerts[2].xyz.x *= scaleToVirtual.x;
+	localVerts[2].xyz.y *= scaleToVirtual.y;
+	localVerts[2].SetTexCoord( 1.0f, 0.0f );
+	localVerts[2].SetColor( PackColor( idVec4() ) );
+	localVerts[2].ClearColor2();
+
+	localVerts[3].Clear();
+	localVerts[3].xyz[0] = _clipRects.x;
+	localVerts[3].xyz[1] = ( _clipRects.y + _clipRects.h );
+	localVerts[3].xyz[2] = 0.0f;
+	localVerts[3].xyz *= mat;
+	localVerts[3].xyz += origin;
+	localVerts[3].xyz.x *= scaleToVirtual.x;
+	localVerts[3].xyz.y *= scaleToVirtual.y;
+	localVerts[3].SetTexCoord( 0.0f, 0.0f );
+	localVerts[3].SetColor( PackColor( idVec4() ) );
+	localVerts[3].ClearColor2();
+
+	// Render only to the stencil buffer. Replace the stencil value with the stencil ref + the number of masks.
+	uint64_t glState = GLS_OVERRIDE | GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK
+					   | GLS_COLORMASK
+					   | GLS_ALPHAMASK
+					   | GLS_STENCIL_OP_PASS_REPLACE
+					   | GLS_STENCIL_FUNC_ALWAYS
+					   | GLS_STENCIL_MAKE_REF( kRmlStencilRef + _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
+
+	idDrawVert* maskVerts = tr_guiModel->AllocTris(4, quadPicIndexes, 6, _guiSolid, glState, STEREO_DEPTH_TYPE_NONE);
+
+	WriteDrawVerts16( maskVerts, localVerts, 4 );
+
+	// TODO(Stephen): Make render debug masks configurable.
+	if( rmlShowStencilMasks.GetInteger() > 0 )
+	{
+		DrawRect( _clipRects, idVec4( 1.0f, 0.0f, 0.0f, 1.0f ) );
+	}
 }
 
 void idRmlRender::PreRender()
@@ -398,42 +392,41 @@ void idRmlRender::PreRender()
 
 void idRmlRender::PostRender()
 {
+	( void )0;
 }
 
 void idRmlRender::DrawCursor( int x, int y, int w, int h )
 {
-	const idVec2 scaleToVirtual( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-								 ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
+	const idVec2 scaleToVirtual( GetScaleToVirtual() );
+
 	idVec2 bounds;
 	bounds.x = w * scaleToVirtual.x;
 	bounds.y = h * scaleToVirtual.y;
 	float sx = x * scaleToVirtual.x;
 	float sy = y * scaleToVirtual.y;
-	renderSystem->SetGLState( GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK | GLS_STENCIL_FUNC_GEQUAL | GLS_STENCIL_MAKE_REF( kRmlStencilRef ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask ) );
 	rmlDc->PushClipRect( idRectangle( 0, 0, w, h ) );
 	rmlDc->DrawCursor( &sx, &sy, 36.0f * scaleToVirtual.x, bounds );
 	rmlDc->PopClipRect();
 	renderSystem->SetGLState( 0 );
 }
 
-void idRmlRender::DrawRect(const idRectangle& rect, const idVec4& color)
+void idRmlRender::DrawRect( const idRectangle& rect, const idVec4& color )
 {
-	const idVec2 scaleToVirtual((float)renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-		(float)renderSystem->GetVirtualHeight() / renderSystem->GetHeight());
+	const idVec2 scaleToVirtual( GetScaleToVirtual() );
 
-	renderSystem->SetColor(color);
+	renderSystem->SetColor( color );
 
 	float x = rect.x * scaleToVirtual.x;
 	float y = rect.y * scaleToVirtual.y;
-	float w = fabs(rect.w) * scaleToVirtual.x;
-	float h = fabs(rect.h) * scaleToVirtual.y;
+	float w = fabs( rect.w ) * scaleToVirtual.x;
+	float h = fabs( rect.h ) * scaleToVirtual.y;
 
 	float size = 1;
 
-	renderSystem->DrawStretchPic(x, y, size, h, 0, 0, 0, 0, _guiSolid);
-	renderSystem->DrawStretchPic(x + w - size, y, size, h, 0, 0, 0, 0, _guiSolid);
-	renderSystem->DrawStretchPic(x, y, w, size, 0, 0, 0, 0, _guiSolid);
-	renderSystem->DrawStretchPic(x, y + h - size, w, size, 0, 0, 0, 0, _guiSolid);
+	renderSystem->DrawStretchPic( x, y, size, h, 0, 0, 0, 0, _guiSolid );
+	renderSystem->DrawStretchPic( x + w - size, y, size, h, 0, 0, 0, 0, _guiSolid );
+	renderSystem->DrawStretchPic( x, y, w, size, 0, 0, 0, 0, _guiSolid );
+	renderSystem->DrawStretchPic( x, y + h - size, w, size, 0, 0, 0, 0, _guiSolid );
 }
 
 void RmlImage::Free()

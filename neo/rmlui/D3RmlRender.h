@@ -86,9 +86,12 @@ public:
 
 	void DrawCursor( int x, int y, int w, int h );
 
-	void DrawRect(const idRectangle& rect, const idVec4& color);
+	void DrawRect( const idRectangle& rect, const idVec4& color );
 
 private:
+
+	// Generates render state flags. Turns on stencil testing and functions.
+	uint64 GenerateGlState() const;
 
 	bool				_enableScissor;
 	idRectangle			_clipRects;

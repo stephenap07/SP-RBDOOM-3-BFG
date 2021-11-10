@@ -9,7 +9,7 @@
 
 	951 constants
 	93 enums
-	448 classes/structs/unions
+	447 classes/structs/unions
 	4 templates
 	6 max inheritance level for 'idAFEntity_VehicleAutomated'
 
@@ -5062,11 +5062,6 @@ static classVariableInfo_t idInventory_typeInfo[] = {
 	{ NULL, 0 }
 };
 
-static classVariableInfo_t idNewInventory_typeInfo[] = {
-	{ "idList < idDict * >", "items", (intptr_t)(&((idNewInventory *)0)->items), sizeof( ((idNewInventory *)0)->items ) },
-	{ NULL, 0 }
-};
-
 static classVariableInfo_t loggedAccel_t_typeInfo[] = {
 	{ "int", "time", (intptr_t)(&((loggedAccel_t *)0)->time), sizeof( ((loggedAccel_t *)0)->time ) },
 	{ "idVec3", "dir", (intptr_t)(&((loggedAccel_t *)0)->dir), sizeof( ((loggedAccel_t *)0)->dir ) },
@@ -6933,14 +6928,7 @@ static classVariableInfo_t idMenuHandler_Inventory_typeInfo[] = {
 };
 
 static classVariableInfo_t UI_Shell_typeInfo[] = {
-	{ ": int", "_nextScreen", (intptr_t)(&((UI_Shell *)0)->_nextScreen), sizeof( ((UI_Shell *)0)->_nextScreen ) },
-	{ "int", "_currentScreen", (intptr_t)(&((UI_Shell *)0)->_currentScreen), sizeof( ((UI_Shell *)0)->_currentScreen ) },
-	{ "RmlUserInterface *", "_ui", (intptr_t)(&((UI_Shell *)0)->_ui), sizeof( ((UI_Shell *)0)->_ui ) },
-	{ "idSoundWorld *", "_soundWorld", (intptr_t)(&((UI_Shell *)0)->_soundWorld), sizeof( ((UI_Shell *)0)->_soundWorld ) },
-	{ "bool", "_isActive", (intptr_t)(&((UI_Shell *)0)->_isActive), sizeof( ((UI_Shell *)0)->_isActive ) },
-	{ "bool", "_isPausingGame", (intptr_t)(&((UI_Shell *)0)->_isPausingGame), sizeof( ((UI_Shell *)0)->_isPausingGame ) },
-	{ "bool", "_inhibitsControl", (intptr_t)(&((UI_Shell *)0)->_inhibitsControl), sizeof( ((UI_Shell *)0)->_inhibitsControl ) },
-	{ "bool", "_showCursor", (intptr_t)(&((UI_Shell *)0)->_showCursor), sizeof( ((UI_Shell *)0)->_showCursor ) },
+	{ ": RmlUserInterface *", "_ui", (intptr_t)(&((UI_Shell *)0)->_ui), sizeof( ((UI_Shell *)0)->_ui ) },
 	{ NULL, 0 }
 };
 
@@ -7272,7 +7260,6 @@ static classTypeInfo_t classTypeInfo[] = {
 	{ "RechargeAmmo_t", "", sizeof(RechargeAmmo_t), RechargeAmmo_t_typeInfo },
 	{ "WeaponToggle_t", "", sizeof(WeaponToggle_t), WeaponToggle_t_typeInfo },
 	{ "idInventory", "", sizeof(idInventory), idInventory_typeInfo },
-	{ "idNewInventory", "", sizeof(idNewInventory), idNewInventory_typeInfo },
 	{ "loggedAccel_t", "", sizeof(loggedAccel_t), loggedAccel_t_typeInfo },
 	{ "aasLocation_t", "", sizeof(aasLocation_t), aasLocation_t_typeInfo },
 	{ "idPlayer", "idActor", sizeof(idPlayer), idPlayer_typeInfo },

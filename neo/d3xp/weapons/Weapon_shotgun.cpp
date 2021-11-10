@@ -37,7 +37,7 @@ void idWeaponShotgun::Init( idWeapon* weapon )
 	rvmWeaponObject::Init( weapon );
 
 	next_attack = 0;
-	spread = weapon->GetFloat( "spread" ); // weapon->GetFloat("spread")
+	spread = weapon->GetFloat( "spread" );
 	snd_lowammo = FindSound( "snd_lowammo" );
 }
 
