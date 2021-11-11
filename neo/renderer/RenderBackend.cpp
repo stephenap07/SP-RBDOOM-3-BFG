@@ -4712,6 +4712,7 @@ void idRenderBackend::CalculateAutomaticExposure()
 		deltaTime = curTime - hdrTime;
 
 		//if(r_hdrMaxLuminance->value)
+		if (0)
 		{
 			hdrAverageLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), hdrAverageLuminance );
 			avgLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), avgLuminance );
@@ -4720,8 +4721,9 @@ void idRenderBackend::CalculateAutomaticExposure()
 			maxLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), maxLuminance );
 		}
 
-		newAdaptation = hdrAverageLuminance + ( avgLuminance - hdrAverageLuminance ) * ( 1.0f - powf( 0.98f, 30.0f * deltaTime ) );
-		newMaximum = hdrMaxLuminance + ( maxLuminance - hdrMaxLuminance ) * ( 1.0f - powf( 0.98f, 30.0f * deltaTime ) );
+		const double EulerConstant = exp(1.0);
+		newAdaptation = hdrAverageLuminance + ( avgLuminance - hdrAverageLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime));
+		newMaximum = hdrMaxLuminance + ( maxLuminance - hdrMaxLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime));
 
 		if( !IsNAN( newAdaptation ) && !IsNAN( newMaximum ) )
 		{

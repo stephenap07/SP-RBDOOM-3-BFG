@@ -1229,6 +1229,7 @@ extern idCVar r_shadowMapRegularDepthBiasScale;
 extern idCVar r_shadowMapSunDepthBiasScale;
 
 extern idCVar r_hdrAutoExposure;
+extern idCVar r_hdrAdaptionRate;
 extern idCVar r_hdrMinLuminance;
 extern idCVar r_hdrMaxLuminance;
 extern idCVar r_hdrKey;
