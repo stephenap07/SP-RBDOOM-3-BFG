@@ -675,10 +675,10 @@ set(FREETYPE_SOURCES
 
 add_definitions("-DRMLUI_STATIC_LIB")
 set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
+
 set(RMLUI_LIBRARIES
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/RmlCore.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/RmlDebugger.lib)
-	
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlCore.lib optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlCore.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlDebugger.lib optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlDebugger.lib)	
 	
 set(SOUND_INCLUDES
 	sound/snd_local.h

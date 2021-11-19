@@ -1,0 +1,13 @@
+namespace computer
+{
+	void test()
+	{
+		$computer_camera.activate( $player1 );
+	}
+
+	void main()
+	{
+		sys.print("Hi");
+		//my_test();
+	}
+}

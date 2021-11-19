@@ -4712,7 +4712,7 @@ void idRenderBackend::CalculateAutomaticExposure()
 		deltaTime = curTime - hdrTime;
 
 		//if(r_hdrMaxLuminance->value)
-		if (0)
+		if( 0 )
 		{
 			hdrAverageLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), hdrAverageLuminance );
 			avgLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), avgLuminance );
@@ -4721,9 +4721,9 @@ void idRenderBackend::CalculateAutomaticExposure()
 			maxLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), maxLuminance );
 		}
 
-		const double EulerConstant = exp(1.0);
-		newAdaptation = hdrAverageLuminance + ( avgLuminance - hdrAverageLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime));
-		newMaximum = hdrMaxLuminance + ( maxLuminance - hdrMaxLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime));
+		const double EulerConstant = exp( 1.0 );
+		newAdaptation = hdrAverageLuminance + ( avgLuminance - hdrAverageLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime ) );
+		newMaximum = hdrMaxLuminance + ( maxLuminance - hdrMaxLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime ) );
 
 		if( !IsNAN( newAdaptation ) && !IsNAN( newMaximum ) )
 		{
@@ -6206,6 +6206,13 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 	DrawViewInternal( cmd->viewDef, stereoEye );
 
 	MotionBlur();
+
+	if( viewDef->targetRender )
+	{
+		// TODO(Stephen): Move this into the GL backend. Make this more generic. How to get the color attachment for the framebuffer?
+		globalImages->glowImage[0]->Bind( );
+		glGenerateMipmap( GL_TEXTURE_2D );
+	}
 
 	// restore the context for 2D drawing if we were stubbing it out
 	// RB: not really needed

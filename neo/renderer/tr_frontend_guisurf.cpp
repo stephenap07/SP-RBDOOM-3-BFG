@@ -254,6 +254,7 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 
 			viewDef_t* viewDef = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *viewDef ), FRAME_ALLOC_VIEW_DEF );
 			viewDef->is2Dgui = true;
+			viewDef->targetRender = nullptr;
 
 			//tr.CropRenderSize(stage->texture.width, stage->texture.height);
 			{

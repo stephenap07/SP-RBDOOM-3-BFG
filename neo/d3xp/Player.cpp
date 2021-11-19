@@ -5795,12 +5795,14 @@ void idPlayer::Weapon_GUI()
 				focusGUIent->UpdateVisuals();
 			}
 		}
+
 		RmlUserInterface* rml = ActiveRml();
 		if( rml )
 		{
 			sysEvent_t ev = sys->GenerateMouseButtonEvent( 1, isDown );
 			command = rml->HandleEvent( &ev, gameLocal.time / 1000 );
 		}
+
 		if( common->IsClient() )
 		{
 			// we predict enough, but don't want to execute commands
@@ -6615,6 +6617,7 @@ void idPlayer::UpdateFocus()
 				// move to an absolute position
 				ev = sys->GenerateMouseMoveEvent( pt.x * rmlDim.x, pt.y * rmlDim.y );
 				command = rml->HandleEvent( &ev, gameLocal.time / 1000 );
+				HandleGuiCommands( focusGUIent, command );
 				focusTime = gameLocal.time + FOCUS_GUI_TIME;
 
 				break;

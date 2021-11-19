@@ -1,43 +1,37 @@
 <rml>
 <head>
-	<link type="text/template" href="../window.rml"/>
-	<link type="text/css" href="icon.rcss"/>
-	<title>Inventory</title>
+	<link type="text/template" href="../win_retro_window.rml"/>
+	<title>Computer</title>
 	<style>
 		body
 		{
-			width: 100%;
-			height: 100%;
-
+			width: 200dp;
+			height: 50dp;
 			z-index: -1;
+			/*transform: rotate3d(0,1,0,15deg);*/
 		}
-		
-		/* Hide the window icon. */
-        div#title_bar div#icon
-        {
-            display: none;
-        }
 
-        div#menu_content
-        {
-        	z-index: 2;
+		button
+		{
+			color: black;
+		}
 
-			width: auto;
-			height: auto;
-
-			overflow: hidden auto;
-
-			text-align: center;
-        }
+		.container_img
+		{
+			height: 100%;
+			width: 100%;
+			image-color: rgba(131, 112, 55, 255);
+		}
 
 	</style>
 </head>
-<body>
-	<div id="menu_content">
-		<button id="start_game" onclick="startgame; goto game">Start Game</button><br />
-		<button id="options">Options</button><br />
-		<button id="help">Help</button><br />
-		<button id="exit" onclick="exit">Exit</button>
-	</div>
+
+<body template="window" onshow="enableCursor=true;">
+		<form>
+			<p>Username</p>
+			<input type="text" name=""></input>
+			<button onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over" onclick="runScript computer::test()">Sign In</button>
+		</form>
 </body>
+
 </rml>

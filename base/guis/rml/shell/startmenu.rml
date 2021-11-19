@@ -1,6 +1,6 @@
 <rml>
 <head>
-	<link type="text/template" href="../window.rml"/>
+	<link type="text/template" href="../win_retro_window.rml"/>
 	<link type="text/css" href="icon.rcss"/>
 	<title>Start Menu</title>
 	<style>
@@ -21,7 +21,7 @@
 		div#menu_content
 		{
 			z-index: 2;
-    		background-color: yellow;
+    		/* background-color: green; */
     		width: 800px; 
     		height: 200px;
     		position: absolute;
@@ -51,7 +51,7 @@
 		{
 			height: 100%;
 			width: 100%;
-			image-color: rgba(130, 112, 55, 255);
+			image-color: rgba(131, 112, 55, 255);
 		}
 
 		@decorator render : renderscene
@@ -77,9 +77,9 @@
 	<img src="/textures/common/guiWhite" class="container_img" />
 
 	<div id="menu_content">
-		<button id="start_game" onclick="goto guis/rml/shell/game.rml; map fourroom" onmousedown="playsound gui/btn_pda_advance" onmouseover="playsound gui/btn_roll_over">Start</button><br />
-		<button id="options" onclick="goto guis/rml/shell/options.rml" onmousedown="playsound gui/btn_pda_advance" onmouseover="playsound gui/btn_roll_over">Options</button><br />
-		<button id="exit" onmousedown="playsound gui/btn_pda_advance" onclick="exit" onmouseover="playsound gui/btn_roll_over">Exit</button>
+		<button id="start_game" onclick="map fourroom" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Start</button><br />
+		<button id="options" onclick="goto guis/rml/shell/options.rml" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Options</button><br />
+		<button id="exit" onmousedown="playsound gui_btn_pda_advance" onclick="exit" onmouseover="playsound gui_btn_roll_over">Exit</button>
 	</div>
 </body>
 </rml>

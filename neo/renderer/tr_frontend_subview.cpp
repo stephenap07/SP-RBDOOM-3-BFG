@@ -228,6 +228,7 @@ static viewDef_t* R_MirrorViewBySurface( const drawSurf_t* drawSurf )
 	viewDef_t* parms = ( viewDef_t* )R_FrameAlloc( sizeof( *parms ) );
 	*parms = *tr.viewDef;
 	parms->renderView.viewID = 0;	// clear to allow player bodies to show up, and suppress view weapons
+	parms->targetRender = nullptr;
 
 	parms->isSubview = true;
 	parms->isMirror = true;

@@ -1425,13 +1425,13 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 	{
 		bool isDefaultFramebufferActive = Framebuffer::IsDefaultFramebufferActive();
 
-		if( viewDef && viewDef->targetRender )
-		{
-			viewDef->targetRender->Bind();
-		}
-		else if( viewDef && viewDef->renderView.rdflags & RDF_IRRADIANCE )
+		if( viewDef && viewDef->renderView.rdflags & RDF_IRRADIANCE )
 		{
 			globalFramebuffers.envprobeFBO->Bind();
+		}
+		else if( viewDef && viewDef->targetRender )
+		{
+			viewDef->targetRender->Bind( );
 		}
 		else
 		{

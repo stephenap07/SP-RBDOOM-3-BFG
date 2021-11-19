@@ -35,7 +35,6 @@
 		{
   		  	margin-bottom: 1px;
     		margin-left : 1px;
-    		background-color: red;
     		color: white;
     		position: fixed;
     		bottom: 0;
@@ -56,7 +55,7 @@
 
 	</style>
 </head>
-<body onshow="inhibitControl=false; pauseGame=false; enableCursor=true">
+<body onshow="inhibitControl=false; pauseGame=false; enableCursor=false">
 	<div id="crosshair">+</div>
 	<div id="lowerleft">
 		Health: 100

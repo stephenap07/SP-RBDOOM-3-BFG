@@ -1,0 +1,51 @@
+textures/monitor
+{
+	mikktspace
+	unsmoothedTangents
+	twosided
+
+	qer_editorimage	textures/computer/Monitor_Base_Color.png
+	diffusemap	textures/computer/Monitor_Base_Color.png
+	normalmap	textures/computer/Monitor_Normal_DirectX.png
+
+	{
+        	blend rmaomap
+        	map combineRgba(textures/computer/Monitor_Roughness.png,
+                        	textures/computer/Monitor_Metallic.png,
+                        	textures/computer/Monitor_AO.png)
+   	}
+}
+
+textures/tower
+{
+	mikktspace
+	unsmoothedTangents
+
+	qer_editorimage	textures/computer/Tower_Base_Color.png
+	diffusemap	textures/computer/Tower_Base_Color.png
+	normalmap	textures/computer/Tower_Normal_DirectX.png
+
+	{
+        	blend rmaomap
+        	map combineRgba(textures/computer/Tower_Roughness.png,
+        	                textures/computer/Misc_Metallic.png,
+        	                textures/computer/Tower_Mixed_AO.png)
+    	}
+}
+
+textures/keyboardmouse
+{
+	mikktspace
+	unsmoothedTangents
+
+	qer_editorimage	textures/computer/Misc_Base_Color.png
+	diffusemap	textures/computer/Misc_Base_Color.png
+	normalmap	textures/computer/Misc_Normal_DirectX.png
+
+	{
+        	blend rmaomap
+        	map combineRgba(textures/computer/Misc_Roughness.png,
+        	                textures/computer/Misc_Metallic.png,
+        	                textures/computer/Misc_Mixed_AO.png)
+    	}	
+}

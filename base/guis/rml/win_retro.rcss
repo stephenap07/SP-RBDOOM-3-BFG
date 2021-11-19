@@ -1,0 +1,367 @@
+@spritesheet retro-theme 
+{
+	src: ../assets/win_retro.png;
+	
+	/* For high dpi screens, designates the scaling it is intended to be shown at. */
+	resolution: .4x;  
+	
+	/**
+	   The following specifies a list of sprite names and associated rectangles into the image given above.
+	   Any sprite given here can be specified in a decorator. Their names must be globally unique.
+	   Rectangles are specified as: x y width height. With the origin assumed to be at the top left corner.
+	*/
+	window-header-l: 9px 5px 3px 26px;
+	window-header-c: 28px 5px 1px 26px;
+	window-header-r: 54px 5px 3px 26px;
+
+	window-header-inactive-l: 71px 5px 3px 26px;
+	window-header-inactive-c: 76px 5px 1px 26px;
+	window-header-inactive-r: 116px 5px 3px 26px;
+
+	window-tl: 9px 31px 3px 1px;
+	window-t:  12px 31px 1px 1px;
+	window-tr: 54px 31px 3px 1px;
+	window-l:  9px 31px 3px 1px;
+	window-c:  12px 31px 1px 1px;
+	window-r:  54px 31px 3px 1px;
+	window-bl: 9px 50px 3px 3px;
+	window-b:  15px 50px 1px 3px;
+	window-br: 54px 50px 3px 3px;
+
+	button-tl: 2px 62px 3px 3px;
+	button-t: 5px 62px 1px 3px;
+	button-tr: 14px 62px 3px 3px;
+	button-l: 2px 64px 3px 1px;
+	button-c: 8px 64px 1px 1px;
+	button-r: 14px 64px 3px 1px;
+	button-bl: 2px 74px 3px 3px;
+	button-b: 5px 74px 1px 3px;
+	button-br: 14px 74px 3px 3px;
+
+	button-focus-tl: 19px 62px 3px 3px;
+	button-focus-t: 21px 62px 1px 3px;
+	button-focus-tr: 31px 62px 3px 3px;
+	button-focus-l: 19px 64px 3px 1px;
+	button-focus-c: 21px 64px 1px 1px;
+	button-focus-r: 31px 64px 3px 1px;
+	button-focus-bl: 19px 74px 3px 3px;
+	button-focus-b: 22px 74px 1px 3px;
+	button-focus-br: 31px 74px 3px 3px;
+
+	button-pressed-tl: 70px 62px 3px 3px;
+	button-pressed-t: 73px 62px 1px 3px;
+	button-pressed-tr: 82px 62px 3px 3px;
+	button-pressed-l: 70px 64px 3px 1px;
+	button-pressed-c: 73px 64px 1px 1px;
+	button-pressed-r: 82px 64px 3px 1px;
+	button-pressed-bl: 70px 74px 3px 3px;
+	button-pressed-b: 73px 74px 1px 3px;
+	button-pressed-br: 82px 74px 3px 3px;
+
+	button-inactive-tl: 53px 62px 3px 3px;
+	button-inactive-t: 58px 62px 1px 3px;
+	button-inactive-tr: 65px 62px 3px 3px;
+	button-inactive-l: 53px 64px 3px 1px;
+	button-inactive-c: 58px 64px 1px 1px;
+	button-inactive-r: 65px 64px 3px 1px;
+	button-inactive-bl: 53px 74px 3px 3px;
+	button-inactive-b: 56px 74px 1px 3px;
+	button-inactive-br: 65px 74px 3px 3px;
+
+	text-l: 151px 80px 3px 16px;
+	text-c: 157px 80px 1px 16px;
+	text-r: 165px 80px 2px 16px;
+
+	line-separator: 103px 64px 1px 2px;
+
+	radio: 55px 83px 13px 13px;
+	radio-inactive: 71px 83px 13px 13px;
+	radio-checked: 87px 83px 13px 13px;
+
+	checkbox: 151px 80px 16px 16px;
+	checkbox-inactive: 171px 80px 16px 16px;
+	checkbox-checked: 192px 80px 16px 16px;
+}
+
+body
+{
+	font-family: LatoLatin;
+	font-weight: normal;
+	font-style: normal;
+	font-size: 15dp;
+	color: white;
+}
+
+body.window
+{
+	padding-top: 43dp;
+	padding-bottom: 20dp;
+	
+	min-width: 250dp;
+	max-width: 800dp;
+	
+	min-height: 135dp;
+	max-height: 700dp;
+}
+
+div#title_bar
+{
+	z-index: 1;
+
+	position: absolute;
+	top: 3dp;
+	left: 0;
+	
+	text-align: left;
+}
+
+div#title_bar div#icon
+{
+	position: absolute;
+	left: 20dp;
+	top: -4dp;
+	
+	width: 51dp;
+	height: 39dp;
+}
+
+
+div#title_bar span
+{
+	width: auto;
+
+	padding-left: 15dp;
+	padding-right: 25dp;
+	padding-top: 6dp;
+	padding-bottom: 6dp;
+
+	font-size: 20dp;
+	font-weight: bold;
+	
+	/* font-effect: glow(1dp black); */
+
+	decorator: tiled-horizontal( window-header-l, window-header-c, window-header-r );
+}
+
+div#window
+{
+	width: auto;
+	padding: 10dp 15dp;
+	
+	decorator: tiled-box(
+		window-tl, window-t, window-tr, 
+		window-l, window-c, window-r,
+		window-bl, window-b, window-br
+	);
+}
+
+div#content
+{
+	z-index: 2;
+
+	width: auto;
+	height: 100%;
+
+	overflow: hidden auto;
+
+	text-align: center;
+}
+
+p
+{
+	text-align: left;
+	margin-bottom: 1em;
+
+	color: black;
+}
+
+h1
+{
+	margin-left: 0.4em;
+	margin-bottom: 0.4em;
+
+	text-align: left;
+	font-size: 16dp;
+	font-weight: bold;
+
+	font-effect: glow(1dp 1dp 1dp 1dp #1117);
+}
+
+
+
+input,
+select,
+dataselect
+{
+	margin-left: 20dp;
+}
+
+input.submit
+{
+	margin-left: 0;
+}
+
+
+button,
+input.submit
+{
+	display: inline-block;
+
+	width: 159dp;
+	height: 33dp;
+
+	padding-top: 12dp;
+	vertical-align: -18dp;
+
+	font-size: 16dp;
+	text-align: center;
+	tab-index: auto;
+	color: black;
+
+	decorator: tiled-box(
+		button-tl, button-t, button-tr, 
+		button-l, button-c, button-r,
+		button-bl, button-b, button-br
+	);
+}
+
+button:focus,
+input.submit:focus
+{
+	font-effect: blur(3dp #fff);
+}
+
+button:hover,
+input.submit:hover
+{
+	decorator: tiled-box(
+		button-focus-tl, button-focus-t, button-focus-tr, 
+		button-focus-l, button-focus-c, button-focus-r,
+		button-focus-bl, button-focus-b, button-focus-br
+	);
+}
+
+button:active,
+input.submit:active
+{
+	decorator: tiled-box(
+		button-pressed-tl, button-pressed-t, button-pressed-tr, 
+		button-pressed-l, button-pressed-c, button-pressed-r,
+		button-pressed-bl, button-pressed-b, button-pressed-br
+	);
+}
+
+input.submit:disabled
+{
+	decorator: tiled-box(
+		button-inactive-tl, button-inactive-t, button-inactive-tr, 
+		button-inactive-l, button-inactive-c, button-inactive-r,
+		button-inactive-bl, button-inactive-b, button-inactive-br
+	);
+
+	image-color: rgba(50, 150, 150, 120);
+	
+	cursor: unavailable;
+
+	color: grey;
+}
+
+input.text, input.password
+{
+	box-sizing: border-box;
+	height: 31dp;
+	padding: 11dp 10dp 0;
+	decorator: tiled-horizontal( text-l, text-c, text-r );
+	cursor: text;
+}
+
+input.text,
+input.password,
+select,
+dataselect,
+textarea
+{
+	color: #333;
+	font-size: 13dp;
+}
+
+select,
+dataselect
+{
+	width: 175dp;
+	height: 37dp;
+}
+
+select selectbox option,
+dataselect selectbox option
+{
+	width: auto;
+	padding: 3dp 0 3dp 6dp;
+	background: #DDDD;
+}
+
+select selectbox option:nth-child(even),
+dataselect selectbox option:nth-child(even),
+datagrid datagridrow:nth-child(even),
+tr:nth-child(even)
+{
+	background: #FFFFFFA0;
+}
+
+select selectbox option:checked,
+dataselect selectbox option:checked
+{
+	font-weight: bold;
+}
+
+select selectbox option:hover,
+dataselect selectbox option:hover
+{
+	background: #FF5D5D;
+}
+
+
+input.radio,
+input.checkbox
+{
+	width: 30dp;
+	height: 30dp;
+
+	vertical-align: -11dp;
+}
+
+input.radio
+{
+	decorator: image(radio);
+}
+
+input.radio:hover
+{
+	decorator: image(radio);
+}
+
+input.radio:active
+{
+	decorator: image(radio);
+}
+
+input.radio:checked
+{
+	decorator: image(radio-checked);
+}
+
+input.radio:checked:hover
+{
+	decorator: image(radio-checked);
+}
+
+input.radio:checked:active
+{
+	decorator: image(radio-checked);
+}
+
+hr
+{
+	width: auto;
+	border-width: 1px;
+}

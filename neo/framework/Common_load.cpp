@@ -240,6 +240,8 @@ void idCommonLocal::UnloadMap()
 	mapSpawned = false;
 }
 
+static bool use_swfLoadingScreen = true;
+
 /*
 ===============
 idCommonLocal::LoadLoadingGui
@@ -248,26 +250,29 @@ idCommonLocal::LoadLoadingGui
 void idCommonLocal::LoadLoadingGui( const char* mapName, bool& hellMap )
 {
 
-	defaultLoadscreen = false;
-	loadGUI = new idSWF( "loading/default", NULL );
-
-	if( g_demoMode.GetBool() )
+	if( use_swfLoadingScreen )
 	{
-		hellMap = false;
-		if( loadGUI != NULL )
-		{
-			const idMaterial* defaultMat = declManager->FindMaterial( "guis/assets/loadscreens/default" );
-			renderSystem->LoadLevelImages();
+		defaultLoadscreen = false;
+		loadGUI = new idSWF( "loading/default", NULL );
 
-			loadGUI->Activate( true );
-			idSWFSpriteInstance* bgImg = loadGUI->GetRootObject().GetSprite( "bgImage" );
-			if( bgImg != NULL )
+		if( g_demoMode.GetBool() )
+		{
+			hellMap = false;
+			if( loadGUI != NULL )
 			{
-				bgImg->SetMaterial( defaultMat );
+				const idMaterial* defaultMat = declManager->FindMaterial( "guis/assets/loadscreens/default" );
+				renderSystem->LoadLevelImages();
+
+				loadGUI->Activate( true );
+				idSWFSpriteInstance* bgImg = loadGUI->GetRootObject().GetSprite( "bgImage" );
+				if( bgImg != NULL )
+				{
+					bgImg->SetMaterial( defaultMat );
+				}
 			}
+			defaultLoadscreen = true;
+			return;
 		}
-		defaultLoadscreen = true;
-		return;
 	}
 
 	// load / program a gui to stay up on the screen while loading
@@ -677,7 +682,6 @@ void idCommonLocal::ExecuteMapChange()
 	// at this point we should be done with the loading gui so we kill it
 	delete loadGUI;
 	loadGUI = NULL;
-
 
 	// capture the current screen and start a wipe
 	StartWipe( "wipe2Material" );

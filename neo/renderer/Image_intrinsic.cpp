@@ -264,7 +264,7 @@ static void R_RGBA8Image_ResGui( idImage* image )
 #else
 	int msaaSamples = 0;
 #endif
-	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F ); //, msaaSamples );
+	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_DEFAULT, TR_CLAMP, TD_LOOKUP_TABLE_RGBA ); //, msaaSamples );
 }
 
 static void R_HDR_RGBA16FImage_ResNative_Linear( idImage* image )
@@ -1056,7 +1056,8 @@ void idImageManager::CreateIntrinsicImages()
 
 	glowImage[0] = globalImages->ImageFromFunction( "_glowImage0", R_RGBA8Image_ResGui );
 	glowImage[1] = globalImages->ImageFromFunction( "_glowImage1", R_RGBA8Image_ResGui );
-	glowDepthImage = globalImages->ImageFromFunction( "_glowDepthImage", R_DepthImage );
+	glowDepthImage[0] = globalImages->ImageFromFunction( "_glowDepthImage0", R_DepthImage );
+	glowDepthImage[1] = globalImages->ImageFromFunction( "_glowDepthImage1", R_DepthImage );
 
 	accumTransparencyImage = globalImages->ImageFromFunction( "_accumTransparencyImage", R_HDR_RGBA16FImage_ResNative_Linear );
 	revealTransparencyImage = globalImages->ImageFromFunction( "_revealTransparencyImage", R_R8Image_ResNative_Linear );

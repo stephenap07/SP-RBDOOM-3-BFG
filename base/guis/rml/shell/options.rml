@@ -22,27 +22,41 @@
     			text-transform: uppercase;
     			color: #ccc; text-align:center; vertical-align:middle
 			}
+
+			.container_img
+			{
+				height: 100%;
+				width: 100%;
+				image-color: rgba(131, 112, 55, 255);
+			}
+
 		</style>
 	</head>
-	<body onshow="inhibitControl=true; pauseGame=false; enableCursor=true">
-		<div id="menu_content">
-			<form onsubmit="store; goto guis/rml/shell/startmenu.rml" onchange="enable_accept">
+	<body onshow="restore; inhibitControl=true; pauseGame=true; enableCursor=true">
+		<img src="/textures/common/guiWhite" class="container_img" />
+		<div id="menu_content" data-model="options">
+			<form onsubmit="store" onchange="enable_accept">
 				<div>
 					<p>
-						Graphics<br />
-						<label><input id="good" type="radio" name="graphics" value="good" /> Good</label><br />
-						<label><input id="ok" type="radio" name="graphics" value="ok" checked="true" /> OK</label><br />
-						<label><input id="bad" type="radio" name="graphics" value="bad" onchange="bad_graphics" /> Bad</label><br />
+						WINDOW MODE<br />
+						<hr class="win-retro" /><br />
+						<label><input id="fullscreen" type="radio" name="window_mode" value="fullscreen" />Fullscreen</label><br />
+						<label><input id="windowed" type="radio" name="window_mode" value="windowed" />Windowed</label><br />
+						<label><input id="windowed_borderless" type="radio" name="window_mode" value="windowed_borderless" onchange="bad_graphics" />Windowed Borderless</label><br />
 					</p>
 					<p id="bad_warning" style="display: none;">Are you sure about this? Bad graphics are just plain <em>bad.</em></p>
+
 					<p>
-						Audio<br />
-						<label><input id="reverb" type="checkbox" name="reverb" value="true" checked="true" /> Reverb</label><br />
-						<label><input id="3d" type="checkbox" name="3d" value="true" /> 3D Spatialisation</label>
+						FULL SCREEN VIDEO MODE<br />
+						<select name="vid_mode" id="vid_mode">
+							<option data-for="vid, i : vidModes" data-value="i">{{ vid.width }} x {{ vid.height }} - {{ vid.displayHz }}</option>
+						</select>
 					</p>
 				</div>
-				<input type="submit" id="accept" value="accept" disabled>Accept</input>
-				<input type="submit" value="cancel">Cancel</input>
+
+				<input type="submit" id="accept" value="accept" disabled onclick="playsound gui_btn_pda_advance">Accept</input>
+				<input type="submit" id="apply" value="apply" disabled onclick="playsound gui_btn_pda_advance">Apply</input>
+				<input type="submit" id="cancel" value="cancel" onclick="playsound gui_btn_pda_advance">Cancel</input>
 			</form>
 		</div>
 	</body>

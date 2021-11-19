@@ -1,6 +1,6 @@
 <rml>
 <head>
-	<link type="text/template" href="../window.rml"/>
+	<link type="text/template" href="../win_retro_window.rml"/>
 	<link type="text/css" href="icon.rcss"/>
 	<title>Inventory</title>
 	<style>
@@ -45,10 +45,11 @@
 
 	</style>
 </head>
-<body onshow="inhibitControl=true; pauseGame=true; enableCursor=true">
+<body onshow="inhibitControl=true;  pauseGame=true; enableCursor=true">
 	<div class="center_content">
-		<button id="continue" onclick="goto game" onmousedown="playsound gui/btn_pda_advance" onmouseover="playsound gui/btn_roll_over">Continue</button><br />
-		<button id="exit" onclick="exit" onmousedown="playsound gui/btn_pda_advance" onmouseover="playsound gui/btn_roll_over">Exit</button>
+		<button id="continue" onclick="goto game" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Continue</button><br />
+		<button id="options" onclick="goto guis/rml/shell/options.rml" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Options</button><br />
+		<button id="exit" onclick="exit" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Exit</button>
 	</div>
 </body>
 </rml>

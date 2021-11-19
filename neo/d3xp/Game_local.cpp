@@ -5800,23 +5800,7 @@ idGameLocal::Shell_Init
 */
 void idGameLocal::Shell_Init( const char* filename, idSoundWorld* sw )
 {
-	if( idStr::Icmp( filename, "game" ) == 0 )
-	{
-		rmlShell->Ui()->HideAllDocuments();
-		rmlShell->SetNextScreen( "game" );
-	}
-	else if( idStr::Icmp( filename, "pause" ) == 0 )
-	{
-		rmlShell->Ui()->HideAllDocuments();
-		rmlShell->SetNextScreen( "pause" );
-	}
-	else if( idStr::Icmp( filename, "shell" ) == 0 )
-	{
-		if( rmlShell )
-		{
-			rmlShell->Init();
-		}
-	}
+	rmlShell->SetNextScreen( filename );
 
 	//if( shellHandler != NULL )
 	//{
@@ -5860,19 +5844,12 @@ void idGameLocal::Shell_CreateMenu( bool inGame )
 		if( !inGame )
 		{
 			shellHandler->SetInGame( false );
-			Shell_Init( "shell", common->MenuSW() );
+			Shell_Init( "startmenu", common->MenuSW() );
 		}
 		else
 		{
 			shellHandler->SetInGame( true );
-			if( common->IsMultiplayer() )
-			{
-				Shell_Init( "pause", common->SW() );
-			}
-			else
-			{
-				Shell_Init( "pause", common->MenuSW() );
-			}
+			Shell_Init( "game", common->MenuSW() );
 		}
 	}
 }
@@ -6020,10 +5997,11 @@ idGameLocal::Shell_ResetMenu
 */
 void idGameLocal::Shell_ResetMenu()
 {
-	if( rmlShell->Ui() != nullptr)
+	rmlShell->Init( );
+	
+	if( rmlShell->Ui() != nullptr )
 	{
-		rmlShell->Ui()->HideAllDocuments();
-		rmlShell->SetNextScreen( "startmenu" );
+		//rmlShell->Ui()->HideAllDocuments();
 	}
 
 	//if( shellHandler != NULL )
@@ -6048,29 +6026,21 @@ void idGameLocal::Shell_SyncWithSession()
 	{
 		case idSession::PRESS_START:
 			shellHandler->SetShellState( SHELL_STATE_PRESS_START );
-			//rmlShell->SetNextScreen( "startmenu" );
 			break;
 		case idSession::INGAME:
 			shellHandler->SetShellState( SHELL_STATE_PAUSED );
-			//rmlShell->SetNextScreen( "game" );
 			if( rmlShell->Ui()->IsPausingGame() )
 			{
-				rmlShell->Ui()->HideAllDocuments();
 				rmlShell->SetNextScreen( "pause" );
-				rmlShell->Ui()->SetInhibitsControl( true );
-				rmlShell->Ui()->SetCursorEnabled( true );
 			}
 			else
 			{
-				rmlShell->Ui()->HideAllDocuments();
+				rmlShell->Ui( )->HideAllDocuments( );
 				rmlShell->SetNextScreen( "game" );
-				rmlShell->Ui()->SetInhibitsControl( false );
-				rmlShell->Ui()->SetCursorEnabled( false );
 			}
 			break;
 		case idSession::IDLE:
 			shellHandler->SetShellState( SHELL_STATE_IDLE );
-			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "startmenu" );
 			break;
 		case idSession::PARTY_LOBBY:
@@ -6084,17 +6054,14 @@ void idGameLocal::Shell_SyncWithSession()
 			break;
 		case idSession::LOADING:
 			shellHandler->SetShellState( SHELL_STATE_LOADING );
-			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "loading" );
 			break;
 		case idSession::CONNECTING:
 			shellHandler->SetShellState( SHELL_STATE_CONNECTING );
-			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "loading" );
 			break;
 		case idSession::BUSY:
 			shellHandler->SetShellState( SHELL_STATE_BUSY );
-			rmlShell->Ui()->HideAllDocuments();
 			rmlShell->SetNextScreen( "loading" );
 			break;
 	}

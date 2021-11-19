@@ -100,6 +100,7 @@ void idRmlRender::Init()
 	mat.Identity();
 
 	_guiSolid = declManager->FindMaterial( "_white", false );
+	//_guiSolid->SetSort( SS_GUI );
 }
 
 void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indices, int numIndexes, Rml::TextureHandle texture, const Rml::Vector2f& translation )
@@ -124,10 +125,11 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	idDrawVert* temp = &_verts[_numVerts];
 	for( int i = 0; i < numVerts; i++ )
 	{
-		const Rml::Vertex localVertex = vertices[i];
+		const Rml::Vertex& localVertex = vertices[i];
 
-		idVec3 pos = idVec3( localVertex.position.x, localVertex.position.y, 0 );
-		pos += idVec3( translation.x, translation.y, 0 );
+		//this->GetContext( )->GetDimensions( ).y;
+
+		idVec3 pos = idVec3( localVertex.position.x + translation.x, localVertex.position.y + translation.y, 0 );
 
 		// transform
 		pos *= mat;
@@ -140,9 +142,10 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 
 		localDrawVert.xyz = pos;
 		localDrawVert.SetTexCoord( localVertex.tex_coord.x, localVertex.tex_coord.y );
-		idVec4 color = idVec4( localVertex.colour.red, localVertex.colour.green, localVertex.colour.blue, localVertex.colour.alpha );
-		dword packedColor = PackColor( color );
-		localDrawVert.SetColor( packedColor );
+		idVec4 color = idVec4( localVertex.colour.red / 255.0f, localVertex.colour.green / 255.0f, localVertex.colour.blue / 255.0f, localVertex.colour.alpha / 255.0f );
+		int currentColorNativeBytesOrder = LittleLong( PackColor( color ) );
+		localDrawVert.SetNativeOrderColor( currentColorNativeBytesOrder );
+		localDrawVert.ClearColor2( );
 
 		_numVerts++;
 
@@ -160,10 +163,7 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 		material = _guiSolid;
 	}
 
-	if( material )
-	{
-		material->SetSort( SS_GUI );
-	}
+	material->SetSort( SS_GUI );
 
 	idDrawVert* verts = tr_guiModel->AllocTris( numVerts, tris, numIndexes, material, GenerateGlState(), STEREO_DEPTH_TYPE_NONE );
 
@@ -374,7 +374,7 @@ void idRmlRender::RenderClipMask()
 					   | GLS_STENCIL_FUNC_ALWAYS
 					   | GLS_STENCIL_MAKE_REF( kRmlStencilRef + _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
 
-	idDrawVert* maskVerts = tr_guiModel->AllocTris(4, quadPicIndexes, 6, _guiSolid, glState, STEREO_DEPTH_TYPE_NONE);
+	idDrawVert* maskVerts = tr_guiModel->AllocTris( 4, quadPicIndexes, 6, _guiSolid, glState, STEREO_DEPTH_TYPE_NONE );
 
 	WriteDrawVerts16( maskVerts, localVerts, 4 );
 

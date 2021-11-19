@@ -31,6 +31,25 @@ muzzleflash
 
 models/weapons/shotgun
 {
-	qer_editorimage textures/weapons/shotgun/color
-	diffusemap textures/weapons/shotgun/color	
+	unsmoothedTangents
+	mikktspace
+	qer_editorimage textures/weapons/shotgun/shotgun_mat_BaseColor
+	
+	{
+		blend diffusemap
+		nearest
+		map textures/weapons/shotgun/shotgun_mat_BaseColor.tga
+	}
+
+	normalmap textures/weapons/shotgun/shotgun_Material_Normal.tga
+	rmaomap textures/weapons/shotgun/shotgun_mat_RoughnessMetallicOcclusion.tga
+}
+
+textures/weapons/sshell
+{
+	//noshadows
+	{
+		blend diffusemap
+		map textures/weapons/sshell.png
+	}
 }

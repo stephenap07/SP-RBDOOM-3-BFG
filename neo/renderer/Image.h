@@ -598,7 +598,7 @@ public:
 	idImage*			currentRenderHDRImage64;
 	idImage*			bloomRenderImage[2];
 	idImage*			glowImage[2];					// contains any glowable surface information.
-	idImage*			glowDepthImage;
+	idImage*			glowDepthImage[2];
 	idImage*			accumTransparencyImage;
 	idImage*			revealTransparencyImage;
 	idImage*			envprobeHDRImage;

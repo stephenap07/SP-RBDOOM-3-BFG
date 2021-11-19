@@ -1,0 +1,20 @@
+textures/particles/spark3
+{
+	noSelfShadow
+	noshadows
+	translucent
+	discrete
+	nonsolid
+	noimpact
+	//deform tube
+
+	qer_editorimage		textures/particles/spark_05
+
+	{
+	    blend  add  
+		map    textures/particles/spark_05
+        vertexcolor
+        colored
+		//clamp
+	}
+}

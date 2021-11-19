@@ -43,6 +43,8 @@ class ElementDocument;
 class Context;
 }
 
+class RmlEventHandler;
+
 // This class provides an interface to manage the rml documents. It provides access to reload documents and handle material loading as you edit them in real time.
 class RmlUserInterface
 {
@@ -60,10 +62,12 @@ public:
 
 	virtual void					Reload( ) = 0;
 
+	virtual void					ReloadStyleSheet( ) = 0;
+
 	// Repaints the ui
 	virtual void					Redraw( int time ) = 0;
 
-	virtual Rml::ElementDocument*	LoadDocument( const char* filePath ) = 0;
+	virtual Rml::ElementDocument*	LoadDocument( const char* filePath, RmlEventHandler* _eventHandler = nullptr ) = 0;
 
 	virtual bool					IsDocumentOpen( const char* name ) = 0;
 
@@ -94,9 +98,11 @@ public:
 
 	virtual void					SetInhibitsControl( bool inhibit ) = 0;
 
-	virtual Rml::ElementDocument*	SetNextScreen( const char* _nextScreen ) = 0;
+	virtual Rml::ElementDocument*	SetNextScreen( const char* _nextScreen, RmlEventHandler* _eventHandler = nullptr ) = 0;
 
 	virtual void					HideAllDocuments() = 0;
+
+	virtual Rml::ElementDocument*	GetDocument( const char* _path ) = 0;
 
 	// Window specific
 
@@ -108,6 +114,8 @@ public:
 	virtual int						PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false ) = 0;
 
 	virtual void					StopSound( int channel = SCHANNEL_ANY ) = 0;
+
+	virtual void					AddCommand( const char* _cmd ) = 0;
 };
 
 class RmlUserInterfaceManager
@@ -127,6 +135,7 @@ public:
 	// Reloads changed guis, or all guis.
 	virtual void					Preload( const char* mapName ) = 0;
 	virtual void					Reload( bool all ) = 0;
+	virtual	void					ReloadStyleSheets( bool all ) = 0;
 
 	virtual void					PostRender() = 0;
 };

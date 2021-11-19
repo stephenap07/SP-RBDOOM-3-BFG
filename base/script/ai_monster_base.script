@@ -369,9 +369,9 @@ void monster_base::wait_for_enemy() {
 	stopMove();
 	
 	while( !AI_PAIN && !getEnemy() ) {
-		if ( checkForEnemy( idle_sight_fov ) ) {
-			break;
-		}
+		//if ( checkForEnemy( idle_sight_fov ) ) {
+		//	break;
+		//}
 		waitFrame();
 	}
 }
@@ -406,7 +406,7 @@ monster_base::enemy_dead
 */
 void monster_base::enemy_dead() {
 	AI_ENEMY_DEAD = false;
-	checkForEnemy( false );
+	//checkForEnemy( false );
 	if ( !getEnemy() ) {
 		waitFrame();  // avoid infinite loops
 		setState( "state_Idle" );
@@ -450,9 +450,9 @@ void monster_base::idle_followPathEntities( entity pathnode ) {
 			return;
 		}
 
-		if ( checkForEnemy( true ) ) {
-			return;
-		}
+		//if ( checkForEnemy( true ) ) {
+		//	return;
+		//}
 		
 		// trigger any entities the path had targeted
 		triggername = current_path.getKey( "trigger" );
@@ -496,9 +496,9 @@ void monster_base::path_corner() {
 			if ( sys.influenceActive() ) {
 				break;
 			}
-			if ( checkForEnemy( true ) ) {
-				break;
-			}
+			//if ( checkForEnemy( true ) ) {
+			//	break;
+			//}
 			waitFrame();
 		}
 
@@ -542,18 +542,18 @@ void monster_base::path_anim() {
 		ang = current_path.getFloatKey( "angle" );
 		turnTo( ang );
 		while( !facingIdeal() ) {
-			if ( checkForEnemy( true ) ) {
-				return;
-			}
+			//if ( checkForEnemy( true ) ) {
+			//	return;
+			//}
 			waitFrame();
 		}
 	}
 
 	playCustomAnim( animname, blend_in, blend_out );
 	while( !animDone( ANIMCHANNEL_TORSO, blend_out ) ) {
-		if ( checkForEnemy( true ) ) {
-			break;
-		}
+		//if ( checkForEnemy( true ) ) {
+		//	break;
+		//}
 		waitFrame();
 	}
 	animState( ANIMCHANNEL_TORSO, "Torso_Idle", blend_out );
@@ -577,9 +577,9 @@ void monster_base::path_cycleanim() {
 	ang = current_path.getAngles();
 	turnTo( ang_y );
 	while( !facingIdeal() ) {
-		if ( checkForEnemy( true ) ) {
-			return;
-		}
+		//if ( checkForEnemy( true ) ) {
+		//	return;
+		//}
 		waitFrame();
 	}
 	playCustomCycle( animname, blend_in );
@@ -588,17 +588,17 @@ void monster_base::path_cycleanim() {
 	if ( waittime ) {
 		waittime += sys.getTime();
 		while( sys.getTime() < waittime ) {
-			if ( checkForEnemy( true ) ) {
-				return;
-			}
+			//if ( checkForEnemy( true ) ) {
+			//	return;
+			//}
 			waitFrame();
 		}
 	} else {
 		AI_ACTIVATED = false;
 		while( !AI_ACTIVATED ) {
-			if ( checkForEnemy( true ) ) {
-				return;
-			}
+			//if ( checkForEnemy( true ) ) {
+			//	return;
+			//}
 			waitFrame();
 		}
 	}
@@ -616,9 +616,9 @@ void monster_base::path_turn() {
 	ang = current_path.getAngles();
 	turnTo( ang_y );
 	while( !facingIdeal() ) {
-		if ( checkForEnemy( true ) ) {
-			return;
-		}
+		//if ( checkForEnemy( true ) ) {
+		//	return;
+		//}
 		waitFrame();
 	}
 }
@@ -634,9 +634,9 @@ void monster_base::path_wait() {
 	waittime = current_path.getFloatKey( "wait" );
 	waittime += sys.getTime();
 	while( sys.getTime() < waittime ) {
-		if ( checkForEnemy( true ) ) {
-			return;
-		}
+		//if ( checkForEnemy( true ) ) {
+		//	return;
+		//}
 		waitFrame();
 	}
 }
@@ -649,9 +649,9 @@ monster_base::path_waitfortrigger
 void monster_base::path_waitfortrigger() {
 	AI_ACTIVATED = false;
 	while( !AI_ACTIVATED ) {
-		if ( checkForEnemy( true ) ) {
-			return;
-		}
+		//if ( checkForEnemy( true ) ) {
+		//	return;
+		//}
 		waitFrame();
 	}
 	AI_ACTIVATED = false;

@@ -1,7 +1,6 @@
 <rml>
 <head>
 	<link type="text/template" href="../window.rml"/>
-	<link type="text/css" href="icon.rcss"/>
 	<title>Inventory</title>
 	<style>
 		body
@@ -46,7 +45,9 @@
 
 	</style>
 </head>
-<body>
-	*****Loading*****
+<body onshow="inhibitControl=false;enableCursor=false">
+	<div class="center_content">
+		<h1>*****Loading*****</h1>
+	</div>
 </body>
 </rml>

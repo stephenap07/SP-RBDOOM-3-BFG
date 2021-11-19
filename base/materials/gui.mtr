@@ -30,19 +30,29 @@ material guis/simplekey {
 	}
 }
 
-guis/assets/userinterface_skin
+guis/assets/userinterface_skin.png
 {
+	translucent
+	alphazeroclamp
 	{
 		blend blend
-		clamp
-		map guis/assets/userinterface_skin.png
+		map guis/assets/invader
 	}
 }
 
 guis/rml/shell/textures/invader
 {
-    translucent
-    noshadows
-    twosided
-	diffusemap textures/invader.tga
+	{
+		blend blend
+		map textures/invader.tga
+	}
+}
+
+guis/assets/win_retro.png
+{
+	{
+		blend blend
+		nearest
+		map guis/assets/win_retro.png
+	}
 }

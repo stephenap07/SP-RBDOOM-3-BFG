@@ -177,7 +177,8 @@ void Framebuffer::Init()
 		globalFramebuffers.glowFBO[i]->AddColorBuffer( GL_RGBA8, 0 );
 		globalFramebuffers.glowFBO[i]->AttachImage2D( GL_TEXTURE_2D, globalImages->glowImage[i], 0 );
 		globalFramebuffers.glowFBO[i]->AddStencilBuffer( GL_STENCIL_INDEX ); // stencil buffer for gui masks
-		//globalFramebuffers.glowFBO[i]->AddDepthBuffer(GL_DEPTH24_STENCIL8); // probably don't need depth?
+		//globalFramebuffers.glowFBO[i]->AddDepthBuffer( GL_DEPTH24_STENCIL8 ); // probably don't need depth?
+		//globalFramebuffers.envprobeFBO->AttachImageDepth( GL_TEXTURE_2D, globalImages->glowDepthImage[i] );
 		globalFramebuffers.glowFBO[i]->Check();
 	}
 
@@ -315,7 +316,7 @@ void Framebuffer::CheckFramebuffers()
 		{
 			globalFramebuffers.glowFBO[i]->Bind();
 			globalFramebuffers.glowFBO[i]->AttachImage2D( GL_TEXTURE_2D, globalImages->glowImage[i], 0 );
-			globalFramebuffers.glowFBO[i]->AttachImageDepth( GL_TEXTURE_2D, globalImages->glowDepthImage );
+			globalFramebuffers.glowFBO[i]->AttachImageDepth( GL_TEXTURE_2D, globalImages->glowDepthImage[i] );
 			globalFramebuffers.glowFBO[i]->Check();
 		}
 

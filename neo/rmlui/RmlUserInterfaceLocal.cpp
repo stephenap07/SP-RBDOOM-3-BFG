@@ -32,6 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RmlUserInterfaceLocal.h"
 #include "RmlFileSystem.h"
+#include "RmlEventHandler.h"
 #include "GlobalRmlEventListener.h"
 
 #include "renderer/GLState.h"
@@ -52,6 +53,7 @@ class GlobalRmlEventListenerInstancer : public Rml::EventListenerInstancer
 public:
 	GlobalRmlEventListenerInstancer()
 		: ui( nullptr )
+		, eventHandler( nullptr )
 	{
 	}
 
@@ -60,14 +62,23 @@ public:
 		ui = _ui;
 	}
 
+	void SetEventHandler( RmlEventHandler* _eventHandler )
+	{
+		eventHandler = _eventHandler;
+	}
+
 	Rml::EventListener* InstanceEventListener( const Rml::String& value, Rml::Element* element ) override
 	{
-		return new GlobalRmlEventListener( ui, value, element );
+		auto listener = new GlobalRmlEventListener( ui, value, element );
+		listener->SetEventHandler( eventHandler );
+
+		return listener;
 	}
 
 private:
 
 	RmlUserInterface* ui;
+	RmlEventHandler* eventHandler;
 };
 
 static GlobalRmlEventListenerInstancer eventListenerInstancer;
@@ -97,6 +108,7 @@ RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 	, _isPausingGame( false )
 	, _inhibitsControl( false )
 	, _soundWorld( nullptr )
+	, _cmds( )
 	, _refs( 1 )
 {
 }
@@ -110,6 +122,8 @@ bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
 	_context = Rml::GetContext( name );
 	_soundWorld = soundWorld;
 	_isActive = true;
+	_name = name;
+	_cmds.Clear( );
 
 	if( !_context )
 	{
@@ -127,6 +141,9 @@ bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
 
 const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int time )
 {
+	// Clear this command buffer out to populate them with new commands from the event handlers.
+	_cmds.Clear();
+
 	int keyModState = idRmlSystem::GetKeyModifier();
 
 	if( event->IsMouseEvent() )
@@ -149,6 +166,11 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 	if( event->IsCharEvent() )
 	{
 		HandleCharEvent( event, keyModState );
+	}
+
+	if( _cmds.Length() > 0 )
+	{
+		return _cmds.c_str( );
 	}
 
 	return nullptr;
@@ -280,7 +302,7 @@ void RmlUserInterfaceLocal::Redraw( int time )
 	renderer->PostRender();
 }
 
-Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath )
+Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath, RmlEventHandler* _eventHandler )
 {
 	if( !_context )
 	{
@@ -289,13 +311,13 @@ Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath 
 
 	// This touches the filesystem, not sure if this really should be doing this sort
 	// of thing in the middle of the game. Need to preload as much as possible.
-	ID_TIME_T timeStamp(0);
-	fileSystem->ReadFile(filePath, nullptr, &timeStamp);
+	ID_TIME_T timeStamp( 0 );
+	fileSystem->ReadFile( filePath, nullptr, &timeStamp );
 
-	Document foundDoc( GetDocument( filePath ) );
+	Document foundDoc( GetInternalDocument( filePath ) );
 	if( foundDoc._doc )
 	{
-		if (timeStamp <= foundDoc._timeStamp)
+		if( timeStamp <= foundDoc._timeStamp )
 		{
 			// The already loaded document doesn't need an update.
 			return foundDoc._doc;
@@ -306,11 +328,27 @@ Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath 
 	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
 	{
 		eventListenerInstancer.SetUi( this );
+
+		if( _eventHandler )
+		{
+			eventListenerInstancer.SetEventHandler( _eventHandler );
+		}
+
 		document = _context->LoadDocument( filePath );
 
 		if( document )
 		{
-			_documents.Append( { document, timeStamp, filePath } );
+			if( foundDoc._doc )
+			{
+				foundDoc._doc->Close( );
+				foundDoc._doc = document;
+				foundDoc._eventHandler = _eventHandler;
+				foundDoc._timeStamp = timeStamp;
+			}
+			else
+			{
+				_documents.Append( { document, _eventHandler, timeStamp, filePath } );
+			}
 		}
 	}
 
@@ -349,6 +387,20 @@ void RmlUserInterfaceLocal::CloseDocument( const char* name )
 	}
 }
 
+Rml::ElementDocument* RmlUserInterfaceLocal::GetDocument( const char* _path )
+{
+	for( int i = 0; i < _documents.Num( ); i++ )
+	{
+		if( _context == _documents[i]._doc->GetContext( ) && !idStr::Icmp( _documents[i]._name, _path ) )
+		{
+			return _documents[i]._doc;
+		}
+	}
+
+	// didn't find the document
+	return nullptr;
+}
+
 void RmlUserInterfaceLocal::Reload()
 {
 	for( int i = 0; i < _documents.Num(); i++ )
@@ -359,10 +411,18 @@ void RmlUserInterfaceLocal::Reload()
 		{
 			// File needs a reload.
 			common->Printf( "Reloading %s\n", _documents[i]._name.c_str() );
+
 			bool show = _documents[i]._doc->IsVisible();
+
 			Rml::Context* context = _documents[i]._doc->GetContext();
+
 			context->UnloadDocument( _documents[i]._doc );
+
+			_documents[i]._doc->Close( );
+
 			eventListenerInstancer.SetUi( this );
+			eventListenerInstancer.SetEventHandler( _documents[i]._eventHandler );
+
 			_documents[i]._doc = context->LoadDocument( _documents[i]._name.c_str() );
 			if( show && _documents[i]._doc )
 			{
@@ -372,18 +432,25 @@ void RmlUserInterfaceLocal::Reload()
 	}
 }
 
+void RmlUserInterfaceLocal::ReloadStyleSheet( )
+{
+	for( int i = 0; i < _documents.Num(); i++ )
+	{
+		_documents[i]._doc->ReloadStyleSheet();
+	}
+}
+
 const char* RmlUserInterfaceLocal::Activate( bool activate, int time )
 {
 	_isActive = activate;
 	return nullptr;
 }
 
-Rml::ElementDocument* RmlUserInterfaceLocal::SetNextScreen( const char* _nextScreen )
+Rml::ElementDocument* RmlUserInterfaceLocal::SetNextScreen( const char* _nextScreen, RmlEventHandler* _eventHandler )
 {
-	auto doc = LoadDocument( _nextScreen );
+	auto doc = LoadDocument( _nextScreen, _eventHandler );
 	if( doc )
 	{
-		common->Printf( "Loaded %s ", _nextScreen );
 		doc->Show();
 	}
 	return doc;
@@ -395,6 +462,15 @@ void RmlUserInterfaceLocal::HideAllDocuments()
 	{
 		_documents[i]._doc->Hide();
 	}
+}
+
+void RmlUserInterfaceLocal::AddCommand( const char* _cmd )
+{
+	if( !_cmds.IsEmpty( ) )
+	{
+		_cmds.Append( ";" );
+	}
+	_cmds.Append( _cmd );
 }
 
 size_t RmlUserInterfaceLocal::Size()
@@ -441,6 +517,8 @@ int RmlUserInterfaceLocal::PlaySound( const char* sound, int channel, bool block
 		return -1;
 	}
 
+	AddCommand( va( "play %s", sound ) );
+
 	if( _soundWorld )
 	{
 		return _soundWorld->PlayShaderDirectly( sound, channel );
@@ -464,7 +542,7 @@ void RmlUserInterfaceLocal::StopSound( int channel )
 	}
 }
 
-RmlUserInterfaceLocal::Document RmlUserInterfaceLocal::GetDocument( const char* name )
+RmlUserInterfaceLocal::Document RmlUserInterfaceLocal::GetInternalDocument( const char* name )
 {
 	for( int i = 0; i < _documents.Num(); i++ )
 	{
@@ -533,14 +611,10 @@ void RmlUserInterfaceManagerLocal::Init()
 
 void RmlUserInterfaceManagerLocal::Shutdown()
 {
-	int c = _guis.Num();
-	for( int i = 0; i < c; i++ )
-	{
-		delete _guis[i];
-	}
-
-	_guis.Clear();
+	// Shut down RML first since it starts to send events to elements before it all ends. Need to keep _guis in memory.
 	Rml::Shutdown();
+
+	_guis.DeleteContents( true );
 }
 
 RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool autoload )
@@ -550,6 +624,13 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool aut
 	{
 		if( !idStr::Icmp( _guis[i]->GetName(), name ) )
 		{
+			if( _guis[i]->GetRefs( ) == 0 )
+			{
+				_guis[i]->Reload( );
+			}
+
+			_guis[i]->AddRef( );
+
 			return _guis[i];
 		}
 	}
@@ -583,27 +664,51 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const Rml::Context* contex
 void RmlUserInterfaceManagerLocal::BeginLevelLoad()
 {
 	_inLevelLoad = true;
+
+	for( int i = 0; i < _guis.Num( ); i++ )
+	{
+		_guis[i]->ClearRefs( );
+	}
 }
 
 void RmlUserInterfaceManagerLocal::EndLevelLoad( const char* mapName )
 {
 	_inLevelLoad = false;
+
+	int c = _guis.Num( );
+	for( int i = 0; i < c; i++ )
+	{
+		if( _guis[i]->GetRefs( ) == 0 )
+		{
+			delete _guis[i];
+			_guis.RemoveIndex( i );
+			i--;
+			c--;
+		}
+
+		common->UpdateLevelLoadPacifier( );
+	}
+
+	if( cvarSystem->GetCVarBool( "fs_buildresources" ) && mapName != NULL && mapName[0] != '\0' )
+	{
+		common->Printf( "TODO(Stephen): Implement generated RML binary gui" );
+	}
 }
 
-void RmlUserInterfaceManagerLocal::Preload(const char* mapName)
+void RmlUserInterfaceManagerLocal::Preload( const char* mapName )
 {
 	Rml::StringList textureNames = Rml::GetTextureSourceList();
 
-	for (const auto& texturePath : textureNames)
+	for( const auto& texturePath : textureNames )
 	{
-		const idMaterial* material = declManager->FindMaterial(texturePath.c_str());
-		if (material)
+		const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
+		if( material )
 		{
-			material->ReloadImages(false);
+			material->ReloadImages( false );
 		}
 		else
 		{
-			common->Warning("Failed to load rml texture %s", texturePath.c_str());
+			common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
 		}
 	}
 }
@@ -613,6 +718,14 @@ void RmlUserInterfaceManagerLocal::Reload( bool all )
 	for( int i = 0; i < _guis.Num(); i++ )
 	{
 		_guis[i]->Reload();
+	}
+}
+
+void RmlUserInterfaceManagerLocal::ReloadStyleSheets( bool all )
+{
+	for( int i = 0; i < _guis.Num(); i++ )
+	{
+		_guis[i]->ReloadStyleSheet();
 	}
 }
 
@@ -627,13 +740,15 @@ void RmlUserInterfaceManagerLocal::PostRender()
 	for( int i = 0; i < _imagesToReload.Num(); i++ )
 	{
 		RmlImage& img = _imagesToReload[i];
+
 		img.image->GenerateImage(
 			img.data,
 			img.dimensions.x,
 			img.dimensions.y,
-			textureFilter_t::TF_NEAREST,
+			textureFilter_t::TF_DEFAULT,
 			textureRepeat_t::TR_CLAMP,
-			textureUsage_t::TD_RGBA32F );
+			textureUsage_t::TD_DEFAULT );
+
 		if( img.referencedOutsideLevelLoad )
 		{
 			img.image->SetReferencedOutsideLevelLoad();
@@ -657,4 +772,9 @@ void RmlUserInterfaceManagerLocal::AddMaterialToReload( const RmlImage& rmlImage
 CONSOLE_COMMAND( reloadRml, "Reload updated rml gui files", NULL )
 {
 	rmlManagerLocal.Reload( true );
+}
+
+CONSOLE_COMMAND( reloadRcss, "Reload updated RCSS", NULL )
+{
+	rmlManagerLocal.ReloadStyleSheets( true );
 }

@@ -387,7 +387,7 @@ static void R_AddSingleLight( viewLight_t* vLight )
 
 			// The table is updated at interaction::AllocAndLink() and interaction::UnlinkAndFree()
 
-			// Stephen: interactionTableRow is null if renderDef is used in a gui.sub
+			// TODO(Stephen): interactionTableRow is null if renderDef is used in a gui.sub
 			const idInteraction* inter = interactionTableRow[ edef->index ];
 
 			const renderEntity_t& eParms = edef->parms;

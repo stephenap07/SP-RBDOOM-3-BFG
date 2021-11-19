@@ -1798,7 +1798,7 @@ bool idEntity::HasInteractiveGui() const
 		return true;
 	}
 
-	if( renderEntity.rml[0] && renderEntity.rml[0]->IsCursorEnabled() ) // TODO(Stephen): Make rml interactive through other means like key presses.
+	if( renderEntity.rml[0] && renderEntity.rml[0]->IsCursorEnabled() ) // TODO(Stephen): Add IsInteractive to RmlUserInterface
 	{
 		return true;
 	}

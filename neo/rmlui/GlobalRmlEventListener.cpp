@@ -32,10 +32,13 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "GlobalRmlEventListener.h"
 
+#include "rmlui/RmlEventHandler.h"
+
 GlobalRmlEventListener::GlobalRmlEventListener( RmlUserInterface* _ui, const Rml::String& value, Rml::Element* element )
 	: ui( _ui )
 	, value( value )
 	, element( element )
+	, eventHandler( nullptr )
 {
 }
 
@@ -72,9 +75,9 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 		if( !token.Icmp( "goto" ) )
 		{
 			src.ReadToken( &token );
-			ui->SetNextScreen( token.c_str() );
 			event.GetTargetElement()->GetOwnerDocument()->Hide();
-			ui->CloseDocument( event.GetTargetElement()->GetOwnerDocument()->GetSourceURL().c_str() );
+			ui->SetNextScreen( token.c_str() );
+			//ui->CloseDocument( event.GetTargetElement()->GetOwnerDocument()->GetSourceURL().c_str() );
 
 			continue;
 		}
@@ -205,6 +208,28 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			}
 
 			continue;
+		}
+
+		if( !token.Icmp( "runScript" ) )
+		{
+			idStr cmd;
+			do
+			{
+				cmd.Append( token );
+				cmd.Append( ' ' );
+				src.ReadToken( &token );
+			}
+			while( !token.IsEmpty( ) && token.Icmp( ";" ) );
+
+			ui->AddCommand( cmd.c_str( ) );
+
+			continue;
+		}
+
+		// Handle specific document events.
+		if( eventHandler )
+		{
+			eventHandler->ProcessEvent( event, token.c_str() );
 		}
 	}
 }

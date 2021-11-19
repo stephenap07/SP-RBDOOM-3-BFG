@@ -62,15 +62,19 @@ public:
 
 	void						Reload() override;
 
+	void						ReloadStyleSheet() override;
+
 	// Repaints the ui
 	void						Redraw( int time ) override;
 
 	// Loads the document and sets up the event listeners.
-	Rml::ElementDocument*		LoadDocument( const char* filePath ) override;
+	Rml::ElementDocument*		LoadDocument( const char* filePath, RmlEventHandler* _eventHandler = nullptr ) override;
 
 	bool						IsDocumentOpen( const char* name ) override;
 
 	void						CloseDocument( const char* name ) override;
+
+	Rml::ElementDocument*		GetDocument( const char* _path ) override;
 
 
 	void						SetCursor( float x, float y ) override
@@ -102,7 +106,7 @@ public:
 	// Activated the gui.
 	const char*					Activate( bool activate, int time ) override;
 
-	Rml::ElementDocument*		SetNextScreen( const char* _nextScreen ) override;
+	Rml::ElementDocument*		SetNextScreen( const char* _nextScreen, RmlEventHandler* _eventHandler = nullptr ) override;
 
 	void						HideAllDocuments() override;
 
@@ -135,6 +139,9 @@ public:
 	int							PlaySound( const char* sound, int channel = SCHANNEL_ANY, bool blocking = false ) override;
 
 	void						StopSound( int channel = SCHANNEL_ANY ) override;
+
+	// Adds a command to be picked up by the game logic.
+	void						AddCommand( const char* _cmd ) override;
 
 	// End RmlUserInterface
 
@@ -196,11 +203,12 @@ protected:
 	struct Document
 	{
 		Rml::ElementDocument* _doc = nullptr;
+		RmlEventHandler* _eventHandler = nullptr;
 		ID_TIME_T _timeStamp = 0;
 		idStr _name;
 	};
 
-	Document					GetDocument( const char* name );
+	Document					GetInternalDocument( const char* name );
 
 	Rml::Context*				_context;
 
@@ -220,6 +228,9 @@ protected:
 	int							_refs;
 
 	idSoundWorld*				_soundWorld;
+
+	idStr						_cmds;
+	idStr						_pendingCmds;
 
 	idList<Document>			_documents;
 };
@@ -258,6 +269,8 @@ public:
 
 	// Reloads changed guis, or all guis.
 	void						Reload( bool all ) override;
+
+	void						ReloadStyleSheets( bool all ) override;
 
 	// Run this method on the main thread to actually generate data for the image. This is used to generate font glyphs to an idImage.
 	void						PostRender() override;

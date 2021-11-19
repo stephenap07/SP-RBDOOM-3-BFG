@@ -36,6 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "RmlUi/Core/EventListener.h"
 #include "RmlUi/Core/EventListenerInstancer.h"
 
+class RmlEventHandler;
 
 ///
 /// This event listener responds to commands from the rml gui stuff.
@@ -48,10 +49,16 @@ public:
 
 	void OnDetach( Rml::Element* element ) override;
 
+	void SetEventHandler( RmlEventHandler* _eventHandler )
+	{
+		eventHandler = _eventHandler;
+	}
+
 private:
 	RmlUserInterface* ui;
 	Rml::String value;
 	Rml::Element* element;
+	RmlEventHandler* eventHandler;
 };
 
 #endif

@@ -6929,6 +6929,10 @@ static classVariableInfo_t idMenuHandler_Inventory_typeInfo[] = {
 
 static classVariableInfo_t UI_Shell_typeInfo[] = {
 	{ ": RmlUserInterface *", "_ui", (intptr_t)(&((UI_Shell *)0)->_ui), sizeof( ((UI_Shell *)0)->_ui ) },
+	{ "idStrStatic < 512 >", "_previousScreen", (intptr_t)(&((UI_Shell *)0)->_previousScreen), sizeof( ((UI_Shell *)0)->_previousScreen ) },
+	{ "idStrStatic < 512 >", "_currentScreen", (intptr_t)(&((UI_Shell *)0)->_currentScreen), sizeof( ((UI_Shell *)0)->_currentScreen ) },
+	{ "Rml :: DataModelHandle", "vidModeModel", (intptr_t)(&((UI_Shell *)0)->vidModeModel), sizeof( ((UI_Shell *)0)->vidModeModel ) },
+	{ "std :: vector < vidMode_t >", "modeList", (intptr_t)(&((UI_Shell *)0)->modeList), sizeof( ((UI_Shell *)0)->modeList ) },
 	{ NULL, 0 }
 };
 

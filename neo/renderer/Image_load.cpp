@@ -82,6 +82,8 @@ int BitsForFormat( textureFormat_t format )
 		// RB end
 		case FMT_DEPTH:
 			return 32;
+		case FMT_DEPTH_STENCIL:
+			return 32;
 		case FMT_X16:
 			return 16;
 		case FMT_Y16_X16:
