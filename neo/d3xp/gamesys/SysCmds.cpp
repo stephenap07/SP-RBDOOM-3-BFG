@@ -183,6 +183,11 @@ CONSOLE_COMMAND( reloadScript2, "Doesn't thow an error...  Use this when switchi
 	}
 }
 
+CONSOLE_COMMAND( reloadLua, "Reload the lua scripts", 0 )
+{
+	gameLocal.scriptManager.Reload( );
+}
+
 /*
 ===================
 Cmd_Script_f

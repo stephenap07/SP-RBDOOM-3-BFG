@@ -173,6 +173,22 @@ inline void	ReadFromBitMsg( netBoolEvent_t& netEvent, const idBitMsg& msg )
 	assert( netEvent.count <= netBoolEvent_t::Maximum );
 }
 
+class idStateScript
+{
+public:
+	idStateScript( idEntity* _owner ) : owner(_owner), scriptName( ) {}
+
+	void SetName( const char* name ) { scriptName = name;  }
+
+	virtual ~idStateScript( ) {}
+
+	void Load( );
+
+private:
+
+	idEntity* owner;
+	idStr scriptName;
+};
 
 class idEntity : public idClass
 {
@@ -195,6 +211,7 @@ public:
 	idStr					name;					// name of entity
 	idDict					spawnArgs;				// key/value pairs used to spawn and initialize entity
 	idScriptObject			scriptObject;			// contains all script defined data for this entity
+	idStateScript			stateScript;
 
 	int						thinkFlags;				// TH_? flags
 	int						dormantStart;			// time that the entity was first closed off from player
@@ -423,6 +440,9 @@ public:
 	bool					HasSignal( signalNum_t signalnum ) const;
 	void					Signal( signalNum_t signalnum );
 	void					SignalEvent( idThread* thread, signalNum_t signalnum );
+
+	// lua scripting
+	void					ConstructStateScript(const char* loadScript);
 
 	// gui
 	void					TriggerGuis();

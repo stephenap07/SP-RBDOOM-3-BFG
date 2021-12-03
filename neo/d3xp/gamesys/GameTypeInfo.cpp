@@ -30,6 +30,45 @@ bool idClass::HasNativeFunction(const char *functionName) {
 
 };
 
+intptr_t LuaThread::Invoke(const char *functionName, void *param1) {
+	int functionNameHash = idStr::Hash(functionName);
+	if(functionNameHash == 98469) { // LuaState
+		return (intptr_t)LuaState();
+	};
+	if(functionNameHash == 48744) { // Init
+		Init();
+		return 0;
+	};
+	if(functionNameHash == 90512) { // Restart
+		Restart();
+		return 0;
+	};
+	if(functionNameHash == 150425) { // InitLuaState
+		InitLuaState();
+		return 0;
+	};
+	return __super::Invoke(functionName, param1);
+
+};
+
+bool LuaThread::HasNativeFunction(const char *functionName) {
+	int functionNameHash = idStr::Hash(functionName);
+	if(functionNameHash == 98469) { // LuaState
+		return true;
+	};
+	if(functionNameHash == 48744) { // Init
+		return true;
+	};
+	if(functionNameHash == 90512) { // Restart
+		return true;
+	};
+	if(functionNameHash == 150425) { // InitLuaState
+		return true;
+	};
+	return __super::HasNativeFunction(functionName);
+
+};
+
 intptr_t idForce::Invoke(const char *functionName, void *param1) {
 	int functionNameHash = idStr::Hash(functionName);
 	return __super::Invoke(functionName, param1);
@@ -6200,6 +6239,25 @@ bool idPlayer::HasNativeFunction(const char *functionName) {
 		return true;
 	};
 	if(functionNameHash == 194887) { // Event_StartWarp
+		return true;
+	};
+	return __super::HasNativeFunction(functionName);
+
+};
+
+intptr_t LuaEntity::Invoke(const char *functionName, void *param1) {
+	int functionNameHash = idStr::Hash(functionName);
+	if(functionNameHash == 63102) { // Spawn
+		Spawn();
+		return 0;
+	};
+	return __super::Invoke(functionName, param1);
+
+};
+
+bool LuaEntity::HasNativeFunction(const char *functionName) {
+	int functionNameHash = idStr::Hash(functionName);
+	if(functionNameHash == 63102) { // Spawn
 		return true;
 	};
 	return __super::HasNativeFunction(functionName);

@@ -35,6 +35,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "RmlUi/Core/Core.h"
 #include "Entity.h"
 
+#include <lua.hpp>
+
 /*
 ===============================================================================
 
@@ -233,6 +235,7 @@ void AddRenderRml( const char* name, RmlUserInterface** rml, const idDict* args 
 {
 	//const idKeyValue* kv = args->MatchPrefix("rml_parm", NULL);
 	*rml = rmlManager->Find( name, true );
+
 	( *rml )->SetNextScreen( name );
 	{
 		Rml::StringList textureNames = Rml::GetTextureSourceList();
@@ -499,7 +502,8 @@ idEntity::idEntity():
 	predictionKey( INVALID_PREDICTION_KEY ),
 	originDelta( vec3_zero ),
 	axisDelta( mat3_identity ),
-	interpolationBehavior( USE_NO_INTERPOLATION )
+	interpolationBehavior( USE_NO_INTERPOLATION ),
+	stateScript( this )
 {
 
 	entityNumber	= ENTITYNUM_NONE;
@@ -582,6 +586,8 @@ void idEntity::Spawn()
 	const idKeyValue*	networkSync;
 	const char*			classname;
 	const char*			scriptObjectName;
+	const char*			stateScriptName;
+	const char*			loadScriptName;
 
 	gameLocal.RegisterEntity( this, -1, gameLocal.GetSpawnArgs() );
 
@@ -719,6 +725,14 @@ void idEntity::Spawn()
 		}
 
 		ConstructScriptObject();
+	}
+
+	if( spawnArgs.GetString( "loadScript", nullptr, &loadScriptName ) &&
+		spawnArgs.GetString( "stateScript", nullptr, &stateScriptName) )
+	{
+		gameLocal.Printf( "Found state script %s\n", loadScriptName );
+		stateScript.SetName( stateScriptName );
+		ConstructStateScript( loadScriptName );
 	}
 
 	// determine time group
@@ -4224,6 +4238,16 @@ void idEntity::SignalEvent( idThread* thread, signalNum_t signalnum )
 	Signal( signalnum );
 }
 
+void idEntity::ConstructStateScript( const char* loadScript )
+{
+	if( loadScript )
+	{
+		gameLocal.scriptManager.LoadScript( va( "script/%s", loadScript ) );
+	}
+
+	stateScript.Load( );
+}
+
 /***********************************************************************
 
   Guis.
@@ -4709,6 +4733,7 @@ idEntity::Event_GetName
 void idEntity::Event_GetName()
 {
 	idThread::ReturnString( name.c_str() );
+	gameLocal.scriptManager.ReturnString( name.c_str( ) );
 }
 
 /*
@@ -5195,7 +5220,9 @@ idEntity::Event_GetOrigin
 */
 void idEntity::Event_GetOrigin()
 {
-	idThread::ReturnVector( GetLocalCoordinates( GetPhysics()->GetOrigin() ) );
+	auto origin = GetLocalCoordinates( GetPhysics( )->GetOrigin( ) );
+	idThread::ReturnVector( origin );
+	gameLocal.scriptManager.ReturnVector( origin );
 }
 
 /*
@@ -6755,6 +6782,7 @@ void idAnimatedEntity::Event_GetJointHandle( const char* jointname )
 
 	joint = animator.GetJointHandle( jointname );
 	idThread::ReturnInt( joint );
+	gameLocal.scriptManager.ReturnInt( joint );
 }
 
 /*
@@ -6826,6 +6854,7 @@ void idAnimatedEntity::Event_GetJointPos( jointHandle_t jointnum )
 	}
 
 	idThread::ReturnVector( offset );
+	gameLocal.scriptManager.ReturnVector( offset );
 }
 
 /*
@@ -6848,4 +6877,43 @@ void idAnimatedEntity::Event_GetJointAngle( jointHandle_t jointnum )
 	idAngles ang = axis.ToAngles();
 	idVec3 vec( ang[ 0 ], ang[ 1 ], ang[ 2 ] );
 	idThread::ReturnVector( vec );
+}
+
+void idStateScript::Load( )
+{
+	lua_State* L = gameLocal.scriptManager.LuaState( );
+
+	if( lua_getglobal( L, scriptName ) != LUA_TTABLE )
+	{
+		gameLocal.Error( "Failed to find script %s", scriptName );
+		return;
+	}
+
+	if( lua_getfield( L, -1, "init" ) != LUA_TFUNCTION )
+	{
+		gameLocal.Error( "Failed to find constructor for %s", scriptName );
+	}
+
+	gameLocal.scriptManager.ReturnEntity( owner );
+
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "This should be a table!\n" );
+	}
+
+	if( !lua_isfunction( L, -2 ) )
+	{
+		gameLocal.Warning( "This should be a function!\n" );
+	}
+
+	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
+	{
+		if( !lua_istable( L, -1 ) )
+		{
+			gameLocal.Warning( "This should be a table!\n" );
+		}
+
+		gameLocal.Error( "Something went wrong in the constructor for %s: %s", scriptName, lua_tostring( L, -1 ) );
+		lua_pop( L, -1 );
+	}
 }

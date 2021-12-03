@@ -943,6 +943,7 @@ const int	CINEMATIC_SKIP_DELAY	= SEC2MS( 2.0f );
 #include "Achievements.h"
 #include "AimAssist.h"
 #include "Player.h"
+#include "lua/LuaEntity.h"
 #include "Mover.h"
 #include "Camera.h"
 #include "Moveable.h"

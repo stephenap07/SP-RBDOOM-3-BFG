@@ -39,6 +39,8 @@ instancing of objects.
 
 #include "../Game_local.h"
 
+#include <lua.hpp>
+
 
 /***********************************************************************
 
@@ -1131,6 +1133,201 @@ idClass::Event_Remove
 void idClass::Event_Remove()
 {
 	delete this;
+}
+
+static int l_CallEvent( lua_State* L )
+{
+	// Not thread safe.
+	static idArray<idVec3, 6> vectors;
+
+	int numVectors = 0;
+
+	ScopedLuaState stateScope( L );
+
+	// Get the EventDef from the upvalue data.
+	const idEventDef* evdef = ( const idEventDef* )lua_topointer( L, lua_upvalueindex( 1 ) );
+
+	// Get the idClass from the top of the stack.
+	lua_getfield( L, 1, "classPtr" );
+
+	idClass* luaThread = (idClass*)lua_topointer( L, -1 );
+
+	intptr_t data[D_EVENT_MAXARGS];
+
+	const char* format = evdef->GetArgFormat( );
+
+	for( int i = 0, j = 2; format[i] != 0; i++, j++ )
+	{
+		switch( format[i] )
+		{
+		case D_EVENT_INTEGER:
+		{
+			*( int* )&data[i] = luaL_checkinteger( L, j );
+			break;
+		}
+		case D_EVENT_FLOAT:
+		{
+			*( float* )&data[i] = luaL_checknumber( L, j );
+			break;
+		}
+		case D_EVENT_VECTOR:
+		{
+			// The vector is represented as a table in lua {x, y, z}
+			lua_getfield( L, j, "x" );
+			vectors[numVectors].x = ( luaL_checknumber( L, -1 ) );
+			lua_pop( L, 1 );
+			lua_getfield( L, j, "y" );
+			vectors[numVectors].y = ( luaL_checknumber( L, -1 ) );
+			lua_pop( L, 1 );
+			lua_getfield( L, j, "z" );
+			vectors[numVectors].z = ( luaL_checknumber( L, -1 ) );
+			lua_pop( L, 1 );
+			*( idVec3** )&data[i] = &vectors[numVectors];
+
+			numVectors++;
+			break;
+		}
+		case D_EVENT_STRING:
+		{
+			const char* theStr = luaL_checkstring( L, j );
+			*( const char** )&data[i] = theStr;
+			break;
+		}
+		case D_EVENT_ENTITY:
+		{
+			lua_getfield( L, j, "classPtr" );
+			data[i] = (intptr_t)lua_topointer( L, -1 );
+			lua_pop( L, 1 );
+			break;
+		}
+		case D_EVENT_ENTITY_NULL:
+		{
+			lua_getfield( L, j, "classPtr" );
+			data[i] = ( intptr_t )lua_topointer( L, -1 );
+			lua_pop( L, 1 );
+			break;
+		}
+		case D_EVENT_TRACE:
+		{
+			common->Error( "TODO: Implement Trace" );
+			break;
+		}
+		default:
+		{
+			common->Error( "Invalid arg format string for '%s' event.", evdef->GetName( ) );
+			break;
+		}
+		}
+	}
+
+	luaThread->ProcessEventArgPtr( evdef, data );
+
+	return 1;
+}
+
+static void SetEventUpValues( lua_State* L, const idList<const idEventDef*>& events ) {
+	for( int i = 0; i < events.Num(); i++ )
+	{
+		if( lua_getfield( L, -1, events[i]->GetName() ) == LUA_TFUNCTION )
+		{
+			lua_pushlightuserdata( L, ( void* )events[i] );
+			lua_setupvalue( L, -2, 1 );
+		}
+		// pop the function
+		lua_pop( L, 1 );
+	}
+}
+
+int OpenLuaEventLib( lua_State* luaState, const idList<luaL_Reg>& classLib, const idList<const idEventDef*>& events )
+{
+	// Can't use luaL_newlib, so use the expanded version to add the upvalues.
+	luaL_checkversion( luaState );
+
+	// Create the empty table, pre-allocated to the right size
+	lua_createtable( luaState, 0, classLib.Num( ) );
+	
+	// Push a nil upvalue for now
+	lua_pushnil( luaState );
+
+	// Register event functions with 1 upvalue
+	luaL_setfuncs( luaState, &classLib[0], 1 );
+	
+	// Set up the upvalues
+	SetEventUpValues( luaState, events );
+
+	return 1;
+}
+
+void idClass::ExportLuaFunctions( lua_State* luaState )
+{
+	// allocate temporary memory for flags so that the subclass's event callbacks
+	// override the superclass's event callback
+	int numEventDefs = idEventDef::NumEventCommands( );
+	bool* set = new bool[numEventDefs];
+	memset( set, 0, sizeof( bool ) * numEventDefs );
+
+	for( const idTypeInfo* c = classHierarchy.GetNext( ); c != nullptr; c = c->node.GetNext( ) )
+	{
+		idList<luaL_Reg> classLib;
+		idList<const idEventDef*> eventDefs;
+
+		// Go through each entry until we hit the NULL terminator
+		const idTypeInfo* p = c;
+		while( p )
+		{
+			idEventFunc<idClass>* def = p->eventCallbacks;
+
+			if( !def || !def[0].event )
+			{
+				// No new events or overrides
+				p = p->super;
+				continue;
+			}
+
+			for( int j = 0; def[j].event != nullptr; j++ )
+			{
+				const idEventDef* ev = def[j].event;
+				int evNum = ev->GetEventNum( );
+
+				if( ev->GetName( )[0] == '_' || ev->GetName( )[0] == '<' )
+				{
+					// internal event
+					continue;
+				}
+
+				if( set[evNum] )
+				{
+					// We've run into a method that this class has overriden. Skip.
+					continue;
+					//gameLocal.Printf( "Class %s is overriding %s of class %s\n", c->classname, ev->GetName( ), p->classname );
+				}
+
+				set[evNum] = true;
+
+				eventDefs.Append( ev );
+				classLib.Append( { ev->GetName( ), l_CallEvent } );
+			}
+
+			p = p->super;
+		}
+
+		memset( set, 0, sizeof( bool ) * numEventDefs );
+		classLib.Append( { NULL, NULL } );
+
+		// Create the metatable to use in the registry
+		luaL_newmetatable( luaState, c->classname );
+
+		// Key
+		lua_pushstring( luaState, "__index" );
+
+		// Create a new table with all the event methods for this class
+		OpenLuaEventLib( luaState, classLib, eventDefs );
+
+		// Set the __index to the newly created table
+		lua_settable( luaState, -3 );
+	}
+
+	delete[] set;
 }
 
 /*

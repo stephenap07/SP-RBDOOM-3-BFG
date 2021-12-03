@@ -1,7 +1,10 @@
 -- main entry point
 
 require "portal"
+require "myMap"
+
+id4 = require("wait_support")
 
 function main()
-	comPrintf("Hello, world\n")
+	print("Hello, world\n")
 end

@@ -9,7 +9,7 @@
 
 	951 constants
 	93 enums
-	447 classes/structs/unions
+	451 classes/structs/unions
 	4 templates
 	6 max inheritance level for 'idAFEntity_VehicleAutomated'
 
@@ -2568,8 +2568,20 @@ static classVariableInfo_t idProgram_typeInfo[] = {
 	{ NULL, 0 }
 };
 
+static classVariableInfo_t LuaThread_typeInfo[] = {
+	{ "lua_State *", "luaState", (intptr_t)(&((LuaThread *)0)->luaState), sizeof( ((LuaThread *)0)->luaState ) },
+	{ NULL, 0 }
+};
+
 static classVariableInfo_t ScriptManager_typeInfo[] = {
-	{ "lua_State *", "luaState", (intptr_t)(&((ScriptManager *)0)->luaState), sizeof( ((ScriptManager *)0)->luaState ) },
+	{ "bool firstThink =", "false", (intptr_t)(&((ScriptManager *)0)->false), sizeof( ((ScriptManager *)0)->false ) },
+	{ "LuaThread *", "luaThread", (intptr_t)(&((ScriptManager *)0)->luaThread), sizeof( ((ScriptManager *)0)->luaThread ) },
+	{ NULL, 0 }
+};
+
+static classVariableInfo_t ScopedLuaState_typeInfo[] = {
+	{ ": lua_State *", "originalThread", (intptr_t)(&((ScopedLuaState *)0)->originalThread), sizeof( ((ScopedLuaState *)0)->originalThread ) },
+	{ "lua_State *", "newThread", (intptr_t)(&((ScopedLuaState *)0)->newThread), sizeof( ((ScopedLuaState *)0)->newThread ) },
 	{ NULL, 0 }
 };
 
@@ -2612,11 +2624,11 @@ static classVariableInfo_t frameLookup_t_typeInfo[] = {
 	{ NULL, 0 }
 };
 
-static classVariableInfo_t class_30_class_30_typeInfo[] = {
-//	{ "const idSoundShader *", "soundShader", (intptr_t)(&((class_30::class_30 *)0)->soundShader), sizeof( ((class_30::class_30 *)0)->soundShader ) },
-//	{ "const function_t *", "function", (intptr_t)(&((class_30::class_30 *)0)->function), sizeof( ((class_30::class_30 *)0)->function ) },
-//	{ "const idDeclSkin *", "skin", (intptr_t)(&((class_30::class_30 *)0)->skin), sizeof( ((class_30::class_30 *)0)->skin ) },
-//	{ "int", "index", (intptr_t)(&((class_30::class_30 *)0)->index), sizeof( ((class_30::class_30 *)0)->index ) },
+static classVariableInfo_t class_32_class_32_typeInfo[] = {
+//	{ "const idSoundShader *", "soundShader", (intptr_t)(&((class_32::class_32 *)0)->soundShader), sizeof( ((class_32::class_32 *)0)->soundShader ) },
+//	{ "const function_t *", "function", (intptr_t)(&((class_32::class_32 *)0)->function), sizeof( ((class_32::class_32 *)0)->function ) },
+//	{ "const idDeclSkin *", "skin", (intptr_t)(&((class_32::class_32 *)0)->skin), sizeof( ((class_32::class_32 *)0)->skin ) },
+//	{ "int", "index", (intptr_t)(&((class_32::class_32 *)0)->index), sizeof( ((class_32::class_32 *)0)->index ) },
 	{ NULL, 0 }
 };
 
@@ -3689,6 +3701,12 @@ static classVariableInfo_t signalList_t_typeInfo[] = {
 	{ NULL, 0 }
 };
 
+static classVariableInfo_t idStateScript_typeInfo[] = {
+	{ ": idEntity *", "owner", (intptr_t)(&((idStateScript *)0)->owner), sizeof( ((idStateScript *)0)->owner ) },
+	{ "idStr", "scriptName", (intptr_t)(&((idStateScript *)0)->scriptName), sizeof( ((idStateScript *)0)->scriptName ) },
+	{ NULL, 0 }
+};
+
 static classVariableInfo_t idEntity_entityFlags_s_typeInfo[] = {
 //	{ "bool", "notarget", (intptr_t)(&((idEntity::entityFlags_s *)0)->notarget), sizeof( ((idEntity::entityFlags_s *)0)->notarget ) },
 //	{ "bool", "noknockback", (intptr_t)(&((idEntity::entityFlags_s *)0)->noknockback), sizeof( ((idEntity::entityFlags_s *)0)->noknockback ) },
@@ -3720,6 +3738,7 @@ static classVariableInfo_t idEntity_typeInfo[] = {
 	{ "idStr", "name", (intptr_t)(&((idEntity *)0)->name), sizeof( ((idEntity *)0)->name ) },
 	{ "idDict", "spawnArgs", (intptr_t)(&((idEntity *)0)->spawnArgs), sizeof( ((idEntity *)0)->spawnArgs ) },
 	{ "idScriptObject", "scriptObject", (intptr_t)(&((idEntity *)0)->scriptObject), sizeof( ((idEntity *)0)->scriptObject ) },
+	{ "idStateScript", "stateScript", (intptr_t)(&((idEntity *)0)->stateScript), sizeof( ((idEntity *)0)->stateScript ) },
 	{ "int", "thinkFlags", (intptr_t)(&((idEntity *)0)->thinkFlags), sizeof( ((idEntity *)0)->thinkFlags ) },
 	{ "int", "dormantStart", (intptr_t)(&((idEntity *)0)->dormantStart), sizeof( ((idEntity *)0)->dormantStart ) },
 	{ "bool", "cinematic", (intptr_t)(&((idEntity *)0)->cinematic), sizeof( ((idEntity *)0)->cinematic ) },
@@ -5292,6 +5311,12 @@ static classVariableInfo_t idPlayer_typeInfo[] = {
 	{ "idPlayerIcon", "playerIcon", (intptr_t)(&((idPlayer *)0)->playerIcon), sizeof( ((idPlayer *)0)->playerIcon ) },
 	{ "bool", "selfSmooth", (intptr_t)(&((idPlayer *)0)->selfSmooth), sizeof( ((idPlayer *)0)->selfSmooth ) },
 	{ "netBoolEvent_t", "respawn_netEvent", (intptr_t)(&((idPlayer *)0)->respawn_netEvent), sizeof( ((idPlayer *)0)->respawn_netEvent ) },
+	{ NULL, 0 }
+};
+
+static classVariableInfo_t LuaEntity_typeInfo[] = {
+	{ ": int", "animBlendFrames", (intptr_t)(&((LuaEntity *)0)->animBlendFrames), sizeof( ((LuaEntity *)0)->animBlendFrames ) },
+	{ "int", "animDoneTime", (intptr_t)(&((LuaEntity *)0)->animDoneTime), sizeof( ((LuaEntity *)0)->animDoneTime ) },
 	{ NULL, 0 }
 };
 
@@ -7033,13 +7058,15 @@ static classTypeInfo_t classTypeInfo[] = {
 	{ "idVarDefName", "", sizeof(idVarDefName), idVarDefName_typeInfo },
 	{ "statement_t", "", sizeof(statement_t), statement_t_typeInfo },
 	{ "idProgram", "", sizeof(idProgram), idProgram_typeInfo },
+	{ "LuaThread", "idClass", sizeof(LuaThread), LuaThread_typeInfo },
 	{ "ScriptManager", "", sizeof(ScriptManager), ScriptManager_typeInfo },
+	{ "ScopedLuaState", "", sizeof(ScopedLuaState), ScopedLuaState_typeInfo },
 	{ "frameBlend_t", "", sizeof(frameBlend_t), frameBlend_t_typeInfo },
 	{ "jointAnimInfo_t", "", sizeof(jointAnimInfo_t), jointAnimInfo_t_typeInfo },
 	{ "jointInfo_t", "", sizeof(jointInfo_t), jointInfo_t_typeInfo },
 	{ "jointMod_t", "", sizeof(jointMod_t), jointMod_t_typeInfo },
 	{ "frameLookup_t", "", sizeof(frameLookup_t), frameLookup_t_typeInfo },
-//	{ "class_30::class_30", "", sizeof(class_30::class_30), class_30_class_30_typeInfo },
+//	{ "class_32::class_32", "", sizeof(class_32::class_32), class_32_class_32_typeInfo },
 	{ "frameCommand_t", "", sizeof(frameCommand_t), frameCommand_t_typeInfo },
 	{ "animFlags_t", "", sizeof(animFlags_t), animFlags_t_typeInfo },
 	{ "idMD5Anim", "", sizeof(idMD5Anim), idMD5Anim_typeInfo },
@@ -7131,6 +7158,7 @@ static classTypeInfo_t classTypeInfo[] = {
 	{ "idSmokeParticles", "", sizeof(idSmokeParticles), idSmokeParticles_typeInfo },
 	{ "signal_t", "", sizeof(signal_t), signal_t_typeInfo },
 	{ "signalList_t", "", sizeof(signalList_t), signalList_t_typeInfo },
+	{ "idStateScript", "", sizeof(idStateScript), idStateScript_typeInfo },
 	{ "idEntity::entityFlags_s", "", sizeof(idEntity::entityFlags_s), idEntity_entityFlags_s_typeInfo },
 	{ "idEntity", "idClass", sizeof(idEntity), idEntity_typeInfo },
 	{ "damageEffect_t", "", sizeof(damageEffect_t), damageEffect_t_typeInfo },
@@ -7267,6 +7295,7 @@ static classTypeInfo_t classTypeInfo[] = {
 	{ "loggedAccel_t", "", sizeof(loggedAccel_t), loggedAccel_t_typeInfo },
 	{ "aasLocation_t", "", sizeof(aasLocation_t), aasLocation_t_typeInfo },
 	{ "idPlayer", "idActor", sizeof(idPlayer), idPlayer_typeInfo },
+	{ "LuaEntity", "idAnimatedEntity", sizeof(LuaEntity), LuaEntity_typeInfo },
 	{ "idMover::moveState_t", "", sizeof(idMover::moveState_t), idMover_moveState_t_typeInfo },
 	{ "idMover::rotationState_t", "", sizeof(idMover::rotationState_t), idMover_rotationState_t_typeInfo },
 	{ "idMover", "idEntity", sizeof(idMover), idMover_typeInfo },

@@ -1394,6 +1394,8 @@ void idGameLocal::InitFromNewMap( const char* mapName, idRenderWorld* renderWorl
 	gamestate = GAMESTATE_ACTIVE;
 
 	Printf( "--------------------------------------\n" );
+
+	scriptManager.SendEvent( "OnMapLoad" );
 }
 
 /*
@@ -1745,6 +1747,7 @@ void idGameLocal::MapShutdown()
 
 	// reset the script to the state it was before the map was started
 	program.Restart();
+	scriptManager.Reload( );
 
 	if( smokeParticles )
 	{
@@ -2800,6 +2803,9 @@ void idGameLocal::RunFrame( idUserCmdMgr& cmdMgr, gameReturn_t& ret )
 					}
 				}
 			}
+
+			// now run state scripts
+			scriptManager.Think( time );
 
 			RunTimeGroup2( cmdMgr );
 // jmarshall
@@ -6041,6 +6047,7 @@ void idGameLocal::Shell_SyncWithSession()
 			break;
 		case idSession::IDLE:
 			shellHandler->SetShellState( SHELL_STATE_IDLE );
+			rmlShell->Ui( )->HideAllDocuments( );
 			rmlShell->SetNextScreen( "startmenu" );
 			break;
 		case idSession::PARTY_LOBBY:

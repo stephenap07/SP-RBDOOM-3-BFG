@@ -4,7 +4,7 @@ Portal =
 }
 
 function Portal:spawn ()
-	comPrintf("Spawned the portal!\n")
+	print("Spawned the portal!\n")
 end
 
 function Portal:think ()

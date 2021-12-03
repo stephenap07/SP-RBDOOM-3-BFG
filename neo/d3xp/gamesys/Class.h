@@ -327,7 +327,12 @@ public:
 	static void					ExportScriptEvents_f( const idCmdArgs& args );
 	static void					EditLights_f( const idCmdArgs& args );
 	// RB end
+
+	// Goes through the class heirarchy and assigns functions to the registered to each idEventDef to an associated lua metatable.
+	static void					ExportLuaFunctions( lua_State* luaState );
+
 	static idClass* 			CreateInstance( const char* name );
+
 	static int					GetNumTypes()
 	{
 		return types.Num();

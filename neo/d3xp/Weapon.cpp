@@ -59,8 +59,6 @@ void rvmWeaponObject::Init( idWeapon* weapon )
 	owner = weapon;
 	stateThread.SetOwner( this );
 	owner->Event_WeaponRising();
-
-	idClass::Init();
 }
 
 /*

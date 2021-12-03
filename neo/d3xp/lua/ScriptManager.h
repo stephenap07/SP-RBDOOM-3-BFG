@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2012 Robert Beckebans
+Copyright (C) 2021 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -29,7 +29,47 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __SCRIPT_MANAGER_H__
 #define __SCRIPT_MANAGER_H__
 
-#include <lua.hpp>
+extern const idEventDef EV_LuaThread_Print;
+extern const idEventDef EV_LuaThread_GetEntity;
+extern const idEventDef EV_LuaThread_DrawText;
+
+class LuaThread : public idClass
+{
+private:
+	void	Event_Print( const char* text );
+	void	Event_GetEntity( const char* name );
+	void	Event_DrawText( const char* text, const idVec3& origin, float scale, const idVec3& color, const int align, const float lifetime );
+
+public:
+	CLASS_PROTOTYPE( LuaThread );
+
+	LuaThread( );
+	LuaThread( idEntity* self );
+
+	~LuaThread( ) override;
+
+	lua_State* LuaState( ) { return luaState; }
+
+	void	Init( );
+	bool	LoadLuaScript( const char* luaScript, bool failIfFound = false );
+	void	Restart( );
+
+	void	Call( const char* name, int numargs );
+
+	void	ReturnString( const char* text );
+	void	ReturnFloat( float value );
+	void	ReturnInt( int value );
+	void	ReturnVector( idVec3 const& vec );
+	void	ReturnEntity( idEntity* ent );
+
+private:
+	friend class ScriptManager;
+	friend class ScopedLuaState;
+
+	void InitLuaState( );
+
+	lua_State* luaState;
+};
 
 class ScriptManager
 {
@@ -39,16 +79,41 @@ public:
 
 	~ScriptManager();
 
-	bool Init();
+	bool		Init( );
+	void		Shutdown( );
+	void		Reload( );
+	void		Restart( );
+	void		SendEvent( const char* eventName );
+	void		LoadScript( const char* script );
+	void		Think( int mSeconds );
 
-	void Shutdown();
+	lua_State*	LuaState( ) { return luaThread->LuaState(); }
+	void		Call( const char* name, int numargs );
+	void		ReturnString( const char* text );
+	void		ReturnFloat( float value );
+	void		ReturnInt( int value );
+	void		ReturnVector( idVec3 const& vec );
+	void		ReturnEntity( idEntity* ent );
 
 private:
+	friend class ScopedLuaState;
 
-	void InitLuaState();
-	bool LoadLuaScript( const char* luaScript, bool failIfFound = false );
+	int startTime = 0;
+	bool firstThink = false;
+	LuaThread* luaThread;
+};
 
-	lua_State* luaState;
+/// This class updates the lua_State* to the current call so that any return
+/// values are placed into the correct lua thread.
+class ScopedLuaState
+{
+public:
+	ScopedLuaState( lua_State* L );
+	~ScopedLuaState( );
+
+private:
+	lua_State* originalThread;
+	lua_State* newThread;
 };
 
 #endif
