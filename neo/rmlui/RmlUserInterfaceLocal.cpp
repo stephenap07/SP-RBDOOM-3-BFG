@@ -115,6 +115,9 @@ RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 
 RmlUserInterfaceLocal::~RmlUserInterfaceLocal()
 {
+	_documents.Clear( );
+	_context->UnloadAllDocuments( );
+	Rml::RemoveContext( _name.c_str( ) );
 }
 
 bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
@@ -410,13 +413,11 @@ void RmlUserInterfaceLocal::Reload()
 		if( timeStamp > _documents[i]._timeStamp )
 		{
 			// File needs a reload.
-			common->Printf( "Reloading %s\n", _documents[i]._name.c_str() );
+			common->DPrintf( "Reloading RML Doc %s\n", _documents[i]._name.c_str() );
 
 			bool show = _documents[i]._doc->IsVisible();
 
 			Rml::Context* context = _documents[i]._doc->GetContext();
-
-			context->UnloadDocument( _documents[i]._doc );
 
 			_documents[i]._doc->Close( );
 
@@ -611,10 +612,10 @@ void RmlUserInterfaceManagerLocal::Init()
 
 void RmlUserInterfaceManagerLocal::Shutdown()
 {
-	// Shut down RML first since it starts to send events to elements before it all ends. Need to keep _guis in memory.
-	Rml::Shutdown();
-
+	// The guis destructor is responsible for closing the documents within each gui context.
 	_guis.DeleteContents( true );
+
+	Rml::Shutdown( );
 }
 
 RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool autoload )

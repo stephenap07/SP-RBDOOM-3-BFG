@@ -202,7 +202,9 @@ protected:
 
 	struct Document
 	{
+		// Does not own
 		Rml::ElementDocument* _doc = nullptr;
+		// Does not own.
 		RmlEventHandler* _eventHandler = nullptr;
 		ID_TIME_T _timeStamp = 0;
 		idStr _name;

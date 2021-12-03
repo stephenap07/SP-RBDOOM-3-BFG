@@ -77,6 +77,7 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			src.ReadToken( &token );
 			event.GetTargetElement()->GetOwnerDocument()->Hide();
 			ui->SetNextScreen( token.c_str() );
+			event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
 			//ui->CloseDocument( event.GetTargetElement()->GetOwnerDocument()->GetSourceURL().c_str() );
 
 			continue;
