@@ -1120,7 +1120,7 @@ void idRenderWorldLocal::AddWorldModelEntities()
 		{
 			const modelSurface_t* surf = hModel->Surface( j );
 
-			if( surf->shader->GetName() == idStr( "textures/smf/portal_sky" ) )
+			if( surf->shader->IsPortalSky() )
 			{
 				def->needsPortalSky = true;
 			}

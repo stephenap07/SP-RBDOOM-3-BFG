@@ -4721,9 +4721,8 @@ void idRenderBackend::CalculateAutomaticExposure()
 			maxLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), maxLuminance );
 		}
 
-		const double EulerConstant = exp( 1.0 );
-		newAdaptation = hdrAverageLuminance + ( avgLuminance - hdrAverageLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime ) );
-		newMaximum = hdrMaxLuminance + ( maxLuminance - hdrMaxLuminance ) * ( 1.0f - powf( EulerConstant, r_hdrAdaptionRate.GetFloat() * -deltaTime ) );
+		newAdaptation = hdrAverageLuminance + ( avgLuminance - hdrAverageLuminance ) * ( 1.0f - powf( idMath::E, r_hdrAdaptionRate.GetFloat() * -deltaTime ) );
+		newMaximum = hdrMaxLuminance + ( maxLuminance - hdrMaxLuminance ) * ( 1.0f - powf( idMath::E, r_hdrAdaptionRate.GetFloat() * -deltaTime ) );
 
 		if( !IsNAN( newAdaptation ) && !IsNAN( newMaximum ) )
 		{
@@ -4739,7 +4738,7 @@ void idRenderBackend::CalculateAutomaticExposure()
 		hdrTime = curTime;
 
 		// calculate HDR image key
-#if 0
+#if 1
 		// RB: this never worked :/
 		if( r_hdrAutoExposure.GetBool() )
 		{
@@ -4749,7 +4748,7 @@ void idRenderBackend::CalculateAutomaticExposure()
 		else
 #endif
 		{
-			hdrKey = r_hdrKey.GetFloat();
+			hdrKey = r_hdrKey.GetFloat( );
 		}
 	}
 
@@ -5959,7 +5958,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 #endif
 
 	// RB: convert back from HDR to LDR range
-	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) )
+	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) && !_viewDef->targetRender )
 	{
 		/*
 		int x = backEnd.viewDef->viewport.x1;
