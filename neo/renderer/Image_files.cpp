@@ -1518,7 +1518,7 @@ bool R_LoadCubeImages( const char* imgName, cubeFiles_t extensions, byte* pics[6
 	char	fullName[MAX_IMAGE_NAME];
 	int		width, height, size = 0;
 
-	if( extensions == CF_CAMERA || extensions == CF_SINGLE )
+	if( extensions == CF_CAMERA )
 	{
 		sides = cameraSides;
 	}
