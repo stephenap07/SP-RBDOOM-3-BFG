@@ -450,6 +450,10 @@ struct sysEvent_t
 	{
 		return evValue2 != 0;
 	}
+	bool			IsKeyUp( ) const
+	{
+		return evValue2 == 0;
+	}
 	keyNum_t		GetKey() const
 	{
 		return static_cast< keyNum_t >( evValue );

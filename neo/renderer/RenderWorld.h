@@ -254,7 +254,6 @@ typedef struct renderView_s
 	idVec3					vieworg_weapon;		// has already been adjusted for stereo world seperation
 	idMat3					viewaxis;			// transformation matrix, view looks down the positive X axis
 
-	float                   x1 = 0.0f, y1 = 0.0f, x2 = 0.0f, y2 = 0.0f;
 	idPlane                 clipPlane;
 	bool					cramZNear;			// for cinematics, we want to set ZNear much lower
 	bool					flipProjection;

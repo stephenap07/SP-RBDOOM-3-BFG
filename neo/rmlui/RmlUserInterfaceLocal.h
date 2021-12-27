@@ -104,7 +104,7 @@ public:
 	}
 
 	// Activated the gui.
-	const char*					Activate( bool activate, int time ) override;
+	const char*					Activate( bool activate ) override;
 
 	Rml::ElementDocument*		SetNextScreen( const char* _nextScreen, RmlEventHandler* _eventHandler = nullptr ) override;
 
@@ -125,10 +125,7 @@ public:
 		_isPausingGame = pause;
 	}
 
-	bool						InhibitsControl() override
-	{
-		return _inhibitsControl;
-	}
+	bool						InhibitsControl( ) override;
 
 	idVec2						GetScreenSize() const override;
 
@@ -210,7 +207,7 @@ protected:
 		idStr _name;
 	};
 
-	Document					GetInternalDocument( const char* name );
+	Document*					GetInternalDocument( const char* name );
 
 	Rml::Context*				_context;
 

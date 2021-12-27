@@ -50,6 +50,8 @@ struct overlayText_t
 	int				time;
 };
 
+class ConsoleRenderer;
+
 
 // the console will query the cvar and command systems for
 // command completion information

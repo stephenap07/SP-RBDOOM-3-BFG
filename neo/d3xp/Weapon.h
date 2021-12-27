@@ -145,6 +145,7 @@ public:
 		return currentWeaponObject;
 	}
 
+	// Cache the ejected brass model and the weapon gui.
 	static void				CacheWeapon( const char* weaponName );
 
 	// save games

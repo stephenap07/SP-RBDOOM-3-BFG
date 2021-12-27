@@ -651,8 +651,6 @@ void R_RenderView( viewDef_t* parms )
 	// build up the GUIs on world surfaces
 	R_AddInGameGuis( tr.viewDef->drawSurfs, tr.viewDef->numDrawSurfs );
 
-	tr.primaryWorld->DebugDrawSubmitToCurrentView();
-
 	// any viewLight that didn't have visible surfaces can have it's shadows removed
 	R_OptimizeViewLightsList();
 
@@ -671,6 +669,8 @@ void R_RenderView( viewDef_t* parms )
 
 	// RB: find closest environment probes so we can interpolate between them in the ambient shaders
 	R_FindClosestEnvironmentProbes();
+
+	tr.primaryWorld->DebugDrawSubmitToCurrentView( );
 
 	// write everything needed to the demo file
 	if( common->WriteDemo() )

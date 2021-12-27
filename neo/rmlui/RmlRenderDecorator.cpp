@@ -64,8 +64,6 @@ public:
 
 	void Draw( int time, idVec4 drawRect )
 	{
-		viewDef_t* oldView = tr.viewDef;
-
 		PreRender();
 		Render( time );
 
@@ -81,24 +79,20 @@ public:
 
 		refdef.fov_x = 90;
 		refdef.fov_y = 2 * atan( ( float )drawRect.w / drawRect.z ) * idMath::M_RAD2DEG;
-		refdef.x1 = drawRect.x;
-		refdef.y1 = drawRect.y;
-		refdef.x2 = drawRect.x + drawRect.z;
-		refdef.y2 = drawRect.y + drawRect.w;
 
 		refdef.time[0] = time;
 		refdef.time[1] = time;
 
-		tr.viewDef = oldView;
+		tr.CropRenderSize( drawRect.x, drawRect.y, drawRect.z, drawRect.w );
 		world->RenderScene( &refdef );
-
-		tr.viewDef = oldView;
+		tr.UnCrop( );
 	}
 
 private:
 
 	void PreRender()
 	{
+		// Call once
 		if( needsRender )
 		{
 			world->InitFromMap( NULL );
@@ -208,10 +202,11 @@ void idRmlRenderDecorator::RenderElement( Rml::Element* element, Rml::DecoratorD
 	Rml::Vector2f box = element->GetBox().GetSize( Rml::Box::PADDING );
 	idVec4 drawRect( pos.x, pos.y, box.x, box.y );
 
-	helper->Draw( static_cast<int>( Sys_Milliseconds() ) / 1000.0, drawRect );
+	helper->Draw( Sys_Milliseconds(), drawRect );
 }
 
 idRmlRenderDecoratorInstancer::idRmlRenderDecoratorInstancer()
+	: Rml::DecoratorInstancer()
 {
 }
 

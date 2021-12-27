@@ -633,7 +633,7 @@ void TextBufferManager::deformSprite( TextBufferHandle _handle, const idMat3& vi
 	{
 		const idVec3 left = -leftDir * vert[i].xyz.x;
 		const idVec3 up = -upDir * vert[i].xyz.y;
-		vert[i].xyz = mid + left + up;
+		vert[i].xyz = ( mid + left + up );
 	}
 }
 

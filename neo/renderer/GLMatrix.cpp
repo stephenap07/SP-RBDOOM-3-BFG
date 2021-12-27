@@ -686,13 +686,14 @@ credits to motorsep: https://github.com/motorsep/StormEngine2/blob/743a0f9581a10
 */
 void R_ObliqueProjection( viewDef_t* parms )
 {
-	float mvt[16];	//model view transpose
+	float mvt[16]; // model view transpose
 	idPlane pB = parms->clipPlanes[0];
-	idPlane cp;
+	idPlane cp; // camera space plane
 	R_MatrixTranspose( parms->worldSpace.modelViewMatrix, mvt );
-	R_GlobalPlaneToLocal( mvt, pB, cp );	//transform plane (which is set to the surface we're mirroring about's plane) to camera space
+	// transform plane (which is set to the surface we're mirroring about's plane) to camera space
+	R_GlobalPlaneToLocal( mvt, pB, cp );
 
-	//oblique projection adjustment code
+	// oblique projection adjustment code
 	idVec4 clipPlane( cp[0], cp[1], cp[2], cp[3] );
 	idVec4 q;
 	q[0] = ( ( clipPlane[0] < 0.0f ? -1.0f : clipPlane[0] > 0.0f ? 1.0f : 0.0f ) + parms->projectionMatrix[8] ) / parms->projectionMatrix[0];

@@ -84,7 +84,7 @@ public:
 	virtual float					CursorY() = 0;
 
 	// Activated the gui.
-	virtual const char*				Activate( bool activate, int time ) = 0;
+	virtual const char*				Activate( bool activate ) = 0;
 
 	virtual Rml::Context*			Context() = 0;
 

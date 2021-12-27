@@ -42,6 +42,10 @@ GlobalRmlEventListener::GlobalRmlEventListener( RmlUserInterface* _ui, const Rml
 {
 }
 
+GlobalRmlEventListener::~GlobalRmlEventListener( )
+{
+}
+
 void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 {
 	using namespace Rml;
@@ -70,17 +74,6 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 		{
 			common->Quit();
 			break;
-		}
-
-		if( !token.Icmp( "goto" ) )
-		{
-			src.ReadToken( &token );
-			event.GetTargetElement()->GetOwnerDocument()->Hide();
-			ui->SetNextScreen( token.c_str() );
-			event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
-			//ui->CloseDocument( event.GetTargetElement()->GetOwnerDocument()->GetSourceURL().c_str() );
-
-			continue;
 		}
 
 		if( !token.Icmp( "load" ) )
@@ -151,6 +144,14 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 			}
 
 			continue;
+		}
+
+		if( !token.Icmp( "closeMenu" ) )
+		{
+			if( common->Game( ) )
+			{
+				common->Game( )->Shell_Show( false );
+			}
 		}
 
 		if( !token.Icmp( "enableCursor" ) )
@@ -230,7 +231,7 @@ void GlobalRmlEventListener::ProcessEvent( Rml::Event& event )
 		// Handle specific document events.
 		if( eventHandler )
 		{
-			eventHandler->ProcessEvent( event, token.c_str() );
+			eventHandler->ProcessEvent( event, src, token );
 		}
 	}
 }

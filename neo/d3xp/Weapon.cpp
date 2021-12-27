@@ -1261,24 +1261,27 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 
 	if( !weaponDef->dict.GetString( "weapon_class", NULL, &objectType ) )
 	{
-		gameLocal.Error( "No 'weaponclass' set on '%s'.", objectname );
+		//gameLocal.Error( "No 'weaponclass' set on '%s'.", objectname );
 	}
 
 	// setup script object
-	idTypeInfo* typeInfo;
-	typeInfo = idClass::GetClass( objectType );
-	if( !typeInfo )
+	if( objectType )
 	{
-		gameLocal.Error( "Failed to get weapon class" );
+		idTypeInfo* typeInfo;
+		typeInfo = idClass::GetClass( objectType );
+		if( !typeInfo )
+		{
+			gameLocal.Error( "Failed to get weapon class" );
+		}
+		if( currentWeaponObject != nullptr )
+		{
+			delete currentWeaponObject;
+			currentWeaponObject = nullptr;
+		}
+		currentWeaponObject = static_cast< rvmWeaponObject* >( typeInfo->CreateInstance( ) );
+		currentWeaponObject->Init( this );
+		currentWeaponObject->CallSpawn( );
 	}
-	if( currentWeaponObject != nullptr )
-	{
-		delete currentWeaponObject;
-		currentWeaponObject = nullptr;
-	}
-	currentWeaponObject = static_cast<rvmWeaponObject*>( typeInfo->CreateInstance() );
-	currentWeaponObject->Init( this );
-	currentWeaponObject->CallSpawn();
 
 	spawnArgs = weaponDef->dict;
 

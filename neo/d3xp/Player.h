@@ -808,6 +808,12 @@ public:
 	{
 		numProjectileKills = 0;
 	}
+
+	bool					IsDead( ) const
+	{
+		return health <= 0;
+	}
+
 private:
 	// Stats & achievements
 	idAchievementManager	achievementManager;

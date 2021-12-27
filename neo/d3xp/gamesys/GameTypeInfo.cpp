@@ -5592,6 +5592,9 @@ intptr_t idPlayer::Invoke(const char *functionName, void *param1) {
 		ResetProjectileKills();
 		return 0;
 	};
+	if(functionNameHash == 67368) { // IsDead
+		return (intptr_t)IsDead();
+	};
 	if(functionNameHash == 127156) { // StopFiring
 		StopFiring();
 		return 0;
@@ -6092,6 +6095,9 @@ bool idPlayer::HasNativeFunction(const char *functionName) {
 		return true;
 	};
 	if(functionNameHash == 265803) { // ResetProjectileKills
+		return true;
+	};
+	if(functionNameHash == 67368) { // IsDead
 		return true;
 	};
 	if(functionNameHash == 127156) { // StopFiring
@@ -9291,6 +9297,48 @@ bool idWeaponFlashlight::HasNativeFunction(const char *functionName) {
 		return true;
 	};
 	if(functionNameHash == 268148) { // UpdateLightIntensity
+		return true;
+	};
+	return __super::HasNativeFunction(functionName);
+
+};
+
+intptr_t idWeaponRocketLauncher::Invoke(const char *functionName, void *param1) {
+	int functionNameHash = idStr::Hash(functionName);
+	if(functionNameHash == 60556) { // Raise
+		return (intptr_t)Raise((stateParms_t *)param1);
+	};
+	if(functionNameHash == 63107) { // Lower
+		return (intptr_t)Lower((stateParms_t *)param1);
+	};
+	if(functionNameHash == 46077) { // Idle
+		return (intptr_t)Idle((stateParms_t *)param1);
+	};
+	if(functionNameHash == 47046) { // Fire
+		return (intptr_t)Fire((stateParms_t *)param1);
+	};
+	if(functionNameHash == 72819) { // Reload
+		return (intptr_t)Reload((stateParms_t *)param1);
+	};
+	return __super::Invoke(functionName, param1);
+
+};
+
+bool idWeaponRocketLauncher::HasNativeFunction(const char *functionName) {
+	int functionNameHash = idStr::Hash(functionName);
+	if(functionNameHash == 60556) { // Raise
+		return true;
+	};
+	if(functionNameHash == 63107) { // Lower
+		return true;
+	};
+	if(functionNameHash == 46077) { // Idle
+		return true;
+	};
+	if(functionNameHash == 47046) { // Fire
+		return true;
+	};
+	if(functionNameHash == 72819) { // Reload
 		return true;
 	};
 	return __super::HasNativeFunction(functionName);

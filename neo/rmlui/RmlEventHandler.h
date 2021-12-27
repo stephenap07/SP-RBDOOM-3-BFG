@@ -37,7 +37,7 @@ class RmlEventHandler
 public:
 	virtual ~RmlEventHandler() = default;
 
-	virtual void ProcessEvent( Rml::Event& _event, const Rml::String& _value ) = 0;
+	virtual void ProcessEvent( Rml::Event& _event, idLexer& src,  idToken& token ) = 0;
 };
 
 #endif

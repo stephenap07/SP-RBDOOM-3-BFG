@@ -45,6 +45,8 @@ class GlobalRmlEventListener : public Rml::EventListener
 public:
 	GlobalRmlEventListener( RmlUserInterface* _ui, const Rml::String& value, Rml::Element* element );
 
+	virtual ~GlobalRmlEventListener( );
+
 	void ProcessEvent( Rml::Event& event ) override;
 
 	void OnDetach( Rml::Element* element ) override;
@@ -55,9 +57,14 @@ public:
 	}
 
 private:
+
 	RmlUserInterface* ui;
+	
 	Rml::String value;
+
 	Rml::Element* element;
+
+	// Not owns
 	RmlEventHandler* eventHandler;
 };
 

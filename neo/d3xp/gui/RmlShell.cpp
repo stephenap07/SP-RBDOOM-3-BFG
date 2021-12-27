@@ -32,6 +32,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RmlShell.h"
 
+#include "EventHandlers.h"
+
 #include "../Game_local.h"
 
 #include "rmlui/RmlUserInterfaceLocal.h"
@@ -46,163 +48,77 @@ If you have questions concerning this license or the applicable additional terms
 
 class UI_Shell;
 
-class EventHandlerOptions : public RmlEventHandler
-{
-public:
-	EventHandlerOptions( UI_Shell* _shell )
-		: shell( _shell )
-	{
-	}
-
-	virtual ~EventHandlerOptions() = default;
-
-	void ProcessEvent( Rml::Event& _event, const Rml::String& _value ) override
-	{
-		if( _value == "restore" )
-		{
-			Rml::ElementDocument* optionsBody = _event.GetTargetElement()->GetOwnerDocument();
-
-			if( !optionsBody )
-			{
-				return;
-			}
-
-			Rml::String windowModeId;
-			switch( r_fullscreen.GetInteger() )
-			{
-				case 0: // windowed
-					windowModeId = "windowed";
-					break;
-				case 1: // fullscreen
-					windowModeId = "fullscreen";
-					break;
-				case 2: // windowed borderless
-					windowModeId = "windowed_borderless";
-					break;
-			}
-
-			Rml::ElementFormControlInput* windowModeOption = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( optionsBody->GetElementById( windowModeId ) );
-
-			if( windowModeOption )
-			{
-				windowModeOption->SetAttribute( "checked", "" );
-			}
-
-			Rml::ElementFormControlInput* accept = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "accept" ) );
-			Rml::ElementFormControlInput* apply = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "apply" ) );
-
-			if( accept )
-			{
-				accept->SetDisabled( true );
-			}
-
-			if( apply )
-			{
-				apply->SetDisabled( true );
-			}
-		}
-		else if( _value == "store" )
-		{
-			const Rml::String subParm = _event.GetParameter<Rml::String>( "submit", "cancel" );
-			if( subParm == "accept" || subParm == "apply" )
-			{
-				Rml::String windowMode = _event.GetParameter<Rml::String>( "window_mode", "fullscreen" );
-
-				if( windowMode == "fullscreen" )
-				{
-					r_fullscreen.SetInteger( 1 );
-				}
-				else if( windowMode == "windowed" )
-				{
-					r_fullscreen.SetInteger( 0 );
-				}
-				else if( windowMode == "windowed_borderless" )
-				{
-					r_fullscreen.SetInteger( 2 );
-				}
-
-				int vidModeOption = _event.GetParameter<int>( "vid_mode", 0);
-
-				r_vidMode.SetInteger( vidModeOption );
-
-				cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "vid_restart\n" );
-			}
-			
-			if( subParm == "cancel" || subParm == "accept" )
-			{
-				_event.GetTargetElement()->GetOwnerDocument()->Hide();
-				shell->SetNextScreen( "startmenu" );
-			}
-		}
-		else if( _value == "enable_accept" )
-		{
-			Rml::ElementDocument* optionsBody = _event.GetTargetElement()->GetOwnerDocument();
-
-			if( optionsBody == nullptr )
-			{
-				return;
-			}
-
-			// Enable the accept button when values are changed
-			Rml::ElementFormControlInput* accept = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( optionsBody->GetElementById( "accept" ) );
-			Rml::ElementFormControlInput* apply = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( optionsBody->GetElementById( "apply" ) );
-
-			if( accept )
-			{
-				accept->SetDisabled( false );
-			}
-
-			if( apply )
-			{
-				apply->SetDisabled( false );
-			}
-		}
-	}
-
-private:
-
-	UI_Shell* shell;
-};
-
 static EventHandlerOptions* eventHandlerOptions = nullptr;
+static RmlGameEventHandler* baseEventHandler = nullptr;
 
 // UI Code
 
-UI_Shell::UI_Shell()
-	: _ui( nullptr )
+UI_Shell::UI_Shell( )
+	: ui( nullptr )
+	, soundWorld( nullptr )
+	, nextState( ShellState::WAITING )
+	, state( ShellState::WAITING )
+	, activeScreen( ShellScreen::START )
+	, nextScreen( ShellScreen::START )
+	, gameComplete( false )
+	, inGame( false )
+	, isInitialized( false )
 {
-	eventHandlerOptions = new EventHandlerOptions( this );
+	if( !eventHandlerOptions )
+	{
+		eventHandlerOptions = new EventHandlerOptions( this );
+	}
+
+	if( !baseEventHandler )
+	{
+		baseEventHandler = new RmlGameEventHandler( this );
+	}
 }
 
 UI_Shell::~UI_Shell()
 {
 	delete eventHandlerOptions;
+	delete baseEventHandler;
 }
 
-bool UI_Shell::Init( )
+bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 {
-	_ui = rmlManager->Find( "shell", true );
+	ui = rmlManager->Find( "shell", true );
 
-	if( !_ui )
+	if( !ui )
 	{
 		return false;
 	}
 
+	isInitialized = true;
+
+	soundWorld = sw;
+
 	SetupDataBinding( );
 
-	_ui->SetInhibitsControl( true );
-	_ui->SetIsPausingGame( false );
+	ui->SetInhibitsControl( true );
+	ui->SetIsPausingGame( false );
 
-	_ui->LoadDocument( "guis/rml/shell/options.rml", eventHandlerOptions );
-	_ui->LoadDocument( "guis/rml/shell/startmenu.rml" );
-	_ui->LoadDocument( "guis/rml/shell/loading.rml" );
-	_ui->LoadDocument( "guis/rml/shell/game.rml" );
-	_ui->LoadDocument( "guis/rml/shell/test.rml" );
+	// Load up all the documents.
+	ui->LoadDocument( "guis/rml/shell/options.rml", eventHandlerOptions );
+	ui->LoadDocument( "guis/rml/shell/startmenu.rml", baseEventHandler );
+	ui->LoadDocument( "guis/rml/shell/loading.rml", baseEventHandler );
+	ui->LoadDocument( "guis/rml/shell/test.rml", baseEventHandler );
+	ui->LoadDocument( "guis/rml/shell/pause.rml", baseEventHandler );
+	ui->LoadDocument( "guis/rml/shell/game.rml", baseEventHandler );
+
+	screenToName.AssureSize( (int)ShellScreen::TOTAL );
+	screenToName[(int)ShellScreen::START] = "guis/rml/shell/startmenu.rml";
+	screenToName[( int )ShellScreen::OPTIONS] = "guis/rml/shell/options.rml";
+	screenToName[( int )ShellScreen::LOADING] = "guis/rml/shell/loading.rml";
+	screenToName[( int )ShellScreen::GAME] = "guis/rml/shell/game.rml";
+	screenToName[( int )ShellScreen::TEST] = "guis/rml/shell/test.rml";
+	screenToName[( int )ShellScreen::PAUSE] = "guis/rml/shell/pause.rml";
 
 	// Preload all the materials.
 	rmlManager->Preload( "" );
 
-	return SetNextScreen( "startmenu" );
+	return true;
 }
 
 struct ShellOptions
@@ -225,9 +141,76 @@ struct ShellOptions
 
 } shellOptions;
 
+void UI_Shell::Update( )
+{
+	HandleStateChange( );
+
+	HandleScreenChange( );
+
+	ui->Redraw( Sys_Milliseconds( ) / 1000.0f );
+}
+
+void UI_Shell::HandleStateChange( )
+{
+	// State Machine
+	if( nextState != state )
+	{
+		if( nextState == ShellState::START )
+		{
+			nextScreen = ShellScreen::START;
+
+			ShowScreen( "startmenu" );
+
+			state = nextState;
+		}
+		else if( nextState == ShellState::GAME )
+		{
+			if( state == ShellState::LOADING )
+			{
+				HideScreen( "loading" );
+			}
+
+			if( gameComplete )
+			{
+				state = ShellState::CREDITS;
+			}
+			else
+			{
+				ShowScreen( "game" );
+				state = nextState;
+			}
+		}
+		else if ( nextState == ShellState::LOADING )
+		{
+			ShowScreen( "loading" );
+			state = nextState;
+		}
+	}
+}
+
+
+void UI_Shell::HandleScreenChange( )
+{
+	if( activeScreen != nextScreen )
+	{
+		activeScreen = nextScreen;
+	}
+
+	if( !nextScreenName.IsEmpty( ) )
+	{
+		ShowScreen( nextScreenName.c_str( ) );
+		nextScreenName.Clear( );
+	}
+}
+
+void UI_Shell::SetState( ShellState _nextState )
+{
+	nextState = _nextState;
+}
+
 void UI_Shell::SetupDataBinding( )
 {
-	if( _ui->IsDocumentOpen( "guis/rml/shell/options.rml" ) )
+	if( ui->IsDocumentOpen( "guis/rml/shell/options.rml" ) )
 	{
 		// Already loaded the document. Don't set up data binding.
 		return;
@@ -235,7 +218,7 @@ void UI_Shell::SetupDataBinding( )
 
 	shellOptions.Init( );
 
-	Rml::DataModelConstructor constructor = _ui->Context( )->CreateDataModel( "options" );
+	Rml::DataModelConstructor constructor = ui->Context( )->CreateDataModel( "options" );
 
 	if( !constructor )
 	{
@@ -255,64 +238,84 @@ void UI_Shell::SetupDataBinding( )
 	vidModeModel = constructor.GetModelHandle( );
 }
 
-Rml::ElementDocument* UI_Shell::SetNextScreen( const char* name )
+void UI_Shell::ActivateMenu( bool show )
 {
-	idStr path( va( "guis/rml/shell/%s.rml", name ) );
-
-	if( _currentScreen != name )
+	if( show && ui && ui->IsActive( ) )
 	{
-		_previousScreen = _currentScreen;
-		_currentScreen = name;
+		return;
+	}
+	else if( !show && ui && !ui->IsActive( ) )
+	{
+		return;
+	}
+
+	if( inGame )
+	{
+		idPlayer* player = gameLocal.GetLocalPlayer( );
+		if( player )
+		{
+			if( !show )
+			{
+				if( player->IsDead( ) && !common->IsMultiplayer( ) )
+				{
+					return;
+				}
+			}
+		}
+	}
+
+	ui->Activate( show );
+
+	if( show )
+	{
+		if( !inGame )
+		{
+			//PlaySound( GUI_SOUND_MUSIC );
+		}
 	}
 	else
 	{
-		Rml::ElementDocument* doc = _ui->GetDocument( path.c_str() );
-
-		if( doc )
-		{
-			if( !doc->IsVisible( ) )
-			{
-				doc->Show( );
-			}
-
-			return doc;
-		}
+		nextScreen = ShellScreen::START;
+		activeScreen = ShellScreen::START;
+		nextState = ShellState::START;
+		state = ShellState::START;
+		common->Dialog( ).ClearDialog( GDM_LEAVE_LOBBY_RET_NEW_PARTY );
 	}
+}
 
-	RmlEventHandler* eventHandler( nullptr );
+void UI_Shell::SetNextScreen( ShellScreen _nextScreen )
+{
+	nextScreen = _nextScreen;
+}
 
-	Rml::ElementDocument*  document = _ui->SetNextScreen( path.c_str(), eventHandler );
+void UI_Shell::SetNextScreen( const char* _nextScreen )
+{
+	nextScreenName = _nextScreen;
+}
 
-	if( !document )
+void UI_Shell::ShowScreen( const char* _screen )
+{
+	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", _screen ) );
+	if( doc )
 	{
-		return nullptr;
+		doc->Show( );
 	}
+}
 
-	if( !idStr::Icmp( name, "startmenu" ) )
+void UI_Shell::HideScreen( const char* _screen )
+{
+	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", _screen ) );
+	if( doc )
 	{
-		// Initialize the start screen
-		auto el = document->GetElementById( "start_game" );
-		if( el )
-		{
-			auto p1 = Rml::Transform::MakeProperty( { Rml::Transforms::Rotate2D{10.f}, Rml::Transforms::TranslateX{100.f} } );
-			auto p2 = Rml::Transform::MakeProperty( { Rml::Transforms::Scale2D{3.f} } );
-			el->Animate( "transform", p1, 1.8f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut }, -1, true );
-			el->AddAnimationKey( "transform", p2, 1.3f, Rml::Tween{ Rml::Tween::Elastic, Rml::Tween::InOut } );
-		}
+		doc->Hide( );
 	}
+}
 
-	// When this object frees its resources after destructing, it frees itself using the overriden delete method.
-	// Originally this was allocated with the non-overriden 'new' function. Annoying.
-	Rml::StringList textureNames = Rml::GetTextureSourceList();
+void UI_Shell::UpdateSavedGames( )
+{
+}
 
-	for( const auto& texturePath : textureNames )
-	{
-		const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
-		if( !material )
-		{
-			common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
-		}
-	}
-
-	return document;
+bool UI_Shell::IsPausingGame( )
+{
+	return ui->IsPausingGame( );
 }

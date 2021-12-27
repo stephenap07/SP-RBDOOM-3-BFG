@@ -83,6 +83,14 @@ void RenderDebug_local::Init()
 
 void RenderDebug_local::Shutdown()
 {
+	TextBufferManager* man = renderSystem->GetTextBufferManager( );
+
+	for( int i = 0; i < _numActiveDebugText; i++ )
+	{
+		man->destroyTextBuffer( _debugText[i].handle );
+	}
+
+	ClearAll( );
 }
 
 void RenderDebug_local::SubmitForDrawing()

@@ -10,7 +10,7 @@ public:
 
 	virtual ~GameRmlEventHandler();
 
-	void ProcessEvent( Rml::Event& _event, const Rml::String& _value ) override;
+	void ProcessEvent( Rml::Event& _event, idLexer& src, idToken& token ) override;
 };
 
 #endif

@@ -355,6 +355,8 @@ Rml::Input::KeyIdentifier idRmlSystem::TranslateKey( int key )
 			return KI_LMENU;
 		case K_RALT:
 			return KI_RMENU;
+		case K_ESCAPE:
+			return KI_ESCAPE;
 		/*case SDLK_LSUPER:
 			return KI_LWIN;
 			break;

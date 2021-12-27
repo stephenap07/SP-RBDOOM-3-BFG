@@ -2203,10 +2203,7 @@ void idRenderSystemLocal::Shutdown()
 
 	fonts.DeleteContents();
 
-	delete textBufferManager;
-	delete fontManager;
-
-	RenderDebug::Get().Shutdown();
+	RenderDebug::Get( ).Shutdown( );
 
 	if( IsInitialized() )
 	{
@@ -2237,7 +2234,10 @@ void idRenderSystemLocal::Shutdown()
 	RB_ShutdownDebugTools();
 
 	delete guiModel;
+	delete textBufferManager;
+	delete fontManager;
 
+	parallelJobManager->FreeJobList( envprobeJobList );
 	parallelJobManager->FreeJobList( frontEndJobList );
 
 	Clear();
