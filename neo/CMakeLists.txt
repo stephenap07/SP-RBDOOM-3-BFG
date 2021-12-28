@@ -672,6 +672,8 @@ set(FREETYPE_SOURCES
 	libs/freetype/src/type42/type42.c
 	libs/freetype/src/winfonts/winfnt.c)
 
+find_package(PhysX REQUIRED)
+include_directories(${PhysX_INCLUDE_DIR})
 
 add_definitions("-DRMLUI_STATIC_LIB")
 set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
@@ -1723,6 +1725,8 @@ if(MSVC)
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
         ${RMLUI_LIBRARIES}
+        PhysX::PhysXExtensions
+    	PhysX::PhysXCommon
 		${CMAKE_DL_LIBS}
 		)
 		
