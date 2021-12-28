@@ -673,7 +673,6 @@ set(FREETYPE_SOURCES
 	libs/freetype/src/winfonts/winfnt.c)
 
 find_package(PhysX REQUIRED)
-include_directories(${PhysX_INCLUDE_DIR})
 
 add_definitions("-DRMLUI_STATIC_LIB")
 set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
@@ -1705,7 +1704,8 @@ if(MSVC)
 			)
 
 	target_include_directories(RBDoom3BFG PUBLIC
-					${RMLUI_INCLUDE})
+					${RMLUI_INCLUDE}
+					${PhysX_INCLUDE_DIR})
 
 	target_link_libraries(RBDoom3BFG
 		idlib
