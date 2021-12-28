@@ -7,9 +7,9 @@
 
 	This file has been generated with the Type Info Generator v1.1 (c) 2004 id Software
 
-	826 constants
+	828 constants
 	92 enums
-	450 classes/structs/unions
+	451 classes/structs/unions
 	4 templates
 	6 max inheritance level for 'idAFEntity_VehicleAutomated'
 
@@ -788,9 +788,11 @@ static constantInfo_t constantInfo[] = {
 	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_ANTIALIASING", "3" },
 	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_POSTFX", "4" },
 	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_SHADOWMAPPING", "5" },
-	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_BRIGHTNESS", "6" },
-	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_VOLUME", "7" },
-	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::MAX_SYSTEM_FIELDS", "8" },
+	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_SSAO", "6" },
+	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_AMBIENT_BRIGHTNESS", "7" },
+	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_BRIGHTNESS", "8" },
+	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::SYSTEM_FIELD_VOLUME", "9" },
+	{ "int", "idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::MAX_SYSTEM_FIELDS", "10" },
 	{ "int", "idMenuScreen_Shell_Stereoscopics::idMenuDataSource_StereoSettings::STEREO_FIELD_ENABLE", "0" },
 	{ "int", "idMenuScreen_Shell_Stereoscopics::idMenuDataSource_StereoSettings::STEREO_FIELD_SEPERATION", "1" },
 	{ "int", "idMenuScreen_Shell_Stereoscopics::idMenuDataSource_StereoSettings::STEREO_FIELD_SWAP_EYES", "2" },
@@ -1860,9 +1862,11 @@ static enumValueInfo_t idMenuScreen_Shell_SystemOptions_idMenuDataSource_SystemS
 	{ "SYSTEM_FIELD_ANTIALIASING", 3 },
 	{ "SYSTEM_FIELD_POSTFX", 4 },
 	{ "SYSTEM_FIELD_SHADOWMAPPING", 5 },
-	{ "SYSTEM_FIELD_BRIGHTNESS", 6 },
-	{ "SYSTEM_FIELD_VOLUME", 7 },
-	{ "MAX_SYSTEM_FIELDS", 8 },
+	{ "SYSTEM_FIELD_SSAO", 6 },
+	{ "SYSTEM_FIELD_AMBIENT_BRIGHTNESS", 7 },
+	{ "SYSTEM_FIELD_BRIGHTNESS", 8 },
+	{ "SYSTEM_FIELD_VOLUME", 9 },
+	{ "MAX_SYSTEM_FIELDS", 10 },
 	{ NULL, 0 }
 };
 
@@ -6074,6 +6078,10 @@ static classVariableInfo_t idMenuWidget_ScoreboardList_typeInfo[] = {
 	{ NULL, 0 }
 };
 
+static classVariableInfo_t idMenuWidget_SystemOptionsList_typeInfo[] = {
+	{ NULL, 0 }
+};
+
 static classVariableInfo_t idMenuWidget_NavBar_typeInfo[] = {
 	{ ": idList < idStr , TAG_IDLIB_LIST_MENU >", "headings", (intptr_t)(&((idMenuWidget_NavBar *)0)->headings), sizeof( ((idMenuWidget_NavBar *)0)->headings ) },
 	{ "float", "initialPos", (intptr_t)(&((idMenuWidget_NavBar *)0)->initialPos), sizeof( ((idMenuWidget_NavBar *)0)->initialPos ) },
@@ -6449,11 +6457,13 @@ static classVariableInfo_t idMenuScreen_Shell_ControllerLayout_typeInfo[] = {
 static classVariableInfo_t idMenuScreen_Shell_SystemOptions_idMenuDataSource_SystemSettings_typeInfo[] = {
 	{ ": int", "originalFramerate", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalFramerate), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalFramerate ) },
 	{ "int", "originalAntialias", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalAntialias), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalAntialias ) },
-	{ "int", "originalPostProcessing", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalPostProcessing), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalPostProcessing ) },
 	{ "int", "originalVsync", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalVsync), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalVsync ) },
 	{ "float", "originalBrightness", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalBrightness), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalBrightness ) },
 	{ "float", "originalVolume", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalVolume), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalVolume ) },
 	{ "int", "originalShadowMapping", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalShadowMapping), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalShadowMapping ) },
+	{ "int", "originalSSAO", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalSSAO), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalSSAO ) },
+	{ "int", "originalPostProcessing", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalPostProcessing), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalPostProcessing ) },
+	{ "float", "originalAmbientBrightness", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalAmbientBrightness), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->originalAmbientBrightness ) },
 	{ "idList < vidMode_t >", "modeList", (intptr_t)(&((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->modeList), sizeof( ((idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings *)0)->modeList ) },
 	{ NULL, 0 }
 };
@@ -7131,6 +7141,7 @@ static classTypeInfo_t classTypeInfo[] = {
 	{ "idMenuWidget_LobbyList", "idMenuWidget_List", sizeof(idMenuWidget_LobbyList), idMenuWidget_LobbyList_typeInfo },
 	{ "idMenuWidget_DynamicList", "idMenuWidget_List", sizeof(idMenuWidget_DynamicList), idMenuWidget_DynamicList_typeInfo },
 	{ "idMenuWidget_ScoreboardList", "idMenuWidget_DynamicList", sizeof(idMenuWidget_ScoreboardList), idMenuWidget_ScoreboardList_typeInfo },
+	{ "idMenuWidget_SystemOptionsList", "idMenuWidget_DynamicList", sizeof(idMenuWidget_SystemOptionsList), idMenuWidget_SystemOptionsList_typeInfo },
 	{ "idMenuWidget_NavBar", "idMenuWidget_DynamicList", sizeof(idMenuWidget_NavBar), idMenuWidget_NavBar_typeInfo },
 	{ "idMenuWidget_MenuBar", "idMenuWidget_DynamicList", sizeof(idMenuWidget_MenuBar), idMenuWidget_MenuBar_typeInfo },
 	{ "idMenuWidget_PDA_UserData", "idMenuWidget", sizeof(idMenuWidget_PDA_UserData), idMenuWidget_PDA_UserData_typeInfo },

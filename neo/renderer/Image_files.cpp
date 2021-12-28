@@ -132,7 +132,7 @@ void R_WriteTGA( const char* filename, const byte* data, int width, int height, 
 	fileSystem->WriteFile( filename, buffer, bufferSize, basePath );
 }
 
-static void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp );
+void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp );
 static void LoadJPG( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp );
 
 /*
@@ -166,7 +166,7 @@ TARGA LOADING
 LoadTGA
 =============
 */
-static void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp )
+void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp )
 {
 	int		columns, rows, numPixels, fileSize, numBytes;
 	byte*	pixbuf;
@@ -670,7 +670,7 @@ extern "C"
 LoadPNG
 =============
 */
-static void LoadPNG( const char* filename, unsigned char** pic, int* width, int* height, ID_TIME_T* timestamp )
+void LoadPNG( const char* filename, unsigned char** pic, int* width, int* height, ID_TIME_T* timestamp )
 {
 	byte*	fbuffer;
 #if PNG_LIBPNG_VER_MAJOR > 1 || PNG_LIBPNG_VER_MINOR > 4
