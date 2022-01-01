@@ -12,32 +12,6 @@
 
 class UI_Shell;
 
-void RmlGameEventHandler::ProcessEvent( Rml::Event& _event, idLexer& _src, idToken& _token )
-{
-	if( _event == Rml::EventId::Keydown )
-	{
-		Rml::Input::KeyIdentifier keyId = ( Rml::Input::KeyIdentifier )_event.GetParameter< int >( "key_identifier", 0 );
-		if( keyId == Rml::Input::KI_ESCAPE && _event.GetTargetElement()->GetOwnerDocument()->IsVisible() )
-		{
-			if( !_token.Icmp( "goto" ) )
-			{
-				_src.ReadToken( &_token );
-
-				_event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
-
-				shell->SetNextScreen( _token.c_str( ) );
-			}
-		}
-	}
-	else if( !_token.Icmp( "goto" ) )
-	{
-		_src.ReadToken( &_token );
-
-		_event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
-
-		shell->ShowScreen( _token.c_str( ) );
-	}
-}
 
 void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idToken& _token )
 {
@@ -56,10 +30,10 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 		case 0: // windowed
 			windowModeId = "windowed";
 			break;
-		case 1: // fullscreen
+		case 1: // fullscreen on primary monitor
 			windowModeId = "fullscreen";
 			break;
-		case 2: // windowed borderless
+		case 2: // fullscreen on secondary monitor
 			windowModeId = "windowed_borderless";
 			break;
 		}
