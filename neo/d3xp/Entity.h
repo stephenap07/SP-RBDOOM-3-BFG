@@ -29,6 +29,11 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __GAME_ENTITY_H__
 #define __GAME_ENTITY_H__
 
+namespace physx
+{
+class PxRigidActor;
+}
+
 /*
 ===============================================================================
 
@@ -416,6 +421,8 @@ public:
 	// remove a touching entity
 	virtual void			RemoveContactEntity( idEntity* ent );
 
+	virtual physx::PxRigidActor* GetRigidActor( ) const;
+
 	// damage
 	// returns true if this entity can be damaged from the given origin
 	virtual bool			CanDamage( const idVec3& origin, idVec3& damagePoint ) const;
@@ -566,6 +573,7 @@ private:
 	bool					useClientInterpolation;				// disables interpolation for some objects (handy for weapon world models)
 	int						numPVSAreas;						// number of renderer areas the entity covers
 	int						PVSAreas[MAX_PVS_AREAS];			// numbers of the renderer areas the entity covers
+	physx::PxRigidActor*	physicsActor;
 
 	signalList_t* 			signals;
 

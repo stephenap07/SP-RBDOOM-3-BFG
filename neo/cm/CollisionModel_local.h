@@ -37,6 +37,13 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "CollisionModel.h"
 
+#include "PxPhysicsApi.h"
+#include "extensions/PxDefaultAllocator.h"
+#include "PxFoundation.h"
+#include "PxPhysics.h"
+#include "PxMaterial.h"
+#include "PxScene.h"
+
 #define MIN_NODE_SIZE						64.0f
 #define MAX_NODE_POLYGONS					128
 #define CM_MAX_POLYGON_EDGES				64
@@ -322,9 +329,15 @@ typedef struct cm_procNode_s
 	int children[2];				// negative numbers are (-1 - areaNumber), 0 = solid
 } cm_procNode_t;
 
+
 class idCollisionModelManagerLocal : public idCollisionModelManager
 {
 public:
+
+	void			InitPhysX( ) override;
+
+	void			ShutdownPhysX( ) override;
+
 	// load collision models from a map file
 	void			LoadMap( const idMapFile* mapFile );
 	// frees all the collision models
@@ -378,6 +391,12 @@ public:
 	void			ListModels();
 	// write a collision model file for the map entity
 	bool			WriteCollisionModelForMapEntity( const idMapEntity* mapEnt, const char* filename, const bool testTraceModel = true );
+
+	void			Simulate( float simTime ) override;
+	void			FetchResults( bool wait ) override;
+
+	physx::PxPhysics*	Physics( ) override;
+	physx::PxScene*		PhysicsScene( ) override;
 
 private:			// CollisionMap_translate.cpp
 	int				TranslateEdgeThroughEdge( idVec3& cross, idPluecker& l1, idPluecker& l2, float* fraction );
@@ -562,6 +581,28 @@ private:			// collision map data
 	contactInfo_t* 	contacts;
 	int				maxContacts;
 	int				numContacts;
+
+	// Begin PhysX
+	physx::PxDefaultAllocator		gAllocator;
+	physx::PxDefaultErrorCallback	gErrorCallback;
+
+	physx::PxFoundation* gFoundation = nullptr;
+	physx::PxPhysics* gPhysics = nullptr;
+
+	physx::PxDefaultCpuDispatcher* gDispatcher = nullptr;
+	physx::PxScene* gScene = nullptr;
+
+	physx::PxMaterial* gMaterial = nullptr;
+
+	physx::PxCooking* gCooking = nullptr;
+
+	physx::PxPvd* gPvd = nullptr;
+
+	physx::PxReal stackZ = 10.0f;
+
+	void InitScene( );
+	void FreePhysXScene( );
+	// End PhysX
 };
 
 // for debugging

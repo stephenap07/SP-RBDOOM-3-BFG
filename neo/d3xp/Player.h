@@ -844,6 +844,7 @@ private:
 	idVec3					viewBob;
 	int						landChange;
 	int						landTime;
+	int						spawnItemTime;
 
 
 	int						currentWeapon;

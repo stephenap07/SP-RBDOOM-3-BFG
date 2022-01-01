@@ -37,6 +37,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #include <lua.hpp>
 
+#include "PxActor.h"
+#include <PxPhysicsAPI.h>
+
 /*
 ===============================================================================
 
@@ -503,7 +506,8 @@ idEntity::idEntity():
 	originDelta( vec3_zero ),
 	axisDelta( mat3_identity ),
 	interpolationBehavior( USE_NO_INTERPOLATION ),
-	stateScript( this )
+	stateScript( this ),
+	physicsActor(nullptr)
 {
 
 	entityNumber	= ENTITYNUM_NONE;
@@ -1455,6 +1459,16 @@ void idEntity::UpdateModelTransform()
 	idVec3 origin;
 	idMat3 axis;
 
+	if( physicsActor )
+	{
+		physx::PxTransform physicsTransform = physicsActor->getGlobalPose( );
+		idVec3 pos = idVec3( physicsTransform.p.x, physicsTransform.p.y, physicsTransform.p.z );
+		idQuat q( physicsTransform.q.x, physicsTransform.q.y, physicsTransform.q.z, physicsTransform.q.w );
+		renderEntity.axis = q.ToMat3( );
+		renderEntity.origin = pos;
+		return;
+	}
+
 	if( GetPhysicsToVisualTransform( origin, axis ) )
 	{
 		renderEntity.axis = axis * GetPhysics()->GetAxis();
@@ -1766,7 +1780,7 @@ void idEntity::Present()
 	}
 
 	// don't present to the renderer if the entity hasn't changed
-	if( !( thinkFlags & TH_UPDATEVISUALS ) )
+	if( !( thinkFlags & TH_UPDATEVISUALS ) && !physicsActor)
 	{
 		return;
 	}
@@ -2967,6 +2981,25 @@ void idEntity::InitDefaultPhysics( const idVec3& origin, const idMat3& axis )
 		}
 	}
 
+	int sphereRadius = spawnArgs.GetInt( "physxSphere", 0);
+
+	if( sphereRadius > 0 )
+	{
+		using namespace physx;
+		PxPhysics* ps = collisionModelManager->Physics( );
+		PxScene* scene = collisionModelManager->PhysicsScene( );
+
+		auto physicsMaterial = ps->createMaterial( 0.5f, 0.5f, 0.6f );
+
+		PxRigidDynamic* dynamic = PxCreateDynamic( *ps, PxTransform( PxVec3( origin.x, origin.y, origin.z ) ), PxSphereGeometry( sphereRadius ), *physicsMaterial, 10.0f );
+		dynamic->setAngularDamping( 0.5f );
+		idVec3 speed = spawnArgs.GetVector( "physxSpeed", "0 0 0" );
+		dynamic->setLinearVelocity( PxVec3( speed.x, speed.y, speed.z ) );
+		scene->addActor( *dynamic );
+
+		physicsActor = dynamic;
+	}
+
 	if( !spawnArgs.GetBool( "noclipmodel", "0" ) )
 	{
 
@@ -3289,6 +3322,20 @@ bool idEntity::RunPhysics()
 		}
 	}
 
+	if( physicsActor )
+	{
+		bool shouldUpdate = false;
+		if( physicsActor->is<physx::PxRigidDynamic>( ) && !reinterpret_cast< physx::PxRigidDynamic* >( physicsActor )->isSleeping( ) )
+		{
+			shouldUpdate = true;
+		}
+
+		if( shouldUpdate )
+		{
+			UpdateFromPhysics( false );
+		}
+	}
+
 	return true;
 }
 
@@ -3537,6 +3584,11 @@ void idEntity::SetOrigin( const idVec3& org )
 
 	GetPhysics()->SetOrigin( org );
 
+	if( physicsActor )
+	{
+		physicsActor->setGlobalPose( physx::PxTransform( physx::PxVec3( org.x, org.y, org.z ) ) );
+	}
+
 	UpdateVisuals();
 }
 
@@ -3719,6 +3771,15 @@ void idEntity::RemoveContactEntity( idEntity* ent )
 	{
 		GetPhysics()->RemoveContactEntity( ent );
 	}
+}
+/*
+================
+idEntity::GetRigidActor
+================
+*/
+physx::PxRigidActor* idEntity::GetRigidActor( ) const
+{
+	return physicsActor;
 }
 
 

@@ -51,6 +51,11 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "CollisionModel_local.h"
 
+#include "cooking/PxCooking.h"
+#include "cooking/PxConvexMeshDesc.h"
+
+using namespace physx;
+
 #define CMODEL_BINARYFILE_EXT	"bcmodel"
 
 idCollisionModelManagerLocal	collisionModelManagerLocal;
@@ -480,6 +485,8 @@ void idCollisionModelManagerLocal::FreeMap()
 	Clear();
 
 	ShutdownHash();
+
+	FreePhysXScene( );
 }
 
 /*
@@ -4286,7 +4293,8 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 				break;
 			}
 			models[numModels] = CollisionModelForMapEntity( mapEnt );
-			if( models[ numModels] )
+
+			if( models[numModels] )
 			{
 				numModels++;
 			}
@@ -4300,6 +4308,115 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 		WriteCollisionModelsToFile( mapFile->GetName(), 0, numModels, mapFile->GetGeometryCRC() );
 	}
 
+	for( int n = 0; n < numModels; n++ )
+	{
+		if( models[n] )
+		{
+			cm_model_t* model = models[n];
+
+			{
+				idList<cm_node_t*> nodeStack;
+				nodeStack.Append( model->node );
+
+				while( nodeStack.Num() > 0 )
+				{
+					cm_node_t* node = nodeStack[0];
+					nodeStack.RemoveIndex( 0 );
+
+					for( cm_polygonRef_t* pref = node->polygons; pref; pref = pref->next )
+					{
+						cm_polygon_t* p = pref->p;
+
+						idFixedWinding winding;
+						idList<int> indexes;
+
+						bool completedTriangle = false;
+						for( int n = p->numEdges - 1; n >= 0; n-- )
+						{
+							int edgeNum = p->edges[n];
+							cm_edge_t* edge = model->edges + abs( edgeNum );
+							int vertNum = edge->vertexNum[INT32_SIGNBITSET( edgeNum )];
+
+							if( completedTriangle )
+							{
+								// completed one triangle.
+								indexes.Append( winding.GetNumPoints( ) - 1 );
+								indexes.Append( winding.GetNumPoints( ) );
+								indexes.Append( winding.GetNumPoints( ) - 3);
+
+								completedTriangle = false;
+							}
+							else
+							{
+								// still building up the triangle
+								indexes.Append( winding.GetNumPoints( ) );
+
+								if( indexes.Num( ) % 3 == 0 )
+								{
+									completedTriangle = true;
+								}
+							}
+
+							winding.AddPoint( model->vertices[vertNum].p );
+						}
+
+						if( indexes.Num( ) > 0 && indexes.Num() % 3 == 0)
+						{
+							bool isValid = winding.Check( );
+
+							PxTriangleMeshDesc meshDesc;
+							meshDesc.flags = PxMeshFlag::eFLIPNORMALS;
+
+							meshDesc.points.count = winding.GetNumPoints( );
+							meshDesc.points.stride = sizeof( idVec5 );
+							meshDesc.points.data = &winding[0];
+
+							meshDesc.triangles.count = indexes.Num( ) / 3;
+							meshDesc.triangles.stride = 3 * sizeof( int );
+							meshDesc.triangles.data = &indexes[0];
+
+							PxDefaultMemoryOutputStream writeBuffer;
+							PxTriangleMeshCookingResult::Enum result;
+							bool status = gCooking->cookTriangleMesh( meshDesc, writeBuffer, &result );
+							if( !status )
+							{
+								// Error.
+								return;
+							}
+
+							PxDefaultMemoryInputData readBuffer( writeBuffer.getData( ), writeBuffer.getSize( ) );
+							PxTriangleMesh* triMesh = gPhysics->createTriangleMesh( readBuffer );
+
+							// Create a shape 
+							PxMeshScale scale;
+							PxTriangleMeshGeometry geom( triMesh, scale );
+
+							PxRigidStatic* actor = gPhysics->createRigidStatic( PxTransform( PxIdentity ) );
+							PxShape* myConvexMeshShape = PxRigidActorExt::createExclusiveShape( *actor, geom, *gMaterial );
+
+							gScene->addActor( *actor );
+						}
+					}
+					
+					if( node->planeType == -1 )
+					{
+						//break;
+					}
+
+					if( node->children[0] )
+					{
+						nodeStack.Append( node->children[0] );
+					}
+
+					if( node->children[1] )
+					{
+						nodeStack.Append( node->children[1] );
+					}
+				}
+			}
+		}
+	}
+	
 	timer.Stop();
 
 	// print statistics on collision data
@@ -4357,7 +4474,6 @@ idCollisionModelManagerLocal::LoadMap
 */
 void idCollisionModelManagerLocal::LoadMap( const idMapFile* mapFile )
 {
-
 	if( mapFile == NULL )
 	{
 		common->Error( "idCollisionModelManagerLocal::LoadMap: NULL mapFile" );
@@ -4378,6 +4494,9 @@ void idCollisionModelManagerLocal::LoadMap( const idMapFile* mapFile )
 		}
 		FreeMap();
 	}
+
+	FreePhysXScene( );
+	InitScene( );
 
 	// clear the collision map
 	Clear();
@@ -4789,4 +4908,106 @@ bool idCollisionModelManagerLocal::TrmFromModel( const char* modelName, idTraceM
 	}
 
 	return TrmFromModel( models[ handle ], trm );
+}
+
+
+constexpr const char* PVD_HOST = "localhost";
+
+void idCollisionModelManagerLocal::InitPhysX( )
+{
+	gFoundation = PxCreateFoundation( PX_PHYSICS_VERSION, gAllocator, gErrorCallback );
+
+	gPvd = PxCreatePvd( *gFoundation );
+	PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate( PVD_HOST, 5425, 10 );
+	gPvd->connect( *transport, PxPvdInstrumentationFlag::eALL );
+
+	PxTolerancesScale scale;
+	scale.length = 32;
+	scale.speed = 312;
+
+	gPhysics = PxCreatePhysics( PX_PHYSICS_VERSION, *gFoundation, scale, true, gPvd );
+}
+
+void idCollisionModelManagerLocal::InitScene( )
+{
+	PxSceneDesc sceneDesc( gPhysics->getTolerancesScale( ) );
+	sceneDesc.gravity = PxVec3( 0.0f, 0.0f, -9.81f * 64.0f );
+	gDispatcher = PxDefaultCpuDispatcherCreate( 2 );
+	sceneDesc.cpuDispatcher = gDispatcher;
+	sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+	gScene = gPhysics->createScene( sceneDesc );
+
+	PxPvdSceneClient* pvdClient = gScene->getScenePvdClient( );
+	if( pvdClient )
+	{
+		pvdClient->setScenePvdFlag( PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true );
+		pvdClient->setScenePvdFlag( PxPvdSceneFlag::eTRANSMIT_CONTACTS, true );
+		pvdClient->setScenePvdFlag( PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true );
+	}
+
+	gScene->setVisualizationParameter( PxVisualizationParameter::eSCALE, 1.0f / 128.0f );
+
+	gMaterial = gPhysics->createMaterial( 0.5f, 0.5f, 0.6f );
+
+	PxCookingParams params( gPhysics->getTolerancesScale( ) );
+	params.buildGPUData = true;
+	gCooking = PxCreateCooking( PX_PHYSICS_VERSION, *gFoundation, params );
+}
+
+void idCollisionModelManagerLocal::FreePhysXScene( )
+{
+	if( gScene )
+	{
+		gScene->release( );
+		gScene = nullptr;
+	}
+}
+
+void idCollisionModelManagerLocal::ShutdownPhysX( )
+{
+	if( gDispatcher )
+	{
+		gDispatcher->release( );
+	}
+
+	if( gPhysics )
+	{
+		gPhysics->release( );
+	}
+	
+	if( gPvd )
+	{
+		PxPvdTransport* transport = gPvd->getTransport( );
+		gPvd->release( );	gPvd = NULL;
+
+		if( transport )
+		{
+			transport->release( );
+		}
+	}
+	
+	if( gFoundation )
+	{
+		gFoundation->release( );
+	}
+}
+
+void idCollisionModelManagerLocal::Simulate( float simTime )
+{
+	gScene->simulate( simTime );
+}
+
+void idCollisionModelManagerLocal::FetchResults( bool wait )
+{
+	gScene->fetchResults( wait );
+}
+
+physx::PxPhysics* idCollisionModelManagerLocal::Physics( )
+{
+	return gPhysics;
+}
+
+physx::PxScene* idCollisionModelManagerLocal::PhysicsScene( )
+{
+	return gScene;
 }

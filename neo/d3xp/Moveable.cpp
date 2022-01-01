@@ -100,6 +100,12 @@ void idMoveable::Spawn()
 	int clipShrink;
 	idStr clipModelName;
 
+	if( spawnArgs.GetString( "physxSphere" ) )
+	{
+		BecomeActive( TH_PHYSICS );
+		return;
+	}
+
 	// check if a clip model is set
 	spawnArgs.GetString( "clipmodel", "", clipModelName );
 	if( !clipModelName[0] )

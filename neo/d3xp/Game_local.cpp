@@ -35,6 +35,13 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "rmlui/RmlUserInterface.h"
 
+#include "PxPhysicsApi.h"
+#include "extensions/PxDefaultAllocator.h"
+#include "PxFoundation.h"
+#include "PxPhysics.h"
+#include "PxMaterial.h"
+#include "PxScene.h"
+
 #ifdef GAME_DLL
 
 	idSys* 						sys = NULL;
@@ -368,6 +375,8 @@ void idGameLocal::Init()
 	scriptManager.Init();
 	// SP End
 
+	collisionModelManager->InitPhysX( );
+
 	smokeParticles = new( TAG_PARTICLE ) idSmokeParticles;
 
 	// set up the aas
@@ -450,6 +459,8 @@ void idGameLocal::Shutdown()
 
 	// free the collision map
 	collisionModelManager->FreeMap();
+
+	collisionModelManager->ShutdownPhysX( );
 
 	ShutdownConsoleCommands();
 
@@ -2749,6 +2760,9 @@ void idGameLocal::RunFrame( idUserCmdMgr& cmdMgr, gameReturn_t& ret )
 
 			timer_think.Clear();
 			timer_think.Start();
+
+			collisionModelManager->Simulate( ( time - previousTime ) / 1000.0f );
+			collisionModelManager->FetchResults( true );
 
 			// let entities think
 			if( g_timeentities.GetFloat() )
