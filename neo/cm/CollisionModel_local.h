@@ -583,13 +583,16 @@ private:			// collision map data
 	int				numContacts;
 
 	// Begin PhysX
+	idParallelJobList* physxJobList;
+	idParallelJobList* physxSubJobList;
+
 	physx::PxDefaultAllocator		gAllocator;
 	physx::PxDefaultErrorCallback	gErrorCallback;
 
 	physx::PxFoundation* gFoundation = nullptr;
 	physx::PxPhysics* gPhysics = nullptr;
 
-	physx::PxDefaultCpuDispatcher* gDispatcher = nullptr;
+	physx::PxCpuDispatcher* gDispatcher = nullptr;
 	physx::PxScene* gScene = nullptr;
 
 	physx::PxMaterial* gMaterial = nullptr;

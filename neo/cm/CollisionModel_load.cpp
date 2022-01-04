@@ -54,6 +54,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "cooking/PxCooking.h"
 #include "cooking/PxConvexMeshDesc.h"
 
+#include "GamePxCpuDispatcher.h"
+
 using namespace physx;
 
 #define CMODEL_BINARYFILE_EXT	"bcmodel"
@@ -4400,7 +4402,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 					
 					if( node->planeType == -1 )
 					{
-						//break;
+						continue;
 					}
 
 					if( node->children[0] )
@@ -4926,13 +4928,19 @@ void idCollisionModelManagerLocal::InitPhysX( )
 	scale.speed = 312;
 
 	gPhysics = PxCreatePhysics( PX_PHYSICS_VERSION, *gFoundation, scale, true, gPvd );
+
+	physxJobList = parallelJobManager->AllocJobList( JOBLIST_PHYSX, JOBLIST_PRIORITY_MEDIUM, 2048, 0, nullptr );
+	physxSubJobList = parallelJobManager->AllocJobList( JOBLIST_UTILITY, JOBLIST_PRIORITY_MEDIUM, 2048, 0, nullptr );
+
+	gDispatcher = PxDefaultCpuDispatcherCreate( 2 );
+
+	//gDispatcher = new GamePXCpuDispatcher( physxJobList, physxSubJobList );
 }
 
 void idCollisionModelManagerLocal::InitScene( )
 {
 	PxSceneDesc sceneDesc( gPhysics->getTolerancesScale( ) );
 	sceneDesc.gravity = PxVec3( 0.0f, 0.0f, -9.81f * 64.0f );
-	gDispatcher = PxDefaultCpuDispatcherCreate( 2 );
 	sceneDesc.cpuDispatcher = gDispatcher;
 	sceneDesc.filterShader = PxDefaultSimulationFilterShader;
 	gScene = gPhysics->createScene( sceneDesc );
@@ -4967,7 +4975,10 @@ void idCollisionModelManagerLocal::ShutdownPhysX( )
 {
 	if( gDispatcher )
 	{
-		gDispatcher->release( );
+		delete gDispatcher;
+
+		parallelJobManager->FreeJobList( physxJobList );
+		parallelJobManager->FreeJobList( physxSubJobList );
 	}
 
 	if( gPhysics )
@@ -4995,10 +5006,12 @@ void idCollisionModelManagerLocal::ShutdownPhysX( )
 void idCollisionModelManagerLocal::Simulate( float simTime )
 {
 	gScene->simulate( simTime );
+	physxJobList->Submit( );
 }
 
 void idCollisionModelManagerLocal::FetchResults( bool wait )
 {
+	physxJobList->Wait( );
 	gScene->fetchResults( wait );
 }
 
