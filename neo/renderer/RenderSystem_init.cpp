@@ -35,6 +35,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 
+#include "sys/DeviceManager.h"
+
 // RB begin
 #if defined(_WIN32)
 
@@ -50,6 +52,7 @@ If you have questions concerning this license or the applicable additional terms
 #endif
 
 #include "idlib/HandleManager.h"
+
 
 // DeviceContext bypasses RenderSystem to work directly with this
 idGuiModel* tr_guiModel;
@@ -329,10 +332,7 @@ const char* fileExten[4] = { "tga", "png", "jpg", "exr" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
 const char* skyDirection[6] = { "_forward", "_back", "_left", "_right", "_up", "_down" };
 
-
-
-
-
+DeviceManager* deviceManager;
 
 /*
 =============================
@@ -448,6 +448,7 @@ void R_SetNewMode( const bool fullInit )
 
 		if( fullInit )
 		{
+			deviceManager = DeviceManager::Create( nvrhi::GraphicsAPI::D3D12 );
 			// create the context as well as setting up the window
 // SRS - Generalized Vulkan SDL platform
 #if defined(VULKAN_USE_PLATFORM_SDL)
@@ -2422,7 +2423,7 @@ void idRenderSystemLocal::ResetFonts()
 idRenderSystemLocal::InitOpenGL
 ========================
 */
-void idRenderSystemLocal::InitOpenGL()
+void idRenderSystemLocal::InitBackend()
 {
 	// if OpenGL isn't started, start it now
 	if( !IsInitialized() )
@@ -2431,14 +2432,6 @@ void idRenderSystemLocal::InitOpenGL()
 
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		//globalImages->ReloadImages( true );
-
-#if !defined(USE_VULKAN)
-		int err = glGetError();
-		if( err != GL_NO_ERROR )
-		{
-			common->Printf( "glGetError() = 0x%x\n", err );
-		}
-#endif
 	}
 }
 

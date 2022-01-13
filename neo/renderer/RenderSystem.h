@@ -294,7 +294,7 @@ public:
 
 	virtual void			ResetGuiModels() = 0;
 
-	virtual void			InitOpenGL() = 0;
+	virtual void			InitBackend() = 0;
 
 	virtual void			ShutdownOpenGL() = 0;
 

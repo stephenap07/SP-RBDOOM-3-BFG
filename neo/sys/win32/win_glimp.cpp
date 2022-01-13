@@ -48,6 +48,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "rc/doom_resource.h"
 #include "../../renderer/RenderCommon.h"
 
+#include "../DeviceManager.h"
+
 
 
 #if defined(_WIN32)
@@ -56,6 +58,8 @@ If you have questions concerning this license or the applicable additional terms
 	idCVar r_useOpenGL45( "r_useOpenGL45", "2", CVAR_INTEGER, "0 = OpenGL 4.0, 1 = OpenGL 4.5 compatibility profile, 2 = OpenGL 4.5 core profile", 0, 2 );
 #endif
 
+
+extern DeviceManager* deviceManager;
 
 
 #if !defined(USE_VULKAN)
@@ -610,7 +614,7 @@ static void GLW_CreateWindowClasses()
 	}
 	common->Printf( "...registered window class\n" );
 
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_DX12)
 	// now register the fake window class that is only used
 	// to get wgl extensions
 	wc.style         = 0;
@@ -1059,6 +1063,118 @@ static bool GLW_GetWindowDimensions( const glimpParms_t parms, int& x, int& y, i
 	return true;
 }
 
+
+bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, const char* windowTitle )
+{
+	int x, y, w, h;
+	x = 0;
+	y = 0;
+	w = parms.width;
+	h = parms.height;
+
+	int	stylebits;
+	int	exstyle;
+
+	if( parms.fullScreen != 0 )
+	{
+		exstyle = WS_EX_TOPMOST;
+		stylebits = WS_POPUP | WS_VISIBLE | WS_SYSMENU;
+	}
+	else
+	{
+		exstyle = 0;
+		stylebits = WINDOW_STYLE | WS_SYSMENU;
+	}
+
+	win32.hWnd = CreateWindowEx(
+		exstyle,
+		WIN32_WINDOW_CLASS_NAME,
+		GAME_NAME,
+		stylebits,
+		x, y, w, h,
+		NULL,
+		NULL,
+		win32.hInstance,
+		NULL );
+
+	windowHandle = win32.hWnd;
+
+	if( !win32.hWnd )
+	{
+		common->Printf( "^3GLW_CreateWindow() - Couldn't create window^0\n" );
+		return false;
+	}
+
+	::SetTimer( win32.hWnd, 0, 100, NULL );
+
+	ShowWindow( win32.hWnd, SW_SHOW );
+	UpdateWindow( win32.hWnd );
+	common->Printf( "...created window @ %d,%d (%dx%d)\n", x, y, w, h );
+
+	// makeCurrent NULL frees the DC, so get another
+	win32.hDC = GetDC( win32.hWnd );
+	if( !win32.hDC )
+	{
+		common->Printf( "^3GLW_CreateWindow() - GetDC()failed^0\n" );
+		return false;
+	}
+
+	if( !CreateDeviceAndSwapChain( ) )
+		return false;
+
+	SetForegroundWindow( win32.hWnd );
+	SetFocus( win32.hWnd );
+
+	glConfig.isFullscreen = parms.fullScreen;
+
+	UpdateWindowSize( );
+
+	return true;
+}
+
+void DeviceManager::UpdateWindowSize( )
+{
+	int x;
+	int y;
+	int width;
+	int height;
+
+	// get the current monitor position and size on the desktop, assuming
+	// any required ChangeDisplaySettings has already been done
+	int displayHz = 0;
+	if( !GetDisplayCoordinates(0, x, y, width, height, displayHz ) )
+	{
+		return;
+	}
+
+	if( width == 0 || height == 0 )
+	{
+		// window is minimized
+		windowVisible = false;
+		return;
+	}
+
+	windowVisible = true;
+
+	if( int( deviceParms.backBufferWidth ) != width ||
+		int( deviceParms.backBufferHeight ) != height ||
+		( deviceParms.vsyncEnabled != requestedVSync && GetGraphicsAPI( ) == nvrhi::GraphicsAPI::VULKAN ) )
+	{
+		// window is not minimized, and the size has changed
+
+		BackBufferResizing( );
+
+		deviceParms.backBufferWidth = width;
+		deviceParms.backBufferHeight = height;
+		deviceParms.vsyncEnabled = requestedVSync;
+
+		ResizeSwapChain( );
+		BackBufferResized( );
+	}
+
+	deviceParms.vsyncEnabled = requestedVSync;
+}
+
 /*
 =======================
 GLW_CreateWindow
@@ -1254,6 +1370,11 @@ static bool GLW_ChangeDislaySettingsIfNeeded( glimpParms_t parms )
 	return false;
 }
 
+void DeviceManager::SetWindowTitle( const char* title )
+{
+	SetWindowTextA( ( HWND )windowHandle, title );
+}
+
 void GLimp_PreInit()
 {
 	// DG: not needed on this platform, so just do nothing
@@ -1306,7 +1427,7 @@ bool GLimp_Init( glimpParms_t parms )
 	// create our window classes if we haven't already
 	GLW_CreateWindowClasses();
 
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_DX12)
 	// this will load the dll and set all our gl* function pointers,
 	// but doesn't create a window
 
@@ -1324,9 +1445,10 @@ bool GLimp_Init( glimpParms_t parms )
 
 	// try to create a window with the correct pixel format
 	// and init the renderer context
-	if( !GLW_CreateWindow( parms ) )
+	if( !deviceManager->CreateWindowDeviceAndSwapChain( parms, GAME_NAME ) )
 	{
-		GLimp_Shutdown();
+		deviceManager->Shutdown( );
+		//GLimp_Shutdown();
 		return false;
 	}
 
@@ -1358,7 +1480,7 @@ bool GLimp_Init( glimpParms_t parms )
 	}
 
 	// RB: we probably have a new OpenGL 3.2 core context so reinitialize GLEW
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_DX12)
 	GLenum glewResult = glewInit();
 	if( GLEW_OK != glewResult )
 	{
@@ -1409,6 +1531,7 @@ bool GLimp_SetScreenParms( glimpParms_t parms )
 		stylebits = WINDOW_STYLE | WS_SYSMENU;
 	}
 
+	// TODO(Stephen): Update the swap chain.
 	SetWindowLong( win32.hWnd, GWL_STYLE, stylebits );
 	SetWindowLong( win32.hWnd, GWL_EXSTYLE, exstyle );
 	SetWindowPos( win32.hWnd, parms.fullScreen ? HWND_TOPMOST : HWND_NOTOPMOST, x, y, w, h, SWP_SHOWWINDOW );
@@ -1423,54 +1546,30 @@ bool GLimp_SetScreenParms( glimpParms_t parms )
 	return true;
 }
 
-/*
-===================
-GLimp_Shutdown
-
-This routine does all OS specific shutdown procedures for the OpenGL
-subsystem.
-===================
-*/
-void GLimp_Shutdown()
+void DeviceManager::Shutdown( )
 {
+	swapFrameBuffers.Clear( );
+
+	DestroyDeviceAndSwapChain( );
+
 	const char* success[] = { "failed", "success" };
 	int retVal;
-
-#if defined(USE_VULKAN)
-	// TODO
-#else
-	common->Printf( "Shutting down OpenGL subsystem\n" );
-
-	// set current context to NULL
-	//if( wglMakeCurrent )
-	{
-		retVal = wglMakeCurrent( NULL, NULL ) != 0;
-		common->Printf( "...wglMakeCurrent( NULL, NULL ): %s\n", success[retVal] );
-	}
-
-	// delete HGLRC
-	if( win32.hGLRC )
-	{
-		retVal = wglDeleteContext( win32.hGLRC ) != 0;
-		common->Printf( "...deleting GL context: %s\n", success[retVal] );
-		win32.hGLRC = NULL;
-	}
-#endif
 
 	// release DC
 	if( win32.hDC )
 	{
 		retVal = ReleaseDC( win32.hWnd, win32.hDC ) != 0;
 		common->Printf( "...releasing DC: %s\n", success[retVal] );
-		win32.hDC   = NULL;
+		win32.hDC = NULL;
 	}
 
 	// destroy window
-	if( win32.hWnd )
+	if( windowHandle )
 	{
 		common->Printf( "...destroying window\n" );
-		ShowWindow( win32.hWnd, SW_HIDE );
-		DestroyWindow( win32.hWnd );
+		ShowWindow( ( HWND )windowHandle, SW_HIDE );
+		DestroyWindow( ( HWND )windowHandle );
+		windowHandle = nullptr;
 		win32.hWnd = NULL;
 	}
 
@@ -1483,7 +1582,20 @@ void GLimp_Shutdown()
 	}
 
 	// restore gamma
-	GLimp_RestoreGamma();
+	GLimp_RestoreGamma( );
+}
+
+/*
+===================
+GLimp_Shutdown
+
+This routine does all OS specific shutdown procedures for the OpenGL
+subsystem.
+===================
+*/
+void GLimp_Shutdown()
+{
+	deviceManager->Shutdown( );
 }
 
 /*

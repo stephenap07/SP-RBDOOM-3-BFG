@@ -31,17 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "RenderCommon.h"
-
-
-#if defined(USE_VULKAN)
-
-	extern idUniformBuffer emptyUBO;
-
-	void CreateVertexDescriptions();
-
-	void CreateDescriptorPools( VkDescriptorPool( &pools )[ NUM_FRAME_DATA ] );
-
-#endif
+#include <sys/DeviceManager.h>
 
 
 idRenderProgManager renderProgManager;
@@ -80,11 +70,13 @@ static void R_ReloadShaders( const idCmdArgs& args )
 idRenderProgManager::Init()
 ================================================================================================
 */
-void idRenderProgManager::Init()
+void idRenderProgManager::Init( nvrhi::IDevice* _device )
 {
 	common->Printf( "----- Initializing Render Shaders -----\n" );
 
+	device = _device;
 
+#ifndef USE_DX12
 	for( int i = 0; i < MAX_BUILTINS; i++ )
 	{
 		builtinShaders[i] = -1;
@@ -308,24 +300,6 @@ void idRenderProgManager::Init()
 	}
 
 	cmdSystem->AddCommand( "reloadShaders", R_ReloadShaders, CMD_FL_RENDERER, "reloads shaders" );
-
-#if defined(USE_VULKAN)
-	counter = 0;
-
-	// Create Vertex Descriptions
-	CreateVertexDescriptions();
-
-	// Create Descriptor Pools
-	CreateDescriptorPools( descriptorPools );
-
-	for( int i = 0; i < NUM_FRAME_DATA; ++i )
-	{
-		parmBuffers[ i ] = new idUniformBuffer();
-		parmBuffers[ i ]->AllocBufferObject( NULL, MAX_DESC_SETS * MAX_DESC_SET_UNIFORMS * sizeof( idVec4 ), BU_DYNAMIC );
-	}
-
-	// Placeholder: mainly for optionalSkinning
-	emptyUBO.AllocBufferObject( NULL, sizeof( idVec4 ), BU_DYNAMIC );
 #endif
 }
 
@@ -349,7 +323,7 @@ void idRenderProgManager::LoadAllShaders()
 			continue;
 		}
 
-		LoadGLSLProgram( i, renderProgs[i].vertexShaderIndex, renderProgs[i].fragmentShaderIndex );
+		LoadProgram( i, renderProgs[i].vertexShaderIndex, renderProgs[i].fragmentShaderIndex );
 	}
 }
 
@@ -370,7 +344,7 @@ void idRenderProgManager::Shutdown()
 idRenderProgManager::FindVertexShader
 ================================================================================================
 */
-int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout )
+int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 {
 	idStr shaderName( name );
 	shaderName.StripFileExtension();
@@ -379,25 +353,27 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 	for( int i = 0; i < shaders.Num(); i++ )
 	{
 		shader_t& shader = shaders[ i ];
-		if( shader.name.Icmp( shaderName.c_str() ) == 0 && shader.stage == stage && shader.nameOutSuffix.Icmp( nameOutSuffix ) == 0 )
+		if( shader.name.Icmp( shaderName.c_str() ) == 0 && shader.stage == stage )
 		{
 			LoadShader( i, stage );
 			return i;
 		}
 	}
 
+	// Load it.
 	shader_t shader;
 	shader.name = shaderName;
-	shader.nameOutSuffix = nameOutSuffix;
-	shader.shaderFeatures = features;
-	shader.builtin = builtin;
 	shader.stage = stage;
-	shader.vertexLayout = vertexLayout;
 
 	int index = shaders.Append( shader );
 	LoadShader( index, stage );
 
 	return index;
+}
+
+nvrhi::ShaderHandle idRenderProgManager::GetShader( int index )
+{
+	return shaders[ index ].handle;
 }
 
 

@@ -25,24 +25,24 @@ else()
 endif()
 
 set(ID_INCLUDES_ALL
-			${ID__INCLUDES}
-			${ID_BV_INCLUDES}
-			${ID_CONTAINERS_INCLUDES}
-			${ID_GEOMETRY_INCLUDES}
-			${ID_HASHING_INCLUDES}
-			${ID_MATH_INCLUDES}
-			${ID_SYS_INCLUDES}
-			)
+		${ID__INCLUDES}
+		${ID_BV_INCLUDES}
+		${ID_CONTAINERS_INCLUDES}
+		${ID_GEOMETRY_INCLUDES}
+		${ID_HASHING_INCLUDES}
+		${ID_MATH_INCLUDES}
+		${ID_SYS_INCLUDES}
+		)
 			
 set(ID_SOURCES_ALL
-			${ID__SOURCES}
-			${ID_BV_SOURCES}
-			${ID_CONTAINERS_SOURCES}
-			${ID_GEOMETRY_SOURCES}
-			${ID_HASHING_SOURCES}
-			${ID_MATH_SOURCES}
-			${ID_SYS_SOURCES}
-			)
+		${ID__SOURCES}
+		${ID_BV_SOURCES}
+		${ID_CONTAINERS_SOURCES}
+		${ID_GEOMETRY_SOURCES}
+		${ID_HASHING_SOURCES}
+		${ID_MATH_SOURCES}
+		${ID_SYS_SOURCES}
+		)
 			
 if(MSVC)
 	list(APPEND ID_INCLUDES_ALL ${ID_SYS_WIN32_INCLUDES})
@@ -75,10 +75,6 @@ else()
 	source_group("sys\\posix" FILES ${ID_SYS_POSIX_SOURCES})
 endif()
 
-#if(STANDALONE)
-#	add_definitions(-DSTANDALONE)
-#endif()
-
 set(ID_PRECOMPILED_SOURCES ${ID_SOURCES_ALL})
 list(REMOVE_ITEM ID_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/geometry/RenderMatrix.cpp)
 list(REMOVE_ITEM ID_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/SoftwareCache.cpp)
@@ -86,42 +82,43 @@ list(REMOVE_ITEM ID_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/SoftwareCach
 if(MSVC)
     list(REMOVE_ITEM ID_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/precompiled.cpp)
 
-    #set_target_properties(idlib PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h")
-    set_source_files_properties(precompiled.cpp
+    set_source_files_properties(
+    	precompiled.cpp
         PROPERTIES
         COMPILE_FLAGS "/Ycprecompiled.h"
         OBJECT_OUTPUTS "precompiled.pch"
         )
-        set_source_files_properties(
-            ${ID_PRECOMPILED_SOURCES}
-            PROPERTIES
-            COMPILE_FLAGS "/Yuprecompiled.h"
-            OBJECT_DEPENDS "precompiled.pch"
-            )
+	
+	set_source_files_properties(
+		${ID_PRECOMPILED_SOURCES}
+        PROPERTIES
+        COMPILE_FLAGS "/Yuprecompiled.h"
+        OBJECT_DEPENDS "precompiled.pch"
+        )
 
     add_library(idlib ${ID_SOURCES_ALL} ${ID_INCLUDES_ALL})
 else()
 	if (USE_PRECOMPILED_HEADERS)
-	foreach( src_file ${ID_PRECOMPILED_SOURCES} )
-		#message(STATUS "-include precompiled.h for ${src_file}")
-		set_source_files_properties(
-			${src_file}
-			PROPERTIES
-			COMPILE_FLAGS "-include ${CMAKE_CURRENT_SOURCE_DIR}/precompiled.h"
-			)
-	endforeach()
+		foreach( src_file ${ID_PRECOMPILED_SOURCES} )
+			#message(STATUS "-include precompiled.h for ${src_file}")
+			set_source_files_properties(
+				${src_file}
+				PROPERTIES
+				COMPILE_FLAGS "-include ${CMAKE_CURRENT_SOURCE_DIR}/precompiled.h"
+				)
+		endforeach()
 	endif()
 
 	include_directories(.)
 	
 	if (USE_PRECOMPILED_HEADERS)
-	# precompiled magic for GCC/clang, adapted from https://gist.github.com/573926
-	STRING(TOUPPER "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}" _flags_var_name)
-	SET(_compiler_FLAGS "${${_flags_var_name}} -std=c++${CMAKE_CXX_STANDARD}")
-	GET_DIRECTORY_PROPERTY(_directory_flags INCLUDE_DIRECTORIES)
-	FOREACH(item ${_directory_flags})
-		LIST(APPEND _compiler_FLAGS " -I${item}")
-	ENDFOREACH(item)
+		# precompiled magic for GCC/clang, adapted from https://gist.github.com/573926
+		STRING(TOUPPER "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}" _flags_var_name)
+		SET(_compiler_FLAGS "${${_flags_var_name}} -std=c++${CMAKE_CXX_STANDARD}")
+		GET_DIRECTORY_PROPERTY(_directory_flags INCLUDE_DIRECTORIES)
+		FOREACH(item ${_directory_flags})
+			LIST(APPEND _compiler_FLAGS " -I${item}")
+		ENDFOREACH(item)
 	endif()
 
 	GET_DIRECTORY_PROPERTY(_directory_flags DEFINITIONS)
@@ -138,18 +135,8 @@ else()
 	endif()
 	
 	add_library(idlib ${ID_SOURCES_ALL} ${ID_INCLUDES_ALL})
+	
 	if (USE_PRECOMPILED_HEADERS)
-	add_dependencies(idlib precomp_header_idlib)
+		add_dependencies(idlib precomp_header_idlib)
 	endif()
-	
 endif()
-	
-
-# if(MSVC)
-	# # set_source_files_properties(precompiled.cpp
-        # # PROPERTIES
-        # # COMPILE_FLAGS "/Ycprecompiled.h"
-        # # )
-		
-	# #set_target_properties(idlib PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h")
-# endif()

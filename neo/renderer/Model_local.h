@@ -550,4 +550,40 @@ public:
 	};
 };
 
+/*
+===============================================================================
+
+	Beam model
+
+===============================================================================
+*/
+
+class idRenderModelSphere : public idRenderModelStatic
+{
+public:
+	virtual dynamicModel_t		IsDynamicModel( ) const;
+	virtual bool				SupportsBinaryModel( )
+	{
+		return false;
+	}
+	virtual bool				IsLoaded( ) const;
+	virtual idRenderModel*		InstantiateDynamicModel( const struct renderEntity_s* ent, const viewDef_t* view, idRenderModel* cachedModel );
+	virtual idBounds			Bounds( const struct renderEntity_s* ent ) const;
+
+	// with the addModels2 arrangement we could have light accepting and
+	// shadowing dynamic models, but the original game never did
+	virtual bool				ModelHasDrawingSurfaces( ) const
+	{
+		return true;
+	};
+	virtual bool				ModelHasInteractingSurfaces( ) const
+	{
+		return false;
+	};
+	virtual bool				ModelHasShadowCastingSurfaces( ) const
+	{
+		return false;
+	};
+};
+
 #endif /* !__MODEL_LOCAL_H__ */

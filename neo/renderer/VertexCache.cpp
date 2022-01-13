@@ -32,12 +32,14 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "RenderCommon.h"
+#include "sys/DeviceManager.h"
 
 idVertexCache vertexCache;
 
 idCVar r_showVertexCache( "r_showVertexCache", "0", CVAR_RENDERER | CVAR_BOOL, "Print stats about the vertex cache every frame" );
 idCVar r_showVertexCacheTimings( "r_showVertexCacheTimings", "0", CVAR_RENDERER | CVAR_BOOL, "Print stats about the vertex cache every frame" );
 
+extern DeviceManager* deviceManager;
 
 /*
 ==============
@@ -114,6 +116,9 @@ static void AllocGeoBufferSet( geoBufferSet_t& gbs, const int vertexBytes, const
 	ClearGeoBufferSet( gbs );
 }
 
+
+nvrhi::CommandListHandle vcCommandList;
+
 /*
 ==============
 idVertexCache::Init
@@ -130,6 +135,13 @@ void idVertexCache::Init( int _uniformBufferOffsetAlignment )
 	mostUsedIndex = 0;
 	mostUsedJoint = 0;
 
+	nvrhi::CommandListParameters parms;
+	parms.setQueueType( nvrhi::CommandQueue::Copy );
+
+	vcCommandList = deviceManager->GetDevice( )->createCommandList();
+
+	vcCommandList->open( );
+
 	for( int i = 0; i < NUM_FRAME_DATA; i++ )
 	{
 		AllocGeoBufferSet( frameData[i], VERTCACHE_VERTEX_MEMORY_PER_FRAME, VERTCACHE_INDEX_MEMORY_PER_FRAME, VERTCACHE_JOINT_MEMORY_PER_FRAME, BU_DYNAMIC );
@@ -141,6 +153,9 @@ void idVertexCache::Init( int _uniformBufferOffsetAlignment )
 #endif
 
 	MapGeoBufferSet( frameData[ listNum ] );
+
+	vcCommandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( vcCommandList );
 }
 
 /*
@@ -150,6 +165,8 @@ idVertexCache::Shutdown
 */
 void idVertexCache::Shutdown()
 {
+	vcCommandList->open( );
+
 	for( int i = 0; i < NUM_FRAME_DATA; i++ )
 	{
 		frameData[i].vertexBuffer.FreeBufferObject();
@@ -161,6 +178,10 @@ void idVertexCache::Shutdown()
 	staticData.vertexBuffer.FreeBufferObject();
 	staticData.indexBuffer.FreeBufferObject();
 	staticData.jointBuffer.FreeBufferObject();
+
+	vcCommandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( vcCommandList );
 }
 
 /*

@@ -498,9 +498,9 @@ private:
 	GLuint				texnum;				// gl texture binding
 
 	// we could derive these in subImageUpload each time if necessary
-	GLuint				internalFormat;
+	/*GLuint				internalFormat;
 	GLuint				dataFormat;
-	GLuint				dataType;
+	GLuint				dataType;*/
 #endif
 };
 

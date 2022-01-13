@@ -37,6 +37,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "Framebuffer.h"
 
 #include "imgui/ImGui_Hooks.h"
+#include <sys/DeviceManager.h>
 
 
 idCVar r_drawEyeColor( "r_drawEyeColor", "0", CVAR_RENDERER | CVAR_BOOL, "Draw a colored box, red = left eye, blue = right eye, grey = non-stereo" );
@@ -5594,6 +5595,8 @@ BACKEND COMMANDS
 =========================================================================================================
 */
 
+extern DeviceManager* deviceManager;
+
 
 /*
 ====================
@@ -5615,9 +5618,6 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 	ResizeImages();
 
-	renderLog.StartFrame();
-	GL_StartFrame();
-
 	if( cmds->commandId == RC_NOP && !cmds->next )
 	{
 		return;
@@ -5630,79 +5630,85 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 		return;
 	}
 
+	renderLog.StartFrame( );
+	GL_StartFrame( );
+
 	uint64 backEndStartTime = Sys_Microseconds();
 
-	// needed for editor rendering
+	//// needed for editor rendering
 	GL_SetDefaultState();
 
-	// SRS - Save glConfig.timerQueryAvailable state so it can be disabled for RC_DRAW_VIEW_GUI then restored after it is finished
+	//// SRS - Save glConfig.timerQueryAvailable state so it can be disabled for RC_DRAW_VIEW_GUI then restored after it is finished
 	const bool timerQueryAvailable = glConfig.timerQueryAvailable;
 	bool drawView3D_timestamps = false;
 
-	for( ; cmds != NULL; cmds = ( const emptyCommand_t* )cmds->next )
+	nvrhi::IFramebuffer* framebuffer = deviceManager->GetCurrentFramebuffer( );
+
+	for( int i = 0; i < renderPasses.Num( ); i++ )
 	{
-		switch( cmds->commandId )
-		{
-			case RC_NOP:
-				break;
-
-			case RC_DRAW_VIEW_GUI:
-				if( drawView3D_timestamps )
-				{
-					// SRS - Capture separate timestamps for overlay GUI rendering when RC_DRAW_VIEW_3D timestamps are active
-					renderLog.OpenMainBlock( MRB_DRAW_GUI );
-					renderLog.OpenBlock( "Render_DrawViewGUI", colorBlue );
-					// SRS - Disable detailed timestamps during overlay GUI rendering so they do not overwrite timestamps from 3D rendering
-					glConfig.timerQueryAvailable = false;
-
-					DrawView( cmds, 0 );
-
-					// SRS - Restore timestamp capture state after overlay GUI rendering is finished
-					glConfig.timerQueryAvailable = timerQueryAvailable;
-					renderLog.CloseBlock();
-					renderLog.CloseMainBlock();
-				}
-				else
-				{
-					DrawView( cmds, 0 );
-				}
-				c_draw2d++;
-				break;
-
-			case RC_DRAW_VIEW_3D:
-				drawView3D_timestamps = true;
-				DrawView( cmds, 0 );
-				c_draw3d++;
-				break;
-
-			case RC_SET_BUFFER:
-				SetBuffer( cmds );
-				c_setBuffers++;
-				break;
-
-			case RC_COPY_RENDER:
-				CopyRender( cmds );
-				c_copyRenders++;
-				break;
-
-			case RC_POST_PROCESS:
-			{
-				// apply optional post processing
-				PostProcess( cmds );
-				break;
-			}
-
-			default:
-				common->Error( "RB_ExecuteBackEndCommands: bad commandId" );
-				break;
-		}
+		renderPasses[i]->Render( framebuffer );
 	}
 
-	DrawFlickerBox();
+	//for( ; cmds != NULL; cmds = ( const emptyCommand_t* )cmds->next )
+	//{
+	//	switch( cmds->commandId )
+	//	{
+	//		case RC_NOP:
+	//			break;
 
-	// RB
-	// Stephen: This submits front-end render calls. This shouldn't be here, I think.
-	//ImGuiHook::Render();
+	//		case RC_DRAW_VIEW_GUI:
+	//			if( drawView3D_timestamps )
+	//			{
+	//				// SRS - Capture separate timestamps for overlay GUI rendering when RC_DRAW_VIEW_3D timestamps are active
+	//				renderLog.OpenMainBlock( MRB_DRAW_GUI );
+	//				renderLog.OpenBlock( "Render_DrawViewGUI", colorBlue );
+	//				// SRS - Disable detailed timestamps during overlay GUI rendering so they do not overwrite timestamps from 3D rendering
+	//				glConfig.timerQueryAvailable = false;
+
+	//				DrawView( cmds, 0 );
+
+	//				// SRS - Restore timestamp capture state after overlay GUI rendering is finished
+	//				glConfig.timerQueryAvailable = timerQueryAvailable;
+	//				renderLog.CloseBlock();
+	//				renderLog.CloseMainBlock();
+	//			}
+	//			else
+	//			{
+	//				DrawView( cmds, 0 );
+	//			}
+	//			c_draw2d++;
+	//			break;
+
+	//		case RC_DRAW_VIEW_3D:
+	//			drawView3D_timestamps = true;
+	//			DrawView( cmds, 0 );
+	//			c_draw3d++;
+	//			break;
+
+	//		case RC_SET_BUFFER:
+	//			SetBuffer( cmds );
+	//			c_setBuffers++;
+	//			break;
+
+	//		case RC_COPY_RENDER:
+	//			CopyRender( cmds );
+	//			c_copyRenders++;
+	//			break;
+
+	//		case RC_POST_PROCESS:
+	//		{
+	//			// apply optional post processing
+	//			PostProcess( cmds );
+	//			break;
+	//		}
+
+	//		default:
+	//			common->Error( "RB_ExecuteBackEndCommands: bad commandId" );
+	//			break;
+	//	}
+	//}
+
+	DrawFlickerBox();
 
 	GL_EndFrame();
 
@@ -5789,11 +5795,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// RB end
 
 	//GL_CheckErrors();
-
-#if !defined(USE_VULKAN)
-	// bind one global Vertex Array Object (VAO)
-	glBindVertexArray( glConfig.global_vao );
-#endif
 
 	//------------------------------------
 	// sets variables that can be used by all programs

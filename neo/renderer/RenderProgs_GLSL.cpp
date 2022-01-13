@@ -1668,7 +1668,7 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 idRenderProgManager::FindGLSLProgram
 ================================================================================================
 */
-int	 idRenderProgManager::FindGLSLProgram( const char* name, int vIndex, int fIndex )
+int	 idRenderProgManager::FindProgram( const char* name, int vIndex, int fIndex )
 {
 	for( int i = 0; i < renderProgs.Num(); ++i )
 	{
@@ -1681,7 +1681,7 @@ int	 idRenderProgManager::FindGLSLProgram( const char* name, int vIndex, int fIn
 	renderProg_t program;
 	program.name = name;
 	int index = renderProgs.Append( program );
-	LoadGLSLProgram( index, vIndex, fIndex );
+	LoadProgram( index, vIndex, fIndex );
 	return index;
 }
 
@@ -1704,28 +1704,3 @@ const char* idRenderProgManager::GetGLSLMacroName( shaderFeature_t sf ) const
 	return GLSLMacroNames[ sf ];
 }
 // RB end
-
-/*
-================================================================================================
-idRenderProgManager::SetUniformValue
-================================================================================================
-*/
-void idRenderProgManager::SetUniformValue( const renderParm_t rp, const float* value )
-{
-	for( int i = 0; i < 4; i++ )
-	{
-		uniforms[rp][i] = value[i];
-	}
-}
-
-
-/*
-================================================================================================
-idRenderProgManager::ZeroUniforms
-================================================================================================
-*/
-void idRenderProgManager::ZeroUniforms()
-{
-	memset( uniforms.Ptr(), 0, uniforms.Allocated() );
-}
-

@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 	#include "Vulkan/Allocator_VK.h"
 #endif
 
+#include <nvrhi/nvrhi.h>
+
 enum bufferMapType_t
 {
 	BM_READ,			// map for reading
@@ -82,9 +84,9 @@ public:
 		return apiObject;
 	}
 #else
-	GLintptr			GetAPIObject() const
+	nvrhi::BufferHandle	GetAPIObject() const
 	{
-		return apiObject;
+		return bufferHandle;
 	}
 #endif
 	int					GetOffset() const
@@ -112,29 +114,17 @@ protected:
 	}
 
 protected:
-	int					size;					// size in bytes
-	int					offsetInOtherBuffer;	// offset in bytes
-	bufferUsageType_t	usage;
+	int							size;					// size in bytes
+	int							offsetInOtherBuffer;	// offset in bytes
+	bufferUsageType_t			usage;
+	void*						buffer;
 
-#if defined( USE_VULKAN )
-	VkBuffer			apiObject;
-
-#if defined( USE_AMD_ALLOCATOR )
-	VmaAllocation		vmaAllocation;
-	VmaAllocationInfo	allocation;
-#else
-	vulkanAllocation_t	allocation;
-#endif
-
-#else
-	// GL
-	GLintptr			apiObject;
-	void* 				buffer;
-#endif
+	nvrhi::InputLayoutHandle	inputLayout;
+	nvrhi::BufferHandle			bufferHandle;
 
 	// sizeof() confuses typeinfo...
-	static const int	MAPPED_FLAG			= 1 << ( 4 /* sizeof( int ) */ * 8 - 1 );
-	static const int	OWNS_BUFFER_FLAG	= 1 << ( 4 /* sizeof( int ) */ * 8 - 1 );
+	static const int			MAPPED_FLAG			= 1 << ( 4 /* sizeof( int ) */ * 8 - 1 );
+	static const int			OWNS_BUFFER_FLAG	= 1 << ( 4 /* sizeof( int ) */ * 8 - 1 );
 };
 
 /*

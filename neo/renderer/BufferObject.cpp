@@ -126,18 +126,8 @@ idBufferObject::idBufferObject()
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	usage = BU_STATIC;
-
-#if defined( USE_VULKAN )
-	apiObject = VK_NULL_HANDLE;
-
-#if defined( USE_AMD_ALLOCATOR )
-	vmaAllocation = NULL;
-#endif
-
-#else
-	apiObject = NULL;
-	buffer = NULL;
-#endif
+	bufferHandle.Reset( );
+	inputLayout.Reset( );
 }
 
 /*
@@ -173,10 +163,8 @@ void idVertexBuffer::Reference( const idVertexBuffer& other )
 	size = other.GetSize();					// this strips the MAPPED_FLAG
 	offsetInOtherBuffer = other.GetOffset();	// this strips the OWNS_BUFFER_FLAG
 	usage = other.usage;
-	apiObject = other.apiObject;
-#if defined( USE_VULKAN )
-	allocation = other.allocation;
-#endif
+	bufferHandle = other.bufferHandle;
+
 	assert( OwnsBuffer() == false );
 }
 
@@ -197,7 +185,7 @@ void idVertexBuffer::Reference( const idVertexBuffer& other, int refOffset, int 
 	size = refSize;
 	offsetInOtherBuffer = other.GetOffset() + refOffset;
 	usage = other.usage;
-	apiObject = other.apiObject;
+	bufferHandle = other.bufferHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif
@@ -237,7 +225,7 @@ void idIndexBuffer::Reference( const idIndexBuffer& other )
 	size = other.GetSize();					// this strips the MAPPED_FLAG
 	offsetInOtherBuffer = other.GetOffset();	// this strips the OWNS_BUFFER_FLAG
 	usage = other.usage;
-	apiObject = other.apiObject;
+	bufferHandle = other.bufferHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif
@@ -261,7 +249,7 @@ void idIndexBuffer::Reference( const idIndexBuffer& other, int refOffset, int re
 	size = refSize;
 	offsetInOtherBuffer = other.GetOffset() + refOffset;
 	usage = other.usage;
-	apiObject = other.apiObject;
+	bufferHandle = other.bufferHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif
@@ -301,7 +289,7 @@ void idUniformBuffer::Reference( const idUniformBuffer& other )
 	size = other.GetSize();					// this strips the MAPPED_FLAG
 	offsetInOtherBuffer = other.GetOffset();	// this strips the OWNS_BUFFER_FLAG
 	usage = other.usage;
-	apiObject = other.apiObject;
+	bufferHandle = other.bufferHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif
@@ -325,7 +313,7 @@ void idUniformBuffer::Reference( const idUniformBuffer& other, int refOffset, in
 	size = refSize;
 	offsetInOtherBuffer = other.GetOffset() + refOffset;
 	usage = other.usage;
-	apiObject = other.apiObject;
+	bufferHandle = other.bufferHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif

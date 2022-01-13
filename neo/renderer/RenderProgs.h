@@ -211,6 +211,12 @@ enum rpBinding_t
 	BINDING_TYPE_MAX
 };
 
+struct ShaderBlob
+{
+	void* data = nullptr;;
+	size_t size = 0;
+};
+
 #define VERTEX_UNIFORM_ARRAY_NAME				"_va_"
 #define FRAGMENT_UNIFORM_ARRAY_NAME				"_fa_"
 
@@ -247,7 +253,7 @@ public:
 	idRenderProgManager();
 	virtual ~idRenderProgManager();
 
-	void	Init();
+	void	Init(nvrhi::IDevice* _device);
 	void	Shutdown();
 
 	void	StartFrame();
@@ -255,7 +261,11 @@ public:
 	void	SetRenderParm( renderParm_t rp, const float* value );
 	void	SetRenderParms( renderParm_t rp, const float* values, int numValues );
 
-	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
+	int		FindShader( const char* name, rpStage_t stage );
+
+	nvrhi::ShaderHandle GetShader( int index );
+
+	ShaderBlob	GetBytecode( const char* fileName, const char* entryName );
 
 	void	BindProgram( int progIndex );
 
@@ -712,12 +722,14 @@ public:
 	// the joints buffer should only be bound for vertex programs that use joints
 	bool		ShaderUsesJoints() const
 	{
-		return renderProgs[current].usesJoints;
+		return false;
+		//return renderProgs[current].usesJoints;
 	}
 	// the rpEnableSkinning render parm should only be set for vertex programs that use it
 	bool		ShaderHasOptionalSkinning() const
 	{
-		return renderProgs[current].optionalSkinning;
+		return false;
+		//return renderProgs[current].optionalSkinning;
 	}
 
 	// unbind the currently bound render program
@@ -737,7 +749,7 @@ public:
 	void		SetUniformValue( const renderParm_t rp, const float* value );
 	void		CommitUniforms( uint64 stateBits );
 	void		CachePipeline( uint64 stateBits );
-	int			FindGLSLProgram( const char* name, int vIndex, int fIndex );
+	int			FindProgram( const char* name, int vIndex, int fIndex );
 	void		ZeroUniforms();
 
 #if defined(USE_VULKAN)
@@ -885,7 +897,7 @@ private:
 	const char*	GetGLSLMacroName( shaderFeature_t sf ) const;
 
 	bool	CompileGLSL( uint target, const char* name );
-	void	LoadGLSLProgram( const int programIndex, const int vertexShaderIndex, const int fragmentShaderIndex );
+	void	LoadProgram( const int programIndex, const int vertexShaderIndex, const int fragmentShaderIndex );
 
 	static const uint INVALID_PROGID = 0xFFFFFFFF;
 
@@ -960,6 +972,55 @@ private:
 
 	static void		CreateDescriptorSetLayout( const shader_t& vertexShader, const shader_t& fragmentShader, renderProg_t& renderProg );
 	void			AllocParmBlockBuffer( const idList<int>& parmIndices, idUniformBuffer& ubo );
+#elif defined(USE_DX12) || defined(USE_DX11)
+struct ShaderMacro
+{
+	idStr name;
+	idStr definition;
+
+	ShaderMacro( )
+		: name( )
+		, definition( )
+	{
+	}
+
+	ShaderMacro( const idStr& _name, const idStr& _definition )
+		: name( _name )
+		, definition( _definition )
+	{ }
+};
+
+struct shader_t
+{
+	shader_t( ) :
+		name( ),
+		macros( ),
+		handle( nullptr ),
+		stage( SHADER_STAGE_DEFAULT )
+	{
+	}
+
+	idStr				name;
+	idList<ShaderMacro> macros;
+	nvrhi::ShaderHandle	handle;
+	rpStage_t			stage;
+};
+
+struct renderProg_t
+{
+	renderProg_t( ) :
+		name( ),
+		pipeline( nullptr ),
+		vertexShaderIndex( -1 ),
+		fragmentShaderIndex( -1 )
+	{
+	}
+
+	idStr						  name;
+	nvrhi::GraphicsPipelineHandle pipeline;
+	int							  vertexShaderIndex;
+	int							  fragmentShaderIndex;
+};
 #else
 	struct shader_t
 	{
@@ -1009,6 +1070,8 @@ private:
 	idList<shader_t, TAG_RENDER>				shaders;
 
 	idStaticList < idVec4, RENDERPARM_TOTAL >	uniforms;
+
+	nvrhi::IDevice*								device;
 
 #if defined( USE_VULKAN )
 	int					counter;

@@ -103,6 +103,9 @@ const int MAX_EXPRESSION_REGISTERS = 4096;
 	#include <GL/glew.h>
 	// RB end
 #endif
+
+#include "nvrhi/nvrhi.h"
+
 #include "../renderer/Cinematic.h"
 #include "../renderer/Material.h"
 #include "../renderer/BufferObject.h"

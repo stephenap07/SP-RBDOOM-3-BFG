@@ -42,6 +42,24 @@ If you have questions concerning this license or the applicable additional terms
 #include "FontManager.h"
 #include "TextBufferManager.h"
 
+#if USE_DX11 || USE_DX12
+#include <DXGI.h>
+#endif
+
+#if USE_DX11
+#include <d3d11.h>
+#endif
+
+#if USE_DX12
+#include <d3d12.h>
+#endif
+
+#if USE_VK
+#include <nvrhi/vulkan.h>
+#endif
+
+#include <nvrhi/nvrhi.h>
+
 
 // RB: define this to use the id Tech 4.5 UI interface for ImGui instead of OpenGL or Vulkan
 // this allows to have the com_showFPS stats in screenshots
@@ -852,7 +870,7 @@ public:
 		return bInitialized;
 	}
 	virtual void			ResetGuiModels();
-	virtual void			InitOpenGL();
+	virtual void			InitBackend();
 	virtual void			ShutdownOpenGL();
 	virtual bool			IsOpenGLRunning() const;
 	virtual bool			IsFullScreen() const;
@@ -1323,6 +1341,7 @@ struct glimpParms_t
 	int			height;
 	int			fullScreen;		// 0 = windowed, otherwise 1 based monitor number to go full screen on
 	// -1 = borderless window for spanning multiple displays
+	bool		startMaximized = false;
 	bool		stereo;
 	int			displayHz;
 	int			multiSamples;

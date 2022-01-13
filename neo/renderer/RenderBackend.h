@@ -248,6 +248,8 @@ all state modified by the back end is separated from the front end state
 */
 struct ImDrawData;
 
+class IRenderPass;
+
 class idRenderBackend
 {
 	friend class Framebuffer;
@@ -475,7 +477,12 @@ private:
 	// RB end
 
 private:
-#if !defined( USE_VULKAN )
+#if defined( USE_DX12 )
+
+	nvrhi::CommandListHandle	commandList;
+	idList<IRenderPass*>		renderPasses;
+
+#elif !defined( USE_VULKAN )
 	int					currenttmu;
 
 	unsigned int		currentVertexBuffer;

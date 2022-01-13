@@ -31,6 +31,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Model_local.h"
 #include "RenderCommon.h"	// just for R_FreeWorldInteractions and R_CreateWorldInteractions
+#include <sys/DeviceManager.h>
+
+extern nvrhi::CommandListHandle vcCommandList;
+extern DeviceManager* deviceManager;
 
 idCVar binaryLoadRenderModels( "binaryLoadRenderModels", "1", 0, "enable binary load/write of render models" );
 idCVar preload_MapModels( "preload_MapModels", "1", CVAR_SYSTEM | CVAR_BOOL, "preload models during begin or end levelload" );
@@ -69,6 +73,7 @@ private:
 	idRenderModel* 			defaultModel;
 	idRenderModel* 			beamModel;
 	idRenderModel* 			spriteModel;
+	idRenderModel*			sphereModel;
 	bool					insideLevelLoad;		// don't actually load now
 
 	idRenderModel* 			GetModel( const char* modelName, bool createIfNotFound );
@@ -93,6 +98,7 @@ idRenderModelManagerLocal::idRenderModelManagerLocal()
 	defaultModel = NULL;
 	beamModel = NULL;
 	spriteModel = NULL;
+	sphereModel = nullptr;
 	insideLevelLoad = false;
 }
 
@@ -232,6 +238,8 @@ idRenderModelManagerLocal::Init
 */
 void idRenderModelManagerLocal::Init()
 {
+	vcCommandList->open( );
+
 	cmdSystem->AddCommand( "listModels", ListModels_f, CMD_FL_RENDERER, "lists all models" );
 	cmdSystem->AddCommand( "printModel", PrintModel_f, CMD_FL_RENDERER, "prints model info", idCmdSystem::ArgCompletion_ModelName );
 	cmdSystem->AddCommand( "reloadModels", ReloadModels_f, CMD_FL_RENDERER | CMD_FL_CHEAT, "reloads models" );
@@ -259,6 +267,16 @@ void idRenderModelManagerLocal::Init()
 	sprite->SetLevelLoadReferenced( true );
 	spriteModel = sprite;
 	AddModel( sprite );
+
+	idRenderModelSphere* sphere = new( TAG_MODEL ) idRenderModelSphere;
+	sphere->InitEmpty( "_SPHERE" );
+	sphere->SetLevelLoadReferenced( true );
+	sphereModel = sphere;
+	AddModel( sphere );
+
+	vcCommandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( vcCommandList );
 }
 
 /*
@@ -279,7 +297,6 @@ idRenderModelManagerLocal::GetModel
 */
 idRenderModel* idRenderModelManagerLocal::GetModel( const char* _modelName, bool createIfNotFound )
 {
-
 	if( !_modelName || !_modelName[0] )
 	{
 		return NULL;
@@ -442,7 +459,7 @@ idRenderModel* idRenderModelManagerLocal::GetModel( const char* _modelName, bool
 	}
 
 	// RB begin
-	if( postLoadExportModels.GetBool() && ( model != defaultModel && model != beamModel && model != spriteModel ) )
+	if( postLoadExportModels.GetBool() && ( model != defaultModel && model != beamModel && model != spriteModel && model != sphereModel ) )
 	{
 		idStrStatic< MAX_OSPATH > exportedFileName;
 
@@ -518,6 +535,11 @@ void idRenderModelManagerLocal::FreeModel( idRenderModel* model )
 	if( model == spriteModel )
 	{
 		common->Error( "idRenderModelManager::FreeModel: can't free the sprite model" );
+		return;
+	}
+	if( model == sphereModel )
+	{
+		common->Error( "idRenderModelManager::FreeModel: can't free the sphere model" );
 		return;
 	}
 
@@ -744,8 +766,6 @@ void idRenderModelManagerLocal::Preload( const idPreloadManifest& manifest )
 	}
 }
 
-
-
 /*
 =================
 idRenderModelManagerLocal::EndLevelLoad
@@ -756,6 +776,8 @@ void idRenderModelManagerLocal::EndLevelLoad()
 	common->Printf( "----- idRenderModelManagerLocal::EndLevelLoad -----\n" );
 
 	int start = Sys_Milliseconds();
+
+	vcCommandList->open( );
 
 	insideLevelLoad = false;
 	int	purgeCount = 0;
@@ -810,7 +832,6 @@ void idRenderModelManagerLocal::EndLevelLoad()
 	{
 		common->UpdateLevelLoadPacifier();
 
-
 		idRenderModel* model = models[i];
 		if( model->IsLoaded() )
 		{
@@ -821,6 +842,9 @@ void idRenderModelManagerLocal::EndLevelLoad()
 		}
 	}
 
+	vcCommandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( vcCommandList );
 
 	// _D3XP added this
 	int	end = Sys_Milliseconds();
