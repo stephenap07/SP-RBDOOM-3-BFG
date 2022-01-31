@@ -1390,15 +1390,6 @@ void R_LoadImage( const char* cname, byte** pic, int* width, int* height, ID_TIM
 
 		pbrImageLookup = true;
 	}
-#if 0
-	else if( usage && *usage == TD_R11G11B10F )
-	{
-		name.StripFileExtension();
-
-		ext = "exr";
-		name.DefaultFileExtension( ".exr" );
-	}
-#endif
 
 retry:
 
@@ -1456,6 +1447,26 @@ retry:
 			{
 				idLib::Printf( "PBR hack: using '%s' instead of '%s'\n", name.c_str(), origName.c_str() );
 				*usage = TD_SPECULAR_PBR_RMAO;
+			}
+		}
+	}
+	else
+	{
+		// Try loading from a deferred image hash list
+		int hash = name.FileNameHash( );
+		for( int i = globalImages->deferredImageHash.First( hash ); i != -1; i = globalImages->deferredImageHash.Next( i ) )
+		{
+			idDeferredImage* image = globalImages->deferredImages[i];
+			if( name.Icmp( image->name ) == 0 )
+			{
+				if( pic && *pic == nullptr )
+				{
+					*usage = image->textureUsage;
+					*width = image->width;
+					*height = image->height;
+					memcpy( *pic, image->pic, 4 * *width * *height );
+					break;
+				}
 			}
 		}
 	}

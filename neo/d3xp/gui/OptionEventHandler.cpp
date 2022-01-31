@@ -15,7 +15,7 @@ class UI_Shell;
 
 void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idToken& _token )
 {
-	if( !_token.Icmp("restore") )
+	if( !_token.Icmp( "restore" ) )
 	{
 		Rml::ElementDocument* optionsBody = _event.GetTargetElement( )->GetOwnerDocument( );
 
@@ -27,15 +27,15 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 		Rml::String windowModeId;
 		switch( r_fullscreen.GetInteger( ) )
 		{
-		case 0: // windowed
-			windowModeId = "windowed";
-			break;
-		case 1: // fullscreen on primary monitor
-			windowModeId = "fullscreen";
-			break;
-		case 2: // fullscreen on secondary monitor
-			windowModeId = "windowed_borderless";
-			break;
+			case 0: // windowed
+				windowModeId = "windowed";
+				break;
+			case 1: // fullscreen on primary monitor
+				windowModeId = "fullscreen";
+				break;
+			case 2: // fullscreen on secondary monitor
+				windowModeId = "windowed_borderless";
+				break;
 		}
 
 		Rml::ElementFormControlInput* windowModeOption = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( windowModeId ) );
@@ -60,8 +60,8 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 
 		return;
 	}
-	
-	if( !_token.Icmp("store") )
+
+	if( !_token.Icmp( "store" ) )
 	{
 		const Rml::String subParm = _event.GetParameter<Rml::String>( "submit", "cancel" );
 		if( subParm == "accept" || subParm == "apply" )
@@ -104,8 +104,8 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 
 		return;
 	}
-	
-	if( !_token.Icmp("enable_accept") )
+
+	if( !_token.Icmp( "enable_accept" ) )
 	{
 		Rml::ElementDocument* optionsBody = _event.GetTargetElement( )->GetOwnerDocument( );
 

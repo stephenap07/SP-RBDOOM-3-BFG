@@ -200,6 +200,30 @@ public:
 		memTag = ( byte )tag_;
 	};
 
+	// Begin/End methods for range-based for loops.
+	_type_* begin( )
+	{
+		if( num > 0 )
+		{
+			return &list[0];
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+	_type_* end( )
+	{
+		if( num > 0 )
+		{
+			return &list[num - 1];
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
 private:
 	int				num;
 	int				size;
@@ -286,7 +310,10 @@ ID_INLINE void idList<_type_, _tag_>::DeleteContents( bool clear )
 
 	for( i = 0; i < num; i++ )
 	{
-		delete list[ i ];
+		if( list[i] )
+		{
+			delete list[i];
+		}
 		list[ i ] = NULL;
 	}
 

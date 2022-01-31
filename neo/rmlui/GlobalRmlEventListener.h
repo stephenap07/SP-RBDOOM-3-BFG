@@ -59,7 +59,7 @@ public:
 private:
 
 	RmlUserInterface* ui;
-	
+
 	Rml::String value;
 
 	Rml::Element* element;

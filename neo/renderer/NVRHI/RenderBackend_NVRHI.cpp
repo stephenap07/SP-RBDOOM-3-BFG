@@ -47,6 +47,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../RenderCommon.h"
 #include "../RenderBackend.h"
 #include "../../framework/Common_local.h"
+#include "renderer/RenderPass.h"
 
 #include "../../imgui/imgui.h"
 
@@ -74,6 +75,20 @@ void GLimp_SwapBuffers();
 void RB_SetMVP( const idRenderMatrix& mvp );
 
 glContext_t glcontext;
+
+static const int MAX_IMAGE_PARMS = 16;
+
+class NvrhiContext
+{
+public:
+
+	int										currentImageParm = 0;
+	idArray< idImage*, MAX_IMAGE_PARMS >	imageParms;
+	nvrhi::GraphicsPipelineHandle			pipeline;
+	bool									fullscreen = false;
+};
+
+static NvrhiContext context;
 
 /*
 ==================
@@ -482,10 +497,6 @@ static void R_CheckPortableExtensions()
 	{
 		idLib::Error( "GL_ATI_separate_stencil not available" );
 	}
-
-	// generate one global Vertex Array Object (VAO)
-	glGenVertexArrays( 1, &glConfig.global_vao );
-	glBindVertexArray( glConfig.global_vao );
 }
 // RB end
 
@@ -493,79 +504,6 @@ static void R_CheckPortableExtensions()
 idStr extensions_string;
 
 extern DeviceManager* deviceManager;
-
-class BasicTriangle : public IRenderPass
-{
-private:
-	nvrhi::ShaderHandle vertexShader;
-	nvrhi::ShaderHandle pixelShader;
-	nvrhi::GraphicsPipelineHandle pipeline;
-	nvrhi::CommandListHandle commandList;
-
-public:
-	using IRenderPass::IRenderPass;
-
-	bool Init( )
-	{
-		int v = renderProgManager.FindShader( "shaders.hlsl", SHADER_STAGE_VERTEX );
-		int f = renderProgManager.FindShader( "shaders.hlsl", SHADER_STAGE_FRAGMENT );
-
-		vertexShader = renderProgManager.GetShader( v );
-		pixelShader = renderProgManager.GetShader( f );
-
-		if( !vertexShader || !pixelShader )
-		{
-			return false;
-		}
-
-		commandList = GetDevice( )->createCommandList( );
-
-		return true;
-	}
-
-	void BackBufferResizing( ) override
-	{
-		pipeline = nullptr;
-	}
-
-	void Animate( float fElapsedTimeSeconds ) override
-	{
-		//GetDeviceManager( )->SetInformativeWindowTitle( g_WindowTitle );
-	}
-
-	void Render( nvrhi::IFramebuffer* framebuffer ) override
-	{
-		if( !pipeline )
-		{
-			nvrhi::GraphicsPipelineDesc psoDesc;
-			psoDesc.VS = vertexShader;
-			psoDesc.PS = pixelShader;
-			psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
-			psoDesc.renderState.depthStencilState.depthTestEnable = false;
-
-			pipeline = GetDevice( )->createGraphicsPipeline( psoDesc, framebuffer );
-		}
-
-		commandList->open( );
-
-		nvrhi::utils::ClearColorAttachment( commandList, framebuffer, 0, nvrhi::Color( 0.f ) );
-
-		nvrhi::GraphicsState state;
-		state.pipeline = pipeline;
-		state.framebuffer = framebuffer;
-		state.viewport.addViewportAndScissorRect( framebuffer->getFramebufferInfo( ).getViewport( ) );
-
-		commandList->setGraphicsState( state );
-
-		nvrhi::DrawArguments args;
-		args.vertexCount = 3;
-		commandList->draw( args );
-
-		commandList->close( );
-		GetDevice( )->executeCommandList( commandList );
-	}
-
-};
 
 /*
 ==================
@@ -601,12 +539,23 @@ void idRenderBackend::Init()
 	// input and sound systems need to be tied to the new window
 	Sys_InitInput();
 
+	bindingCache.Init( deviceManager->GetDevice( ) );
+	commonPasses.Init( deviceManager->GetDevice( ) );
 	renderProgManager.Init( deviceManager->GetDevice( ) );
 
 	tr.SetInitialized();
 
+	if( !commandList )
+	{
+		commandList = deviceManager->GetDevice( )->createCommandList( );
+	}
+
 	// allocate the vertex array range or vertex objects
-	vertexCache.Init( glConfig.uniformBufferOffsetAlignment );
+	commandList->open( );
+	vertexCache.Init( glConfig.uniformBufferOffsetAlignment, commandList );
+	renderProgManager.CommitConstantBuffer( commandList );
+	commandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 
 	// allocate the frame data, which may be more if smp is enabled
 	R_InitFrameData();
@@ -616,26 +565,10 @@ void idRenderBackend::Init()
 
 	// RB: prepare ImGui system
 	//ImGui_Init();
-
-	auto renderPass = new BasicTriangle( deviceManager );
-
-	if( renderPass->Init( ) )
-	{
-		renderPasses.Append( renderPass );
-
-		renderPass->BackBufferResizing( );
-		renderPass->BackBufferResized( renderSystem->GetWidth( ), renderSystem->GetHeight( ), 1 );
-	}
-	else
-	{
-		common->Error( "Failed to initialize BasicTriangle. " );
-	}
 }
 
 void idRenderBackend::Shutdown()
 {
-	renderPasses.Clear( );
-
 	GLimp_Shutdown();
 }
 
@@ -646,6 +579,83 @@ idRenderBackend::DrawElementsWithCounters
 */
 void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 {
+	// Get vertex buffer
+	const vertCacheHandle_t vbHandle = surf->ambientCache;
+	idVertexBuffer* vertexBuffer;
+	if( vertexCache.CacheIsStatic( vbHandle ) )
+	{
+		vertexBuffer = &vertexCache.staticData.vertexBuffer;
+	}
+	else
+	{
+		const uint64 frameNum = ( int )( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
+		{
+			idLib::Warning( "RB_DrawElementsWithCounters, vertexBuffer == NULL" );
+			return;
+		}
+		vertexBuffer = &vertexCache.frameData[vertexCache.drawListNum].vertexBuffer;
+	}
+	const uint vertOffset = ( uint )( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+
+	if( currentVertexBuffer != ( nvrhi::IBuffer* )vertexBuffer->GetAPIObject( ) || !r_useStateCaching.GetBool( ) )
+	{
+		currentVertexBuffer = vertexBuffer->GetAPIObject( );
+	}
+
+	// Get index buffer
+	const vertCacheHandle_t ibHandle = surf->indexCache;
+	idIndexBuffer* indexBuffer;
+	if( vertexCache.CacheIsStatic( ibHandle ) )
+	{
+		indexBuffer = &vertexCache.staticData.indexBuffer;
+	}
+	else
+	{
+		const uint64 frameNum = ( int )( ibHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
+		{
+			idLib::Warning( "RB_DrawElementsWithCounters, indexBuffer == NULL" );
+			return;
+		}
+		indexBuffer = &vertexCache.frameData[vertexCache.drawListNum].indexBuffer;
+	}
+	const uint indexOffset = ( uint )( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+
+	RENDERLOG_PRINTF( "Binding Buffers: %p:%i %p:%i\n", vertexBuffer, vertOffset, indexBuffer, indexOffset );
+
+	if( currentIndexBuffer != ( nvrhi::IBuffer* )indexBuffer->GetAPIObject( ) || !r_useStateCaching.GetBool( ) )
+	{
+		currentIndexBuffer = indexBuffer->GetAPIObject( );
+	}
+
+	nvrhi::GraphicsState state;
+	state.bindings = { currentBindingSet };
+	state.indexBuffer = { currentIndexBuffer, nvrhi::Format::R16_UINT, indexOffset };
+	state.vertexBuffers = { { currentVertexBuffer, 0, vertOffset } };
+	state.pipeline = currentPipeline;
+	state.framebuffer = currentFrameBuffer->GetApiObject();
+
+	// TODO(Stephen): use currentViewport instead.
+	nvrhi::Viewport viewport;
+	viewport.minX = currentViewport.x1;
+	viewport.minY = currentViewport.y1;
+	viewport.maxX = currentViewport.x2;
+	viewport.maxY = currentViewport.y2;
+	viewport.minZ = currentViewport.zmin;
+	viewport.maxZ = currentViewport.zmax;
+	state.viewport.addViewportAndScissorRect( viewport );
+	state.viewport.addScissorRect( nvrhi::Rect( currentScissor.x1, currentScissor.y1, currentScissor.x2, currentScissor.y2 ) );
+
+	commandList->setGraphicsState( state );
+
+	nvrhi::DrawArguments args;
+	args.vertexCount = surf->numIndexes;
+	commandList->drawIndexed( args );
+
+	// RB: added stats
+	pc.c_drawElements++;
+	pc.c_drawIndexes += surf->numIndexes;
 }
 
 /*
@@ -664,6 +674,8 @@ idRenderBackend::GL_StartFrame
 void idRenderBackend::GL_StartFrame()
 {
 	deviceManager->BeginFrame( );
+
+	commandList->open( );
 }
 
 /*
@@ -673,7 +685,17 @@ idRenderBackend::GL_EndFrame
 */
 void idRenderBackend::GL_EndFrame()
 {
+	commandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( commandList );
+
 	deviceManager->Present( );
+
+	// Make sure that all frames have finished rendering
+	deviceManager->GetDevice()->waitForIdle( );
+
+	// Release all in-flight references to the render targets
+	deviceManager->GetDevice( )->runGarbageCollection( );
 }
 
 /*
@@ -685,6 +707,11 @@ We want to exit this with the GPU idle, right at vsync
 */
 void idRenderBackend::GL_BlockingSwapBuffers()
 {
+	// Make sure that all frames have finished rendering
+	deviceManager->GetDevice( )->waitForIdle( );
+
+	// Release all in-flight references to the render targets
+	deviceManager->GetDevice( )->runGarbageCollection( );
 }
 
 /*
@@ -697,6 +724,17 @@ may touch, including the editor.
 */
 void idRenderBackend::GL_SetDefaultState()
 {
+	RENDERLOG_PRINTF( "--- GL_SetDefaultState ---\n" );
+
+	// make sure our GL state vector is set correctly
+	memset( &glcontext.tmu, 0, sizeof( glcontext.tmu ) );
+
+	glStateBits = 0;
+	GL_State( 0, true );
+
+	// RB begin
+	Framebuffer::Unbind( );
+	// RB end
 }
 
 /*
@@ -708,6 +746,387 @@ This routine is responsible for setting the most commonly changed state
 */
 void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 {
+	uint64 diff = stateBits ^ glStateBits;
+
+	if( !r_useStateCaching.GetBool( ) || forceGlState )
+	{
+		// make sure everything is set all the time, so we
+		// can see if our delta checking is screwing up
+		diff = 0xFFFFFFFFFFFFFFFF;
+	}
+	else if( diff == 0 )
+	{
+		return;
+	}
+
+	// Reset pipeline
+	currentPipeline = nullptr;
+
+	auto& currentBlendState = currentRenderState.blendState;
+	auto& currentDepthStencilState = currentRenderState.depthStencilState;
+	auto& currentRasterState = currentRenderState.rasterState;
+
+	//
+	// culling
+	//
+	if( diff & ( GLS_CULL_BITS ) )//| GLS_MIRROR_VIEW ) )
+	{
+		switch( stateBits & GLS_CULL_BITS )
+		{
+		case GLS_CULL_TWOSIDED:
+			currentRasterState.setCullNone( );
+			break;
+
+		case GLS_CULL_BACKSIDED:
+			if( viewDef != NULL && viewDef->isMirror )
+			{
+				stateBits |= GLS_MIRROR_VIEW;
+				currentRasterState.setCullFront( );
+			}
+			else
+			{
+				currentRasterState.setCullBack( );
+			}
+			break;
+
+		case GLS_CULL_FRONTSIDED:
+		default:
+			if( viewDef != NULL && viewDef->isMirror )
+			{
+				stateBits |= GLS_MIRROR_VIEW;
+				currentRasterState.setCullBack( );
+			}
+			else
+			{
+				currentRasterState.setCullFront( );
+			}
+			break;
+		}
+	}
+
+	//
+	// check depthFunc bits
+	//
+	if( diff & GLS_DEPTHFUNC_BITS )
+	{
+		switch( stateBits & GLS_DEPTHFUNC_BITS )
+		{
+		case GLS_DEPTHFUNC_EQUAL:
+			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Equal;
+			break;
+		case GLS_DEPTHFUNC_ALWAYS:
+			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Always;
+			break;
+		case GLS_DEPTHFUNC_LESS:
+			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Less;
+			break;
+		case GLS_DEPTHFUNC_GREATER:
+			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Greater;
+			break;
+		}
+	}
+
+	nvrhi::BlendState::RenderTarget renderTarget;
+
+	//
+	// check blend bits
+	//
+	if( diff & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) )
+	{
+		nvrhi::BlendFactor srcFactor = nvrhi::BlendFactor::One;
+		nvrhi::BlendFactor dstFactor = nvrhi::BlendFactor::One;
+
+		switch( stateBits & GLS_SRCBLEND_BITS )
+		{
+		case GLS_SRCBLEND_ZERO:
+			srcFactor = nvrhi::BlendFactor::Zero;
+			break;
+		case GLS_SRCBLEND_ONE:
+			srcFactor = nvrhi::BlendFactor::One;
+			break;
+		case GLS_SRCBLEND_DST_COLOR:
+			srcFactor = nvrhi::BlendFactor::DstColor;
+			break;
+		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
+			srcFactor = nvrhi::BlendFactor::OneMinusDstColor;
+			break;
+		case GLS_SRCBLEND_SRC_ALPHA:
+			srcFactor = nvrhi::BlendFactor::SrcAlpha;
+			break;
+		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
+			srcFactor = nvrhi::BlendFactor::OneMinusSrcAlpha;
+			break;
+		case GLS_SRCBLEND_DST_ALPHA:
+			srcFactor = nvrhi::BlendFactor::DstAlpha;
+			break;
+		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
+			srcFactor = nvrhi::BlendFactor::OneMinusDstAlpha;
+			break;
+		default:
+			assert( !"GL_State: invalid src blend state bits\n" );
+			break;
+		}
+
+		switch( stateBits & GLS_DSTBLEND_BITS )
+		{
+		case GLS_DSTBLEND_ZERO:
+			dstFactor = nvrhi::BlendFactor::Zero;
+			break;
+		case GLS_DSTBLEND_ONE:
+			dstFactor = nvrhi::BlendFactor::One;
+			break;
+		case GLS_DSTBLEND_SRC_COLOR:
+			dstFactor = nvrhi::BlendFactor::SrcColor;
+			break;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
+			dstFactor = nvrhi::BlendFactor::OneMinusSrcColor;
+			break;
+		case GLS_DSTBLEND_SRC_ALPHA:
+			dstFactor = nvrhi::BlendFactor::SrcAlpha;
+			break;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
+			dstFactor = nvrhi::BlendFactor::OneMinusSrcAlpha;
+			break;
+		case GLS_DSTBLEND_DST_ALPHA:
+			dstFactor = nvrhi::BlendFactor::DstAlpha;
+			break;
+		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
+			dstFactor = nvrhi::BlendFactor::OneMinusDstAlpha;
+			break;
+		default:
+			assert( !"GL_State: invalid dst blend state bits\n" );
+			break;
+		}
+
+		// Only actually update GL's blend func if blending is enabled.
+		if( srcFactor == nvrhi::BlendFactor::One && dstFactor == nvrhi::BlendFactor::Zero )
+		{
+			renderTarget.disableBlend( );
+		}
+		else
+		{
+			currentBlendState.setAlphaToCoverageEnable( true );
+			nvrhi::BlendState::RenderTarget renderTarget;
+			renderTarget.enableBlend( );
+			renderTarget.setSrcBlend( srcFactor );
+			renderTarget.setDestBlend( dstFactor );
+		}
+	}
+
+	//
+	// check depthmask
+	//
+	if( diff & GLS_DEPTHMASK )
+	{
+		if( stateBits & GLS_DEPTHMASK )
+		{
+			currentDepthStencilState.disableDepthWrite( );
+			currentDepthStencilState.disableDepthTest( );
+		}
+		else
+		{
+			currentDepthStencilState.enableDepthWrite( );
+			currentDepthStencilState.enableDepthTest( );
+		}
+	}
+
+	//
+	// check colormask
+	//
+	if( diff & ( GLS_REDMASK | GLS_GREENMASK | GLS_BLUEMASK | GLS_ALPHAMASK ) )
+	{
+		nvrhi::ColorMask mask{ nvrhi::ColorMask::All };
+		
+		if( stateBits & GLS_REDMASK ) mask = mask & ~nvrhi::ColorMask::Red;
+		if( stateBits & GLS_GREENMASK ) mask = mask & ~nvrhi::ColorMask::Green;
+		if( stateBits & GLS_BLUEMASK ) mask = mask & ~nvrhi::ColorMask::Blue;
+		if( stateBits & GLS_ALPHAMASK ) mask = mask & ~nvrhi::ColorMask::Alpha;
+
+		renderTarget.setColorWriteMask( mask );
+	}
+
+	currentBlendState.setRenderTarget( 0, renderTarget );
+
+	//
+	// fill/line mode
+	//
+	if( diff & GLS_POLYMODE_LINE )
+	{
+		if( stateBits & GLS_POLYMODE_LINE )
+		{
+			currentRasterState.setFillMode( nvrhi::RasterFillMode::Line );
+			currentRasterState.setCullNone( );
+		}
+		else
+		{
+			currentRasterState.setCullNone( );
+			currentRasterState.setFillMode( nvrhi::RasterFillMode::Fill );
+		}
+	}
+
+	//
+	// polygon offset
+	//
+	if( diff & GLS_POLYGON_OFFSET )
+	{
+		if( stateBits & GLS_POLYGON_OFFSET )
+		{
+			currentRasterState.enableQuadFill( );
+		}
+		else
+		{
+			currentRasterState.disableQuadFill();
+		}
+	}
+
+	nvrhi::DepthStencilState::StencilOpDesc stencilOp;
+
+	//
+	// stencil
+	//
+	if( diff & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_OP_BITS ) )
+	{
+		if( ( stateBits & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_OP_BITS ) ) != 0 )
+		{
+			currentDepthStencilState.enableStencil( );
+			currentDepthStencilState.enableDepthWrite( );
+		}
+		else
+		{
+			currentDepthStencilState.disableStencil( );
+			currentDepthStencilState.disableDepthWrite( );
+		}
+	}
+	if( diff & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_FUNC_REF_BITS | GLS_STENCIL_FUNC_MASK_BITS ) )
+	{
+		GLuint ref = GLuint( ( stateBits & GLS_STENCIL_FUNC_REF_BITS ) >> GLS_STENCIL_FUNC_REF_SHIFT );
+		GLuint mask = GLuint( ( stateBits & GLS_STENCIL_FUNC_MASK_BITS ) >> GLS_STENCIL_FUNC_MASK_SHIFT );
+		GLenum func = 0;
+
+		currentDepthStencilState.setStencilRefValue( ( stateBits & GLS_STENCIL_FUNC_REF_BITS ) >> GLS_STENCIL_FUNC_REF_SHIFT );
+		currentDepthStencilState.setStencilReadMask( ( stateBits & GLS_STENCIL_FUNC_MASK_BITS ) >> GLS_STENCIL_FUNC_MASK_SHIFT );
+		currentDepthStencilState.setStencilWriteMask( ( stateBits & GLS_STENCIL_FUNC_MASK_BITS ) >> GLS_STENCIL_FUNC_MASK_SHIFT );
+
+		switch( stateBits & GLS_STENCIL_FUNC_BITS )
+		{
+		case GLS_STENCIL_FUNC_NEVER:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Never );
+			break;
+		case GLS_STENCIL_FUNC_LESS:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Less );
+			break;
+		case GLS_STENCIL_FUNC_EQUAL:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Equal );
+			break;
+		case GLS_STENCIL_FUNC_LEQUAL:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::LessOrEqual );
+			break;
+		case GLS_STENCIL_FUNC_GREATER:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Greater );
+			break;
+		case GLS_STENCIL_FUNC_NOTEQUAL:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::NotEqual );
+			break;
+		case GLS_STENCIL_FUNC_GEQUAL:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::GreaterOrEqual );
+			break;
+		case GLS_STENCIL_FUNC_ALWAYS:
+			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Always );
+			break;
+		}
+	}
+	if( diff & ( GLS_STENCIL_OP_FAIL_BITS | GLS_STENCIL_OP_ZFAIL_BITS | GLS_STENCIL_OP_PASS_BITS ) )
+	{
+		GLenum sFail = 0;
+		GLenum zFail = 0;
+		GLenum pass = 0;
+
+		switch( stateBits & GLS_STENCIL_OP_FAIL_BITS )
+		{
+		case GLS_STENCIL_OP_FAIL_KEEP:
+			stencilOp.setFailOp( nvrhi::StencilOp::Keep );
+			break;
+		case GLS_STENCIL_OP_FAIL_ZERO:
+			stencilOp.setFailOp( nvrhi::StencilOp::Zero );
+			break;
+		case GLS_STENCIL_OP_FAIL_REPLACE:
+			stencilOp.setFailOp( nvrhi::StencilOp::Replace );
+			break;
+		case GLS_STENCIL_OP_FAIL_INCR:
+			stencilOp.setFailOp( nvrhi::StencilOp::IncrementAndClamp );
+			break;
+		case GLS_STENCIL_OP_FAIL_DECR:
+			stencilOp.setFailOp( nvrhi::StencilOp::DecrementAndClamp );
+			break;
+		case GLS_STENCIL_OP_FAIL_INVERT:
+			stencilOp.setFailOp( nvrhi::StencilOp::Invert );
+			break;
+		case GLS_STENCIL_OP_FAIL_INCR_WRAP:
+			stencilOp.setFailOp( nvrhi::StencilOp::IncrementAndWrap );
+			break;
+		case GLS_STENCIL_OP_FAIL_DECR_WRAP:
+			stencilOp.setFailOp( nvrhi::StencilOp::DecrementAndWrap );
+			break;
+		}
+		switch( stateBits & GLS_STENCIL_OP_ZFAIL_BITS )
+		{
+		case GLS_STENCIL_OP_ZFAIL_KEEP:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::Keep );
+			break;
+		case GLS_STENCIL_OP_ZFAIL_ZERO:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::Zero );
+			break;
+		case GLS_STENCIL_OP_ZFAIL_REPLACE:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::Replace );
+			break;
+		case GLS_STENCIL_OP_ZFAIL_INCR:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::IncrementAndClamp );
+			break;
+		case GLS_STENCIL_OP_ZFAIL_DECR:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::DecrementAndClamp );
+			break;
+		case GLS_STENCIL_OP_ZFAIL_INVERT:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::Invert );
+			break;
+		case GLS_STENCIL_OP_ZFAIL_INCR_WRAP:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::IncrementAndWrap );
+			break;
+		case GLS_STENCIL_OP_ZFAIL_DECR_WRAP:
+			stencilOp.setDepthFailOp( nvrhi::StencilOp::DecrementAndWrap );
+			break;
+		}
+		switch( stateBits & GLS_STENCIL_OP_PASS_BITS )
+		{
+		case GLS_STENCIL_OP_PASS_KEEP:
+			stencilOp.setPassOp( nvrhi::StencilOp::Keep );
+			break;
+		case GLS_STENCIL_OP_PASS_ZERO:
+			stencilOp.setPassOp( nvrhi::StencilOp::Zero );
+			break;
+		case GLS_STENCIL_OP_PASS_REPLACE:
+			stencilOp.setPassOp( nvrhi::StencilOp::Replace );
+			break;
+		case GLS_STENCIL_OP_PASS_INCR:
+			stencilOp.setPassOp( nvrhi::StencilOp::IncrementAndClamp );
+			break;
+		case GLS_STENCIL_OP_PASS_DECR:
+			stencilOp.setPassOp( nvrhi::StencilOp::DecrementAndClamp );
+			break;
+		case GLS_STENCIL_OP_PASS_INVERT:
+			stencilOp.setPassOp( nvrhi::StencilOp::Invert );
+			break;
+		case GLS_STENCIL_OP_PASS_INCR_WRAP:
+			stencilOp.setPassOp( nvrhi::StencilOp::IncrementAndWrap );
+			break;
+		case GLS_STENCIL_OP_PASS_DECR_WRAP:
+			stencilOp.setPassOp( nvrhi::StencilOp::DecrementAndWrap );
+			break;
+		}
+	}
+
+	currentDepthStencilState.setFrontFaceStencil( stencilOp );
+
+	glStateBits = stateBits;
 }
 
 /*
@@ -717,9 +1136,8 @@ idRenderBackend::SelectTexture
 */
 void idRenderBackend::GL_SelectTexture( int unit )
 {
+	context.currentImageParm = unit;
 }
-
-
 
 /*
 ====================
@@ -728,6 +1146,10 @@ idRenderBackend::GL_Scissor
 */
 void idRenderBackend::GL_Scissor( int x /* left*/, int y /* bottom */, int w, int h )
 {
+	// TODO Check if this is right.
+	currentScissor.Clear( );
+	currentScissor.AddPoint( x, y );
+	currentScissor.AddPoint( x + w, y + h );
 }
 
 /*
@@ -737,6 +1159,9 @@ idRenderBackend::GL_Viewport
 */
 void idRenderBackend::GL_Viewport( int x /* left */, int y /* bottom */, int w, int h )
 {
+	currentViewport.Clear( );
+	currentViewport.AddPoint( x, y );
+	currentViewport.AddPoint( x + w, y + h );
 }
 
 /*
@@ -755,6 +1180,20 @@ idRenderBackend::GL_DepthBoundsTest
 */
 void idRenderBackend::GL_DepthBoundsTest( const float zmin, const float zmax )
 {
+	if( !glConfig.depthBoundsTestAvailable || zmin > zmax )
+	{
+		return;
+	}
+
+	//if( zmin == 0.0f && zmax == 0.0f )
+	//{
+	//	glDisable( GL_DEPTH_BOUNDS_TEST_EXT );
+	//}
+	//else
+	//{
+	//	glEnable( GL_DEPTH_BOUNDS_TEST_EXT );
+	//	glDepthBoundsEXT( zmin, zmax );
+	//}
 }
 
 /*
@@ -764,6 +1203,12 @@ idRenderBackend::GL_Color
 */
 void idRenderBackend::GL_Color( float r, float g, float b, float a )
 {
+	float parm[4];
+	parm[0] = idMath::ClampFloat( 0.0f, 1.0f, r );
+	parm[1] = idMath::ClampFloat( 0.0f, 1.0f, g );
+	parm[2] = idMath::ClampFloat( 0.0f, 1.0f, b );
+	parm[3] = idMath::ClampFloat( 0.0f, 1.0f, a );
+	renderProgManager.SetRenderParm( RENDERPARM_COLOR, parm );
 }
 
 /*
@@ -773,6 +1218,16 @@ idRenderBackend::GL_Clear
 */
 void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stencilValue, float r, float g, float b, float a, bool clearHDR )
 {
+	// TODO: Do something if there is no depth-stencil attachment.
+	if( color )
+	{
+		nvrhi::utils::ClearColorAttachment( commandList, currentFrameBuffer->GetApiObject( ), 0, nvrhi::Color( r, g, b, a ) );
+	}
+
+	if( depth )
+	{
+		nvrhi::utils::ClearDepthStencilAttachment( commandList, currentFrameBuffer->GetApiObject( ), 1.f, stencilValue );
+	}
 }
 
 
@@ -783,7 +1238,7 @@ idRenderBackend::GL_GetCurrentState
 */
 uint64 idRenderBackend::GL_GetCurrentState() const
 {
-	return 0;
+	return glStateBits;
 }
 
 /*
@@ -793,7 +1248,7 @@ idRenderBackend::GL_GetCurrentStateMinusStencil
 */
 uint64 idRenderBackend::GL_GetCurrentStateMinusStencil() const
 {
-	return 0;
+	return GL_GetCurrentState( ) & ~( GLS_STENCIL_OP_BITS | GLS_STENCIL_FUNC_BITS | GLS_STENCIL_FUNC_REF_BITS | GLS_STENCIL_FUNC_MASK_BITS );
 }
 
 
@@ -806,6 +1261,132 @@ See if some cvars that we watch have changed
 */
 void idRenderBackend::CheckCVars()
 {
+	// gamma stuff
+	if( r_gamma.IsModified( ) || r_brightness.IsModified( ) )
+	{
+		r_gamma.ClearModified( );
+		r_brightness.ClearModified( );
+		R_SetColorMappings( );
+	}
+
+	// filtering
+	if( r_maxAnisotropicFiltering.IsModified( ) || r_useTrilinearFiltering.IsModified( ) || r_lodBias.IsModified( ) )
+	{
+		idLib::Printf( "Updating texture filter parameters.\n" );
+		r_maxAnisotropicFiltering.ClearModified( );
+		r_useTrilinearFiltering.ClearModified( );
+		r_lodBias.ClearModified( );
+
+		for( int i = 0; i < globalImages->images.Num( ); i++ )
+		{
+			if( globalImages->images[i] )
+			{
+				globalImages->images[i]->Bind( );
+				globalImages->images[i]->SetTexParameters( );
+			}
+		}
+	}
+
+	if( r_useSeamlessCubeMap.IsModified( ) )
+	{
+		r_useSeamlessCubeMap.ClearModified( );
+		if( glConfig.seamlessCubeMapAvailable )
+		{
+			if( r_useSeamlessCubeMap.GetBool( ) )
+			{
+				//glEnable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
+			}
+			else
+			{
+				//glDisable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
+			}
+		}
+	}
+
+
+	// SRS - Enable SDL-driven vync changes without restart for UNIX-like OSs
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+	extern idCVar r_swapInterval;
+	if( r_swapInterval.IsModified( ) )
+	{
+		r_swapInterval.ClearModified( );
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		if( SDL_GL_SetSwapInterval( r_swapInterval.GetInteger( ) ) < 0 )
+		{
+			common->Warning( "Vsync changes not supported without restart" );
+		}
+#else
+		if( SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, r_swapInterval.GetInteger( ) ) < 0 )
+		{
+			common->Warning( "Vsync changes not supported without restart" );
+		}
+#endif
+	}
+#endif
+	// SRS end
+	if( r_antiAliasing.IsModified( ) )
+	{
+		switch( r_antiAliasing.GetInteger( ) )
+		{
+		case ANTI_ALIASING_MSAA_2X:
+		case ANTI_ALIASING_MSAA_4X:
+		case ANTI_ALIASING_MSAA_8X:
+			if( r_antiAliasing.GetInteger( ) > 0 )
+			{
+				//glEnable( GL_MULTISAMPLE );
+			}
+			break;
+
+		default:
+			//glDisable( GL_MULTISAMPLE );
+			break;
+		}
+	}
+
+	if( r_usePBR.IsModified( ) ||
+		r_useHDR.IsModified( ) ||
+		r_useHalfLambertLighting.IsModified( ) ||
+		r_pbrDebug.IsModified( ) )
+	{
+		bool needShaderReload = false;
+
+		if( r_usePBR.GetBool( ) && r_useHalfLambertLighting.GetBool( ) )
+		{
+			r_useHalfLambertLighting.SetBool( false );
+
+			needShaderReload = true;
+		}
+
+		needShaderReload |= r_useHDR.IsModified( );
+		needShaderReload |= r_pbrDebug.IsModified( );
+
+		r_usePBR.ClearModified( );
+		r_useHDR.ClearModified( );
+		r_useHalfLambertLighting.ClearModified( );
+		r_pbrDebug.ClearModified( );
+
+		renderProgManager.KillAllShaders( );
+		renderProgManager.LoadAllShaders( );
+	}
+
+	// RB: turn off shadow mapping for OpenGL drivers that are too slow
+	switch( glConfig.driverType )
+	{
+	case GLDRV_OPENGL_ES2:
+	case GLDRV_OPENGL_ES3:
+		//case GLDRV_OPENGL_MESA:
+		r_useShadowMapping.SetInteger( 0 );
+		break;
+
+	default:
+		break;
+	}
+	// RB end
+}
+
+void idRenderBackend::BackBufferResizing( )
+{
+	currentPipeline = nullptr;
 }
 
 /*
@@ -823,6 +1404,20 @@ idRenderBackend::DrawFlickerBox
 */
 void idRenderBackend::DrawFlickerBox()
 {
+	if( !r_drawFlickerBox.GetBool( ) )
+	{
+		return;
+	}
+	//if( tr.frameCount & 1 )
+	//{
+	//	glClearColor( 1, 0, 0, 1 );
+	//}
+	//else
+	//{
+	//	glClearColor( 0, 1, 0, 1 );
+	//}
+	//glScissor( 0, 0, 256, 256 );
+	//glClear( GL_COLOR_BUFFER_BIT );
 }
 
 /*
@@ -832,6 +1427,39 @@ idRenderBackend::SetBuffer
 */
 void idRenderBackend::SetBuffer( const void* data )
 {
+	// see which draw buffer we want to render the frame to
+
+	const setBufferCommand_t* cmd = ( const setBufferCommand_t* )data;
+
+	RENDERLOG_PRINTF( "---------- RB_SetBuffer ---------- to buffer # %d\n", cmd->buffer );
+
+	currentScissor.Clear( );
+	currentScissor.AddPoint( 0, 0 );
+	currentScissor.AddPoint( tr.GetWidth( ), tr.GetHeight( ) );
+
+	// clear screen for debugging
+	// automatically enable this with several other debug tools
+	// that might leave unrendered portions of the screen
+	if( r_clear.GetFloat( ) || idStr::Length( r_clear.GetString( ) ) != 1 || r_singleArea.GetBool( ) || r_showOverDraw.GetBool( ) )
+	{
+		float c[3];
+		if( sscanf( r_clear.GetString( ), "%f %f %f", &c[0], &c[1], &c[2] ) == 3 )
+		{
+			GL_Clear( true, false, false, 0, c[0], c[1], c[2], 1.0f, true );
+		}
+		else if( r_clear.GetInteger( ) == 2 )
+		{
+			GL_Clear( true, false, false, 0, 0.0f, 0.0f, 0.0f, 1.0f, true );
+		}
+		else if( r_showOverDraw.GetBool( ) )
+		{
+			GL_Clear( true, false, false, 0, 1.0f, 1.0f, 1.0f, 1.0f, true );
+		}
+		else
+		{
+			GL_Clear( true, false, false, 0, 0.4f, 0.0f, 0.25f, 1.0f, true );
+		}
+	}
 }
 
 /*
@@ -861,6 +1489,14 @@ idRenderBackend::idRenderBackend
 */
 idRenderBackend::idRenderBackend()
 {
+	glcontext.frameCounter = 0;
+	glcontext.frameParity = 0;
+
+	memset( glcontext.tmu, 0, sizeof( glcontext.tmu ) );
+	memset( glcontext.stencilOperations, 0, sizeof( glcontext.stencilOperations ) );
+
+	memset( glcontext.renderLogMainBlockTimeQueryIds, 0, sizeof( glcontext.renderLogMainBlockTimeQueryIds ) );
+	memset( glcontext.renderLogMainBlockTimeQueryIssued, 0, sizeof( glcontext.renderLogMainBlockTimeQueryIssued ) );
 }
 
 /*
@@ -910,5 +1546,25 @@ idRenderBackend::ResizeImages
 */
 void idRenderBackend::ResizeImages( )
 {
-	// TODO resize framebuffers here
+}
+
+void idRenderBackend::SetCurrentImage( idImage* image )
+{
+	context.imageParms[context.currentImageParm] = image;
+}
+
+idImage* idRenderBackend::GetCurrentImage( )
+{
+	return context.imageParms[context.currentImageParm];
+}
+
+void idRenderBackend::BindProgram( nvrhi::ShaderHandle vShader, nvrhi::ShaderHandle fShader, nvrhi::InputLayoutHandle layout, nvrhi::BindingLayoutHandle bindingLayout )
+{
+	vertexShader = vShader;
+	pixelShader = fShader;
+	inputLayout = layout;
+	currentBindingLayout = bindingLayout;
+
+	// reset the pipeline.
+	currentPipeline = nullptr;
 }

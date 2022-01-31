@@ -36,6 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../sound/sound.h"
 
+#include "sys/DeviceManager.h"
 
 // RB begin
 #if defined(USE_DOOMCLASSIC)
@@ -54,6 +55,8 @@ If you have questions concerning this license or the applicable additional terms
 #else
 	#define BUILD_DEBUG ""
 #endif
+
+extern DeviceManager* deviceManager;
 
 struct version_s
 {
@@ -1303,7 +1306,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		cvarSystem->ClearModifiedFlags( CVAR_ARCHIVE );
 
 		// init OpenGL, which will open a window and connect sound and input hardware
-		renderSystem->InitOpenGL();
+		renderSystem->InitBackend();
 
 		// Support up to 2 digits after the decimal point
 		com_engineHz_denominator = 100LL * com_engineHz.GetFloat();
@@ -1335,6 +1338,9 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 			splashScreen = declManager->FindMaterial( "guis/assets/splash/legal_english" );
 		}
 
+		// Load in the splash screen images.
+		globalImages->LoadDeferredImages( );
+
 		const int legalMinTime = 4000;
 		const bool showVideo = ( !com_skipIntroVideos.GetBool() && fileSystem->UsingResourceFiles() );
 		const bool showSplash = true;
@@ -1353,7 +1359,6 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 			// SRS - OSX needs this for some OpenGL drivers, otherwise renders leftover image before splash
 			RenderSplash();
 		}
-
 
 		int legalStartTime = Sys_Milliseconds();
 		declManager->Init2();
@@ -1485,6 +1490,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		com_fullyInitialized = true;
 
+		globalImages->LoadDeferredImages( );
 
 		// No longer need the splash screen
 		if( splashScreen != NULL )

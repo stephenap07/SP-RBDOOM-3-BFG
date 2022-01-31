@@ -3,6 +3,9 @@
 
 #include "DeviceManager.h"
 
+// Either move RenderPass to sys or move window resizing logic
+#include "renderer/RenderPass.h"
+
 DeviceManager* DeviceManager::Create( nvrhi::GraphicsAPI api )
 {
     switch( api )
@@ -33,31 +36,13 @@ void DeviceManager::GetWindowDimensions( int& width, int& height )
 
 void DeviceManager::BackBufferResizing( )
 {
-    swapFrameBuffers.Clear( );
-
-    for( auto it : renderPasses )
-    {
-        it->BackBufferResizing( );
-    }
+    tr.backend.BackBufferResizing( );
+    Framebuffer::Shutdown( );
 }
 
 void DeviceManager::BackBufferResized( )
 {
-    for( auto it : renderPasses )
-    {
-        it->BackBufferResized( deviceParms.backBufferWidth,
-            deviceParms.backBufferHeight,
-            deviceParms.swapChainSampleCount );
-    }
-
-    uint32_t backBufferCount = GetBackBufferCount( );
-    swapFrameBuffers.Resize( backBufferCount );
-    swapFrameBuffers.SetNum( backBufferCount );
-    for( uint32_t index = 0; index < backBufferCount; index++ )
-    {
-        swapFrameBuffers[index] = GetDevice( )->createFramebuffer(
-            nvrhi::FramebufferDesc( ).addColorAttachment( GetBackBuffer( index ) ) );
-    }
+    Framebuffer::ResizeFramebuffers( );
 }
 
 const DeviceCreationParameters& DeviceManager::GetDeviceParams( )
@@ -72,8 +57,12 @@ nvrhi::IFramebuffer* DeviceManager::GetCurrentFramebuffer( )
 
 nvrhi::IFramebuffer* DeviceManager::GetFramebuffer( uint32_t index )
 {
-    if (index < swapFrameBuffers.Num() )
-        return swapFrameBuffers[index];
+    if( index < globalFramebuffers.swapFramebuffers.Num( ) )
+    {
+        return globalFramebuffers.swapFramebuffers[index]->GetApiObject( );
+    }
+
+    return nullptr;
 }
 
 void DeviceManager::AddRenderPassToBack( IRenderPass* pRenderPass )

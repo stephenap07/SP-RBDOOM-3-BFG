@@ -45,7 +45,7 @@ public:
 private:
 
 	/// Submits line drawing primitives to the front-end.
-	void SubmitDebugLines();
+	void SubmitDebugLines( nvrhi::ICommandList* commandList );
 
 	/// Submits text drawing primitives to the front-end.
 	void SubmitDebugText();
@@ -95,7 +95,7 @@ void RenderDebug_local::Shutdown()
 
 void RenderDebug_local::SubmitForDrawing()
 {
-	SubmitDebugLines();
+	SubmitDebugLines( nullptr );
 	SubmitDebugText();
 	ClearAll();
 }
@@ -135,7 +135,7 @@ void RenderDebug_local::DebugLine( const idVec4& color, const idVec3& start, con
 	++_numActiveDebugLine;
 }
 
-void RenderDebug_local::SubmitDebugLines()
+void RenderDebug_local::SubmitDebugLines( nvrhi::ICommandList* commandList )
 {
 	if( _numActiveDebugLine <= 0 )
 	{
@@ -143,8 +143,8 @@ void RenderDebug_local::SubmitDebugLines()
 	}
 
 	// Each debug line will have 4 vertices.
-	vertCacheHandle_t vertexHandle = vertexCache.AllocVertex( nullptr, 2 * ( _numActiveDebugLine + 1 ) );
-	vertCacheHandle_t indexHandle = vertexCache.AllocIndex( nullptr, 2 * ( _numActiveDebugLine + 1 ) );
+	vertCacheHandle_t vertexHandle = vertexCache.AllocVertex( nullptr, 2 * ( _numActiveDebugLine + 1 ), sizeof( idDrawVert ), commandList );
+	vertCacheHandle_t indexHandle = vertexCache.AllocIndex( nullptr, 2 * ( _numActiveDebugLine + 1 ), sizeof( triIndex_t ), commandList );
 
 	idDrawVert* vertexPtr = ( idDrawVert* )vertexCache.MappedVertexBuffer( vertexHandle );
 	triIndex_t* indexPointer = ( triIndex_t* )vertexCache.MappedIndexBuffer( indexHandle );

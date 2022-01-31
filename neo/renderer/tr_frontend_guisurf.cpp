@@ -323,8 +323,8 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 
 			// allocate vertices
 
-			vertCacheHandle_t vertexBlock = vertexCache.AllocVertex( NULL, 4 );
-			vertCacheHandle_t indexBlock = vertexCache.AllocIndex( NULL, 6 );
+			vertCacheHandle_t vertexBlock = vertexCache.AllocVertex( NULL, 4, sizeof( idDrawVert ), nullptr );
+			vertCacheHandle_t indexBlock = vertexCache.AllocIndex( NULL, 6, sizeof( triIndex_t ), nullptr );
 			idDrawVert* vertexPointer = ( idDrawVert* )vertexCache.MappedVertexBuffer( vertexBlock );
 			triIndex_t* indexPointer = ( triIndex_t* )vertexCache.MappedIndexBuffer( indexBlock );
 

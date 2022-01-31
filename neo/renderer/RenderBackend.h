@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderLog.h"
 
+#include "Passes/CommonPasses.h"
+
 bool			GL_CheckErrors_( const char* filename, int line );
 #if 1 // !defined(RETAIL)
 	#define         GL_CheckErrors()	GL_CheckErrors_(__FILE__, __LINE__)
@@ -268,6 +270,8 @@ public:
 	void				Print();
 	void				CheckCVars();
 
+	void				BackBufferResizing( );
+
 	static void			ImGui_Init();
 	static void			ImGui_Shutdown();
 	static void			ImGui_RenderDrawLists( ImDrawData* draw_data );
@@ -285,7 +289,7 @@ private:
 	void				DrawView( const void* data, const int stereoEye );
 	void				CopyRender( const void* data );
 
-	void				BindVariableStageImage( const textureStage_t* texture, const float* shaderRegisters );
+	void				BindVariableStageImage( const textureStage_t* texture, const float* shaderRegisters, nvrhi::ICommandList* commandList );
 	void				PrepareStageTexturing( const shaderStage_t* pStage, const drawSurf_t* surf );
 	void				FinishStageTexturing( const shaderStage_t* pStage, const drawSurf_t* surf );
 
@@ -477,30 +481,35 @@ private:
 	// RB end
 
 private:
-#if defined( USE_DX12 )
+	idScreenRect					currentViewport;
+	nvrhi::BufferHandle				currentVertexBuffer;
+	nvrhi::BufferHandle				currentIndexBuffer;
+	nvrhi::BindingSetHandle			currentBindingSet;
+	nvrhi::BindingLayoutHandle		currentBindingLayout;
+	nvrhi::GraphicsPipelineHandle	currentPipeline;
+	nvrhi::RenderState				currentRenderState;
 
-	nvrhi::CommandListHandle	commandList;
-	idList<IRenderPass*>		renderPasses;
+	Framebuffer*					currentFrameBuffer;
+	nvrhi::CommandListHandle		commandList;
+	idList<IRenderPass*>			renderPasses;
+	CommonRenderPasses				commonPasses;
 
-#elif !defined( USE_VULKAN )
-	int					currenttmu;
+	BindingCache					bindingCache;
 
-	unsigned int		currentVertexBuffer;
-	unsigned int		currentIndexBuffer;
-	Framebuffer*		currentFramebuffer;		// RB: for offscreen rendering
+	nvrhi::InputLayoutHandle		inputLayout;
 
-	vertexLayoutType_t	vertexLayout;
-
-	float				polyOfsScale;
-	float				polyOfsBias;
+	nvrhi::ShaderHandle             vertexShader;
+	nvrhi::ShaderHandle             pixelShader;
 
 public:
-	int					GetCurrentTextureUnit() const
-	{
-		return currenttmu;
-	}
 
-#endif // !defined( USE_VULKAN )
+	void				BindProgram( nvrhi::ShaderHandle vShader,
+		nvrhi::ShaderHandle fShader,
+		nvrhi::InputLayoutHandle layout,
+		nvrhi::BindingLayoutHandle bindingLayout );
+
+	void				SetCurrentImage( idImage* image );
+	idImage*			GetCurrentImage( );
 };
 
 #endif

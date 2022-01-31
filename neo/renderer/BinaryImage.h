@@ -59,7 +59,7 @@ public:
 	ID_TIME_T			LoadFromGeneratedFile( ID_TIME_T sourceFileTime );
 	ID_TIME_T			WriteGeneratedFile( ID_TIME_T sourceFileTime );
 
-	const bimageFile_t& 	GetFileHeader()
+	const bimageFile_t& GetFileHeader()
 	{
 		return fileData;
 	}
@@ -77,6 +77,7 @@ public:
 		return images[i].data;
 	}
 	static void			GetGeneratedFileName( idStr& gfn, const char* imageName );
+
 private:
 	idStr				imgName;			// game path, including extension (except for cube maps), may be an image program
 	bimageFile_t		fileData;

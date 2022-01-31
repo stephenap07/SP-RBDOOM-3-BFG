@@ -51,14 +51,15 @@ class Framebuffer
 public:
 
 	Framebuffer( const char* name, int width, int height );
+	Framebuffer( const char* name, const nvrhi::FramebufferDesc& desc);
+
 	virtual ~Framebuffer();
 
 	static void				Init();
 	static void				Shutdown();
-
 	static void				CheckFramebuffers();
-
 	static Framebuffer*		Find( const char* name );
+	static void				ResizeFramebuffers( );
 
 	void					Bind();
 	bool					IsBound();
@@ -103,31 +104,41 @@ public:
 		height = height_;
 	}
 
+	nvrhi::IFramebuffer*	GetApiObject( )
+	{
+		return apiObject;
+	}
+
+	idScreenRect			GetViewPortInfo( ) const;
+
 private:
 	idStr					fboName;
 
 	// FBO object
-	uint32_t				frameBuffer;
+	uint32_t					frameBuffer;
 
-	uint32_t				colorBuffers[16];
-	int						colorFormat;
+	uint32_t					colorBuffers[16];
+	int							colorFormat;
 
-	uint32_t				depthBuffer;
-	int						depthFormat;
+	uint32_t					depthBuffer;
+	int							depthFormat;
 
-	uint32_t				stencilBuffer;
-	int						stencilFormat;
+	uint32_t					stencilBuffer;
+	int							stencilFormat;
 
-	int						width;
-	int						height;
+	int							width;
+	int							height;
 
-	bool					msaaSamples;
+	bool						msaaSamples;
+
+	nvrhi::FramebufferHandle	apiObject;
 
 	static idList<Framebuffer*>	framebuffers;
 };
 
 struct globalFramebuffers_t
 {
+	idList<Framebuffer*>		swapFramebuffers;
 	Framebuffer*				shadowFBO[MAX_SHADOWMAP_RESOLUTIONS];
 	Framebuffer*				hdrFBO;
 #if defined(USE_HDR_MSAA)
@@ -145,6 +156,7 @@ struct globalFramebuffers_t
 	Framebuffer*				smaaEdgesFBO;
 	Framebuffer*				smaaBlendFBO;
 };
+
 extern globalFramebuffers_t globalFramebuffers;
 
 #endif // __FRAMEBUFFER_H__

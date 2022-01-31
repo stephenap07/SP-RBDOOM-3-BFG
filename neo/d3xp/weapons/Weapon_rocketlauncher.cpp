@@ -56,17 +56,17 @@ stateResult_t idWeaponRocketLauncher::Raise( stateParms_t* parms )
 
 	switch( parms->stage )
 	{
-	case RISING_NOTSET:
-		owner->Event_PlayAnim( ANIMCHANNEL_ALL, "raise", false );
-		parms->stage = RISING_WAIT;
-		return SRESULT_WAIT;
+		case RISING_NOTSET:
+			owner->Event_PlayAnim( ANIMCHANNEL_ALL, "raise", false );
+			parms->stage = RISING_WAIT;
+			return SRESULT_WAIT;
 
-	case RISING_WAIT:
-		if( owner->Event_AnimDone( ANIMCHANNEL_ALL, ROCKETLAUNCHER_RAISE_TO_IDLE ) )
-		{
-			return SRESULT_DONE;
-		}
-		return SRESULT_WAIT;
+		case RISING_WAIT:
+			if( owner->Event_AnimDone( ANIMCHANNEL_ALL, ROCKETLAUNCHER_RAISE_TO_IDLE ) )
+			{
+				return SRESULT_DONE;
+			}
+			return SRESULT_WAIT;
 	}
 
 	return SRESULT_ERROR;
@@ -88,18 +88,18 @@ stateResult_t idWeaponRocketLauncher::Lower( stateParms_t* parms )
 
 	switch( parms->stage )
 	{
-	case LOWERING_NOTSET:
-		owner->Event_PlayAnim( ANIMCHANNEL_ALL, "putaway", false );
-		parms->stage = LOWERING_WAIT;
-		return SRESULT_WAIT;
+		case LOWERING_NOTSET:
+			owner->Event_PlayAnim( ANIMCHANNEL_ALL, "putaway", false );
+			parms->stage = LOWERING_WAIT;
+			return SRESULT_WAIT;
 
-	case LOWERING_WAIT:
-		if( owner->Event_AnimDone( ANIMCHANNEL_ALL, 0 ) )
-		{
-			SetState( "Holstered" );
-			return SRESULT_DONE;
-		}
-		return SRESULT_WAIT;
+		case LOWERING_WAIT:
+			if( owner->Event_AnimDone( ANIMCHANNEL_ALL, 0 ) )
+			{
+				SetState( "Holstered" );
+				return SRESULT_DONE;
+			}
+			return SRESULT_WAIT;
 	}
 
 	return SRESULT_ERROR;
@@ -120,15 +120,15 @@ stateResult_t idWeaponRocketLauncher::Idle( stateParms_t* parms )
 
 	switch( parms->stage )
 	{
-	case IDLE_NOTSET:
-		owner->Event_WeaponReady( );
-		owner->Event_PlayCycle( ANIMCHANNEL_ALL, "idle" );
-		parms->stage = IDLE_WAIT;
-		return SRESULT_WAIT;
+		case IDLE_NOTSET:
+			owner->Event_WeaponReady( );
+			owner->Event_PlayCycle( ANIMCHANNEL_ALL, "idle" );
+			parms->stage = IDLE_WAIT;
+			return SRESULT_WAIT;
 
-	case IDLE_WAIT:
-		// Do nothing.
-		return SRESULT_DONE;
+		case IDLE_WAIT:
+			// Do nothing.
+			return SRESULT_DONE;
 	}
 
 	return SRESULT_ERROR;
@@ -157,28 +157,28 @@ stateResult_t idWeaponRocketLauncher::Fire( stateParms_t* parms )
 
 	switch( parms->stage )
 	{
-	case FIRE_NOTSET:
-		next_attack = gameLocal.realClientTime + SEC2MS( ROCKETLAUNCHER_FIRERATE );
+		case FIRE_NOTSET:
+			next_attack = gameLocal.realClientTime + SEC2MS( ROCKETLAUNCHER_FIRERATE );
 
-		if( ammoClip == ROCKETLAUNCHER_LOWAMMO )
-		{
-			int length;
-			owner->StartSoundShader( snd_lowammo, SND_CHANNEL_ITEM, 0, false, &length );
-		}
+			if( ammoClip == ROCKETLAUNCHER_LOWAMMO )
+			{
+				int length;
+				owner->StartSoundShader( snd_lowammo, SND_CHANNEL_ITEM, 0, false, &length );
+			}
 
-		owner->Event_LaunchProjectiles( ROCKETLAUNCHER_NUMPROJECTILES, spread, 0, 1, 1 );
+			owner->Event_LaunchProjectiles( ROCKETLAUNCHER_NUMPROJECTILES, spread, 0, 1, 1 );
 
-		owner->Event_PlayAnim( ANIMCHANNEL_ALL, "fire", false );
-		parms->stage = FIRE_WAIT;
+			owner->Event_PlayAnim( ANIMCHANNEL_ALL, "fire", false );
+			parms->stage = FIRE_WAIT;
 
-		return SRESULT_WAIT;
+			return SRESULT_WAIT;
 
-	case FIRE_WAIT:
-		if( owner->Event_AnimDone( ANIMCHANNEL_ALL, ROCKETLAUNCHER_FIRE_TO_IDLE ) )
-		{
-			return SRESULT_DONE;
-		}
-		return SRESULT_WAIT;
+		case FIRE_WAIT:
+			if( owner->Event_AnimDone( ANIMCHANNEL_ALL, ROCKETLAUNCHER_FIRE_TO_IDLE ) )
+			{
+				return SRESULT_DONE;
+			}
+			return SRESULT_WAIT;
 	}
 
 	return SRESULT_ERROR;
@@ -209,36 +209,36 @@ stateResult_t idWeaponRocketLauncher::Reload( stateParms_t* parms )
 
 	switch( parms->stage )
 	{
-	case RELOAD_NOTSET:
+		case RELOAD_NOTSET:
 
-		if( ammoClip < clip_size )
-		{
-			owner->Event_PlayAnim( ANIMCHANNEL_ALL, "reload", false );
-			parms->stage = RELOAD_WAIT;
-			return SRESULT_WAIT;
-		}
-
-	case RELOAD_WAIT:
-		if( owner->Event_AnimDone( ANIMCHANNEL_ALL, 0 ) )
-		{
-			if( ( ammoClip < clip_size ) && ( ammoClip < ammoAvail ) )
+			if( ammoClip < clip_size )
 			{
-				parms->stage = RELOAD_NOTSET;
-				owner->Event_AddToClip( ROCKETLAUNCHER_RELOADRATE );
+				owner->Event_PlayAnim( ANIMCHANNEL_ALL, "reload", false );
+				parms->stage = RELOAD_WAIT;
 				return SRESULT_WAIT;
 			}
 
-			owner->Event_AddToClip( owner->ClipSize( ) );
-			return SRESULT_DONE;
-		}
-		return SRESULT_WAIT;
+		case RELOAD_WAIT:
+			if( owner->Event_AnimDone( ANIMCHANNEL_ALL, 0 ) )
+			{
+				if( ( ammoClip < clip_size ) && ( ammoClip < ammoAvail ) )
+				{
+					parms->stage = RELOAD_NOTSET;
+					owner->Event_AddToClip( ROCKETLAUNCHER_RELOADRATE );
+					return SRESULT_WAIT;
+				}
 
-	case RELOAD_END:
-		if( owner->Event_AnimDone( ANIMCHANNEL_ALL, 0 ) )
-		{
-			return SRESULT_DONE;
-		}
-		return SRESULT_WAIT;
+				owner->Event_AddToClip( owner->ClipSize( ) );
+				return SRESULT_DONE;
+			}
+			return SRESULT_WAIT;
+
+		case RELOAD_END:
+			if( owner->Event_AnimDone( ANIMCHANNEL_ALL, 0 ) )
+			{
+				return SRESULT_DONE;
+			}
+			return SRESULT_WAIT;
 	}
 
 

@@ -75,7 +75,7 @@ static int l_initWaitingSupport( lua_State* L, double currentTime )
 	return 0;
 }
 
-// Delta time in seconds. 
+// Delta time in seconds.
 static int l_wakeUpWaitingSeconds( lua_State* L, double deltaTime )
 {
 	lua_getglobal( L, "id4" );
@@ -84,7 +84,7 @@ static int l_wakeUpWaitingSeconds( lua_State* L, double deltaTime )
 	int error = lua_pcall( L, 1, 0, 0 );
 	if( error )
 	{
-		gameLocal.Error("%s\n", lua_tostring( L, -1 ) );
+		gameLocal.Error( "%s\n", lua_tostring( L, -1 ) );
 		lua_pop( L, 1 );
 		return 1;
 	}
@@ -109,7 +109,7 @@ static int SetLuaSearchPath( lua_State* L, const char* path )
 }
 
 ScriptManager::ScriptManager()
-	: luaThread(nullptr)
+	: luaThread( nullptr )
 {
 }
 
@@ -124,10 +124,10 @@ bool ScriptManager::Init()
 	luaThread = new LuaThread( );
 
 	luaThread->Init( );
-	
+
 	// Add remaining support systems.
-	l_initWaitingSupport( luaThread->LuaState(), (double)gameLocal.time * 0.001 );
-	
+	l_initWaitingSupport( luaThread->LuaState(), ( double )gameLocal.time * 0.001 );
+
 	return true;
 }
 
@@ -181,7 +181,7 @@ void ScriptManager::Think( int mSeconds )
 	}
 
 	int deltaMs = mSeconds - startTime;
-	if (firstThink)
+	if( firstThink )
 	{
 		deltaMs = 0;
 	}
@@ -318,10 +318,10 @@ void LuaThread::InitLuaState( )
 void LuaThread::Restart( )
 {
 	if( !LoadLuaScript( "script/scheduler.lua" ) ||
-		!LoadLuaScript( "script/state.lua" ) ||
-		!LoadLuaScript( "script/main.lua" ) )
+			!LoadLuaScript( "script/state.lua" ) ||
+			!LoadLuaScript( "script/main.lua" ) )
 	{
-		gameLocal.Error("Failed to load lua scripts");
+		gameLocal.Error( "Failed to load lua scripts" );
 	}
 
 	lua_getglobal( luaState, "main" );

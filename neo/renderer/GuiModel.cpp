@@ -87,10 +87,10 @@ void idGuiModel::ReadFromDemo( idDemoFile* demo )
 idGuiModel::BeginFrame
 ================
 */
-void idGuiModel::BeginFrame()
+void idGuiModel::BeginFrame( nvrhi::ICommandList* commandList )
 {
-	vertexBlock = vertexCache.AllocVertex( NULL, MAX_VERTS );
-	indexBlock = vertexCache.AllocIndex( NULL, MAX_INDEXES );
+	vertexBlock = vertexCache.AllocVertex( NULL, MAX_VERTS, sizeof( idDrawVert ), commandList );
+	indexBlock = vertexCache.AllocIndex( NULL, MAX_INDEXES, sizeof( idTriList ), commandList );
 	vertexPointer = ( idDrawVert* )vertexCache.MappedVertexBuffer( vertexBlock );
 	indexPointer = ( triIndex_t* )vertexCache.MappedIndexBuffer( indexBlock );
 	numVerts = 0;
@@ -283,38 +283,34 @@ void idGuiModel::EmitFullScreen( textureStage_t* textureStage )
 		screenSize.y = textureStage->height;
 	}
 
+	float xScale = 1.0f / screenSize.x;
+	float yScale = -1.0f / screenSize.y;  // flip y
+	float zScale = -1.0f;
+
 	viewDef->scissor.x1 = 0;
 	viewDef->scissor.y1 = 0;
 	viewDef->scissor.x2 = viewDef->viewport.x2 - viewDef->viewport.x1;
 	viewDef->scissor.y2 = viewDef->viewport.y2 - viewDef->viewport.y1;
 
 	// RB: IMPORTANT - the projectionMatrix has a few changes to make it work with Vulkan
-	viewDef->projectionMatrix[0 * 4 + 0] = 2.0f / screenSize.x;
+	viewDef->projectionMatrix[0 * 4 + 0] = 2.f * xScale;
 	viewDef->projectionMatrix[0 * 4 + 1] = 0.0f;
 	viewDef->projectionMatrix[0 * 4 + 2] = 0.0f;
 	viewDef->projectionMatrix[0 * 4 + 3] = 0.0f;
 
 	viewDef->projectionMatrix[1 * 4 + 0] = 0.0f;
-#if defined(USE_VULKAN)
-	viewDef->projectionMatrix[1 * 4 + 1] = 2.0f / screenSize.y;
-#else
-	viewDef->projectionMatrix[1 * 4 + 1] = -2.0f / screenSize.y;
-#endif
+	viewDef->projectionMatrix[1 * 4 + 1] = 2.f * yScale;
 	viewDef->projectionMatrix[1 * 4 + 2] = 0.0f;
 	viewDef->projectionMatrix[1 * 4 + 3] = 0.0f;
 
 	viewDef->projectionMatrix[2 * 4 + 0] = 0.0f;
 	viewDef->projectionMatrix[2 * 4 + 1] = 0.0f;
-	viewDef->projectionMatrix[2 * 4 + 2] = -1.0f;
+	viewDef->projectionMatrix[2 * 4 + 2] = zScale;
 	viewDef->projectionMatrix[2 * 4 + 3] = 0.0f;
 
-	viewDef->projectionMatrix[3 * 4 + 0] = -1.0f; // RB: was -2.0f
-#if defined(USE_VULKAN)
-	viewDef->projectionMatrix[3 * 4 + 1] = -1.0f;
-#else
-	viewDef->projectionMatrix[3 * 4 + 1] = 1.0f;
-#endif
-	viewDef->projectionMatrix[3 * 4 + 2] = 0.0f; // RB: was 1.0f
+	viewDef->projectionMatrix[3 * 4 + 0] = -( screenSize.x * xScale );
+	viewDef->projectionMatrix[3 * 4 + 1] = -( screenSize.y * yScale );
+	viewDef->projectionMatrix[3 * 4 + 2] = 0.0f;
 	viewDef->projectionMatrix[3 * 4 + 3] = 1.0f;
 
 	// make a tech5 renderMatrix for faster culling

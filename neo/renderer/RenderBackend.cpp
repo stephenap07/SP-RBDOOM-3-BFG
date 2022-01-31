@@ -34,11 +34,12 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "framework/Common_local.h"
 #include "RenderCommon.h"
+#include "RenderPass.h"
 #include "Framebuffer.h"
 
 #include "imgui/ImGui_Hooks.h"
 #include <sys/DeviceManager.h>
-
+#include <nvrhi/utils.h>
 
 idCVar r_drawEyeColor( "r_drawEyeColor", "0", CVAR_RENDERER | CVAR_BOOL, "Draw a colored box, red = left eye, blue = right eye, grey = non-stereo" );
 idCVar r_motionBlur( "r_motionBlur", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_ARCHIVE, "1 - 5, log2 of the number of motion blur samples" );
@@ -49,6 +50,8 @@ idCVar r_skipInteractionFastPath( "r_skipInteractionFastPath", "1", CVAR_RENDERE
 idCVar r_useLightStencilSelect( "r_useLightStencilSelect", "0", CVAR_RENDERER | CVAR_BOOL, "use stencil select pass" );
 
 extern idCVar stereoRender_swapEyes;
+
+extern DeviceManager* deviceManager;
 
 
 /*
@@ -560,7 +563,7 @@ idRenderBackend::BindVariableStageImage
 Handles generating a cinematic frame if needed
 ======================
 */
-void idRenderBackend::BindVariableStageImage( const textureStage_t* texture, const float* shaderRegisters )
+void idRenderBackend::BindVariableStageImage( const textureStage_t* texture, const float* shaderRegisters, nvrhi::ICommandList* commandList )
 {
 	if( texture->cinematic )
 	{
@@ -625,7 +628,6 @@ void idRenderBackend::BindVariableStageImage( const textureStage_t* texture, con
 	}
 	else
 	{
-		// FIXME: see why image is invalid
 		if( texture->image != NULL )
 		{
 			texture->image->Bind();
@@ -786,14 +788,12 @@ void idRenderBackend::PrepareStageTexturing( const shaderStage_t* pStage,  const
 	}
 	else if( pStage->texture.texgen == TG_DIFFUSE_CUBE )
 	{
-
 		// As far as I can tell, this is never used
 		idLib::Warning( "Using Diffuse Cube! Please contact Brian!" );
 
 	}
 	else if( pStage->texture.texgen == TG_GLASSWARP )
 	{
-
 		// As far as I can tell, this is never used
 		idLib::Warning( "Using GlassWarp! Please contact Brian!" );
 	}
@@ -891,6 +891,7 @@ void idRenderBackend::FillDepthBufferGeneric( const drawSurf_t* const* drawSurfs
 				break;
 			}
 		}
+
 		if( stage == shader->GetNumStages() )
 		{
 			continue;
@@ -1010,6 +1011,8 @@ void idRenderBackend::FillDepthBufferGeneric( const drawSurf_t* const* drawSurfs
 
 				// must render with less-equal for Z-Cull to work properly
 				assert( ( GL_GetCurrentState() & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_LESS );
+
+				renderProgManager.CommitConstantBuffer( commandList );
 
 				// draw it
 				DrawElementsWithCounters( drawSurf );
@@ -3860,6 +3863,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 	}
 
 	renderLog.OpenBlock( "Render_GenericShaderPasses", colorBlue );
+	commandList->beginMarker( "Render_GenericShaderPasses" );
 
 	if( viewDef->targetRender )
 	{
@@ -3923,6 +3927,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 		}
 
 		renderLog.OpenBlock( shader->GetName(), colorMdGrey );
+		commandList->beginMarker( shader->GetName( ) );
 
 		// determine the stereoDepth offset
 		// guiStereoScreenOffset will always be zero for 3D views, so the !=
@@ -4100,6 +4105,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 					continue;
 				}
 				renderLog.OpenBlock( "Custom Renderproc Shader Stage", colorRed );
+				commandList->beginMarker( "Custom Renderproc Shader Stage" );
 
 				GL_State( stageGLState );
 
@@ -4133,6 +4139,8 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 					}
 				}
 
+				renderProgManager.CommitConstantBuffer( commandList );
+
 				// draw it
 				DrawElementsWithCounters( surf );
 
@@ -4147,6 +4155,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				renderProgManager.Unbind();
 
 				renderLog.CloseBlock();
+				commandList->endMarker( );
 				continue;
 			}
 
@@ -4180,6 +4189,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			stageVertexColor_t svc = pStage->vertexColor;
 
 			renderLog.OpenBlock( "Standard Shader Stage", colorGreen );
+			commandList->beginMarker( "Standard Shader Stage" );
 			GL_Color( color );
 
 			if( surf->space->isGuiSurface )
@@ -4254,7 +4264,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			RB_SetVertexColorParms( svc );
 
 			// bind the texture
-			BindVariableStageImage( &pStage->texture, regs );
+			BindVariableStageImage( &pStage->texture, regs, commandList );
 
 			// set privatePolygonOffset if necessary
 			if( pStage->privatePolygonOffset )
@@ -4267,7 +4277,30 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 
 			PrepareStageTexturing( pStage, surf );
 
-			// draw it
+			if( !currentPipeline )
+			{
+				nvrhi::GraphicsPipelineDesc psoDesc;
+				psoDesc.VS = vertexShader;
+				psoDesc.PS = pixelShader;
+				psoDesc.inputLayout = inputLayout;
+				psoDesc.bindingLayouts = { currentBindingLayout };
+				psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
+				currentRenderState.rasterState.enableScissor( );
+				psoDesc.setRenderState( currentRenderState );
+
+				currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
+			}
+
+			auto bindingSetDesc = nvrhi::BindingSetDesc( )
+				.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+				.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetCurrentImage( )->GetTextureID( ) ) )
+				.addItem( nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ) );
+
+			currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
+
+			renderProgManager.CommitConstantBuffer( commandList );
+
+			// Draw it
 			DrawElementsWithCounters( surf );
 
 			FinishStageTexturing( pStage, surf );
@@ -4279,9 +4312,11 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			}
 
 			renderLog.CloseBlock();
+			commandList->endMarker( );
 		}
 
 		renderLog.CloseBlock();
+		commandList->endMarker( );
 	}
 
 	GL_Color( 1.0f, 1.0f, 1.0f );
@@ -4292,6 +4327,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 	GL_SelectTexture( 0 );
 
 	renderLog.CloseBlock();
+	commandList->endMarker( );
 	return i;
 }
 
@@ -5618,6 +5654,8 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 	ResizeImages();
 
+	globalImages->LoadDeferredImages( );
+
 	if( cmds->commandId == RC_NOP && !cmds->next )
 	{
 		return;
@@ -5642,71 +5680,64 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	const bool timerQueryAvailable = glConfig.timerQueryAvailable;
 	bool drawView3D_timestamps = false;
 
-	nvrhi::IFramebuffer* framebuffer = deviceManager->GetCurrentFramebuffer( );
-
-	for( int i = 0; i < renderPasses.Num( ); i++ )
+	for( ; cmds != NULL; cmds = ( const emptyCommand_t* )cmds->next )
 	{
-		renderPasses[i]->Render( framebuffer );
+		switch( cmds->commandId )
+		{
+			case RC_NOP:
+				break;
+
+			case RC_DRAW_VIEW_GUI:
+				if( drawView3D_timestamps )
+				{
+					// SRS - Capture separate timestamps for overlay GUI rendering when RC_DRAW_VIEW_3D timestamps are active
+					renderLog.OpenMainBlock( MRB_DRAW_GUI );
+					renderLog.OpenBlock( "Render_DrawViewGUI", colorBlue );
+					// SRS - Disable detailed timestamps during overlay GUI rendering so they do not overwrite timestamps from 3D rendering
+					glConfig.timerQueryAvailable = false;
+
+					DrawView( cmds, 0 );
+
+					// SRS - Restore timestamp capture state after overlay GUI rendering is finished
+					glConfig.timerQueryAvailable = timerQueryAvailable;
+					renderLog.CloseBlock();
+					renderLog.CloseMainBlock();
+				}
+				else
+				{
+					DrawView( cmds, 0 );
+				}
+				c_draw2d++;
+				break;
+
+			case RC_DRAW_VIEW_3D:
+				drawView3D_timestamps = true;
+				DrawView( cmds, 0 );
+				c_draw3d++;
+				break;
+
+			case RC_SET_BUFFER:
+				SetBuffer( cmds );
+				c_setBuffers++;
+				break;
+
+			case RC_COPY_RENDER:
+				CopyRender( cmds );
+				c_copyRenders++;
+				break;
+
+			case RC_POST_PROCESS:
+			{
+				// apply optional post processing
+				PostProcess( cmds );
+				break;
+			}
+
+			default:
+				common->Error( "RB_ExecuteBackEndCommands: bad commandId" );
+				break;
+		}
 	}
-
-	//for( ; cmds != NULL; cmds = ( const emptyCommand_t* )cmds->next )
-	//{
-	//	switch( cmds->commandId )
-	//	{
-	//		case RC_NOP:
-	//			break;
-
-	//		case RC_DRAW_VIEW_GUI:
-	//			if( drawView3D_timestamps )
-	//			{
-	//				// SRS - Capture separate timestamps for overlay GUI rendering when RC_DRAW_VIEW_3D timestamps are active
-	//				renderLog.OpenMainBlock( MRB_DRAW_GUI );
-	//				renderLog.OpenBlock( "Render_DrawViewGUI", colorBlue );
-	//				// SRS - Disable detailed timestamps during overlay GUI rendering so they do not overwrite timestamps from 3D rendering
-	//				glConfig.timerQueryAvailable = false;
-
-	//				DrawView( cmds, 0 );
-
-	//				// SRS - Restore timestamp capture state after overlay GUI rendering is finished
-	//				glConfig.timerQueryAvailable = timerQueryAvailable;
-	//				renderLog.CloseBlock();
-	//				renderLog.CloseMainBlock();
-	//			}
-	//			else
-	//			{
-	//				DrawView( cmds, 0 );
-	//			}
-	//			c_draw2d++;
-	//			break;
-
-	//		case RC_DRAW_VIEW_3D:
-	//			drawView3D_timestamps = true;
-	//			DrawView( cmds, 0 );
-	//			c_draw3d++;
-	//			break;
-
-	//		case RC_SET_BUFFER:
-	//			SetBuffer( cmds );
-	//			c_setBuffers++;
-	//			break;
-
-	//		case RC_COPY_RENDER:
-	//			CopyRender( cmds );
-	//			c_copyRenders++;
-	//			break;
-
-	//		case RC_POST_PROCESS:
-	//		{
-	//			// apply optional post processing
-	//			PostProcess( cmds );
-	//			break;
-	//		}
-
-	//		default:
-	//			common->Error( "RB_ExecuteBackEndCommands: bad commandId" );
-	//			break;
-	//	}
-	//}
 
 	DrawFlickerBox();
 
@@ -5734,6 +5765,8 @@ idRenderBackend::DrawViewInternal
 void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int stereoEye )
 {
 	renderLog.OpenBlock( "Render_DrawViewInternal", colorRed );
+	
+	commandList->beginMarker( "Render_DrawViewInternal" );
 
 	//-------------------------------------------------
 	// guis can wind up referencing purged images that need to be loaded.
@@ -5751,6 +5784,12 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 			const_cast<idMaterial*>( ds->material )->EnsureNotPurged();
 		}
 	}
+
+	//for( int i = 0; i < renderPasses.Num( ); i++ )
+	//{
+	//	// Render directly to the backbuffer for now.
+	//	renderPasses[i]->Render( framebuffer );
+	//}
 
 	//-------------------------------------------------
 	// RB_BeginDrawingView
@@ -5771,7 +5810,16 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	bool useHDR = r_useHDR.GetBool() && !_viewDef->is2Dgui;
 
 	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
-	GL_Clear( _viewDef->targetRender != nullptr, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
+	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
+
+	/// TODO: Skip for nvrhi
+	if( !_viewDef->is2Dgui )
+	{
+		return;
+	}
+
+	// TODO(Stephen): DO.
+	//currentFrameBuffer = framebuffer;
 
 	if( useHDR )
 	{
@@ -5790,7 +5838,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	}
 	else
 	{
-		Framebuffer::Unbind();
+		globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )]->Bind( );
 	}
 	// RB end
 
@@ -5878,6 +5926,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	if( !r_skipShaderPasses.GetBool() )
 	{
 		renderLog.OpenMainBlock( MRB_DRAW_SHADER_PASSES );
+		commandList->beginMarker( "DrawShaderPasses" );
 		float guiScreenOffset;
 		if( _viewDef->viewEntitys != NULL )
 		{
@@ -5890,6 +5939,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 		processed = DrawShaderPasses( drawSurfs, numDrawSurfs, guiScreenOffset, stereoEye );
 		renderLog.CloseMainBlock();
+		commandList->endMarker( );
 	}
 
 	//-------------------------------------------------
@@ -5942,7 +5992,9 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 		// render the remaining surfaces
 		renderLog.OpenMainBlock( MRB_DRAW_SHADER_PASSES_POST );
+		commandList->beginMarker( "DrawShaderPassesPostProcess" );
 		DrawShaderPasses( drawSurfs + processed, numDrawSurfs - processed, 0.0f /* definitely not a gui */, stereoEye );
+		commandList->endMarker( );
 		renderLog.CloseMainBlock();
 	}
 
@@ -5951,68 +6003,10 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//-------------------------------------------------
 	DBG_RenderDebugTools( drawSurfs, numDrawSurfs );
 
-#if !defined(USE_VULKAN)
-
-// SRS - For OSX OpenGL record the final portion of GPU time while no other elapsed time query is active (after final shader pass and before post processing)
-#if defined(__APPLE__)
-	renderLog.OpenMainBlock( MRB_GPU_TIME );
-#endif
-
 	// RB: convert back from HDR to LDR range
 	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) && !_viewDef->targetRender )
 	{
-		/*
-		int x = backEnd.viewDef->viewport.x1;
-		int y = backEnd.viewDef->viewport.y1;
-		int	w = backEnd.viewDef->viewport.x2 - backEnd.viewDef->viewport.x1 + 1;
-		int	h = backEnd.viewDef->viewport.y2 - backEnd.viewDef->viewport.y1 + 1;
-
-		GL_Viewport( viewDef->viewport.x1,
-				viewDef->viewport.y1,
-				viewDef->viewport.x2 + 1 - viewDef->viewport.x1,
-				viewDef->viewport.y2 + 1 - viewDef->viewport.y1 );
-		*/
-
-		/*
-		glBindFramebuffer( GL_READ_FRAMEBUFFER, globalFramebuffers.hdrFBO->GetFramebuffer() );
-		glBindFramebuffer( GL_DRAW_FRAMEBUFFER, globalFramebuffers.hdrQuarterFBO->GetFramebuffer() );
-		glBlitFramebuffer( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight(),
-						   0, 0, renderSystem->GetWidth() * 0.25f, renderSystem->GetHeight() * 0.25f,
-						   GL_COLOR_BUFFER_BIT,
-						   GL_LINEAR );
-		*/
-
-#if defined(USE_HDR_MSAA)
-		if( glConfig.multisamples > 0 )
-		{
-			glBindFramebuffer( GL_READ_FRAMEBUFFER, globalFramebuffers.hdrFBO->GetFramebuffer() );
-			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, globalFramebuffers.hdrNonMSAAFBO->GetFramebuffer() );
-			glBlitFramebuffer( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight(),
-							   0, 0, renderSystem->GetWidth(), renderSystem->GetHeight(),
-							   GL_COLOR_BUFFER_BIT,
-							   GL_LINEAR );
-
-			// TODO resolve to 1x1
-			glBindFramebuffer( GL_READ_FRAMEBUFFER_EXT, globalFramebuffers.hdrNonMSAAFBO->GetFramebuffer() );
-			glBindFramebuffer( GL_DRAW_FRAMEBUFFER_EXT, globalFramebuffers.hdr64FBO->GetFramebuffer() );
-			glBlitFramebuffer( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight(),
-							   0, 0, 64, 64,
-							   GL_COLOR_BUFFER_BIT,
-							   GL_LINEAR );
-		}
-		else
-#endif
-		{
-			glBindFramebuffer( GL_READ_FRAMEBUFFER_EXT, globalFramebuffers.hdrFBO->GetFramebuffer() );
-			glBindFramebuffer( GL_DRAW_FRAMEBUFFER_EXT, globalFramebuffers.hdr64FBO->GetFramebuffer() );
-			glBlitFramebuffer( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight(),
-							   0, 0, 64, 64,
-							   GL_COLOR_BUFFER_BIT,
-							   GL_LINEAR );
-		}
-
 		CalculateAutomaticExposure();
-
 		Tonemap( _viewDef );
 	}
 
@@ -6021,13 +6015,9 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		Bloom( _viewDef );
 	}
 
-#if defined(__APPLE__)
-	renderLog.CloseMainBlock();
-#endif
-
-#endif
-
 	renderLog.CloseBlock();
+
+	commandList->endMarker( );
 }
 
 /*
@@ -6165,11 +6155,6 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 
 	viewDef = cmd->viewDef;
 
-	if( viewDef->targetRender )
-	{
-		viewDef->targetRender->Bind();
-	}
-
 	// we will need to do a new copyTexSubImage of the screen
 	// when a SS_POST_PROCESS material is used
 	currentRenderCopied = false;
@@ -6206,22 +6191,6 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 	DrawViewInternal( cmd->viewDef, stereoEye );
 
 	MotionBlur();
-
-	if( viewDef->targetRender )
-	{
-		// TODO(Stephen): Move this into the GL backend. Make this more generic. How to get the color attachment for the framebuffer?
-		globalImages->glowImage[0]->Bind( );
-		glGenerateMipmap( GL_TEXTURE_2D );
-	}
-
-	// restore the context for 2D drawing if we were stubbing it out
-	// RB: not really needed
-	//if( r_skipRenderContext.GetBool() && backEnd.viewDef->viewEntitys )
-	//{
-	//	GLimp_ActivateContext();
-	//	GL_SetDefaultState();
-	//}
-	// RB end
 
 	// optionally draw a box colored based on the eye number
 	if( r_drawEyeColor.GetBool() )
@@ -6292,6 +6261,9 @@ void idRenderBackend::PostProcess( const void* data )
 	{
 		return;
 	}
+
+	// TODO(Stephen) Skip for NVRHI
+	return;
 
 	renderLog.OpenMainBlock( MRB_POSTPROCESS );
 	renderLog.OpenBlock( "Render_PostProcessing", colorBlue );

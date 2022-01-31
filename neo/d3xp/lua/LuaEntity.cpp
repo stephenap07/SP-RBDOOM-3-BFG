@@ -49,6 +49,6 @@ void LuaEntity::Event_PlayAnim( int channel, const char* animname, bool loop )
 	}
 
 	//animBlendFrames = 0;
-	
+
 	gameLocal.scriptManager.ReturnInt( 0 );
 }

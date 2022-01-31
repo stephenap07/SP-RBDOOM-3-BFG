@@ -34,6 +34,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 #include "../framework/Common_local.h" // commonLocal.WaitGameThread();
+#include <sys/DeviceManager.h>
+
+
+extern DeviceManager* deviceManager;
 
 /*
 =============
@@ -1148,6 +1152,11 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 
 	int	totalEnd = Sys_Milliseconds();
 
+
+	nvrhi::CommandListHandle commandList = deviceManager->GetDevice( )->createCommandList( );
+
+	commandList->open( );
+
 	//--------------------------------------------
 	// LOAD CONVOLVED OCTAHEDRONS INTO THE GPU
 	//--------------------------------------------
@@ -1159,9 +1168,12 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 			continue;
 		}
 
-		def->irradianceImage->Reload( true );
-		def->radianceImage->Reload( true );
+		def->irradianceImage->Reload( true, commandList );
+		def->radianceImage->Reload( true, commandList );
 	}
+
+	commandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 
 	idLib::Printf( "----------------------------------\n" );
 	idLib::Printf( "Processed %i light probes\n", totalProcessedProbes );

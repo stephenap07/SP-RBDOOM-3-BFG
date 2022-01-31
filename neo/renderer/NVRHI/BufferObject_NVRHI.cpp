@@ -41,7 +41,6 @@ extern idCVar r_showBuffers;
 static const GLenum bufferUsage = GL_DYNAMIC_DRAW;
 
 extern DeviceManager* deviceManager;
-extern nvrhi::CommandListHandle vcCommandList;
 
 /*
 ================================================================================================
@@ -90,7 +89,7 @@ idVertexBuffer::idVertexBuffer()
 idVertexBuffer::AllocBufferObject
 ========================
 */
-bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t _usage )
+bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t _usage, nvrhi::ICommandList* commandList )
 {
 	assert( !bufferHandle );
 	assert_16_byte_aligned( data );
@@ -106,39 +105,6 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	bool allocationFailed = false;
 
 	int numBytes = GetAllocedSize();
-
-	nvrhi::VertexAttributeDesc attributes[] = {
-	nvrhi::VertexAttributeDesc( )
-		.setName( "POSITION" )
-		.setFormat( nvrhi::Format::RGB32_FLOAT )
-		.setOffset( offsetof( idDrawVert, xyz ) )
-		.setElementStride( sizeof( idDrawVert ) ),
-	nvrhi::VertexAttributeDesc( )
-		.setName( "NORMAL" )
-		.setFormat( nvrhi::Format::RGBA8_UINT )
-		.setOffset( offsetof( idDrawVert, st ) )
-		.setElementStride( sizeof( idDrawVert ) ),
-	nvrhi::VertexAttributeDesc( )
-		.setName( "COLOR" )
-		.setFormat( nvrhi::Format::RGBA8_UINT )
-		.setOffset( offsetof( idDrawVert, st ) )
-		.setElementStride( sizeof( idDrawVert ) ),
-	nvrhi::VertexAttributeDesc( )
-		.setName( "COLOR2" )
-		.setFormat( nvrhi::Format::RGBA8_UINT )
-		.setOffset( offsetof( idDrawVert, st ) )
-		.setElementStride( sizeof( idDrawVert ) ),
-	nvrhi::VertexAttributeDesc( )
-		.setName( "ST" )
-		.setFormat( nvrhi::Format::RG16_UINT )
-		.setOffset( offsetof( idDrawVert, st ) )
-		.setElementStride( sizeof( idDrawVert ) ),
-	nvrhi::VertexAttributeDesc( )
-		.setName( "TANGENT" )
-		.setFormat( nvrhi::Format::RGBA8_UINT )
-		.setOffset( offsetof( idDrawVert, st ) )
-		.setElementStride( sizeof( idDrawVert ) ),
-	};
 
 	nvrhi::BufferDesc vertexBufferDesc;
 	vertexBufferDesc.byteSize = numBytes;
@@ -156,7 +122,7 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	// copy the data
 	if( data != NULL )
 	{
-		Update( data, allocSize );
+		Update( data, allocSize, 0, commandList );
 	}
 
 	return !allocationFailed;
@@ -201,7 +167,7 @@ void idVertexBuffer::FreeBufferObject()
 idVertexBuffer::Update
 ========================
 */
-void idVertexBuffer::Update( const void* data, int updateSize, int offset ) const
+void idVertexBuffer::Update( const void* data, int updateSize, int offset, nvrhi::ICommandList* commandList ) const
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
@@ -220,9 +186,9 @@ void idVertexBuffer::Update( const void* data, int updateSize, int offset ) cons
 	}
 	else
 	{
-		vcCommandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
-		vcCommandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
-		vcCommandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::VertexBuffer );
+		commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
+		commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
+		commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::VertexBuffer );
 	}
 }
 
@@ -264,7 +230,10 @@ void idVertexBuffer::UnmapBuffer()
 	assert( bufferHandle );
 	assert( IsMapped( ) );
 
-	deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+	if( deviceManager && deviceManager->GetDevice( ) )
+	{
+		deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+	}
 
 	SetUnmapped( );
 }
@@ -307,7 +276,7 @@ idIndexBuffer::idIndexBuffer()
 idIndexBuffer::AllocBufferObject
 ========================
 */
-bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t _usage )
+bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t _usage, nvrhi::ICommandList* commandList )
 {
 	assert( !bufferHandle );
 	assert_16_byte_aligned( data );
@@ -320,26 +289,33 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 	size = allocSize;
 	usage = _usage;
 
-	bool allocationFailed = false;
-
 	int numBytes = GetAllocedSize( );
 
 	nvrhi::BufferDesc indexBufferDesc;
 	indexBufferDesc.byteSize = numBytes;
 	indexBufferDesc.isIndexBuffer = true;
-	indexBufferDesc.debugName = "IndexBuffer";
-	indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-	indexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+
+	if( _usage == BU_STATIC )
+	{
+		indexBufferDesc.debugName = "VertexCache Static Index Buffer";
+		indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+	}
+	else if( _usage == BU_DYNAMIC )
+	{
+		indexBufferDesc.debugName = "VertexCache Mapped Index Buffer";
+		indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+		indexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	}
 
 	bufferHandle  = deviceManager->GetDevice( )->createBuffer( indexBufferDesc );
 
 	// copy the data
 	if( data != NULL )
 	{
-		Update( data, allocSize );
+		Update( data, allocSize, 0, commandList );
 	}
 
-	return !allocationFailed;
+	return true;
 }
 
 /*
@@ -381,7 +357,7 @@ void idIndexBuffer::FreeBufferObject()
 idIndexBuffer::Update
 ========================
 */
-void idIndexBuffer::Update( const void* data, int updateSize, int offset ) const
+void idIndexBuffer::Update( const void* data, int updateSize, int offset, nvrhi::ICommandList* commandList ) const
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
@@ -401,9 +377,9 @@ void idIndexBuffer::Update( const void* data, int updateSize, int offset ) const
 	}
 	else
 	{
-		vcCommandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
-		vcCommandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
-		vcCommandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::IndexBuffer );
+		commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
+		commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+		commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::IndexBuffer );
 	}
 }
 
@@ -445,7 +421,10 @@ void idIndexBuffer::UnmapBuffer()
 	assert( bufferHandle );
 	assert( IsMapped( ) );
 
-	deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+	if( deviceManager && deviceManager->GetDevice( ) )
+	{
+		deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+	}
 
 	SetUnmapped( );
 }
@@ -488,7 +467,7 @@ idUniformBuffer::idUniformBuffer()
 idUniformBuffer::AllocBufferObject
 ========================
 */
-bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t _usage )
+bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t _usage, nvrhi::ICommandList* commandList )
 {
 	assert( !bufferHandle );
 	assert_16_byte_aligned( data );
@@ -517,7 +496,7 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, buffer
 	// copy the data
 	if( data != NULL )
 	{
-		Update( data, allocSize );
+		Update( data, allocSize, 0, commandList );
 	}
 
 	return !allocationFailed;
@@ -537,7 +516,7 @@ void idUniformBuffer::FreeBufferObject()
 idUniformBuffer::Update
 ========================
 */
-void idUniformBuffer::Update( const void* data, int updateSize, int offset ) const
+void idUniformBuffer::Update( const void* data, int updateSize, int offset, nvrhi::ICommandList* commandList ) const
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
@@ -557,9 +536,9 @@ void idUniformBuffer::Update( const void* data, int updateSize, int offset ) con
 	}
 	else
 	{
-		vcCommandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
-		vcCommandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
-		vcCommandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::ConstantBuffer );
+		commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
+		commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+		commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::ConstantBuffer );
 	}
 }
 
@@ -601,7 +580,10 @@ void idUniformBuffer::UnmapBuffer()
 	assert( bufferHandle );
 	assert( IsMapped( ) );
 
-	deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+	if( deviceManager && deviceManager->GetDevice( ) )
+	{
+		deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+	}
 
 	SetUnmapped( );
 }

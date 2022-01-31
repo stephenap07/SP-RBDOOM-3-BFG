@@ -27,9 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
-
 #include "precompiled.h"
+#pragma hdrstop
 
 #include "D3RmlRender.h"
 
@@ -100,7 +99,6 @@ void idRmlRender::Init()
 	mat.Identity();
 
 	_guiSolid = declManager->FindMaterial( "_white", false );
-	//_guiSolid->SetSort( SS_GUI );
 }
 
 void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indices, int numIndexes, Rml::TextureHandle texture, const Rml::Vector2f& translation )
@@ -126,8 +124,6 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indi
 	for( int i = 0; i < numVerts; i++ )
 	{
 		const Rml::Vertex& localVertex = vertices[i];
-
-		//this->GetContext( )->GetDimensions( ).y;
 
 		idVec3 pos = idVec3( localVertex.position.x + translation.x, localVertex.position.y + translation.y, 0 );
 
@@ -202,7 +198,7 @@ void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
 
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
 
-bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source )
+bool idRmlRender::LoadTexture( Rml::TextureHandle& textureHandle, Rml::Vector2i& textureSize, const Rml::String& source )
 {
 	const idMaterial* material = declManager->FindMaterial( source.c_str() );
 
@@ -211,36 +207,61 @@ bool idRmlRender::LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i
 		return false;
 	}
 
-	material->SetSort( SS_GUI );
-
-	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
+	textureHandle = reinterpret_cast<Rml::TextureHandle>( material );
 
 	// If this material isn't an actual image on disk, then image dimensions from an on-disk image doesn't make sense.
-	if( material->GetStage( 0 )->texture.image )
+	idImage* image = material->GetStage( 0 )->texture.image;
+	if( image )
 	{
-		texture_dimensions.x = material->GetImageWidth();
-		texture_dimensions.y = material->GetImageHeight();
+		textureSize.x = material->GetImageWidth();
+		textureSize.y = material->GetImageHeight();
+
+		if( textureSize.x == 0 || textureSize.y == 0 )
+		{
+			image->FinalizeImage( false, nullptr );
+			textureSize.x = material->GetImageWidth( );
+			textureSize.y = material->GetImageHeight( );
+		}
 	}
 	else
 	{
-		texture_dimensions.x = SCREEN_WIDTH;
-		texture_dimensions.y = SCREEN_HEIGHT;
+		textureSize.x = SCREEN_WIDTH;
+		textureSize.y = SCREEN_HEIGHT;
 	}
 
 	return true;
 }
 
-static void GenerateRmlImage( idImage* image )
+void GenerateRmlImage( idImage* image, nvrhi::ICommandList* commandList )
 {
-	// nothing
-	return;
+	idStr name = image->GetName( );
+	int hash = name.FileNameHash( );
+
+	for( int i = globalImages->deferredImageHash.First( hash ); i != -1; i = globalImages->deferredImageHash.Next( i ) )
+	{
+		idDeferredImage* deferredImage = globalImages->deferredImages[i];
+		if( name.Icmp( deferredImage->name ) == 0 )
+		{
+			image->GenerateImage( deferredImage->pic,
+				deferredImage->width,
+				deferredImage->height,
+				deferredImage->textureFilter,
+				deferredImage->textureRepeat,
+				deferredImage->textureUsage,
+				commandList );
+			return;
+		}
+	}
 }
 
 bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions )
 {
-	idImage* image = globalImages->ImageFromFunction( va( "_rmlImage%d", _texGen ), GenerateRmlImage );
+	const char* imgName = va( "_rmlImage%d", _texGen );
+	idImage* image = globalImages->ImageFromFunction( imgName, GenerateRmlImage );
+	image->SetReferencedOutsideLevelLoad( );
 
-	const idMaterial* material = declManager->FindMaterial( va( "_rmlImage%d", _texGen ) );
+	const idMaterial* material = declManager->FindMaterial( imgName );
+
 	material->SetSort( SS_GUI );
 
 	if( !material )
@@ -248,17 +269,14 @@ bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml
 		return false;
 	}
 
-	size_t sz = 4 * source_dimensions.x * source_dimensions.y;
-	const byte* mem = ( byte* )Mem_ClearedAlloc( sz, TAG_FONT );
-	memcpy( ( void* )mem, source, sz );
-
-	RmlImage rmlImage;
-	rmlImage.image = image;
-	rmlImage.material = material;
-	rmlImage.data = mem;
-	rmlImage.dimensions = idVec2( source_dimensions.x, source_dimensions.y );
-	rmlImage.referencedOutsideLevelLoad = true; // might need to arrange this in some other way.
-	rmlManagerLocal.AddMaterialToReload( rmlImage );
+	idDeferredImage* img = globalImages->AllocDeferredImage( imgName );
+	img->pic = ( byte* )Mem_Alloc( 4 * source_dimensions.x * source_dimensions.y, TAG_IMAGE );
+	memcpy( img->pic, source, 4 * source_dimensions.x * source_dimensions.y );
+	img->width = source_dimensions.x;
+	img->height = source_dimensions.y;
+	img->textureFilter = TF_LINEAR;
+	img->textureRepeat = TR_CLAMP;
+	img->textureUsage = TD_LOOKUP_TABLE_RGBA;
 
 	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
 
@@ -304,6 +322,7 @@ void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
 
 void idRmlRender::RenderClipMask()
 {
+	return;
 	// Usually, scissor regions are handled  with actual scissor render commands.
 	// We're using stencil masks to do the same thing because it works in worldspace a
 	// lot better than screen space scissor rects.
@@ -367,7 +386,9 @@ void idRmlRender::RenderClipMask()
 	localVerts[3].ClearColor2();
 
 	// Render only to the stencil buffer. Replace the stencil value with the stencil ref + the number of masks.
-	uint64_t glState = GLS_OVERRIDE | GLS_DEPTHFUNC_LESS | GLS_DEPTHMASK
+	uint64_t glState = GLS_OVERRIDE
+					   | GLS_DEPTHFUNC_LESS
+					   | GLS_DEPTHMASK
 					   | GLS_COLORMASK
 					   | GLS_ALPHAMASK
 					   | GLS_STENCIL_OP_PASS_REPLACE

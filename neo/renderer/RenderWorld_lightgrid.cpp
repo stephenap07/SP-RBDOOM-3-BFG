@@ -32,6 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 #include "../framework/Common_local.h" // commonLocal.WaitGameThread();
+#include <sys/DeviceManager.h>
 
 
 #define LGRID_FILE_EXT			"lightgrid"
@@ -49,6 +50,8 @@ static const int MAX_LIGHTGRID_ATLAS_SIZE	= 2048;
 static const int MAX_AREA_LIGHTGRID_POINTS	= ( MAX_LIGHTGRID_ATLAS_SIZE / LIGHTGRID_IRRADIANCE_SIZE ) * ( MAX_LIGHTGRID_ATLAS_SIZE / LIGHTGRID_IRRADIANCE_SIZE );
 
 static idVec3 defaultLightGridSize = idVec3( 64, 64, 128 );
+
+extern DeviceManager* deviceManager;
 
 LightGrid::LightGrid()
 {
@@ -412,6 +415,10 @@ void idRenderWorldLocal::LoadLightGridImages()
 
 	idStr filename;
 
+	nvrhi::CommandListHandle commandList = deviceManager->GetDevice( )->createCommandList( );
+
+	commandList->open( );
+
 	// try to load existing lightgrid image data
 	for( int i = 0; i < numPortalAreas; i++ )
 	{
@@ -424,9 +431,13 @@ void idRenderWorldLocal::LoadLightGridImages()
 		}
 		else
 		{
-			area->lightGrid.irradianceImage->Reload( true );
+			area->lightGrid.irradianceImage->Reload( true, commandList );
 		}
 	}
+
+	commandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 }
 
 /*

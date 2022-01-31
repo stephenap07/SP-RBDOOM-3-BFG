@@ -274,9 +274,6 @@ public:
 	// Run this method on the main thread to actually generate data for the image. This is used to generate font glyphs to an idImage.
 	void						PostRender() override;
 
-	// Class owns data
-	void						AddMaterialToReload( const RmlImage& rmlImage );
-
 private:
 
 	struct Document

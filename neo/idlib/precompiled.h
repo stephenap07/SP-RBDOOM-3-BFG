@@ -115,6 +115,7 @@ const int MAX_EXPRESSION_REGISTERS = 4096;
 #include "../renderer/RenderSystem.h"
 #include "../renderer/RenderWorld.h"
 #include "../renderer/FontManager.h"
+#include "../renderer/BindingCache.h"
 
 // sound engine
 #include "../sound/sound.h"

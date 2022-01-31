@@ -918,17 +918,6 @@ void idCommonLocal::Frame()
 		// This may block if the game is taking longer than the render back end
 		gameThread.WaitForThread();
 
-		// Load the generated textures to the GPU.
-		rmlManager->PostRender();
-
-		for( int i = 0; i < globalImages->imagesToLoad.Num(); i++ )
-		{
-			// This is a "deferred" load of textures to the gpu.
-			globalImages->imagesToLoad[i]->ActuallyLoadImage( false );
-		}
-
-		globalImages->imagesToLoad.Clear();
-
 		// Send local usermds to the server.
 		// This happens after the game frame has run so that prediction data is up to date.
 		SendUsercmds( Game()->GetLocalClientNum() );
@@ -949,6 +938,7 @@ void idCommonLocal::Frame()
 			soundWorld->UnPause();
 			soundSystem->SetPlayingSoundWorld( soundWorld );
 		}
+
 		// SRS - Play silence when dialog waiting or window not in focus
 		if( Dialog().IsDialogPausing() || session->IsSystemUIShowing() || com_pause.GetInteger() )
 		{

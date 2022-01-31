@@ -28,6 +28,9 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
+#ifndef IMAGE_H_
+#define IMAGE_H_
+
 enum textureType_t
 {
 	TT_DISABLED,
@@ -160,6 +163,7 @@ public:
 	int					numLevels;		// if 0, will be 1 for NEAREST / LINEAR filters, otherwise based on size
 	bool				gammaMips;		// if true, mips will be generated with gamma correction
 	bool				readback;		// 360 specific - cpu reads back from this texture, so allocate with cached memory
+	bool				isRenderTarget;
 };
 
 /*
@@ -178,8 +182,8 @@ ID_INLINE idImageOpts::idImageOpts()
 	textureType		= TT_2D;
 	gammaMips		= false;
 	readback		= false;
-
-};
+	isRenderTarget	= false;
+}
 
 /*
 ========================
@@ -256,6 +260,41 @@ enum imageFileType_t
 	EXR,
 };
 
+class idDeferredImage
+{
+public:
+	idDeferredImage( const char* imageName );
+	~idDeferredImage( );
+
+	idStr			name;
+	byte* pic;
+	int				width;
+	int				height;
+	textureFilter_t textureFilter;
+	textureRepeat_t textureRepeat;
+	textureUsage_t	textureUsage;
+};
+
+ID_INLINE idDeferredImage::idDeferredImage( const char* imageName )
+	: name( imageName )
+	, pic( nullptr )
+	, width( 0 )
+	, height( 0 )
+	, textureFilter( TF_DEFAULT )
+	, textureRepeat( TR_CLAMP )
+	, textureUsage( TD_DEFAULT )
+{
+}
+
+ID_INLINE idDeferredImage::~idDeferredImage( )
+{
+	if( pic )
+	{
+		delete pic;
+	}
+}
+
+
 #include "BinaryImage.h"
 
 #define	MAX_IMAGE_NAME	256
@@ -273,19 +312,19 @@ public:
 		return imgName;
 	}
 
-	// Makes this image active on the current GL texture unit.
+	// Makes this image active on the current texture unit.
 	// automatically enables or disables cube mapping
 	// May perform file loading if the image was not preloaded.
-	void		Bind();
+	void		Bind( );
 
 	// RB begin
-	void		GenerateShadowArray( int width, int height, textureFilter_t filter, textureRepeat_t repeat, textureUsage_t usage );
+	void		GenerateShadowArray( int width, int height, textureFilter_t filter, textureRepeat_t repeat, textureUsage_t usage, nvrhi::ICommandList* commandList );
 	// RB end
 
 	void		CopyFramebuffer( int x, int y, int width, int height );
 	void		CopyDepthbuffer( int x, int y, int width, int height );
 
-	void		UploadScratch( const byte* pic, int width, int height );
+	void		UploadScratch( const byte* pic, int width, int height, nvrhi::ICommandList* commandList );
 
 	// estimates size of the GL image based on dimensions and storage type
 	int			StorageSize() const;
@@ -294,14 +333,14 @@ public:
 	void		Print() const;
 
 	// check for changed timestamp on disk and reload if necessary
-	void		Reload( bool force );
+	void		Reload( bool force, nvrhi::ICommandList* commandList );
 
 	void		AddReference()
 	{
 		refCount++;
 	};
 
-	void		MakeDefault();	// fill with a grid pattern
+	void		MakeDefault( nvrhi::ICommandList* commandList );	// fill with a grid pattern
 
 	const idImageOpts& 	GetOpts() const
 	{
@@ -329,7 +368,8 @@ public:
 	{
 		levelLoadReferenced = true;
 	}
-	void		ActuallyLoadImage( bool fromBackEnd );
+
+	void		FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList );
 
 	// Adds the image to the list of images to load on the main thread to the gpu.
 	void		DeferredLoadImage();
@@ -337,27 +377,6 @@ public:
 	//---------------------------------------------
 	// Platform specific implementations
 	//---------------------------------------------
-
-#if defined( USE_VULKAN )
-	static void	EmptyGarbage();
-
-	VkImage		GetImage() const
-	{
-		return image;
-	}
-	VkImageView	GetView() const
-	{
-		return view;
-	}
-	VkImageLayout GetLayout() const
-	{
-		return layout;
-	}
-	VkSampler	GetSampler() const
-	{
-		return sampler;
-	}
-#endif
 
 	void		AllocImage( const idImageOpts& imgOpts, textureFilter_t filter, textureRepeat_t repeat );
 
@@ -373,13 +392,8 @@ public:
 	// they must be a multiple of four for dxt data.
 	void		SubImageUpload( int mipLevel, int destX, int destY, int destZ,
 								int width, int height, const void* data,
+								nvrhi::ICommandList* commandList,
 								int pixelPitch = 0 );
-
-	// SetPixel is assumed to be a fast memory write on consoles, degenerating to a
-	// SubImageUpload on PCs.  Used to update the page mapping images.
-	// We could remove this now, because the consoles don't use the intermediate page mapping
-	// textures now that they can pack everything into the virtual page table images.
-	void		SetPixel( int mipLevel, int x, int y, const void* data, int dataSize );
 
 	// some scratch images are dynamically resized based on the display window size.  This
 	// simply purges the image and recreates it if the sizes are different, so it should not be
@@ -415,43 +429,40 @@ public:
 							   textureFilter_t filter,
 							   textureRepeat_t repeat,
 							   textureUsage_t usage,
-							   textureSamples_t samples = SAMPLE_1, cubeFiles_t cubeFiles = CF_2D );
+							   nvrhi::ICommandList* commandList,
+							   bool isRenderTarget = false,
+							   textureSamples_t samples = SAMPLE_1,
+							   cubeFiles_t cubeFiles = CF_2D );
 
 	void		GenerateCubeImage( const byte* pic[6], int size,
-								   textureFilter_t filter, textureUsage_t usage );
+								   textureFilter_t filter, textureUsage_t usage, nvrhi::ICommandList* commandList );
 
 	void		SetTexParameters();	// update aniso and trilinear
 
 	// DG: added for imgui integration (to be used with ImGui::Image() etc)
 	void*		GetImGuiTextureID()
 	{
-		if( !IsLoaded() )
-		{
-			// load the image on demand here, which isn't our normal game operating mode
-			ActuallyLoadImage( true );
-		}
-
-#if defined( USE_VULKAN )
-		return ( void* )( intptr_t )image;
-#else
-		return ( void* )( intptr_t )texnum;
-#endif
-
+		return nullptr;
 	}
 	// DG end
+
+	void*		GetTextureID( )
+	{
+		return ( void* )texture.Get( );
+	}
 
 private:
 	friend class idImageManager;
 
-	void		DeriveOpts();
-	void		AllocImage();
-	void		SetSamplerState( textureFilter_t tf, textureRepeat_t tr );
+	void				DeriveOpts( );
+	void				AllocImage( );
+	void				SetSamplerState( textureFilter_t tf, textureRepeat_t tr );
 
 	// parameters that define this image
 	idStr				imgName;				// game path, including extension (except for cube maps), may be an image program
 	cubeFiles_t			cubeFiles;				// If this is a cube map, and if so, what kind
 	int                 cubeMapSize;
-	void	( *generatorFunction )( idImage* image );	// NULL for files
+	void	( *generatorFunction )( idImage* image, nvrhi::ICommandList* commandList );	// NULL for files
 	textureUsage_t		usage;					// Used to determine the type of compression to use
 	idImageOpts			opts;					// Parameters that determine the storage method
 
@@ -459,6 +470,7 @@ private:
 	textureFilter_t		filter;
 	textureRepeat_t		repeat;
 
+	bool				isLoaded;
 	bool				referencedOutsideLevelLoad;
 	bool				levelLoadReferenced;	// for determining if it needs to be purged
 	bool				defaulted;				// true if the default image was generated because a file couldn't be loaded
@@ -469,39 +481,7 @@ private:
 
 	static const uint32 TEXTURE_NOT_LOADED = 0xFFFFFFFF;
 
-#if defined( USE_VULKAN )
-	void				CreateSampler();
-	// SRS - added method to set image layout
-	void                SetImageLayout( VkImage image, VkImageSubresourceRange subresourceRange, VkImageLayout oldImageLayout, VkImageLayout newImageLayout );
-	// SRS End
-
-	bool				bIsSwapChainImage;
-	VkFormat			internalFormat;
-	VkImage				image;
-	VkImageView			view;
-	VkImageLayout		layout;
-	VkSampler			sampler;
-
-#if defined( USE_AMD_ALLOCATOR )
-	VmaAllocation		allocation;
-	static idList< VmaAllocation >		allocationGarbage[ NUM_FRAME_DATA ];
-#else
-	vulkanAllocation_t	allocation;
-	static idList< vulkanAllocation_t > allocationGarbage[ NUM_FRAME_DATA ];
-#endif
-
-	static int						garbageIndex;
-	static idList< VkImage >		imageGarbage[ NUM_FRAME_DATA ];
-	static idList< VkImageView >	viewGarbage[ NUM_FRAME_DATA ];
-	static idList< VkSampler >		samplerGarbage[ NUM_FRAME_DATA ];
-#else
-	GLuint				texnum;				// gl texture binding
-
-	// we could derive these in subImageUpload each time if necessary
-	/*GLuint				internalFormat;
-	GLuint				dataFormat;
-	GLuint				dataType;*/
-#endif
+	nvrhi::TextureHandle texture;
 };
 
 // data is RGBA
@@ -547,7 +527,7 @@ public:
 
 	// The callback will be issued immediately, and later if images are reloaded or vid_restart
 	// The callback function should call one of the idImage::Generate* functions to fill in the data
-	idImage* 			ImageFromFunction( const char* name, void ( *generatorFunction )( idImage* image ) );
+	idImage* 			ImageFromFunction( const char* name, void ( *generatorFunction )( idImage* image, nvrhi::ICommandList* commandList ) );
 
 	// scratch images are for internal renderer use.  ScratchImage names should always begin with an underscore
 	idImage* 			ScratchImage( const char* name, idImageOpts* imgOpts, textureFilter_t filter, textureRepeat_t repeat, textureUsage_t usage );
@@ -559,7 +539,7 @@ public:
 	void				PurgeAllImages();
 
 	// reloads all apropriate images after a vid_restart
-	void				ReloadImages( bool all );
+	void				ReloadImages( bool all, nvrhi::ICommandList* commandList );
 
 	// Called only by renderSystem::BeginLevelLoad
 	void				BeginLevelLoad();
@@ -570,9 +550,11 @@ public:
 	void				Preload( const idPreloadManifest& manifest, const bool& mapPreload );
 
 	// Loads unloaded level images
-	int					LoadLevelImages( bool pacifier );
+	int					LoadLevelImages( bool pacifier, nvrhi::ICommandList* commandList );
 
 	void				PrintMemInfo( MemInfo_t* mi );
+
+	void				LoadDeferredImages( );
 
 	// built-in images
 	void				CreateIntrinsicImages();
@@ -638,16 +620,24 @@ public:
 	idImage* 			AllocImage( const char* name );
 	idImage* 			AllocStandaloneImage( const char* name );
 
+	idDeferredImage*	AllocDeferredImage( const char* name );
+
 	bool				ExcludePreloadImage( const char* name );
 
 	idList<idImage*, TAG_IDLIB_LIST_IMAGE>	images;
-	idHashIndex			imageHash;
+	idHashIndex								imageHash;
 
 	// Transient list of images to load on the main thread to the gpu. Freed after images are loaded.
-	idList<idImage*, TAG_IDLIB_LIST_IMAGE> imagesToLoad;
+	idList<idImage*, TAG_IDLIB_LIST_IMAGE>	imagesToLoad;
 
-	bool				insideLevelLoad;			// don't actually load images now
-	bool				preloadingMapImages;		// unless this is set
+	// Permanent images to load from memory instead of a file system.
+	idList<idDeferredImage*, TAG_IDLIB_LIST_IMAGE>	deferredImages;
+	idHashIndex										deferredImageHash;
+
+	bool									insideLevelLoad;			// don't actually load images now
+	bool									preloadingMapImages;		// unless this is set
+
+	nvrhi::CommandListHandle				commandList;
 };
 
 extern idImageManager*	globalImages;		// pointer to global list for the rest of the system
@@ -708,3 +698,4 @@ IMAGEPROGRAM
 void R_LoadImageProgram( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp, textureUsage_t* usage = NULL );
 const char* R_ParsePastImageProgram( idLexer& src );
 
+#endif

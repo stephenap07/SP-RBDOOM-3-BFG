@@ -35,11 +35,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "RmlEventHandler.h"
 #include "GlobalRmlEventListener.h"
 
-#include "renderer/GLState.h"
-#include "renderer/GuiModel.h"
-#include "renderer/Image.h"
-
 #include "RmlRenderDecorator.h"
+#include "sys/DeviceManager.h"
 
 RmlUserInterfaceManagerLocal rmlManagerLocal;
 RmlUserInterfaceManager* rmlManager = &rmlManagerLocal;
@@ -47,6 +44,8 @@ RmlUserInterfaceManager* rmlManager = &rmlManagerLocal;
 idDeviceContext* rmlDc;
 
 extern idCVar sys_lang;
+
+extern DeviceManager* deviceManager;
 
 class GlobalRmlEventListenerInstancer : public Rml::EventListenerInstancer
 {
@@ -163,7 +162,7 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 	{
 		HandleMouseWheelEvent( event, keyModState );
 	}
-	
+
 	if( event->IsKeyEvent() )
 	{
 		Rml::Input::KeyIdentifier key = idRmlSystem::TranslateKey( event->evValue );
@@ -731,14 +730,6 @@ void RmlUserInterfaceManagerLocal::Preload( const char* mapName )
 	for( const auto& texturePath : textureNames )
 	{
 		const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
-		if( material )
-		{
-			material->ReloadImages( false );
-		}
-		else
-		{
-			common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
-		}
 	}
 }
 
@@ -760,42 +751,6 @@ void RmlUserInterfaceManagerLocal::ReloadStyleSheets( bool all )
 
 void RmlUserInterfaceManagerLocal::PostRender()
 {
-	if( !idLib::IsMainThread() )
-	{
-		common->FatalError( "This must be called from the main thread." );
-		return;
-	}
-
-	for( int i = 0; i < _imagesToReload.Num(); i++ )
-	{
-		RmlImage& img = _imagesToReload[i];
-
-		img.image->GenerateImage(
-			img.data,
-			img.dimensions.x,
-			img.dimensions.y,
-			textureFilter_t::TF_DEFAULT,
-			textureRepeat_t::TR_CLAMP,
-			textureUsage_t::TD_DEFAULT );
-
-		if( img.referencedOutsideLevelLoad )
-		{
-			img.image->SetReferencedOutsideLevelLoad();
-		}
-		img.Free();
-	}
-
-	if( _imagesToReload.Num() == 0 )
-	{
-		return;
-	}
-
-	_imagesToReload.Clear();
-}
-
-void RmlUserInterfaceManagerLocal::AddMaterialToReload( const RmlImage& rmlImage )
-{
-	_imagesToReload.Append( rmlImage );
 }
 
 CONSOLE_COMMAND( reloadRml, "Reload updated rml gui files", NULL )

@@ -32,7 +32,9 @@ If you have questions concerning this license or the applicable additional terms
 #include "../RenderCommon.h"
 #include "../Framebuffer.h"
 
-#if !defined(USE_VULKAN)
+#include "sys/DeviceManager.h"
+
+extern DeviceManager* deviceManager;
 
 static void R_ListFramebuffers_f( const idCmdArgs& args )
 {
@@ -44,19 +46,24 @@ static void R_ListFramebuffers_f( const idCmdArgs& args )
 }
 
 Framebuffer::Framebuffer( const char* name, int w, int h )
-	: fboName(name)
-	, frameBuffer(0)
-	, colorFormat(0)
-	, depthBuffer(0)
-	, depthFormat(0)
-	, stencilFormat(0)
-	, stencilBuffer(0)
-	, width(w)
-	, height(h)
-	, msaaSamples(false)
+	: fboName( name )
+	, frameBuffer( 0 )
+	, colorFormat( 0 )
+	, depthBuffer( 0 )
+	, depthFormat( 0 )
+	, stencilFormat( 0 )
+	, stencilBuffer( 0 )
+	, width( w )
+	, height( h )
+	, msaaSamples( false )
 {
-	memset( colorBuffers, 0, sizeof( colorBuffers ) );
 	framebuffers.Append( this );
+}
+
+Framebuffer::Framebuffer( const char* name, const nvrhi::FramebufferDesc& desc )
+{
+	framebuffers.Append( this );
+	apiObject = deviceManager->GetDevice( )->createFramebuffer( desc );
 }
 
 Framebuffer::~Framebuffer()
@@ -66,6 +73,9 @@ Framebuffer::~Framebuffer()
 void Framebuffer::Init()
 {
 	cmdSystem->AddCommand( "listFramebuffers", R_ListFramebuffers_f, CMD_FL_RENDERER, "lists framebuffers" );
+
+	// HDR
+	ResizeFramebuffers( );
 }
 
 void Framebuffer::CheckFramebuffers()
@@ -79,29 +89,65 @@ void Framebuffer::Shutdown()
 	framebuffers.DeleteContents( true );
 }
 
+void Framebuffer::ResizeFramebuffers( )
+{
+	uint32_t backBufferCount = deviceManager->GetBackBufferCount( );
+	globalFramebuffers.swapFramebuffers.Resize( backBufferCount );
+	globalFramebuffers.swapFramebuffers.SetNum( backBufferCount );
+
+	tr.backend.commandList->open( );
+	globalImages->currentDepthImage->Reload( false, tr.backend.commandList );
+	globalImages->currentRenderHDRImage->Reload( false, tr.backend.commandList );
+	globalImages->currentRenderHDRImage64->Reload( false, tr.backend.commandList );
+	tr.backend.commandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( tr.backend.commandList );
+
+	for( uint32_t index = 0; index < backBufferCount; index++ )
+	{
+		globalFramebuffers.swapFramebuffers[index] = new Framebuffer(
+			va("_swapChain%d", index),
+			nvrhi::FramebufferDesc( )
+			.addColorAttachment( deviceManager->GetBackBuffer( index ) )
+			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+	}
+
+	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->currentRenderHDRImage->texture )
+		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+
+	globalFramebuffers.hdr64FBO = new Framebuffer( "_hdr64",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->currentRenderHDRImage64->texture ));
+
+	Framebuffer::Unbind( );
+}
+
 void Framebuffer::Bind()
 {
 	RENDERLOG_PRINTF( "Framebuffer::Bind( %s )\n", fboName.c_str() );
+	tr.backend.currentFrameBuffer = this;
 }
 
 bool Framebuffer::IsBound()
 {
-	return false;
+	return tr.backend.currentFrameBuffer == this;
 }
 
 void Framebuffer::Unbind()
 {
 	RENDERLOG_PRINTF( "Framebuffer::Unbind()\n" );
+	globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )]->Bind( );
 }
 
 bool Framebuffer::IsDefaultFramebufferActive()
 {
-	return false;
+	return tr.backend.currentFrameBuffer == globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )];
 }
 
 Framebuffer* Framebuffer::GetActiveFramebuffer()
 {
-	return nullptr;
+	return tr.backend.currentFrameBuffer;
 }
 
 void Framebuffer::AddColorBuffer( int format, int index, int multiSamples )
@@ -132,4 +178,12 @@ void Framebuffer::Check()
 {
 }
 
-#endif // #if !defined(USE_VULKAN)
+idScreenRect Framebuffer::GetViewPortInfo( ) const
+{
+	nvrhi::Viewport viewport = apiObject->getFramebufferInfo( ).getViewport( );
+	idScreenRect screenRect;
+	screenRect.Clear( );
+	screenRect.AddPoint( viewport.minX, viewport.minY );
+	screenRect.AddPoint( viewport.maxX, viewport.maxY );
+	return screenRect;
+}

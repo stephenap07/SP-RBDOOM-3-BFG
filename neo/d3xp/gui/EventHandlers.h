@@ -8,7 +8,7 @@ class RmlGameEventHandler : public RmlEventHandler
 {
 public:
 	RmlGameEventHandler( UI_Shell* _shell )
-		: shell(_shell)
+		: shell( _shell )
 	{
 	}
 

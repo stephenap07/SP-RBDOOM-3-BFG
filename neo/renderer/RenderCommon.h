@@ -43,19 +43,19 @@ If you have questions concerning this license or the applicable additional terms
 #include "TextBufferManager.h"
 
 #if USE_DX11 || USE_DX12
-#include <DXGI.h>
+	#include <DXGI.h>
 #endif
 
 #if USE_DX11
-#include <d3d11.h>
+	#include <d3d11.h>
 #endif
 
 #if USE_DX12
-#include <d3d12.h>
+	#include <d3d12.h>
 #endif
 
 #if USE_VK
-#include <nvrhi/vulkan.h>
+	#include <nvrhi/vulkan.h>
 #endif
 
 #include <nvrhi/nvrhi.h>
@@ -831,9 +831,6 @@ const idMaterial* R_RemapShaderBySkin( const idMaterial* shader, const idDeclSki
 
 //====================================================
 
-
-
-
 enum vertexLayoutType_t
 {
 	LAYOUT_UNKNOWN = 0,	// RB: TODO -1
@@ -842,6 +839,13 @@ enum vertexLayoutType_t
 	LAYOUT_DRAW_SHADOW_VERT_SKINNED,
 	LAYOUT_DRAW_IMGUI_VERT,
 	NUM_VERTEX_LAYOUTS
+};
+
+enum bindingLayoutType_t
+{
+	BINDING_LAYOUT_DEFAULT,
+	BINDING_LAYOUT_GBUFFER,
+	NUM_BINDING_LAYOUTS
 };
 
 class idParallelJobList;
@@ -869,7 +873,7 @@ public:
 	{
 		return bInitialized;
 	}
-	virtual void			ResetGuiModels();
+	virtual void			ResetGuiModels( );
 	virtual void			InitBackend();
 	virtual void			ShutdownOpenGL();
 	virtual bool			IsOpenGLRunning() const;
@@ -933,8 +937,8 @@ public:
 	virtual void			DrawDemoPics();
 	virtual const emptyCommand_t* 	SwapCommandBuffers( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc );
 
-	virtual void			SwapCommandBuffers_FinishRendering( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc );
-	virtual const emptyCommand_t* 	SwapCommandBuffers_FinishCommandBuffers();
+	virtual void					SwapCommandBuffers_FinishRendering( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc );
+	virtual const emptyCommand_t*	SwapCommandBuffers_FinishCommandBuffers( );
 
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
 	virtual void			TakeScreenshot( int width, int height, const char* fileName, int downSample, renderView_t* ref, int exten );
@@ -944,7 +948,6 @@ public:
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false );
 	virtual void			CaptureRenderToFile( const char* fileName, bool fixAlpha );
 	virtual void			UnCrop();
-	virtual bool			UploadImage( const char* imageName, const byte* data, int width, int height );
 
 	void					PrintPerformanceCounters();
 
@@ -972,6 +975,7 @@ public:
 
 public:
 	// renderer globals
+	nvrhi::CommandListHandle commandList;
 	bool					registered;		// cleared at shutdown, set at InitOpenGL
 
 	bool					takingScreenshot;
@@ -1617,7 +1621,7 @@ idRenderModel* R_EntityDefDynamicModel( idRenderEntityLocal* def );
 void R_ClearEntityDefDynamicModel( idRenderEntityLocal* def );
 
 void R_SetupDrawSurfShader( drawSurf_t* drawSurf, const idMaterial* shader, const renderEntity_t* renderEntity );
-void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, const idMaterial* shader );
+void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, const idMaterial* shader, nvrhi::ICommandList* commandList );
 void R_LinkDrawSurfToView( drawSurf_t* drawSurf, viewDef_t* viewDef );
 
 void R_AddModels();
@@ -1707,11 +1711,11 @@ srfTriangles_t* 	R_MergeTriangles( const srfTriangles_t* tri1, const srfTriangle
 void				R_DeriveTangents( srfTriangles_t* tri );
 
 // copy data from a front-end srfTriangles_t to a back-end drawSurf_t
-void				R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri );
+void				R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri, nvrhi::ICommandList* commandList );
 
 // For static surfaces, the indexes, ambient, and shadow buffers can be pre-created at load
 // time, rather than being re-created each frame in the frame temporary buffers.
-void				R_CreateStaticBuffersForTri( srfTriangles_t& tri );
+void				R_CreateStaticBuffersForTri( srfTriangles_t& tri, nvrhi::ICommandList* commandList );
 
 // RB
 idVec3				R_ClosestPointPointTriangle( const idVec3& point, const idVec3& vertex1, const idVec3& vertex2, const idVec3& vertex3 );
@@ -1750,7 +1754,7 @@ struct deformInfo_t
 
 // if outputVertexes is not NULL, it will point to a newly allocated set of verts that includes the mirrored ones
 deformInfo_t* 		R_BuildDeformInfo( int numVerts, const idDrawVert* verts, int numIndexes, const int* indexes,
-									   bool useUnsmoothedTangents );
+									   bool useUnsmoothedTangents, nvrhi::ICommandList* commandList );
 void				R_FreeDeformInfo( deformInfo_t* deformInfo );
 int					R_DeformInfoMemoryUsed( deformInfo_t* deformInfo );
 

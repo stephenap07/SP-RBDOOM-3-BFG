@@ -3875,24 +3875,26 @@ void idPlayer::FireWeapon()
 	}
 
 	GetViewPos( muzzle, axis );
-	muzzle += axis * idVec3(64.0f, 0.0f, 0.0f);
+	muzzle += axis * idVec3( 64.0f, 0.0f, 0.0f );
 
 	idDict args;
 
 	static int physxNum = 0;
 
-	if ( ( gameLocal.time - spawnItemTime) > 120)
+	if( ( gameLocal.time - spawnItemTime ) > 120 )
 	{
 		spawnItemTime = gameLocal.time;
 		args.Set( "classname", "func_static" );
 		args.Set( "spawnclass", "idMoveable" );
 		args.Set( "owner", this->name.c_str( ) );
 		args.Set( "name", va( "physx%d", physxNum++ ) );
-		args.Set( "model", "func_static_1" );
+		args.Set( "model", "_SPHERE" );
+		args.Set( "shader", "textures/color/white_shadow" );
+		args.Set( "_color", "255 0 0" );
 		idVec3 physxOrig = muzzle;
 		args.SetVector( "origin", physxOrig );
 		args.SetFloat( "physxSphere", 12.0f );
-		args.SetVector( "physxSpeed", idVec3(512.0f, 0.0f, 0.0f) * axis );
+		args.SetVector( "physxSpeed", idVec3( 512.0f, 0.0f, 0.0f ) * axis );
 		gameLocal.SpawnEntityDef( args );
 	}
 

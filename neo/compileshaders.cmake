@@ -30,7 +30,7 @@
 
 function(compile_shaders)
     set(options "")
-    set(oneValueArgs TARGET CONFIG FOLDER DXIL DXBC SPIRV_DXC CFLAGS)
+    set(oneValueArgs TARGET CONFIG FOLDER DXIL DXBC SPIRV_DXC CFLAGS SHADER_INCLUDE_DIR)
     set(multiValueArgs SOURCES)
     cmake_parse_arguments(params "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -40,6 +40,14 @@ function(compile_shaders)
     if (NOT params_CONFIG)
         message(FATAL_ERROR "compile_shaders: CONFIG argument missing")
     endif()
+
+    if (NOT params_SHADER_INCLUDE_DIR)
+        set(SHADER_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    else()
+        set(SHADER_INCLUDE_DIR ${params_SHADER_INCLUDE_DIR})
+    endif()
+
+    message( STATUS "Shader include path ${SHADER_INCLUDE_DIR}" )
 
     # just add the source files to the project as documents, they are built by the script
     set_source_files_properties(${params_SOURCES} PROPERTIES VS_TOOL_OVERRIDE "None") 

@@ -5949,15 +5949,10 @@ idGameLocal::Shell_IsActive
 */
 bool idGameLocal::Shell_IsActive() const
 {
-	if( rmlShell != NULL )
+	if( rmlShell )
 	{
 		return rmlShell->Ui()->IsActive();
 	}
-
-	//if( shellHandler != NULL )
-	//{
-	//	return shellHandler->IsActive();
-	//}
 
 	return false;
 }
@@ -5997,7 +5992,7 @@ idGameLocal::Shell_InhibitsControl
 */
 bool idGameLocal::Shell_InhibitsControl() const
 {
-	if( rmlShell != NULL )
+	if( rmlShell )
 	{
 		return rmlShell->Ui()->InhibitsControl();
 	}
@@ -6012,15 +6007,10 @@ idGameLocal::Shell_HandleGuiEvent
 */
 bool idGameLocal::Shell_HandleGuiEvent( const sysEvent_t* sev )
 {
-	if( rmlShell != NULL )
+	if( rmlShell )
 	{
 		return rmlShell->Ui()->HandleEvent( sev, Sys_Milliseconds() / 1000.0f );
 	}
-
-	//if( shellHandler != NULL )
-	//{
-	//	return shellHandler->HandleGuiEvent( sev );
-	//}
 
 	return false;
 }
@@ -6032,14 +6022,10 @@ idGameLocal::Shell_Render
 */
 void idGameLocal::Shell_Render()
 {
-	if( rmlShell != NULL )
+	if( rmlShell )
 	{
 		rmlShell->Update( );
 	}
-	//else if( shellHandler != NULL )
-	//{
-	//	shellHandler->Update();
-	//}
 }
 
 /*

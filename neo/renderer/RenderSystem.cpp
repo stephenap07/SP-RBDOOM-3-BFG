@@ -634,7 +634,7 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers(
 {
 	SwapCommandBuffers_FinishRendering( frontEndMicroSec, backEndMicroSec, shadowMicroSec, gpuMicroSec, bc, pc );
 
-	return SwapCommandBuffers_FinishCommandBuffers();
+	return SwapCommandBuffers_FinishCommandBuffers( );
 }
 
 /*
@@ -649,8 +649,7 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 	uint64* shadowMicroSec,
 	uint64* gpuMicroSec,
 	backEndCounters_t* bc,
-	performanceCounters_t* pc
-)
+	performanceCounters_t* pc )
 {
 	SCOPED_PROFILE_EVENT( "SwapCommandBuffers" );
 
@@ -727,8 +726,6 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 	// RB end
 }
 
-extern nvrhi::CommandListHandle vcCommandList;
-
 extern DeviceManager* deviceManager;
 
 /*
@@ -736,7 +733,7 @@ extern DeviceManager* deviceManager;
 idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffers
 =====================
 */
-const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffers()
+const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffers( )
 {
 	if( !IsInitialized() )
 	{
@@ -774,10 +771,16 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	// PC
 	UpdateStereo3DMode();
 
-	// prepare the new command buffer
-	guiModel->BeginFrame();
+	if( !commandList )
+	{
+		commandList = deviceManager->GetDevice( )->createCommandList( );
+	}
 
-	vcCommandList->open( );
+	// Command list to set up vertices.
+	commandList->open( );
+
+	// prepare the new command buffer
+	guiModel->BeginFrame( commandList );
 
 	//------------------------------
 	// Make sure that geometry used by code is present in the buffer cache.
@@ -788,14 +791,10 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	// scene generation, the basic surfaces needed for drawing the buffers will
 	// always be present.
 	//------------------------------
-	R_InitDrawSurfFromTri( tr.unitSquareSurface_, *tr.unitSquareTriangles );
-	R_InitDrawSurfFromTri( tr.zeroOneCubeSurface_, *tr.zeroOneCubeTriangles );
-	R_InitDrawSurfFromTri( tr.zeroOneSphereSurface_, *tr.zeroOneSphereTriangles );
-	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles );
-
-	vcCommandList->close( );
-
-	deviceManager->GetDevice( )->executeCommandList( vcCommandList );
+	R_InitDrawSurfFromTri( tr.unitSquareSurface_, *tr.unitSquareTriangles, commandList );
+	R_InitDrawSurfFromTri( tr.zeroOneCubeSurface_, *tr.zeroOneCubeTriangles, commandList );
+	R_InitDrawSurfFromTri( tr.zeroOneSphereSurface_, *tr.zeroOneSphereTriangles, commandList );
+	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles, commandList );
 
 	// Reset render crop to be the full screen
 	renderCrops[0].x1 = 0;
@@ -831,6 +830,10 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 #endif
 
 #endif
+
+	commandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 
 	// the old command buffer can now be rendered, while the new one can
 	// be built in parallel
@@ -1162,20 +1165,4 @@ void idRenderSystemLocal::PrintMemInfo( MemInfo_t* mi )
 
 	// compute render totals
 
-}
-
-/*
-===============
-idRenderSystemLocal::UploadImage
-===============
-*/
-bool idRenderSystemLocal::UploadImage( const char* imageName, const byte* data, int width, int height )
-{
-	idImage* image = globalImages->GetImage( imageName );
-	if( !image )
-	{
-		return false;
-	}
-	image->UploadScratch( data, width, height );
-	return true;
 }

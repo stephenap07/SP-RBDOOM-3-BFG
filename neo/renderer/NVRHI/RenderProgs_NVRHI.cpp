@@ -56,6 +56,22 @@ idRenderProgManager::BindProgram
 */
 void idRenderProgManager::BindProgram( int index )
 {
+	if( currentIndex == index )
+	{
+		return;
+	}
+
+	currentIndex = index;
+	RENDERLOG_PRINTF( "Binding HLSL Program %s\n", renderProgs[index].name.c_str( ) );
+
+	renderProg_t& prog = renderProgs[index];
+
+	tr.backend.BindProgram( shaders[prog.vertexShaderIndex].handle,
+		shaders[prog.fragmentShaderIndex].handle,
+		prog.inputLayout,
+		prog.bindingLayout );
+
+	renderProgs[index].bindingLayout;
 }
 
 /*
@@ -65,6 +81,7 @@ idRenderProgManager::Unbind
 */
 void idRenderProgManager::Unbind()
 {
+	currentIndex = -1;
 }
 
 /*
@@ -92,33 +109,40 @@ idRenderProgManager::LoadGLSLShader
 void idRenderProgManager::LoadShader( shader_t& shader )
 {
 	idStr stage;
-	nvrhi::ShaderType shaderType;
-	
+	nvrhi::ShaderType shaderType{};
+
 	if( shader.stage == SHADER_STAGE_VERTEX )
 	{
-		stage = "main_vs";
+		stage = "vs";
 		shaderType = nvrhi::ShaderType::Vertex;
 	}
 	else if( shader.stage == SHADER_STAGE_FRAGMENT )
 	{
-		stage = "main_ps";
+		stage = "ps";
 		shaderType = nvrhi::ShaderType::Pixel;
 	}
 	else if( shader.stage == SHADER_STAGE_COMPUTE )
 	{
-		stage = "main_cs";
+		stage = "cs";
 		shaderType = nvrhi::ShaderType::Compute;
 	}
 
-	ShaderBlob shaderBlob = GetBytecode( shader.name.c_str( ), stage.c_str() );
+	idStr adjustedName = shader.name;
+	adjustedName.StripFileExtension( );
+	adjustedName = idStr( "renderprogs/dxil/" ) + adjustedName + "." + stage + ".bin";
+
+	ShaderBlob shaderBlob = GetBytecode( adjustedName );
 
 	if( !shaderBlob.data )
+	{
 		return;
+	}
 
 	idList<nvrhi::ShaderConstant> constants;
 	for( int i = 0; i < shader.macros.Num( ); i++ )
 	{
-		constants.Append( nvrhi::ShaderConstant{
+		constants.Append( nvrhi::ShaderConstant
+		{
 			shader.macros[i].name.c_str(),
 			shader.macros[i].definition.c_str( )
 		} );
@@ -128,33 +152,26 @@ void idRenderProgManager::LoadShader( shader_t& shader )
 	desc.debugName = shader.name;
 
 	nvrhi::ShaderDesc descCopy = desc;
-	descCopy.entryName = stage.c_str();
+	// TODO(Stephen): Might not want to hard-code this.
+	descCopy.entryName = "main";
 
-	nvrhi::ShaderConstant* shaderConstant(nullptr);
+	nvrhi::ShaderConstant* shaderConstant( nullptr );
 
 	nvrhi::ShaderHandle shaderHandle = nvrhi::createShaderPermutation( device, descCopy, shaderBlob.data, shaderBlob.size,
-		(constants.Num() > 0) ? &constants[0] : shaderConstant, uint32_t( constants.Num( ) ) );
+									   ( constants.Num() > 0 ) ? &constants[0] : shaderConstant, uint32_t( constants.Num( ) ) );
 
 	shader.handle = shaderHandle;
 }
 
-ShaderBlob idRenderProgManager::GetBytecode( const char* fileName, const char* entryName )
+ShaderBlob idRenderProgManager::GetBytecode( const char* fileName )
 {
 	ShaderBlob blob;
 
-	if( !entryName )
-		entryName = "main";
-
-	idStr adjustedName = fileName;
-	adjustedName.StripFileExtension( );
-	adjustedName = idStr( "renderprogs/dxil/" ) + adjustedName + "_" + idStr( entryName ) + ".bin";
-
-	blob.size = fileSystem->ReadFile( adjustedName.c_str( ), &blob.data );
+	blob.size = fileSystem->ReadFile( fileName, &blob.data );
 
 	if( !blob.data )
 	{
-		common->Error( "Couldn't read the binary file for shader %s from %s", fileName, adjustedName.c_str( ) );
-		return blob;
+		common->Error( "Couldn't read the binary file for shader %s", fileName);
 	}
 
 	return blob;
@@ -168,11 +185,13 @@ idRenderProgManager::LoadGLSLProgram
 void idRenderProgManager::LoadProgram( const int programIndex, const int vertexShaderIndex, const int fragmentShaderIndex )
 {
 	renderProg_t& prog = renderProgs[programIndex];
-
-	if( prog.pipeline )
-	{
-		return; // Already loaded
-	}
+	prog.fragmentShaderIndex = fragmentShaderIndex;
+	prog.vertexShaderIndex = vertexShaderIndex;
+	prog.inputLayout = device->createInputLayout(
+		&vertexLayoutDescs[prog.vertexLayout][0],
+		vertexLayoutDescs[prog.vertexLayout].Num( ),
+		shaders[prog.vertexShaderIndex].handle );
+	prog.bindingLayout = bindingLayouts[prog.bindingLayoutType];
 }
 
 
@@ -184,10 +203,6 @@ idRenderProgManager::CommitUnforms
 */
 void idRenderProgManager::CommitUniforms( uint64 stateBits )
 {
-	const int progID = current;
-	const renderProg_t& prog = renderProgs[progID];
-
-	// TODO: Set uniform values for nvrhi
 }
 
 /*
@@ -198,6 +213,14 @@ idRenderProgManager::KillAllShaders()
 void idRenderProgManager::KillAllShaders()
 {
 	Unbind();
+
+	for( int i = 0; i < shaders.Num( ); i++ )
+	{
+		if( shaders[i].handle )
+		{
+			shaders[i].handle.Reset( );
+		}
+	}
 }
 
 /*
@@ -221,4 +244,15 @@ idRenderProgManager::ZeroUniforms
 void idRenderProgManager::ZeroUniforms( )
 {
 	memset( uniforms.Ptr( ), 0, uniforms.Allocated( ) );
+}
+
+/*
+================================================================================================
+idRenderProgManager::CommitConstantBuffer
+================================================================================================
+*/
+void idRenderProgManager::CommitConstantBuffer( nvrhi::ICommandList* commandList )
+{
+	uniforms.Size( );
+	commandList->writeBuffer( constantBuffer, &uniforms[0], uniforms.Allocated() );
 }

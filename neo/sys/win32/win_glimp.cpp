@@ -1087,15 +1087,15 @@ bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, c
 	}
 
 	win32.hWnd = CreateWindowEx(
-		exstyle,
-		WIN32_WINDOW_CLASS_NAME,
-		GAME_NAME,
-		stylebits,
-		x, y, w, h,
-		NULL,
-		NULL,
-		win32.hInstance,
-		NULL );
+					 exstyle,
+					 WIN32_WINDOW_CLASS_NAME,
+					 GAME_NAME,
+					 stylebits,
+					 x, y, w, h,
+					 NULL,
+					 NULL,
+					 win32.hInstance,
+					 NULL );
 
 	windowHandle = win32.hWnd;
 
@@ -1120,7 +1120,9 @@ bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, c
 	}
 
 	if( !CreateDeviceAndSwapChain( ) )
+	{
 		return false;
+	}
 
 	SetForegroundWindow( win32.hWnd );
 	SetFocus( win32.hWnd );
@@ -1134,20 +1136,22 @@ bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, c
 
 void DeviceManager::UpdateWindowSize( )
 {
-	int x;
-	int y;
-	int width;
-	int height;
-
 	// get the current monitor position and size on the desktop, assuming
 	// any required ChangeDisplaySettings has already been done
-	int displayHz = 0;
-	if( !GetDisplayCoordinates(0, x, y, width, height, displayHz ) )
+	RECT rect;
+	if( ::GetClientRect( win32.hWnd, &rect ) )
 	{
-		return;
+		if( rect.right > rect.left && rect.bottom > rect.top )
+		{
+			// save the window size in cvars if we aren't fullscreen
+			int style = GetWindowLong( win32.hWnd, GWL_STYLE );
+
+			glConfig.nativeScreenWidth = rect.right - rect.left;
+			glConfig.nativeScreenHeight = rect.bottom - rect.top;
+		}
 	}
 
-	if( width == 0 || height == 0 )
+	if( glConfig.nativeScreenWidth == 0 || glConfig.nativeScreenHeight == 0 )
 	{
 		// window is minimized
 		windowVisible = false;
@@ -1156,20 +1160,20 @@ void DeviceManager::UpdateWindowSize( )
 
 	windowVisible = true;
 
-	if( int( deviceParms.backBufferWidth ) != width ||
-		int( deviceParms.backBufferHeight ) != height ||
-		( deviceParms.vsyncEnabled != requestedVSync && GetGraphicsAPI( ) == nvrhi::GraphicsAPI::VULKAN ) )
+	if( int( deviceParms.backBufferWidth ) != glConfig.nativeScreenWidth ||
+			int( deviceParms.backBufferHeight ) != glConfig.nativeScreenHeight ||
+			( deviceParms.vsyncEnabled != requestedVSync && GetGraphicsAPI( ) == nvrhi::GraphicsAPI::VULKAN ) )
 	{
 		// window is not minimized, and the size has changed
 
 		BackBufferResizing( );
 
-		deviceParms.backBufferWidth = width;
-		deviceParms.backBufferHeight = height;
+		deviceParms.backBufferWidth = glConfig.nativeScreenWidth;
+		deviceParms.backBufferHeight = glConfig.nativeScreenHeight;
 		deviceParms.vsyncEnabled = requestedVSync;
 
 		ResizeSwapChain( );
-		BackBufferResized( );
+		//BackBufferResized( );
 	}
 
 	deviceParms.vsyncEnabled = requestedVSync;
@@ -1427,15 +1431,6 @@ bool GLimp_Init( glimpParms_t parms )
 	// create our window classes if we haven't already
 	GLW_CreateWindowClasses();
 
-#if !defined(USE_VULKAN) && !defined(USE_DX12)
-	// this will load the dll and set all our gl* function pointers,
-	// but doesn't create a window
-
-	// getting the wgl extensions involves creating a fake window to get a context,
-	// which is pretty disgusting, and seems to mess with the AGP VAR allocation
-	GLW_GetWGLExtensionsWithFakeWindow();
-#endif
-
 	// Optionally ChangeDisplaySettings to get a different fullscreen resolution.
 	if( !GLW_ChangeDislaySettingsIfNeeded( parms ) )
 	{
@@ -1447,15 +1442,13 @@ bool GLimp_Init( glimpParms_t parms )
 	// and init the renderer context
 	if( !deviceManager->CreateWindowDeviceAndSwapChain( parms, GAME_NAME ) )
 	{
-		deviceManager->Shutdown( );
-		//GLimp_Shutdown();
+		//deviceManager->Shutdown( );
+		GLimp_Shutdown();
 		return false;
 	}
 
 	glConfig.isFullscreen = parms.fullScreen;
 	glConfig.isStereoPixelFormat = parms.stereo;
-	glConfig.nativeScreenWidth = parms.width;
-	glConfig.nativeScreenHeight = parms.height;
 	glConfig.multisamples = parms.multiSamples;
 
 	glConfig.pixelAspect = 1.0f;	// FIXME: some monitor modes may be distorted
@@ -1478,20 +1471,6 @@ bool GLimp_Init( glimpParms_t parms )
 	{
 		glConfig.physicalScreenWidthInCentimeters = 0.1f * mmWide;
 	}
-
-	// RB: we probably have a new OpenGL 3.2 core context so reinitialize GLEW
-#if !defined(USE_VULKAN) && !defined(USE_DX12)
-	GLenum glewResult = glewInit();
-	if( GLEW_OK != glewResult )
-	{
-		// glewInit failed, something is seriously wrong
-		common->Printf( "^3GLimp_Init() - GLEW could not load OpenGL subsystem: %s", glewGetErrorString( glewResult ) );
-	}
-	else
-	{
-		common->Printf( "Using GLEW %s\n", glewGetString( GLEW_VERSION ) );
-	}
-#endif
 
 	return true;
 }
@@ -1548,8 +1527,6 @@ bool GLimp_SetScreenParms( glimpParms_t parms )
 
 void DeviceManager::Shutdown( )
 {
-	swapFrameBuffers.Clear( );
-
 	DestroyDeviceAndSwapChain( );
 
 	const char* success[] = { "failed", "success" };
@@ -1595,7 +1572,10 @@ subsystem.
 */
 void GLimp_Shutdown()
 {
-	deviceManager->Shutdown( );
+	if( deviceManager )
+	{
+		deviceManager->Shutdown( );
+	}
 }
 
 /*

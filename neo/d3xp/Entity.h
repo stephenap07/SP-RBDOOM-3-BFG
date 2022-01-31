@@ -181,9 +181,12 @@ inline void	ReadFromBitMsg( netBoolEvent_t& netEvent, const idBitMsg& msg )
 class idStateScript
 {
 public:
-	idStateScript( idEntity* _owner ) : owner(_owner), scriptName( ) {}
+	idStateScript( idEntity* _owner ) : owner( _owner ), scriptName( ) {}
 
-	void SetName( const char* name ) { scriptName = name;  }
+	void SetName( const char* name )
+	{
+		scriptName = name;
+	}
 
 	virtual ~idStateScript( ) {}
 
@@ -449,7 +452,7 @@ public:
 	void					SignalEvent( idThread* thread, signalNum_t signalnum );
 
 	// lua scripting
-	void					ConstructStateScript(const char* loadScript);
+	void					ConstructStateScript( const char* loadScript );
 
 	// gui
 	void					TriggerGuis();

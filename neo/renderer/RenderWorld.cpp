@@ -1092,16 +1092,6 @@ void idRenderWorldLocal::RenderScene( const renderView_t* renderView )
 		windowHeight = ( windowHeight * r_screenFraction.GetInteger() ) / 100;
 	}
 
-	// Stephen: I want to add back support for renderDef in the gui scripts.
-	// There seems to be some issues around setting the viewport for one, the
-	// other problem is that the gui isn't being rendered if the render world
-	// is being
-	//if (renderView->x2 > 0.0f || renderView->y2 > 0.0f)
-	//{
-	//	windowWidth = renderView->x2 - renderView->x1;
-	//	windowHeight = renderView->y2 - renderView->y2;
-	//}
-
 	//tr.CropRenderSize( renderView->x1, renderView->y1, windowWidth, windowHeight );
 
 	tr.CropRenderSize( windowWidth, windowHeight );
@@ -1958,7 +1948,7 @@ Force the generation of all light / surface interactions at the start of a level
 If this isn't called, they will all be dynamically generated
 ===================
 */
-void idRenderWorldLocal::GenerateAllInteractions()
+void idRenderWorldLocal::GenerateAllInteractions( )
 {
 	if( !tr.IsInitialized() )
 	{
@@ -2026,7 +2016,7 @@ void idRenderWorldLocal::GenerateAllInteractions()
 				count++;
 
 				// the interaction may create geometry
-				inter->CreateStaticInteraction();
+				inter->CreateStaticInteraction( tr.commandList );
 			}
 		}
 

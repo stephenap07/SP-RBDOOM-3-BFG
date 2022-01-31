@@ -91,7 +91,7 @@ public:
 private:
 
 	// Generates render state flags. Turns on stencil testing and functions.
-	uint64 GenerateGlState() const;
+	uint64				GenerateGlState() const;
 
 	bool				_enableScissor;
 	idRectangle			_clipRects;

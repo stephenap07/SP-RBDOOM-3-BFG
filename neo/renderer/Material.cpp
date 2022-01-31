@@ -3734,7 +3734,7 @@ const shaderStage_t* idMaterial::GetBumpStage() const
 idMaterial::ReloadImages
 ===================
 */
-void idMaterial::ReloadImages( bool force ) const
+void idMaterial::ReloadImages( bool force, nvrhi::ICommandList* commandList ) const
 {
 	for( int i = 0 ; i < numStages ; i++ )
 	{
@@ -3744,13 +3744,13 @@ void idMaterial::ReloadImages( bool force ) const
 			{
 				if( stages[i].newStage->fragmentProgramImages[j] )
 				{
-					stages[i].newStage->fragmentProgramImages[j]->Reload( force );
+					stages[i].newStage->fragmentProgramImages[j]->Reload( force, commandList );
 				}
 			}
 		}
 		else if( stages[i].texture.image )
 		{
-			stages[i].texture.image->Reload( force );
+			stages[i].texture.image->Reload( force, commandList );
 		}
 	}
 }

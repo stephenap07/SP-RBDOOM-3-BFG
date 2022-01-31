@@ -84,7 +84,7 @@ public:
 		return apiObject;
 	}
 #else
-	nvrhi::BufferHandle	GetAPIObject() const
+	nvrhi::IBuffer*		GetAPIObject() const
 	{
 		return bufferHandle;
 	}
@@ -141,7 +141,7 @@ public:
 	~idVertexBuffer();
 
 	// Allocate or free the buffer.
-	bool				AllocBufferObject( const void* data, int allocSize, bufferUsageType_t usage );
+	bool				AllocBufferObject( const void* data, int allocSize, bufferUsageType_t usage, nvrhi::ICommandList* commandList );
 	void				FreeBufferObject();
 
 	// Make this buffer a reference to another buffer.
@@ -149,7 +149,7 @@ public:
 	void				Reference( const idVertexBuffer& other, int refOffset, int refSize );
 
 	// Copies data to the buffer. 'size' may be less than the originally allocated size.
-	void				Update( const void* data, int size, int offset = 0 ) const;
+	void				Update( const void* data, int size, int offset, nvrhi::ICommandList* commandList ) const;
 
 	void* 				MapBuffer( bufferMapType_t mapType );
 	idDrawVert* 		MapVertexBuffer( bufferMapType_t mapType )
@@ -178,7 +178,7 @@ public:
 	~idIndexBuffer();
 
 	// Allocate or free the buffer.
-	bool				AllocBufferObject( const void* data, int allocSize, bufferUsageType_t usage );
+	bool				AllocBufferObject( const void* data, int allocSize, bufferUsageType_t usage, nvrhi::ICommandList* commandList );
 	void				FreeBufferObject();
 
 	// Make this buffer a reference to another buffer.
@@ -186,7 +186,7 @@ public:
 	void				Reference( const idIndexBuffer& other, int refOffset, int refSize );
 
 	// Copies data to the buffer. 'size' may be less than the originally allocated size.
-	void				Update( const void* data, int size, int offset = 0 ) const;
+	void				Update( const void* data, int size, int offset, nvrhi::ICommandList* commandList ) const;
 
 	void* 				MapBuffer( bufferMapType_t mapType );
 	triIndex_t* 		MapIndexBuffer( bufferMapType_t mapType )
@@ -218,7 +218,7 @@ public:
 	~idUniformBuffer();
 
 	// Allocate or free the buffer.
-	bool				AllocBufferObject( const void* data, int allocSize, bufferUsageType_t usage );
+	bool				AllocBufferObject( const void* data, int allocSize, bufferUsageType_t usage, nvrhi::ICommandList* commandList );
 	void				FreeBufferObject();
 
 	// Make this buffer a reference to another buffer.
@@ -226,7 +226,7 @@ public:
 	void				Reference( const idUniformBuffer& other, int refOffset, int refSize );
 
 	// Copies data to the buffer. 'size' may be less than the originally allocated size.
-	void				Update( const void* data, int size, int offset = 0 ) const;
+	void				Update( const void* data, int size, int offset, nvrhi::ICommandList* commandList ) const;
 
 	void* 				MapBuffer( bufferMapType_t mapType );
 	void				UnmapBuffer();

@@ -48,7 +48,10 @@ public:
 
 	~LuaThread( ) override;
 
-	lua_State* LuaState( ) { return luaState; }
+	lua_State* LuaState( )
+	{
+		return luaState;
+	}
 
 	void	Init( );
 	bool	LoadLuaScript( const char* luaScript, bool failIfFound = false );
@@ -87,7 +90,10 @@ public:
 	void		LoadScript( const char* script );
 	void		Think( int mSeconds );
 
-	lua_State*	LuaState( ) { return luaThread->LuaState(); }
+	lua_State*	LuaState( )
+	{
+		return luaThread->LuaState();
+	}
 	void		Call( const char* name, int numargs );
 	void		ReturnString( const char* text );
 	void		ReturnFloat( float value );

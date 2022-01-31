@@ -110,21 +110,21 @@ struct geoBufferSet_t
 class idVertexCache
 {
 public:
-	void			Init( int uniformBufferOffsetAlignment );
+	void			Init( int uniformBufferOffsetAlignment, nvrhi::ICommandList* commandList );
 	void			Shutdown();
-	void			PurgeAll();
+	void			PurgeAll( nvrhi::ICommandList* commandList );
 
 	// call on loading a new map
 	void			FreeStaticData();
 
 	// this data is only valid for one frame of rendering
-	vertCacheHandle_t	AllocVertex( const void* data, int num, size_t size = sizeof( idDrawVert ) );
-	vertCacheHandle_t	AllocIndex( const void* data, int num, size_t size = sizeof( triIndex_t ) );
-	vertCacheHandle_t	AllocJoint( const void* data, int num, size_t size = sizeof( idJointMat ) );
+	vertCacheHandle_t	AllocVertex( const void* data, int num, size_t size, nvrhi::ICommandList* commandList );
+	vertCacheHandle_t	AllocIndex( const void* data, int num, size_t size, nvrhi::ICommandList* commandList );
+	vertCacheHandle_t	AllocJoint( const void* data, int num, size_t size, nvrhi::ICommandList* commandList );
 
 	// this data is valid until the next map load
-	vertCacheHandle_t	AllocStaticVertex( const void* data, int bytes );
-	vertCacheHandle_t	AllocStaticIndex( const void* data, int bytes );
+	vertCacheHandle_t	AllocStaticVertex( const void* data, int bytes, nvrhi::ICommandList* commandList );
+	vertCacheHandle_t	AllocStaticIndex( const void* data, int bytes, nvrhi::ICommandList* commandList );
 
 	byte* 			MappedVertexBuffer( vertCacheHandle_t handle );
 	byte* 			MappedIndexBuffer( vertCacheHandle_t handle );
@@ -161,7 +161,7 @@ public:
 	int				mostUsedJoint;
 
 	// Try to make room for <bytes> bytes
-	vertCacheHandle_t	ActuallyAlloc( geoBufferSet_t& vcs, const void* data, int bytes, cacheType_t type );
+	vertCacheHandle_t	ActuallyAlloc( geoBufferSet_t& vcs, const void* data, int bytes, cacheType_t type, nvrhi::ICommandList* commandList );
 };
 
 // platform specific code to memcpy into vertex buffers efficiently

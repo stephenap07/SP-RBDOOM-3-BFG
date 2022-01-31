@@ -240,24 +240,6 @@ void AddRenderRml( const char* name, RmlUserInterface** rml, const idDict* args 
 	*rml = rmlManager->Find( name, true );
 
 	( *rml )->SetNextScreen( name );
-	{
-		Rml::StringList textureNames = Rml::GetTextureSourceList();
-
-		for( const auto& texturePath : textureNames )
-		{
-			const idMaterial* material = declManager->FindMaterial( texturePath.c_str() );
-
-			// TODO(Stephen): See what happens if you don't reload the images here.
-			if( material )
-			{
-				material->ReloadImages( false );
-			}
-			else
-			{
-				common->Warning( "Failed to load rml texture %s", texturePath.c_str() );
-			}
-		}
-	}
 
 	// Load up the generated textures.
 	( *rml )->Redraw( 0 );
@@ -507,7 +489,7 @@ idEntity::idEntity():
 	axisDelta( mat3_identity ),
 	interpolationBehavior( USE_NO_INTERPOLATION ),
 	stateScript( this ),
-	physicsActor(nullptr)
+	physicsActor( nullptr )
 {
 
 	entityNumber	= ENTITYNUM_NONE;
@@ -732,7 +714,7 @@ void idEntity::Spawn()
 	}
 
 	if( spawnArgs.GetString( "loadScript", nullptr, &loadScriptName ) &&
-		spawnArgs.GetString( "stateScript", nullptr, &stateScriptName) )
+			spawnArgs.GetString( "stateScript", nullptr, &stateScriptName ) )
 	{
 		gameLocal.Printf( "Found state script %s\n", loadScriptName );
 		stateScript.SetName( stateScriptName );
@@ -1780,7 +1762,7 @@ void idEntity::Present()
 	}
 
 	// don't present to the renderer if the entity hasn't changed
-	if( !( thinkFlags & TH_UPDATEVISUALS ) && !physicsActor)
+	if( !( thinkFlags & TH_UPDATEVISUALS ) && !physicsActor )
 	{
 		return;
 	}
@@ -2981,7 +2963,7 @@ void idEntity::InitDefaultPhysics( const idVec3& origin, const idMat3& axis )
 		}
 	}
 
-	int sphereRadius = spawnArgs.GetInt( "physxSphere", 0);
+	int sphereRadius = spawnArgs.GetInt( "physxSphere", 0 );
 
 	if( sphereRadius > 0 )
 	{

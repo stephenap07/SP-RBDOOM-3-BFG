@@ -4344,7 +4344,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 								// completed one triangle.
 								indexes.Append( winding.GetNumPoints( ) - 1 );
 								indexes.Append( winding.GetNumPoints( ) );
-								indexes.Append( winding.GetNumPoints( ) - 3);
+								indexes.Append( winding.GetNumPoints( ) - 3 );
 
 								completedTriangle = false;
 							}
@@ -4362,7 +4362,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 							winding.AddPoint( model->vertices[vertNum].p );
 						}
 
-						if( indexes.Num( ) > 0 && indexes.Num() % 3 == 0)
+						if( indexes.Num( ) > 0 && indexes.Num() % 3 == 0 )
 						{
 							bool isValid = winding.Check( );
 
@@ -4389,7 +4389,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 							PxDefaultMemoryInputData readBuffer( writeBuffer.getData( ), writeBuffer.getSize( ) );
 							PxTriangleMesh* triMesh = gPhysics->createTriangleMesh( readBuffer );
 
-							// Create a shape 
+							// Create a shape
 							PxMeshScale scale;
 							PxTriangleMeshGeometry geom( triMesh, scale );
 
@@ -4399,7 +4399,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 							gScene->addActor( *actor );
 						}
 					}
-					
+
 					if( node->planeType == -1 )
 					{
 						continue;
@@ -4418,7 +4418,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 			}
 		}
 	}
-	
+
 	timer.Stop();
 
 	// print statistics on collision data
@@ -4985,18 +4985,19 @@ void idCollisionModelManagerLocal::ShutdownPhysX( )
 	{
 		gPhysics->release( );
 	}
-	
+
 	if( gPvd )
 	{
 		PxPvdTransport* transport = gPvd->getTransport( );
-		gPvd->release( );	gPvd = NULL;
+		gPvd->release( );
+		gPvd = NULL;
 
 		if( transport )
 		{
 			transport->release( );
 		}
 	}
-	
+
 	if( gFoundation )
 	{
 		gFoundation->release( );

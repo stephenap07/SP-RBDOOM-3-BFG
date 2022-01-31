@@ -107,8 +107,8 @@ bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 	ui->LoadDocument( "guis/rml/shell/pause.rml", baseEventHandler );
 	ui->LoadDocument( "guis/rml/shell/game.rml", baseEventHandler );
 
-	screenToName.AssureSize( (int)ShellScreen::TOTAL );
-	screenToName[(int)ShellScreen::START] = "guis/rml/shell/startmenu.rml";
+	screenToName.AssureSize( ( int )ShellScreen::TOTAL );
+	screenToName[( int )ShellScreen::START] = "guis/rml/shell/startmenu.rml";
 	screenToName[( int )ShellScreen::OPTIONS] = "guis/rml/shell/options.rml";
 	screenToName[( int )ShellScreen::LOADING] = "guis/rml/shell/loading.rml";
 	screenToName[( int )ShellScreen::GAME] = "guis/rml/shell/game.rml";
@@ -180,7 +180,7 @@ void UI_Shell::HandleStateChange( )
 				state = nextState;
 			}
 		}
-		else if ( nextState == ShellState::LOADING )
+		else if( nextState == ShellState::LOADING )
 		{
 			ShowScreen( "loading" );
 			state = nextState;
@@ -264,7 +264,10 @@ void UI_Shell::ActivateMenu( bool show )
 		}
 	}
 
-	ui->Activate( show );
+	if( ui )
+	{
+		ui->Activate( show );
+	}
 
 	if( show )
 	{

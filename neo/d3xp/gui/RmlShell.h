@@ -2,8 +2,8 @@
 #define __GUI_RMLSHELL_H__
 
 #ifndef __TYPEINFOGEN__
-#include "../../renderer/RenderCommon.h"
-#include "rmlui/Core.h"
+	#include "../../renderer/RenderCommon.h"
+	#include "rmlui/Core.h"
 #endif
 
 #include <vector>
@@ -50,7 +50,7 @@ public:
 
 	~UI_Shell();
 
-	bool					Init( const char* filename, idSoundWorld* sw  );
+	bool					Init( const char* filename, idSoundWorld* sw );
 
 	// Called every frame.
 	void					Update( );
@@ -67,7 +67,7 @@ public:
 
 	void					SetNextScreen( ShellScreen _nextScreen );
 
-	void					SetNextScreen( const char* _nextScreen ); 
+	void					SetNextScreen( const char* _nextScreen );
 
 	void					ShowScreen( const char* _screen );
 
@@ -102,7 +102,10 @@ public:
 
 	bool					IsPausingGame( );
 
-	ShellState				State( ) const { return state; }
+	ShellState				State( ) const
+	{
+		return state;
+	}
 
 private:
 

@@ -33,7 +33,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "RenderCommon.h"	// just for R_FreeWorldInteractions and R_CreateWorldInteractions
 #include <sys/DeviceManager.h>
 
-extern nvrhi::CommandListHandle vcCommandList;
 extern DeviceManager* deviceManager;
 
 idCVar binaryLoadRenderModels( "binaryLoadRenderModels", "1", 0, "enable binary load/write of render models" );
@@ -69,12 +68,13 @@ public:
 
 private:
 	idList<idRenderModel*, TAG_MODEL>	models;
-	idHashIndex				hash;
-	idRenderModel* 			defaultModel;
-	idRenderModel* 			beamModel;
-	idRenderModel* 			spriteModel;
-	idRenderModel*			sphereModel;
-	bool					insideLevelLoad;		// don't actually load now
+	idHashIndex							hash;
+	idRenderModel* 						defaultModel;
+	idRenderModel* 						beamModel;
+	idRenderModel* 						spriteModel;
+	idRenderModel*						sphereModel;
+	bool								insideLevelLoad;		// don't actually load now
+	nvrhi::CommandListHandle			commandList;
 
 	idRenderModel* 			GetModel( const char* modelName, bool createIfNotFound );
 
@@ -238,7 +238,10 @@ idRenderModelManagerLocal::Init
 */
 void idRenderModelManagerLocal::Init()
 {
-	vcCommandList->open( );
+	if( !commandList )
+	{
+		commandList = deviceManager->GetDevice( )->createCommandList( );
+	}
 
 	cmdSystem->AddCommand( "listModels", ListModels_f, CMD_FL_RENDERER, "lists all models" );
 	cmdSystem->AddCommand( "printModel", PrintModel_f, CMD_FL_RENDERER, "prints model info", idCmdSystem::ArgCompletion_ModelName );
@@ -273,10 +276,6 @@ void idRenderModelManagerLocal::Init()
 	sphere->SetLevelLoadReferenced( true );
 	sphereModel = sphere;
 	AddModel( sphere );
-
-	vcCommandList->close( );
-
-	deviceManager->GetDevice( )->executeCommandList( vcCommandList );
 }
 
 /*
@@ -771,13 +770,11 @@ void idRenderModelManagerLocal::Preload( const idPreloadManifest& manifest )
 idRenderModelManagerLocal::EndLevelLoad
 =================
 */
-void idRenderModelManagerLocal::EndLevelLoad()
+void idRenderModelManagerLocal::EndLevelLoad( )
 {
 	common->Printf( "----- idRenderModelManagerLocal::EndLevelLoad -----\n" );
 
 	int start = Sys_Milliseconds();
-
-	vcCommandList->open( );
 
 	insideLevelLoad = false;
 	int	purgeCount = 0;
@@ -791,7 +788,6 @@ void idRenderModelManagerLocal::EndLevelLoad()
 
 		if( !model->IsLevelLoadReferenced() && model->IsLoaded() && model->IsReloadable() )
 		{
-
 //			common->Printf( "purging %s\n", model->Name() );
 
 			purgeCount++;
@@ -827,6 +823,7 @@ void idRenderModelManagerLocal::EndLevelLoad()
 		}
 	}
 
+	commandList->open( );
 	// create static vertex/index buffers for all models
 	for( int i = 0; i < models.Num(); i++ )
 	{
@@ -837,14 +834,12 @@ void idRenderModelManagerLocal::EndLevelLoad()
 		{
 			for( int j = 0; j < model->NumSurfaces(); j++ )
 			{
-				R_CreateStaticBuffersForTri( *( model->Surface( j )->geometry ) );
+				R_CreateStaticBuffersForTri( *( model->Surface( j )->geometry ), commandList );
 			}
 		}
 	}
-
-	vcCommandList->close( );
-
-	deviceManager->GetDevice( )->executeCommandList( vcCommandList );
+	commandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 
 	// _D3XP added this
 	int	end = Sys_Milliseconds();

@@ -48,13 +48,14 @@ idImage::idImage
 */
 idImage::idImage( const char* name ) : imgName( name )
 {
-	texnum = TEXTURE_NOT_LOADED;
+	texture.Reset( );
 	generatorFunction = NULL;
 	filter = TF_DEFAULT;
 	repeat = TR_REPEAT;
 	usage = TD_DEFAULT;
 	cubeFiles = CF_2D;
 	cubeMapSize = 0;
+	isLoaded = false;
 
 	referencedOutsideLevelLoad = false;
 	levelLoadReferenced = false;
@@ -62,6 +63,8 @@ idImage::idImage( const char* name ) : imgName( name )
 	sourceFileTime = FILE_NOT_FOUND_TIMESTAMP;
 	binaryFileTime = FILE_NOT_FOUND_TIMESTAMP;
 	refCount = 0;
+
+	DeferredLoadImage( );
 }
 
 /*
@@ -81,7 +84,7 @@ idImage::IsLoaded
 */
 bool idImage::IsLoaded() const
 {
-	return texnum != TEXTURE_NOT_LOADED;
+	return isLoaded;
 }
 
 /*
@@ -91,7 +94,7 @@ Bind
 Automatically enables 2D mapping or cube mapping if needed
 ==============
 */
-void idImage::Bind()
+void idImage::Bind( )
 {
 	RENDERLOG_PRINTF( "idImage::Bind( %s )\n", GetName() );
 
@@ -99,11 +102,10 @@ void idImage::Bind()
 	// RB: don't try again if last time failed
 	if( !IsLoaded( ) && !defaulted )
 	{
-		// load the image on demand here, which isn't our normal game operating mode
-		ActuallyLoadImage( true );
+		// TODO(Stephen): Fix me.
 	}
 
-
+	tr.backend.SetCurrentImage( this );
 }
 
 /*
@@ -131,7 +133,7 @@ void idImage::CopyDepthbuffer( int x, int y, int imageWidth, int imageHeight )
 idImage::SubImageUpload
 ========================
 */
-void idImage::SubImageUpload( int mipLevel, int x, int y, int z, int width, int height, const void* pic, int pixelPitch )
+void idImage::SubImageUpload( int mipLevel, int x, int y, int z, int width, int height, const void* pic, nvrhi::ICommandList* commandList, int pixelPitch )
 {
 	assert( x >= 0 && y >= 0 && mipLevel >= 0 && width >= 0 && height >= 0 && mipLevel < opts.numLevels );
 }
@@ -143,16 +145,6 @@ idImage::SetSamplerState
 */
 void idImage::SetSamplerState( textureFilter_t tf, textureRepeat_t tr )
 {
-}
-
-/*
-========================
-idImage::SetPixel
-========================
-*/
-void idImage::SetPixel( int mipLevel, int x, int y, const void* data, int dataSize )
-{
-	SubImageUpload( mipLevel, x, y, 0, 1, 1, data );
 }
 
 /*
@@ -174,11 +166,12 @@ Image, but doesn't put anything in them.
 This should not be done during normal game-play, if you can avoid it.
 ========================
 */
-void idImage::AllocImage()
+void idImage::AllocImage( )
 {
 	PurgeImage();
 
-	nvrhi::Format format;
+	nvrhi::Format format = nvrhi::Format::RGBA8_UINT;
+	int bpp = 4;
 
 	switch( opts.format )
 	{
@@ -260,9 +253,6 @@ void idImage::AllocImage()
 
 		// see http://what-when-how.com/Tutorial/topic-615ll9ug/Praise-for-OpenGL-ES-30-Programming-Guide-291.html
 		case FMT_R11G11B10F:
-			//internalFormat = GL_R11F_G11F_B10F;
-			//dataFormat = GL_RGB;
-			//dataType = GL_UNSIGNED_INT_10F_11F_11F_REV;
 			format = nvrhi::Format::R11G11B10_FLOAT;
 			break;
 
@@ -279,14 +269,56 @@ void idImage::AllocImage()
 		return;
 	}
 
+	int compressedSize = 0;
+	uint originalWidth = opts.width;
+	uint originalHeight = opts.height;
+
+	if( IsCompressed( ) )
+	{
+		originalWidth = ( originalWidth + 3 ) & ~3;
+		originalHeight = ( originalHeight + 3 ) & ~3;
+	}
+
+	uint scaledWidth = originalWidth;
+	uint scaledHeight = originalHeight;
+
+	uint maxTextureSize = 0;
+
+	if( maxTextureSize > 0 &&
+			int( std::max( originalWidth, originalHeight ) ) > maxTextureSize &&
+			opts.isRenderTarget &&
+			opts.textureType == TT_2D )
+	{
+		if( originalWidth >= originalHeight )
+		{
+			scaledHeight = originalHeight * maxTextureSize / originalWidth;
+			scaledWidth = maxTextureSize;
+		}
+		else
+		{
+			scaledWidth = originalWidth * maxTextureSize / originalHeight;
+			scaledHeight = maxTextureSize;
+		}
+	}
+
 	auto textureDesc = nvrhi::TextureDesc( )
-		.setDimension( nvrhi::TextureDimension::Texture2D )
-		.setWidth( opts.width )
-		.setHeight( opts.height )
-		.setClearValue( nvrhi::Color( 0.f ) )
-		.setKeepInitialState( true )
-		.setFormat( format )
-		.setMipLevels( 1 );
+					   .setDebugName( GetName() )
+					   .setDimension( nvrhi::TextureDimension::Texture2D )
+					   .setWidth( scaledWidth )
+					   .setHeight( scaledHeight )
+					   .setFormat( format )
+					   .setMipLevels( opts.numLevels );
+
+	if( opts.isRenderTarget )
+	{
+		textureDesc.keepInitialState = true;
+		textureDesc.isRenderTarget = opts.isRenderTarget;
+
+		if( opts.format != FMT_DEPTH && opts.format != FMT_DEPTH_STENCIL )
+		{
+			textureDesc.setIsUAV( true );
+		}
+	}
 
 	if( opts.textureType == TT_2D )
 	{
@@ -306,10 +338,12 @@ void idImage::AllocImage()
 	else if( opts.textureType == TT_2D_MULTISAMPLE )
 	{
 		textureDesc.setDimension( nvrhi::TextureDimension::Texture2DMS );
-		textureDesc.setArraySize( 1 ); 
+		textureDesc.setArraySize( 1 );
 	}
 
-	// Upload the texture to the GPU
+	texture = deviceManager->GetDevice( )->createTexture( textureDesc );
+
+	assert( texture );
 }
 
 /*
@@ -319,6 +353,7 @@ idImage::PurgeImage
 */
 void idImage::PurgeImage()
 {
+	texture.Reset( );
 }
 
 /*

@@ -448,36 +448,19 @@ void R_SetNewMode( const bool fullInit )
 
 		if( fullInit )
 		{
-			deviceManager = DeviceManager::Create( nvrhi::GraphicsAPI::D3D12 );
 			// create the context as well as setting up the window
-// SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL)
-			if( VKimp_Init( parms ) )
-#else
+			deviceManager = DeviceManager::Create( nvrhi::GraphicsAPI::D3D12 ); 
 			if( GLimp_Init( parms ) )
-#endif
 			{
-				// it worked
-
-				// DG: ImGui must be initialized after the window has been created, it needs an opengl context
 				ImGuiHook::Init( parms.width, parms.height );
-
 				break;
 			}
 		}
 		else
 		{
-			// just rebuild the window
-// SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL)
-			if( VKimp_SetScreenParms( parms ) )
-#else
 			if( GLimp_SetScreenParms( parms ) )
-#endif
 			{
-				// it worked
-
-				// DG: ImGui must know about the changed window size
+				Framebuffer::ResizeFramebuffers( );
 				ImGuiHook::NotifyDisplaySizeChanged( parms.width, parms.height );
 				break;
 			}
@@ -535,8 +518,13 @@ static void R_ReloadSurface_f( const idCmdArgs& args )
 	// reload the decl
 	mt.material->base->Reload();
 
+	nvrhi::CommandListHandle commandList = deviceManager->GetDevice( )->createCommandList( );
+
+	commandList->open( );
 	// reload any images used by the decl
-	mt.material->ReloadImages( false );
+	mt.material->ReloadImages( false, commandList );
+	commandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 }
 
 /*
@@ -778,6 +766,7 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 	{
 		sysWidth = width;
 	}
+
 
 	if( sysHeight > height )
 	{
@@ -2242,9 +2231,9 @@ void idRenderSystemLocal::Shutdown()
 
 	Clear();
 
-	ShutdownOpenGL();
-
 	bInitialized = false;
+
+	ShutdownOpenGL();
 }
 
 /*
@@ -2252,12 +2241,12 @@ void idRenderSystemLocal::Shutdown()
 idRenderSystemLocal::ResetGuiModels
 ========================
 */
-void idRenderSystemLocal::ResetGuiModels()
+void idRenderSystemLocal::ResetGuiModels( )
 {
 	delete guiModel;
 	guiModel = new( TAG_RENDER ) idGuiModel;
 	guiModel->Clear();
-	guiModel->BeginFrame();
+	guiModel->BeginFrame( commandList );
 	tr_guiModel = guiModel;	// for DeviceContext fast path
 }
 
@@ -2282,7 +2271,7 @@ idRenderSystemLocal::LoadLevelImages
 */
 void idRenderSystemLocal::LoadLevelImages()
 {
-	globalImages->LoadLevelImages( false );
+	globalImages->LoadLevelImages( false, commandList );
 }
 
 /*
@@ -2344,7 +2333,6 @@ idRenderSystemLocal::RegisterFont
 */
 idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 {
-
 	idStrStatic< MAX_OSPATH > baseFontName = fontName;
 	baseFontName.Replace( "fonts/", "" );
 	for( int i = 0; i < fonts.Num(); i++ )
@@ -2430,8 +2418,16 @@ void idRenderSystemLocal::InitBackend()
 	{
 		backend.Init();
 
+		if( !commandList )
+		{
+			commandList = deviceManager->GetDevice( )->createCommandList( );
+		}
+
+		commandList->open( );
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
-		//globalImages->ReloadImages( true );
+		globalImages->ReloadImages( true, commandList );
+		commandList->close( );
+		deviceManager->GetDevice( )->executeCommandList( commandList );
 	}
 }
 

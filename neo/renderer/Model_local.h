@@ -214,7 +214,7 @@ class idRenderModelMD5 : public idRenderModelStatic
 {
 public:
 	virtual void				InitFromFile( const char* fileName );
-	virtual bool				LoadBinaryModel( idFile* file, const ID_TIME_T sourceTimeStamp );
+	virtual bool				LoadBinaryModel( idFile* file, const ID_TIME_T sourceTimeStamp, nvrhi::ICommandList* commandList );
 	virtual void				WriteBinaryModel( idFile* file, ID_TIME_T* _timeStamp = NULL ) const;
 	virtual dynamicModel_t		IsDynamicModel() const;
 	virtual idBounds			Bounds( const struct renderEntity_s* ent ) const;
@@ -296,7 +296,7 @@ class idRenderModelLiquid : public idRenderModelStatic
 public:
 	idRenderModelLiquid();
 
-	virtual void				InitFromFile( const char* fileName );
+	virtual void				InitFromFile( const char* fileName, nvrhi::ICommandList* commandList );
 	virtual bool				SupportsBinaryModel()
 	{
 		return false;

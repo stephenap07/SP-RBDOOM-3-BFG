@@ -83,8 +83,8 @@ public:
 	idCinematicLocal();
 	virtual					~idCinematicLocal();
 
-	virtual bool			InitFromFile( const char* qpath, bool looping );
-	virtual cinData_t		ImageForTime( int milliseconds );
+	virtual bool			InitFromFile( const char* qpath, bool looping, nvrhi::ICommandList* commandList );
+	virtual cinData_t		ImageForTime( int milliseconds, nvrhi::ICommandList* commandList );
 	virtual int				AnimationLength();
 	// RB begin
 	bool                    IsPlaying() const;
@@ -105,8 +105,8 @@ private:
 	bool					hasFrame;
 	long					framePos;
 
-	cinData_t				ImageForTimeFFMPEG( int milliseconds );
-	bool					InitFromFFMPEGFile( const char* qpath, bool looping );
+	cinData_t				ImageForTimeFFMPEG( int milliseconds, nvrhi::ICommandList* commandList );
+	bool					InitFromFFMPEGFile( const char* qpath, bool looping, nvrhi::ICommandList* commandList );
 	void					FFMPEGReset();
 #endif
 #ifdef USE_BINKDEC
@@ -537,7 +537,7 @@ idCinematicLocal::InitFromFFMPEGFile
 ==============
 */
 #if defined(USE_FFMPEG)
-bool idCinematicLocal::InitFromFFMPEGFile( const char* qpath, bool amilooping )
+bool idCinematicLocal::InitFromFFMPEGFile( const char* qpath, bool amilooping, nvrhi::ICommandList* commandList )
 {
 	int ret;
 	looping = amilooping;
@@ -636,7 +636,7 @@ bool idCinematicLocal::InitFromFFMPEGFile( const char* qpath, bool amilooping )
 	status = FMV_PLAY;
 
 	startTime = 0;
-	ImageForTime( 0 );
+	ImageForTime( 0, commandList );
 	status = ( looping ) ? FMV_PLAY : FMV_IDLE;
 
 	//startTime = Sys_Milliseconds();
@@ -748,7 +748,7 @@ void idCinematicLocal::BinkDecReset()
 idCinematicLocal::InitFromFile
 ==============
 */
-bool idCinematicLocal::InitFromFile( const char* qpath, bool amilooping )
+bool idCinematicLocal::InitFromFile( const char* qpath, bool amilooping, nvrhi::ICommandList* commandList )
 {
 	unsigned short RoQID;
 
@@ -788,7 +788,7 @@ bool idCinematicLocal::InitFromFile( const char* qpath, bool amilooping )
 		RoQShutdown();
 		fileName = temp;
 		//idLib::Warning( "New filename: '%s'\n", fileName.c_str() );
-		return InitFromFFMPEGFile( fileName.c_str(), amilooping );
+		return InitFromFFMPEGFile( fileName.c_str(), amilooping, commandList );
 #elif defined(USE_BINKDEC)
 		idStr temp = fileName.StripFileExtension() + ".bik";
 		animationLength = 0;
@@ -827,7 +827,7 @@ bool idCinematicLocal::InitFromFile( const char* qpath, bool amilooping )
 	{
 		RoQ_init();
 		status = FMV_PLAY;
-		ImageForTime( 0 );
+		ImageForTime( 0, commandList );
 		status = ( looping ) ? FMV_PLAY : FMV_IDLE;
 		return true;
 	}
@@ -920,13 +920,13 @@ void idCinematicLocal::ResetTime( int time )
 idCinematicLocal::ImageForTime
 ==============
 */
-cinData_t idCinematicLocal::ImageForTime( int thisTime )
+cinData_t idCinematicLocal::ImageForTime( int thisTime, nvrhi::ICommandList* commandList )
 {
 #if defined(USE_FFMPEG)
 	// Carl: Handle BFG format BINK videos separately
 	if( !isRoQ )
 	{
-		return ImageForTimeFFMPEG( thisTime );
+		return ImageForTimeFFMPEG( thisTime, commandList );
 	}
 #endif
 #ifdef USE_BINKDEC // DG: libbinkdec support
@@ -1042,7 +1042,7 @@ cinData_t idCinematicLocal::ImageForTime( int thisTime )
 	cinData.imageWidth = CIN_WIDTH;
 	cinData.imageHeight = CIN_HEIGHT;
 	cinData.status = status;
-	img->UploadScratch( image, CIN_WIDTH, CIN_HEIGHT );
+	img->UploadScratch( image, CIN_WIDTH, CIN_HEIGHT, commandList );
 	cinData.image = img;
 
 	return cinData;
@@ -1054,7 +1054,7 @@ idCinematicLocal::ImageForTimeFFMPEG
 ==============
 */
 #if defined(USE_FFMPEG)
-cinData_t idCinematicLocal::ImageForTimeFFMPEG( int thisTime )
+cinData_t idCinematicLocal::ImageForTimeFFMPEG( int thisTime, nvrhi::ICommandList* commandList )
 {
 	cinData_t	cinData;
 
@@ -1155,7 +1155,7 @@ cinData_t idCinematicLocal::ImageForTimeFFMPEG( int thisTime )
 	cinData.imageWidth = CIN_WIDTH;
 	cinData.imageHeight = CIN_HEIGHT;
 	cinData.status = status;
-	img->UploadScratch( image, CIN_WIDTH, CIN_HEIGHT );
+	img->UploadScratch( image, CIN_WIDTH, CIN_HEIGHT, commandList );
 	hasFrame = true;
 	cinData.image = img;
 

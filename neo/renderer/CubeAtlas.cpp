@@ -262,7 +262,7 @@ struct ImgData
 	int height;
 };
 
-void GenerateAtlasImage( idImage* image )
+void GenerateAtlasImage( idImage* image, nvrhi::ICommandList* commandList )
 {
 	image->GenerateImage(
 		renderSystem->GetFontManager()->getAtlas()->getTextureBuffer(),
@@ -270,7 +270,8 @@ void GenerateAtlasImage( idImage* image )
 		renderSystem->GetFontManager()->getAtlas()->getTextureSize(),
 		textureFilter_t::TF_LINEAR,
 		textureRepeat_t::TR_CLAMP,
-		textureUsage_t::TD_LOOKUP_TABLE_RGBA );
+		textureUsage_t::TD_LOOKUP_TABLE_RGBA,
+		commandList );
 }
 
 Atlas::Atlas( uint16_t aTextureSize, uint16_t aMaxRegionsCount )
@@ -444,7 +445,7 @@ void Atlas::updateRegion( const AtlasRegion& _region, const uint8_t* _bitmapBuff
 		}
 
 		// TODO: This messes up renderdoc.
-		m_image->SubImageUpload( 0, _region._x, _region._y, 0, _region._width, _region._height, mem );
+		//m_image->SubImageUpload( 0, _region._x, _region._y, 0, _region._width, _region._height, mem );
 		Mem_Free( ( void* )mem );
 	}
 }

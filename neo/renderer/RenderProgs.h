@@ -253,7 +253,7 @@ public:
 	idRenderProgManager();
 	virtual ~idRenderProgManager();
 
-	void	Init(nvrhi::IDevice* _device);
+	void	Init( nvrhi::IDevice* _device );
 	void	Shutdown();
 
 	void	StartFrame();
@@ -262,10 +262,9 @@ public:
 	void	SetRenderParms( renderParm_t rp, const float* values, int numValues );
 
 	int		FindShader( const char* name, rpStage_t stage );
+	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 
 	nvrhi::ShaderHandle GetShader( int index );
-
-	ShaderBlob	GetBytecode( const char* fileName, const char* entryName );
 
 	void	BindProgram( int progIndex );
 
@@ -752,15 +751,16 @@ public:
 	int			FindProgram( const char* name, int vIndex, int fIndex );
 	void		ZeroUniforms();
 
-#if defined(USE_VULKAN)
-	void		PrintPipelines();
-	void		ClearPipelines();
-#endif
+	void			CommitConstantBuffer( nvrhi::ICommandList* commandList );
+	nvrhi::IBuffer* ConstantBuffer( ) { return constantBuffer; }
 
 	static const char* FindEmbeddedSourceShader( const char* name );
 
 private:
 	void		LoadShader( int index, rpStage_t stage );
+
+	// Reads the binary fileName and returns a ShaderBlob.
+	ShaderBlob	GetBytecode( const char* fileName );
 
 	idStr		StripDeadCode( const idStr& in, const char* name, const idStrList& compileMacros, bool builtin );
 	idStr		ConvertCG2GLSL( const idStr& in, const char* name, rpStage_t stage, idStr& outLayout, bool vkGLSL, bool hasGPUSkinning, vertexLayoutType_t vertexLayout );
@@ -901,188 +901,93 @@ private:
 
 	static const uint INVALID_PROGID = 0xFFFFFFFF;
 
-#if defined(USE_VULKAN)
+	// Shader macros are used to pick which permutation of a shader to load from a ShaderBlob
+	// binary file.
+	struct ShaderMacro
+	{
+		idStr name;
+		idStr definition;
+
+		ShaderMacro( )
+			: name( )
+			, definition( )
+		{
+		}
+
+		ShaderMacro( const idStr& _name, const idStr& _definition )
+			: name( _name )
+			, definition( _definition )
+		{ }
+	};
+
 	struct shader_t
 	{
-		shader_t() :
+		shader_t( ) :
+			name( ),
+			nameOutSuffix( ),
 			shaderFeatures( 0 ),
-			builtin( false ),
-			vertexLayout( LAYOUT_DRAW_VERT ),
-			module( VK_NULL_HANDLE ) {}
-		idStr				name;
-		idStr				nameOutSuffix;
-		uint32				shaderFeatures;		// RB: Cg compile macros
-		bool				builtin;			// RB: part of the core shaders built into the executable
-		rpStage_t			stage;
-		vertexLayoutType_t	vertexLayout;
-		VkShaderModule		module;
-		idList<rpBinding_t>	bindings;
-		idList<int>			parmIndices;
+			builtin(false),
+			macros( ),
+			handle( nullptr ),
+			stage( SHADER_STAGE_DEFAULT )
+		{
+		}
+
+		idStr						name;
+		idStr						nameOutSuffix;
+		uint32						shaderFeatures;
+		bool						builtin;
+		idList<ShaderMacro>			macros;
+		nvrhi::ShaderHandle			handle;
+		rpStage_t					stage;
 	};
 
 	struct renderProg_t
 	{
-		renderProg_t() :
-			progId( INVALID_PROGID ),
-			usesJoints( false ),
-			optionalSkinning( false ),
-			builtin( false ),
+		renderProg_t( ) :
+			name( ),
 			vertexShaderIndex( -1 ),
 			fragmentShaderIndex( -1 ),
-			vertexLayout( LAYOUT_DRAW_VERT ),
-			pipelineLayout( VK_NULL_HANDLE ),
-			descriptorSetLayout( VK_NULL_HANDLE ) {}
-
-		struct pipelineState_t
-		{
-			pipelineState_t() :
-				stateBits( 0 ),
-				pipeline( VK_NULL_HANDLE )
-			{
-			}
-
-			uint64		stateBits;
-			VkPipeline	pipeline;
-		};
-
-		VkPipeline GetPipeline( uint64 stateBits, VkShaderModule vertexShader, VkShaderModule fragmentShader );
-
-		idStr				name;
-		uint				progId;
-		bool				usesJoints;
-		bool				optionalSkinning;
-		bool				builtin;			// RB: part of the core shaders built into the executable
-		int					vertexShaderIndex;
-		int					fragmentShaderIndex;
-
-		vertexLayoutType_t		vertexLayout;
-		VkPipelineLayout		pipelineLayout;
-		VkDescriptorSetLayout	descriptorSetLayout;
-		idList<rpBinding_t>		bindings;
-		idList<pipelineState_t>	pipelines;
-	};
-
-	struct Resource
-	{
-		VkObjectType type;
-		uint64_t handle;
-	};
-
-	idList<Resource> resourcesToRelease[ NUM_FRAME_DATA ];
-
-	static void		CreateDescriptorSetLayout( const shader_t& vertexShader, const shader_t& fragmentShader, renderProg_t& renderProg );
-	void			AllocParmBlockBuffer( const idList<int>& parmIndices, idUniformBuffer& ubo );
-#elif defined(USE_DX12) || defined(USE_DX11)
-struct ShaderMacro
-{
-	idStr name;
-	idStr definition;
-
-	ShaderMacro( )
-		: name( )
-		, definition( )
-	{
-	}
-
-	ShaderMacro( const idStr& _name, const idStr& _definition )
-		: name( _name )
-		, definition( _definition )
-	{ }
-};
-
-struct shader_t
-{
-	shader_t( ) :
-		name( ),
-		macros( ),
-		handle( nullptr ),
-		stage( SHADER_STAGE_DEFAULT )
-	{
-	}
-
-	idStr				name;
-	idList<ShaderMacro> macros;
-	nvrhi::ShaderHandle	handle;
-	rpStage_t			stage;
-};
-
-struct renderProg_t
-{
-	renderProg_t( ) :
-		name( ),
-		pipeline( nullptr ),
-		vertexShaderIndex( -1 ),
-		fragmentShaderIndex( -1 )
-	{
-	}
-
-	idStr						  name;
-	nvrhi::GraphicsPipelineHandle pipeline;
-	int							  vertexShaderIndex;
-	int							  fragmentShaderIndex;
-};
-#else
-	struct shader_t
-	{
-		shader_t() :
-			progId( INVALID_PROGID ),
-			shaderFeatures( 0 ),
-			builtin( false ),
-			vertexLayout( LAYOUT_DRAW_VERT ),
-			uniformArray( -1 ) {}
-		idStr			name;
-		idStr			nameOutSuffix;
-		uint32			shaderFeatures;		// RB: Cg compile macros
-		bool			builtin;			// RB: part of the core shaders built into the executable
-		vertexLayoutType_t	vertexLayout;
-		rpStage_t		stage;
-		uint			progId;
-		int				uniformArray;
-		idList<int>		uniforms;
-	};
-
-	struct renderProg_t
-	{
-		renderProg_t() :
-			progId( INVALID_PROGID ),
+			builtin( true ),
 			usesJoints( false ),
-			optionalSkinning( false ),
-			builtin( false ),
 			vertexLayout( LAYOUT_UNKNOWN ),
-			vertexShaderIndex( -1 ),
-			fragmentShaderIndex( -1 ) {}
+			bindingLayoutType( BINDING_LAYOUT_DEFAULT ),
+			inputLayout( nullptr ),
+			bindingLayout( nullptr )
+		{
+		}
 
-		idStr				name;
-		uint				progId;
-		bool				usesJoints;
-		bool				optionalSkinning;
-		bool				builtin;			// RB: part of the core shaders built into the executable
-		vertexLayoutType_t	vertexLayout;
-		int					vertexShaderIndex;
-		int					fragmentShaderIndex;
+		idStr						name;
+		int							vertexShaderIndex;
+		int							fragmentShaderIndex;
+		bool						builtin;
+		bool						usesJoints;
+		vertexLayoutType_t			vertexLayout;
+		bindingLayoutType_t			bindingLayoutType;
+		nvrhi::InputLayoutHandle	inputLayout;
+		nvrhi::BindingLayoutHandle  bindingLayout;
 	};
-#endif
 
-	void							LoadShader( shader_t& shader );
+	void	LoadShader( shader_t& shader );
 
-	int											current;
+	int											currentIndex;
 	idList<renderProg_t, TAG_RENDER>			renderProgs;
 	idList<shader_t, TAG_RENDER>				shaders;
-
-	idStaticList < idVec4, RENDERPARM_TOTAL >	uniforms;
-
+	idStaticList< idVec4, RENDERPARM_TOTAL >	uniforms;
 	nvrhi::IDevice*								device;
 
-#if defined( USE_VULKAN )
-	int					counter;
-	int					currentData;
-	int					currentDescSet;
-	int					currentParmBufferOffset;
-	VkDescriptorPool	descriptorPools[ NUM_FRAME_DATA ];
-	VkDescriptorSet		descriptorSets[ NUM_FRAME_DATA ][ MAX_DESC_SETS ];
+	using VertexAttribDescList = idList< nvrhi::VertexAttributeDesc >;
+	idStaticList< VertexAttribDescList, NUM_VERTEX_LAYOUTS > vertexLayoutDescs;
 
-	idUniformBuffer* 	parmBuffers[ NUM_FRAME_DATA ];
-#endif
+	idStaticList< nvrhi::BindingLayoutHandle, NUM_BINDING_LAYOUTS > bindingLayouts;
+
+	nvrhi::BufferHandle	constantBuffer;
+
+	// Temp
+	nvrhi::InputLayoutHandle      inputLayout;
+	nvrhi::BindingLayoutHandle    bindingLayout;
+	nvrhi::BindingSetHandle       bindingSet;
+	renderProg_t*			      currentShader;
 };
 
 extern idRenderProgManager renderProgManager;
