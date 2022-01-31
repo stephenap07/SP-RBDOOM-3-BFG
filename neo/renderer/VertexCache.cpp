@@ -233,7 +233,7 @@ vertCacheHandle_t idVertexCache::ActuallyAlloc( geoBufferSet_t& vcs, const void*
 				{
 					MapGeoBufferSet( vcs );
 				}
-				vcs.indexBuffer.Update( data, bytes, offset, commandList );
+				vcs.indexBuffer.Update( data, bytes, offset, false, commandList );
 			}
 
 			break;
@@ -254,7 +254,7 @@ vertCacheHandle_t idVertexCache::ActuallyAlloc( geoBufferSet_t& vcs, const void*
 				{
 					MapGeoBufferSet( vcs );
 				}
-				vcs.vertexBuffer.Update( data, bytes, offset, commandList );
+				vcs.vertexBuffer.Update( data, bytes, offset, false, commandList );
 			}
 
 			break;

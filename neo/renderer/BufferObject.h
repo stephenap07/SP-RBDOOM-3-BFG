@@ -149,7 +149,7 @@ public:
 	void				Reference( const idVertexBuffer& other, int refOffset, int refSize );
 
 	// Copies data to the buffer. 'size' may be less than the originally allocated size.
-	void				Update( const void* data, int size, int offset, nvrhi::ICommandList* commandList ) const;
+	void				Update( const void* data, int size, int offset, bool initialUpdate, nvrhi::ICommandList* commandList ) const;
 
 	void* 				MapBuffer( bufferMapType_t mapType );
 	idDrawVert* 		MapVertexBuffer( bufferMapType_t mapType )
@@ -186,7 +186,7 @@ public:
 	void				Reference( const idIndexBuffer& other, int refOffset, int refSize );
 
 	// Copies data to the buffer. 'size' may be less than the originally allocated size.
-	void				Update( const void* data, int size, int offset, nvrhi::ICommandList* commandList ) const;
+	void				Update( const void* data, int size, int offset, bool initialUpdate, nvrhi::ICommandList* commandList ) const;
 
 	void* 				MapBuffer( bufferMapType_t mapType );
 	triIndex_t* 		MapIndexBuffer( bufferMapType_t mapType )

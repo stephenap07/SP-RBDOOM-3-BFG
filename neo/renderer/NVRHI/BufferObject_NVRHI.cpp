@@ -110,8 +110,14 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	vertexBufferDesc.byteSize = numBytes;
 	vertexBufferDesc.isVertexBuffer = true;
 	vertexBufferDesc.debugName = "VertexBuffer";
+
 	vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-	vertexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	
+	if( usage == BU_DYNAMIC )
+	{
+		vertexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	}
+
 	bufferHandle = deviceManager->GetDevice( )->createBuffer( vertexBufferDesc );
 
 	if( r_showBuffers.GetBool( ) )
@@ -122,7 +128,7 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	// copy the data
 	if( data != NULL )
 	{
-		Update( data, allocSize, 0, commandList );
+		Update( data, allocSize, 0, true, commandList );
 	}
 
 	return !allocationFailed;
@@ -167,7 +173,7 @@ void idVertexBuffer::FreeBufferObject()
 idVertexBuffer::Update
 ========================
 */
-void idVertexBuffer::Update( const void* data, int updateSize, int offset, nvrhi::ICommandList* commandList ) const
+void idVertexBuffer::Update( const void* data, int updateSize, int offset, bool initialUpdate, nvrhi::ICommandList* commandList ) const
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
@@ -186,9 +192,16 @@ void idVertexBuffer::Update( const void* data, int updateSize, int offset, nvrhi
 	}
 	else
 	{
-		commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
-		commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
-		commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::VertexBuffer );
+		if( initialUpdate )
+		{
+			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::VertexBuffer );
+		}
+		else
+		{
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+		}
 	}
 }
 
@@ -294,11 +307,15 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 	nvrhi::BufferDesc indexBufferDesc;
 	indexBufferDesc.byteSize = numBytes;
 	indexBufferDesc.isIndexBuffer = true;
+	indexBufferDesc.initialState = nvrhi::ResourceStates::Common;
+	indexBufferDesc.canHaveRawViews = true;
+	indexBufferDesc.canHaveTypedViews = true;
+	indexBufferDesc.format = nvrhi::Format::R16_UINT;
 
 	if( _usage == BU_STATIC )
 	{
 		indexBufferDesc.debugName = "VertexCache Static Index Buffer";
-		indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+		indexBufferDesc.keepInitialState = true;
 	}
 	else if( _usage == BU_DYNAMIC )
 	{
@@ -309,10 +326,9 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 
 	bufferHandle  = deviceManager->GetDevice( )->createBuffer( indexBufferDesc );
 
-	// copy the data
-	if( data != NULL )
+	if( data )
 	{
-		Update( data, allocSize, 0, commandList );
+		Update( data, allocSize, 0, true, commandList );
 	}
 
 	return true;
@@ -357,7 +373,7 @@ void idIndexBuffer::FreeBufferObject()
 idIndexBuffer::Update
 ========================
 */
-void idIndexBuffer::Update( const void* data, int updateSize, int offset, nvrhi::ICommandList* commandList ) const
+void idIndexBuffer::Update( const void* data, int updateSize, int offset, bool initialUpdate, nvrhi::ICommandList* commandList ) const
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
@@ -377,9 +393,17 @@ void idIndexBuffer::Update( const void* data, int updateSize, int offset, nvrhi:
 	}
 	else
 	{
-		commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
-		commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
-		commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::IndexBuffer );
+		if( initialUpdate )
+		{
+			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::Common );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::IndexBuffer | nvrhi::ResourceStates::ShaderResource );
+			commandList->commitBarriers( );
+		}
+		else
+		{
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+		}
 	}
 }
 
