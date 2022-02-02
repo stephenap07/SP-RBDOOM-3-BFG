@@ -1,42 +1,40 @@
 entityDef player_base
 {
-        "spawnclass"                    "idPlayer"
+    "spawnclass"                    "idPlayer"
     "scriptobject"                  "player"
   
-    "def_weapon0"                   "weapon_unarmed" 
-    "weapon0_allowempty"            "0"
+    "def_weapon0"                   "weapon_unarmed"
+    "weapon0_best"                  "0"                 // whether weapon should be chosen when out of ammo
+    "weapon0_cycle"                 "0"                 // whether weapon should be selected when using next/prev weapon
+    "weapon0_toggle"                "0"                 // whether selecting weapon twice switches between current and previous weapons
+    "weapon0_allowempty"            "1"
+    "weapon0_visible"               "1"                 // whether you can see this weapon in the inventory or not
 
-    "def_weapon1"                   "weapon_arm2" 
-    "weapon0_best"                  "1"
-    "weapon1_cycle"                 "1"
+    "def_weapon1"                   "weapon_rocketlauncher" 
+    "weapon1_best"                  "1"
+    //"weapon1_cycle"                 "1"
     "weapon1_allowempty"            "1"
 
-    "def_weapon2"                   "weapon_keycard" 
+    "def_weapon2"                   "weapon_shotgun" 
     "weapon2_allowempty"            "1"
 
-    "def_weapon3"                   "weapon_tazer" 
-    "weapon3_best"                  "0"
-    "weapon3_cycle"                 "1"
-    "weapon3_toggle"                "0"
-    "weapon3_allowempty"            "1"
-
-    "def_weapon18"                   "weapon_pda" 
-    "weapon18_best"                  "0"
-    "weapon18_cycle"                 "1"
-    "weapon18_toggle"                "0"
-    "weapon18_allowempty"            "1"
+    //"def_weapon18"                  "weapon_unarmed" 
+    //"weapon18_best"                 "0"
+    //"weapon18_cycle"                "1"
+    //"weapon18_toggle"               "0"
+    //"weapon18_allowempty"           "1"
 
     "weapon"                        "weapon_unarmed"
-    "current_weapon"                "0"   
+    "current_weapon"                "0"
 
     "snd_footstep"                  "player_sounds_footstep"
 
     "pm_jumpheight"                 "48"
     "pm_stepsize"                   "16"
     "pm_crouchspeed"                "80"
-    "pm_walkspeed"                  "100"
-    "pm_runspeed"                   "220"
-    "pm_noclipspeed"                "200"
+    "pm_walkspeed"                  "140"
+    "pm_runspeed"                   "450"
+    "pm_noclipspeed"                "450"
     "pm_spectatespeed"              "450"
     "pm_spectatebbox"               "32"
     "pm_usecylinder"                "0"
@@ -56,6 +54,27 @@ entityDef player_base
     "pm_crouchbob"                  "0.2"
     "pm_walkbob"                    "0.2"
     "pm_runbob"                     "0.4"
+
+    // ammo
+    "ammo_shells"                       "0"
+    "ammo_bullets"                      "48"
+    "ammo_rockets"                      "0"
+    "ammo_cells"                        "0"
+    "ammo_grenades"                     "0"
+    "ammo_bfg"                          "0"
+    "ammo_clip"                         "0"
+    "ammo_belt"                         "0"
+
+    "max_ammo_shells"                   "320"
+    "max_ammo_bullets"                  "360"
+    "max_ammo_rockets"                  "96"
+    "max_ammo_cells"                    "500"
+    "max_ammo_grenades"                 "50"
+    "max_ammo_souls"                    "5"                         // number of kills required to charge the soul cube
+    "max_ammo_bfg"                      "32"
+    "max_ammo_clip"                     "600"
+    "max_ammo_belt"                     "600"
+
 }
 
 entityDef player_doommarine

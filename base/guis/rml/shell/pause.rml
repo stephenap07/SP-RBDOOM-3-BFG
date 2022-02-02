@@ -45,10 +45,10 @@
 
 	</style>
 </head>
-<body onshow="inhibitControl=true;  pauseGame=true; enableCursor=true">
+<body onshow="inhibitControl=true; pauseGame=true; enableCursor=true" onkeydown="goto game">
 	<div class="center_content">
 		<button id="continue" onclick="goto game" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Continue</button><br />
-		<button id="options" onclick="goto guis/rml/shell/options.rml" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Options</button><br />
+		<button id="options" onclick="goto options" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Options</button><br />
 		<button id="exit" onclick="exit" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Exit</button>
 	</div>
 </body>

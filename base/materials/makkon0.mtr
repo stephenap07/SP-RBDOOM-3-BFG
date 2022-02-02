@@ -1,0 +1,114 @@
+// Makkon materials
+
+// Metal Fences
+textures/makkon/metal_bras2f01
+{
+	{
+		blend blend
+		map "textures/makkon0/textures/metal_bras2f01"
+	}
+}
+
+textures/makkon/metal_bras2f02
+{
+	{
+		blend blend
+		map "textures/makkon0/textures/metal_bras2f02"
+	}
+}
+
+textures/makkon/metal_bras2f03
+{
+	{
+		blend blend
+		map "textures/makkon0/textures/metal_bras2f03"
+	}
+}
+
+// Metal base
+textures/makkon/metal_rust_01
+{
+	qer_editorimage textures/makkon0/textures/metal_rust_01
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon0/textures/metal_rust_01"
+	}
+}
+
+// Metal Towers
+textures/makkon/metal_rust_t1
+{
+	qer_editorimage textures/makkon0/textures/metal_rust_t1
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon0/textures/metal_rust_t1"
+	}
+}
+
+textures/makkon/metal_rust_t1_nonsolid
+{
+	qer_editorimage textures/makkon0/textures/metal_rust_t1
+
+	metal
+	nonsolid
+
+	{
+		blend diffusemap
+		map "textures/makkon0/textures/metal_rust_t1"
+	}
+}
+
+
+textures/makkon/metal_rust_t2
+{
+	qer_editorimage textures/makkon0/textures/metal_rust_t2
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon0/textures/metal_rust_t2"
+	}
+}
+
+textures/makkon/metal_rust_t3
+{
+	qer_editorimage textures/makkon0/textures/metal_rust_t3
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon0/textures/metal_rust_t3"
+	}
+}
+
+textures/makkon/metal_rust_t4
+{
+	qer_editorimage textures/makkon0/textures/metal_rust_t4
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon0/textures/metal_rust_t4"
+	}
+}
+
+textures/makkon/metal_rust_t5
+{
+	qer_editorimage textures/makkon0/textures/metal_rust_t5
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon0/textures/metal_rust_t5"
+	}
+}

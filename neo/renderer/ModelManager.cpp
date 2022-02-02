@@ -58,6 +58,7 @@ public:
 	virtual void			AddModel( idRenderModel* model );
 	virtual void			RemoveModel( idRenderModel* model );
 	virtual void			ReloadModels( bool forceAll = false );
+	virtual void			CreateMeshBuffers( nvrhi::ICommandList* commandList );
 	virtual void			FreeModelVertexCaches();
 	virtual void			WritePrecacheCommands( idFile* file );
 	virtual void			BeginLevelLoad();
@@ -653,6 +654,16 @@ void idRenderModelManagerLocal::ReloadModels( bool forceAll )
 	R_ReCreateWorldReferences();
 }
 
+void idRenderModelManagerLocal::CreateMeshBuffers( nvrhi::ICommandList* commandList )
+{
+	for( int i = 0; i < models.Num( ); i++ )
+	{
+		idRenderModel* model = models[i];
+		// Upload vertices and indices and shadow vertices into the vertex cache.
+		assert( false && "Stephen should implement me!" );
+	}
+}
+
 /*
 =================
 idRenderModelManagerLocal::FreeModelVertexCaches
@@ -824,6 +835,14 @@ void idRenderModelManagerLocal::EndLevelLoad( )
 	}
 
 	commandList->open( );
+
+	for( int i = 0; i < models.Num( ); i++ )
+	{
+		common->UpdateLevelLoadPacifier( );
+		idRenderModel* model = models[i];
+		model->CreateBuffers( commandList );
+	}
+
 	// create static vertex/index buffers for all models
 	for( int i = 0; i < models.Num(); i++ )
 	{
@@ -838,6 +857,7 @@ void idRenderModelManagerLocal::EndLevelLoad( )
 			}
 		}
 	}
+
 	commandList->close( );
 	deviceManager->GetDevice( )->executeCommandList( commandList );
 

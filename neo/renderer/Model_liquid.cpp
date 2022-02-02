@@ -514,7 +514,7 @@ void idRenderModelLiquid::InitFromFile( const char* fileName, nvrhi::ICommandLis
 
 	// build the information that will be common to all animations of this mesh:
 	// sil edge connectivity and normal / tangent generation information
-	deformInfo = R_BuildDeformInfo( verts.Num(), verts.Ptr(), tris.Num(), tris.Ptr(), true, commandList );
+	deformInfo = R_BuildDeformInfo( verts.Num(), verts.Ptr(), tris.Num(), tris.Ptr(), true );
 
 	bounds.Clear();
 	bounds.AddPoint( idVec3( 0.0f, 0.0f, drop_height * -10.0f ) );
@@ -604,4 +604,14 @@ idBounds idRenderModelLiquid::Bounds( const struct renderEntity_s* ent ) const
 {
 	// FIXME: need to do this better
 	return bounds;
+}
+
+/*
+====================
+idRenderModelLiquid::CreateBuffers
+====================
+*/
+void idRenderModelLiquid::CreateBuffers( nvrhi::ICommandList* commandList )
+{
+	R_CreateDeformStaticVertices( deformInfo, commandList );
 }

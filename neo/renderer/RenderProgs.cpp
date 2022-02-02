@@ -447,6 +447,14 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 	shader.name = shaderName;
 	shader.stage = stage;
 
+	for( int i = 0; i < MAX_SHADER_MACRO_NAMES; i++ )
+	{
+		int feature = ( bool )( 0 & BIT( i ) );
+		idStr macroName( GetGLSLMacroName( ( shaderFeature_t )i ) );
+		idStr value( feature );
+		shader.macros.Append( ShaderMacro( macroName, value ) );
+	}
+
 	int index = shaders.Append( shader );
 	LoadShader( index, stage );
 

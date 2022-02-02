@@ -111,11 +111,15 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	vertexBufferDesc.isVertexBuffer = true;
 	vertexBufferDesc.debugName = "VertexBuffer";
 
-	vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-	
 	if( usage == BU_DYNAMIC )
 	{
+		vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
 		vertexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	}
+	else
+	{
+		vertexBufferDesc.initialState = nvrhi::ResourceStates::Common;
+		vertexBufferDesc.keepInitialState = true;
 	}
 
 	bufferHandle = deviceManager->GetDevice( )->createBuffer( vertexBufferDesc );
@@ -194,9 +198,9 @@ void idVertexBuffer::Update( const void* data, int updateSize, int offset, bool 
 	{
 		if( initialUpdate )
 		{
-			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
+			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::Common );
 			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
-			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::VertexBuffer );
+			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::ShaderResource | nvrhi::ResourceStates::VertexBuffer );
 		}
 		else
 		{

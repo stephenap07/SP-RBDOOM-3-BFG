@@ -236,6 +236,7 @@ textures/common/entityRmlRenderMap
 	discrete
 	playerclip
 	rmlSurf	entity
+	forceOpaque
 
 	// Render the gui to the render target.
 	{
@@ -246,13 +247,13 @@ textures/common/entityRmlRenderMap
 	}
 
 	// Perform a shader operation on the generated render target.
-	//{
-	//	blend blend
-	//	renderTargetMap textures/fullscreen/crt 640 480 // Full-screen material, width height
-	//	map 			_glowImage1 					// The image resulted from the shader operation
-	//	//scale 		1 , -1							// The render view ars upside down otherwise
-	//	//translate 	0, -1
-	//}
+	{
+		blend blend
+		renderTargetMap textures/fullscreen/crt 640 480 // Full-screen material, width height
+		map 			_glowImage1 					// The image resulted from the shader operation
+		//scale 		1 , -1							// The render view ars upside down otherwise
+		//translate 	0, -1
+	}
 }
 
 //======================================================================
@@ -420,5 +421,26 @@ textures/common/guiWhite
 	{
 		blend blend
 		map _white
+	}
+}
+
+textures/smf/portalsky
+{
+	qer_editorimage				textures/common/skyportal.tga
+	noshadows
+	noimpact
+	forceOpaque
+	portalSky
+	sort						subview
+
+	{
+		map						_currentRender
+		
+		clamp
+		screen
+
+		// fix up the projection based on the screen coords
+		translate				global4 * 0.5, global5 * 0.5
+		scale					global4 * 0.5, global5 * 0.5
 	}
 }

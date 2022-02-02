@@ -895,6 +895,8 @@ int idImageManager::LoadLevelImages( bool pacifier, nvrhi::ICommandList* command
 		}
 	}
 
+	globalImages->LoadDeferredImages( commandList );
+
 	return loadCount;
 }
 
@@ -984,23 +986,31 @@ void idImageManager::PrintMemInfo( MemInfo_t* mi )
 	fileSystem->CloseFile( f );
 }
 
-void idImageManager::LoadDeferredImages( )
+void idImageManager::LoadDeferredImages( nvrhi::ICommandList* _commandList )
 {
 	if( !commandList )
 	{
 		commandList = deviceManager->GetDevice( )->createCommandList( );
 	}
 
-	commandList->open( );
+	nvrhi::ICommandList* thisCmdList = _commandList;
+	if( !thisCmdList )
+	{
+		thisCmdList = commandList;
+		thisCmdList->open( );
+	}
 
 	for( int i = 0; i < globalImages->imagesToLoad.Num( ); i++ )
 	{
 		// This is a "deferred" load of textures to the gpu.
-		globalImages->imagesToLoad[i]->FinalizeImage( false, commandList );
+		globalImages->imagesToLoad[i]->FinalizeImage( false, thisCmdList );
 	}
 
-	commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	if( !_commandList )
+	{
+		thisCmdList->close( );
+		deviceManager->GetDevice( )->executeCommandList( thisCmdList );
+	}
 
 	globalImages->imagesToLoad.Clear( );
 }

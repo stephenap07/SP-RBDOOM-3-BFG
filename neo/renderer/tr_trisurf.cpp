@@ -2037,7 +2037,7 @@ R_BuildDeformInfo
 ===================
 */
 deformInfo_t* R_BuildDeformInfo( int numVerts, const idDrawVert* verts, int numIndexes, const int* indexes,
-								 bool useUnsmoothedTangents, nvrhi::ICommandList* commandList )
+								 bool useUnsmoothedTangents )
 {
 	srfTriangles_t	tri;
 	memset( &tri, 0, sizeof( srfTriangles_t ) );
@@ -2092,7 +2092,18 @@ deformInfo_t* R_BuildDeformInfo( int numVerts, const idDrawVert* verts, int numI
 		tri.dominantTris = NULL;
 	}
 
-	idShadowVertSkinned* shadowVerts = ( idShadowVertSkinned* ) Mem_Alloc16( ALIGN( deform->numOutputVerts * 2 * sizeof( idShadowVertSkinned ), 16 ), TAG_MODEL );
+	return deform;
+}
+
+/*
+==============================
+R_CreateDeformStaticVertices
+==============================
+Uploads static vertices to the vertex cache.
+*/
+void R_CreateDeformStaticVertices( deformInfo_t* deform, nvrhi::ICommandList* commandList )
+{
+	idShadowVertSkinned* shadowVerts = ( idShadowVertSkinned* )Mem_Alloc16( ALIGN( deform->numOutputVerts * 2 * sizeof( idShadowVertSkinned ), 16 ), TAG_MODEL );
 	idShadowVertSkinned::CreateShadowCache( shadowVerts, deform->verts, deform->numOutputVerts );
 
 	deform->staticAmbientCache = vertexCache.AllocStaticVertex( deform->verts, ALIGN( deform->numOutputVerts * sizeof( idDrawVert ), VERTEX_CACHE_ALIGN ), commandList );
@@ -2100,8 +2111,6 @@ deformInfo_t* R_BuildDeformInfo( int numVerts, const idDrawVert* verts, int numI
 	deform->staticShadowCache = vertexCache.AllocStaticVertex( shadowVerts, ALIGN( deform->numOutputVerts * 2 * sizeof( idShadowVertSkinned ), VERTEX_CACHE_ALIGN ), commandList );
 
 	Mem_Free( shadowVerts );
-
-	return deform;
 }
 
 /*

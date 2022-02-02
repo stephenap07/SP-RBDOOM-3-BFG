@@ -53,3 +53,34 @@ textures/weapons/sshell
 		map textures/weapons/sshell.png
 	}
 }
+
+rocketlauncher
+{
+	{
+		blend diffusemap
+		map textures/weapons/rocketlauncher/rocketlauncher.png
+	}
+}
+
+models/weapons/rocketlauncher/rocket
+{
+    noselfShadow
+	noshadows
+	
+	diffusemap textures/weapons/rocketlauncher/rocket.tga
+	normalmap textures/weapons/rocketlauncher/rocket_local.tga
+}
+
+models/weapons/rocketlauncher/rocketfin
+{
+    noselfShadow
+	noshadows
+
+	{
+		blend diffusemap
+		map textures/weapons/rocketlauncher/rocketfin.tga
+		alphaTest 0.5
+	}
+	
+	normalmap textures/weapons/rocketlauncher/rocket_local.tga
+}

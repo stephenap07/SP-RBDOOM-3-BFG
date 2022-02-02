@@ -2271,7 +2271,10 @@ idRenderSystemLocal::LoadLevelImages
 */
 void idRenderSystemLocal::LoadLevelImages()
 {
+	commandList->open( );
 	globalImages->LoadLevelImages( false, commandList );
+	commandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 }
 
 /*

@@ -1,0 +1,9 @@
+// Makkon materials
+
+material textures/makkon/metal_bras2f01
+{
+	{
+		blend add
+		map "textures/makkon0/textures/metal_bras2f01"
+	}
+}

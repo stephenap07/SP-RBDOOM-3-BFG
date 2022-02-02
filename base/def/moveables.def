@@ -6,6 +6,11 @@ entityDef moveable_black_leather_chair
 
 	"model" "models/static/black_leather_chair.dae"
 	"clipmodel" "models/static/black_leather_chair_clip.dae"
+
+	"density"					"0.05"
+	"friction"					"0.3"
+	"bouncyness"				".2"
+	"mass"						"7"
 }
 
 entityDef moveable_dog_collar
@@ -52,7 +57,7 @@ entityDef moveable_door
 	"editor_var triggerClosed"	"name of entity to trigger when door closes, can be iterated with triggerClosed2, 3 etc."
 	"editor_var triggerOpened"	"name of entity to trigger when door opens, can be iterated with triggerOpened2, 3 etc."
 	"editor_var triggerBlocked"	"name of entity to trigger when door is blocked, can be iterated with triggerBlocked2, 3 etc."
-`
+
 	"start_open"				"0"
 	"no_touch"					"0"
 	"crusher"					"0"

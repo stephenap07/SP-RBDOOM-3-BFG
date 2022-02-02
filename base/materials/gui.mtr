@@ -56,3 +56,34 @@ guis/assets/win_retro.png
 		map guis/assets/win_retro.png
 	}
 }
+
+guis/assets/mainmenu/title
+{
+	{
+		blend add
+		map guis/assets/mainmenu/title
+		vertexColor
+	}
+}
+
+guis/assets/hud/reticle
+{
+	{
+		blend add
+		map guis/assets/hud/reticle
+		vertexColor
+		clamp
+	}
+}
+
+ui/assets/guicursor_arrow
+{
+	translucent
+	alphazeroclamp
+	{
+		blend blend
+		map ui/assets/glove3.png
+		vertexColor
+		clamp
+	}
+}

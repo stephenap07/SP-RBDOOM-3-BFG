@@ -1,0 +1,49 @@
+entityDef weapon_flashlight {
+	"editor_color"				".3 .3 1"
+	"editor_mins"				"-16 -16 0"
+	"editor_maxs"				"16 16 32"
+	"editor_usage"				"Flashlight"
+	"editor_rotatable"			"1"
+	//"model"					"models/items/flashlight/flashlight2_world.lwo"
+
+	"spawnclass"				"idItem"
+	"size"						"32 32 32"
+	//"model_view"				"viewmodel_flashlight"
+	//"model_world" 			"worldmodel_flashlight"
+	//"joint_attach"			"FL_ATTACHER"
+
+	"inv_name"					"Flashlight"
+	"inv_weapon"				"weapon_flashlight"
+	"inv_item"					"5"
+	"icon"						"guis/assets/hud/wpn_10"
+	
+	"impact_damage_effect"		"1"
+	
+	"hide_time"					"0.3"								// time to hide weapon when talking to npcs or looking at guis
+	"hide_distance"				"-15"								// distance to offset weapon when talking to npcs or looking at guis
+
+	"weapon_class"				"idWeaponFlashlight"
+	//"def_melee"					"damage_flashlight"
+	"melee_distance"			"48"
+	"ammoType"					""
+	"ammoRequired"				"0"
+	"clipSize"					"0"
+	"mtr_flashShader"			"lights/flashlight5"
+	"flashColor"				"1 1 1"
+	"flashTime"					"0.016"
+	"flashRadius"				"400"
+	"silent_fire"				"1"
+	"flashAngle"				"22.0"
+	"flashTarget"				"0 0 1280"
+	"flashUp"					"0 640 0"
+	"flashRight"				"-640 0 0"
+	"flashPointLight"			"0"
+
+	"snd_acquire"				"flashlight_pickup"
+
+	// MP
+	//"skin_on"					"skins/models/weapons/flashlight_on"
+	//"skin_on_invis"			"skins/models/weapons/flashlight_on_invis"
+	//"skin_off"				"skins/models/weapons/flashlight_off"
+	//"skin_off_invis"			"skins/models/weapons/flashlight_off_invis"
+}

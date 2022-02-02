@@ -195,6 +195,29 @@ void idRenderProgManager::LoadProgram( const int programIndex, const int vertexS
 }
 
 
+/*
+================================================================================================
+idRenderProgManager::FindProgram
+================================================================================================
+*/
+int	 idRenderProgManager::FindProgram( const char* name, int vIndex, int fIndex )
+{
+	for( int i = 0; i < renderProgs.Num( ); ++i )
+	{
+		if( ( renderProgs[i].vertexShaderIndex == vIndex ) && ( renderProgs[i].fragmentShaderIndex == fIndex ) )
+		{
+			return i;
+		}
+	}
+
+	renderProg_t program;
+	program.name = name;
+	program.vertexLayout = LAYOUT_DRAW_VERT;
+	program.bindingLayoutType = BINDING_LAYOUT_DEFAULT;
+	int index = renderProgs.Append( program );
+	LoadProgram( index, vIndex, fIndex );
+	return index;
+}
 
 /*
 ================================================================================================

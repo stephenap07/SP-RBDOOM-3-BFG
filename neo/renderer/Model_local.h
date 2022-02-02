@@ -72,6 +72,7 @@ public:
 	virtual void				SetLevelLoadReferenced( bool referenced );
 	virtual bool				IsLevelLoadReferenced();
 	virtual void				TouchData();
+	virtual void				CreateBuffers( nvrhi::ICommandList* commandList );
 	virtual void				InitEmpty( const char* name );
 	virtual void				AddSurface( modelSurface_t surface );
 	virtual void				FinishSurfaces( bool useMikktspace );
@@ -80,7 +81,7 @@ public:
 	virtual void				Print() const;
 	virtual void				List() const;
 	virtual int					Memory() const;
-	virtual ID_TIME_T				Timestamp() const;
+	virtual ID_TIME_T			Timestamp() const;
 	virtual int					NumSurfaces() const;
 	virtual int					NumBaseSurfaces() const;
 	virtual const modelSurface_t* Surface( int surfaceNum ) const;
@@ -223,6 +224,7 @@ public:
 	virtual void				TouchData();
 	virtual void				PurgeModel();
 	virtual void				LoadModel();
+	virtual void				CreateBuffers( nvrhi::ICommandList* commandList );
 	virtual int					Memory() const;
 	virtual idRenderModel* 		InstantiateDynamicModel( const struct renderEntity_s* ent, const viewDef_t* view, idRenderModel* cachedModel );
 	virtual int					NumJoints() const;
@@ -304,6 +306,7 @@ public:
 	virtual dynamicModel_t		IsDynamicModel() const;
 	virtual idRenderModel* 		InstantiateDynamicModel( const struct renderEntity_s* ent, const viewDef_t* view, idRenderModel* cachedModel );
 	virtual idBounds			Bounds( const struct renderEntity_s* ent ) const;
+	virtual void				CreateBuffers( nvrhi::ICommandList* commandList );
 
 	virtual void				Reset();
 	void						IntersectBounds( const idBounds& bounds, float displacement );

@@ -11,6 +11,6 @@ textures/skies/cloudy_sky
         cubeMapSingle env/skybox_texture
         cubeMapSize   512
         texgen        skybox
-        //texgen        wobblesky .1 .1 .1
+        texgen        wobblesky 0 0 .1
     }
 }

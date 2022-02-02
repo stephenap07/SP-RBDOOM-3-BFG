@@ -3,6 +3,7 @@ namespace computer
 	void test()
 	{
 		$computer_camera.activate( $player1 );
+		sys.print("Hi");
 	}
 
 	void main()

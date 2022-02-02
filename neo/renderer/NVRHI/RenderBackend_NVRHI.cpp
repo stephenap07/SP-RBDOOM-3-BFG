@@ -1269,6 +1269,8 @@ void idRenderBackend::CheckCVars()
 		R_SetColorMappings( );
 	}
 
+	commandList->open( );
+
 	// filtering
 	if( r_maxAnisotropicFiltering.IsModified( ) || r_useTrilinearFiltering.IsModified( ) || r_lodBias.IsModified( ) )
 	{
@@ -1286,6 +1288,10 @@ void idRenderBackend::CheckCVars()
 			}
 		}
 	}
+
+	commandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( commandList );
 
 	if( r_useSeamlessCubeMap.IsModified( ) )
 	{
@@ -1550,6 +1556,14 @@ void idRenderBackend::ResizeImages( )
 
 void idRenderBackend::SetCurrentImage( idImage* image )
 {
+	// load the image if necessary (FIXME: not SMP safe!)
+	// RB: don't try again if last time failed
+	if( !image->IsLoaded( ) && !image->IsDefaulted( ) )
+	{
+		// TODO(Stephen): Fix me.
+		image->FinalizeImage( true, commandList );
+	}
+
 	context.imageParms[context.currentImageParm] = image;
 }
 

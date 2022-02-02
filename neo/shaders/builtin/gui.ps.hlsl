@@ -32,10 +32,10 @@ Texture2D texGui : register( t0 );
 SamplerState samp0 : register( s0 );
 
 struct PS_IN {
-	float4 position : POSITION;
+	float4 position	 : SV_POSITION;
 	float2 texcoord0 : TEXCOORD0_centroid;
-	float4 texcoord1 : TEXCOORD1_centroid;
-	float4 color : COLOR;
+	float4 texcoord1 : TEXCOORD1;
+	float4 color	 : COLOR0;
 };
 
 struct PS_OUT {

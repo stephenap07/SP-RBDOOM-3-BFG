@@ -27,7 +27,7 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "renderprogs/global.inc.hlsl"
+#include "global.inc.hlsl"
 
 
 #if defined(USE_GPU_SKINNING)

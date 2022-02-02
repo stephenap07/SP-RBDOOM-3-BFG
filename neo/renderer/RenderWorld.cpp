@@ -32,6 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "RenderCommon.h"
+#include <sys/DeviceManager.h>
 
 /*
 ===================
@@ -1940,6 +1941,8 @@ void idRenderWorldLocal::AddEnvprobeRefToArea( RenderEnvprobeLocal* probe, porta
 }
 // RB end
 
+extern DeviceManager* deviceManager;
+
 /*
 ===================
 idRenderWorldLocal::GenerateAllInteractions
@@ -1969,6 +1972,8 @@ void idRenderWorldLocal::GenerateAllInteractions( )
 	interactionTableHeight = lightDefs.Num() + 100;
 	int	size =  interactionTableWidth * interactionTableHeight * sizeof( *interactionTable );
 	interactionTable = ( idInteraction** )R_ClearedStaticAlloc( size );
+
+	tr.commandList->open( );
 
 	// iterate through all lights
 	int	count = 0;
@@ -2022,6 +2027,9 @@ void idRenderWorldLocal::GenerateAllInteractions( )
 
 		session->Pump();
 	}
+
+	tr.commandList->close( );
+	deviceManager->GetDevice( )->executeCommandList( tr.commandList );
 
 	int end = Sys_Milliseconds();
 	int	msec = end - start;

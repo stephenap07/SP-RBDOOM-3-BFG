@@ -59,3 +59,31 @@ textures/decals/dirt_01
 
     //specularmap     textures/decals/dirt_01
 }
+
+textures/decals/ballburn01
+{
+    DECAL_MACRO
+    decalInfo 0.5 10 ( 1 1 1 10 ) ( -5 -5 -5 0 )
+
+    qer_editorimage textures/decals/ballburn01
+
+    {
+        blend       gl_zero, gl_one_minus_src_alpha
+        map         makealpha(textures/decals/ballburn01)
+        vertexColor
+    }
+}
+
+textures/decals/ballburn02
+{
+    DECAL_MACRO
+    decalInfo 0.5 10 ( 1 1 1 10 ) ( -5 -5 -5 0 )
+
+    qer_editorimage textures/decals/ballburn02
+
+    {
+        blend       gl_zero, gl_one_minus_src_alpha
+        map         makealpha(textures/decals/ballburn02)
+        vertexColor
+    }
+}

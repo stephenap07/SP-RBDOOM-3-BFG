@@ -1,6 +1,6 @@
 include(../compileshaders.cmake)
 
-file(GLOB globalshaders "*.hlsl")
+file(GLOB globalshaders "BRDF.inc.hlsl" "global_inc.hlsl")
 file(GLOB builtins "builtin/*.hlsl")
 file(GLOB debug "builtin/debug/*hlsl")
 file(GLOB fog "builtin/fog/*hlsl")
@@ -11,8 +11,11 @@ file(GLOB ssao "builtin/SSAO/*hlsl")
 file(GLOB ssgi "builtin/SSGI/*hlsl")
 file(GLOB video "builtin/video/*hlsl")
 file(GLOB vr "builtin/vr/*hlsl")
+file(GLOB usershaders "*.hlsl")
 
-set(shaders ${globalshaders} ${builtins} ${debug} ${fog} ${legacy} ${lighting} ${post} ${ssao} ${ssgi} ${video} ${vr})
+list(REMOVE_ITEM usershaders ${globalshaders})
+
+set(shaders ${globalshaders} ${builtins} ${debug} ${fog} ${legacy} ${lighting} ${post} ${ssao} ${ssgi} ${video} ${vr} ${usershaders})
 
 source_group("builtin" FILES ${builtins})
 source_group("builtin/debug" FILES ${debug})
@@ -24,6 +27,9 @@ source_group("builtin/SSAO" FILES ${ssao})
 source_group("builtin/SSGI" FILES ${ssgi})
 source_group("builtin/video" FILES ${video})
 source_group("builtin/vr" FILES ${vr})
+source_group("global" FILES ${globalshaders})
+
+source_group("user" FILES ${usershaders})
 
 compile_shaders_all_platforms(
     TARGET Shaders

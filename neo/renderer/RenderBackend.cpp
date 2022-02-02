@@ -4294,7 +4294,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			auto bindingSetDesc = nvrhi::BindingSetDesc( )
 				.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
 				.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetCurrentImage( )->GetTextureID( ) ) )
-				.addItem( nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ) );
+				.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetCurrentImage( )->GetSampler( ) ) );
 
 			currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
 
@@ -5813,10 +5813,10 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
 
 	/// TODO: Skip for nvrhi
-	if( !_viewDef->is2Dgui )
-	{
-		return;
-	}
+	//if( !_viewDef->is2Dgui )
+	//{
+	//	return;
+	//}
 
 	// TODO(Stephen): DO.
 	//currentFrameBuffer = framebuffer;

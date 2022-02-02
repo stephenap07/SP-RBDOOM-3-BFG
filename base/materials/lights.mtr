@@ -2,6 +2,16 @@ table blinktable { { 0, 1 } }
 
 table delayedBlinkTable { { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1 } }
 
+lights/round
+{
+	lightFalloffImage _noFalloff
+	{
+		forceHighQuality
+		map lights/round.tga
+		colored zeroClamp
+	}
+}
+
 lights/defaultPointLight
 {
 	lightFalloffImage	_noFalloff
@@ -59,6 +69,17 @@ lights/squarelight
 	}
 }
 
+lights/squarelight1
+{
+	lightFalloffImage	makeintensity( lights/squarelight1a.tga )
+	{
+		forceHighQuality
+		map lights/square_light_simple.tga
+		colored
+		zeroClamp
+	}
+}
+
 lights/square_light_simple
 {
 	lightFalloffImage	makeintensity( lights/squarelight1a.tga )
@@ -103,5 +124,15 @@ lights/fogBlend
 		map lights/square_light_simple.tga
 		alphazeroclamp			// make sure it doesn't bleed over the edges
 		colored					// take rgba from entity shaderparms
+	}
+}
+
+lights/outdoor1
+{
+	lightFalloffImage	_noFalloff
+	
+	{
+		forceHighQuality
+		map lights/square_light_simple.tga
 	}
 }

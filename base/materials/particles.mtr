@@ -1,3 +1,7 @@
+table table4 { snap { 0, 1, 2, 3 } }
+table table8 { snap { 0, 1, 2, 3, 4, 5, 6, 7 } }
+table table16 { snap { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 } }
+table table32 { snap { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ,24, 25, 26, 27, 28, 29, 30, 31 } }
 
 textures/particles/spark_01
 {
@@ -52,5 +56,64 @@ textures/particles/spark_03
         clamp
         linear
         vertexcolor
+    }
+}
+
+textures/particles/rocketpoof
+{
+    qer_editorimage textures/particles/smoke_09
+    nonsolid
+    noshadows
+    {
+        blend       add
+        map         textures/particles/smoke_09
+        vertexColor
+    }
+}
+
+textures/particles/barrelpoof
+{
+    nonsolid
+    noshadows
+    qer_editorimage     textures/particles/barrelpoof
+    {
+        blend           add
+        map             textures/particles/barrelpoof
+        vertexColor
+    }
+}
+
+textures/particles/boomboom
+
+{
+    noselfShadow
+    noshadows   
+    translucent
+    discrete
+    nonsolid
+    noimpact
+
+    { 
+      
+        blend add
+        map textures/particles/boomboom
+        vertexcolor                   
+    }
+}
+
+textures/particles/flame1
+{
+    qer_editorimage textures/particles/flame_strip.tga
+    noSelfShadow
+    translucent
+    noShadows
+    twosided
+    deform tube
+    {
+        blend add
+        map textures/particles/flame_strip.tga
+        scale 1 / 32 , 1
+        scroll table32[ time * .6 ] , 0
+        clamp
     }
 }

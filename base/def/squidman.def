@@ -1,0 +1,25 @@
+model prop_squidman
+{
+    mesh models/md5/characters/squidman/squidman.md5mesh
+    anim idle models/md5/characters/squidman/Idle.md5anim
+    anim twerk models/md5/characters/squidman/Twerk.md5anim
+
+    channel torso ( "DEF-SPINE" "DEF-CHEST" "DEF-NECK" "DEF-HEAD" "DEF-SHOULDER.L" "DEF-ARM.L" "DEF-FOREARM.L" "DEF-HAND.L" "DEF-PALM-A.L" "DEF-FINGER-A.1.L" "DEF-FINGER-A.2.L" "DEF-FINGER-A.3.L" "DEF-THUMB.L" "DEF-THUMB.1.L" "DEF-THUMB.2.L" "DEF-PALM-B.L" "DEF-FINGER-B.1.L" "DEF-FINGER-B.2.L" "DEF-FINGER-B.3.L" "DEF-PALM-C.L" "DEF-FINGER-C.1.L" "DEF-FINGER-C.2.L" "DEF-FINGER-C.3.L" "DEF-PALM-D.L" "DEF-FINGER-D.1.L" "DEF-FINGER-D.2.L" "DEF-FINGER-D.3.L" "DEF-SHOULDER.R" "DEF-ARM.R" "DEF-FOREARM.R" "DEF-HAND.R" "DEF-PALM-A.R" "DEF-FINGER-A.1.R" "DEF-FINGER-A.2.R" "DEF-FINGER-A.3.R" "DEF-THUMB.R" "DEF-PALM-B.R" "DEF-FINGER-B.1.R" "DEF-FINGER-B.2.R" "DEF-FINGER-B.3.R" "DEF-PALM-C.R" "DEF-FINGER-C.1.R" "DEF-FINGER-C.2.R" "DEF-FINGER-C.3.R" "DEF-PALM-D.R" "DEF-FINGER-D.1.R" "DEF-FINGER-D.2.R" "DEF-FINGER-D.3.R" "DEF-THUMB.2.R" "DEF-THUMB.1.R")
+
+    channel legs  ( "DEF-LEG.L" "DEF-SHIN.L" "DEF-FOOT.L" "DEF-TOE.L" "DEF-LEG.R" "DEF-SHIN.R" "DEF-FOOT.R" "DEF-TOE.R" )    
+}
+
+
+entityDef mrsquid
+{
+	"spawnclass" 	"LuaEntity"
+	"loadScript" 	"mrsquid.lua"
+	"stateScript"	"mrsquid"
+
+	"model" 		"prop_squidman"
+	"health"        "30"
+
+    "gravity"       "1"
+    "cycle" 		"1"
+    "sound_bone" 	"DEF-HEAD"
+}

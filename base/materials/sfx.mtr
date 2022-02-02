@@ -18,3 +18,17 @@ textures/particles/spark3
 		//clamp
 	}
 }
+
+textures/sfx/vpring3
+{
+		qer_editorimage		textures/editor/shader
+		translucent
+        {
+                program         heatHazeWithMaskAndVertex.vfp
+                vertexParm              0               0                               // texture scrolling
+                vertexParm              1               10                             // magnitude of the distortion
+                fragmentMap             0               _currentRender
+                fragmentMap     		1       textures/particles/vpring2  // the normal map for distortion
+                fragmentMap             2       textures/particles/vpring1_alpha.tga   // the distortion blend map
+        }
+}

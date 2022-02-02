@@ -412,8 +412,11 @@ public:
 
 	bool				IsLoaded() const;
 
+	// Creates a sampler for this texture to use in the shader.
+	void				CreateSampler( );
+
 	// RB
-	bool				IsDefaulted() const
+	bool				IsDefaulted( ) const
 	{
 		return defaulted;
 	}
@@ -451,6 +454,11 @@ public:
 		return ( void* )texture.Get( );
 	}
 
+	void* GetSampler( )
+	{
+		return ( void* )sampler.Get( );
+	}
+
 private:
 	friend class idImageManager;
 
@@ -482,6 +490,7 @@ private:
 	static const uint32 TEXTURE_NOT_LOADED = 0xFFFFFFFF;
 
 	nvrhi::TextureHandle texture;
+	nvrhi::SamplerHandle sampler;
 };
 
 // data is RGBA
@@ -554,7 +563,7 @@ public:
 
 	void				PrintMemInfo( MemInfo_t* mi );
 
-	void				LoadDeferredImages( );
+	void				LoadDeferredImages( nvrhi::ICommandList* commandList = nullptr );
 
 	// built-in images
 	void				CreateIntrinsicImages();

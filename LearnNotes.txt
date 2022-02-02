@@ -1,0 +1,12 @@
+What did I learn from idtech 4.5?
+
+Separating game logic from engine logic makes for a 'cleaner' design.
+
+You can separate out logical units of game behavior like a camera or a static object with a transform and
+from the game logic layer, you have a separation of 'how an object does a thing' vs 'what you want an object to do'
+
+For example.
+Let's say I have a static entity. It has a transform, it has geometry. It has at least one material per geometric object.
+From a game standpoint. We don't have knowledge of how a transform gets into the rendering engine. We don't have
+knowledge of how the material gets passed into a HDR framebuffer. We just know that these things exist.
+We also don't care about the lifetime of the object (when it is loaded and when it is freed).

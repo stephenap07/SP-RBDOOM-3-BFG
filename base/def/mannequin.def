@@ -12,7 +12,7 @@ model monster_mannequin
 
 entityDef item_mannequin
 {
-    "scriptobject"  "monster_mannequin" 
+    //"scriptobject"  "monster_mannequin" 
     "spawnclass"    "idItem"
     "model"         "monster_mannequin"
     "health"        "30"

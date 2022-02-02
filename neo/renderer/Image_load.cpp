@@ -301,6 +301,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 	if( generatorFunction )
 	{
 		generatorFunction( this, commandList );
+		isLoaded = commandList != nullptr;
 		return;
 	}
 
@@ -614,15 +615,52 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 
 	AllocImage( );
 
-	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
-	const int bytesPerPixel = info.bytesPerBlock / info.blockSize;
+	const int bytesPerPixel = BitsForFormat( opts.format ) / 2;
 
 	commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
-	for( int mipLevel = 0; mipLevel < im.NumImages( ); mipLevel++ )
+
+	for( int i = 0; i < im.NumImages( ); i++ )
 	{
-		const bimageImage_t& img = im.GetImageHeader( mipLevel );
-		const byte* data = im.GetImageData( mipLevel );
-		commandList->writeTexture( texture, 0, mipLevel, data, img.width * bytesPerPixel );
+		const bimageImage_t& img = im.GetImageHeader( i );
+		const byte* pic = im.GetImageData( i );
+
+		if( opts.format == FMT_RGB565 )
+		{
+			int bufferW = img.width;
+			int bufferH = img.height;
+
+			if( IsCompressed( ) )
+			{
+				bufferW = ( img.width + 3 ) & ~3;
+				bufferH = ( img.height + 3 ) & ~3;
+			}
+
+			int size = bufferW * bufferH * BitsForFormat( opts.format ) / 8;
+
+			byte* data = ( byte* )Mem_Alloc16( size, TAG_IMAGE );
+			memcpy( data, pic, size );
+
+			byte* imgData = ( byte* )pic;
+			for( int j = 0; j < size; j += 2 )
+			{
+				data[i] = imgData[i + 1];
+				data[i + 1] = imgData[i];
+			}
+
+			commandList->writeTexture( texture, img.destZ, img.level, data, bufferW * bytesPerPixel );
+
+			Mem_Free16( data );
+		}
+		else
+		{
+			int bufferW = img.width;
+			if( IsCompressed( ) )
+			{
+				bufferW = ( img.width + 3 ) & ~3;
+			}
+
+			commandList->writeTexture( texture, img.destZ, img.level, pic, bufferW * bytesPerPixel );
+		}
 	}
 	commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
 	commandList->commitBarriers( );

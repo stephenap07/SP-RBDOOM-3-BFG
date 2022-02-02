@@ -184,6 +184,8 @@ LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 				RECT rect;
 				if( ::GetClientRect( win32.hWnd, &rect ) )
 				{
+					auto originalWidth = glConfig.nativeScreenWidth;
+					auto originalHeight = glConfig.nativeScreenHeight;
 					if( rect.right > rect.left && rect.bottom > rect.top )
 					{
 						glConfig.nativeScreenWidth = rect.right - rect.left;
@@ -198,8 +200,11 @@ LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 						}
 					}
 
-					deviceManager->UpdateWindowSize( );
-					Framebuffer::ResizeFramebuffers( );
+					if( glConfig.nativeScreenWidth != originalWidth || glConfig.nativeScreenHeight != originalHeight )
+					{
+						deviceManager->UpdateWindowSize( );
+						Framebuffer::ResizeFramebuffers( );
+					}
 				}
 			}
 			break;

@@ -113,6 +113,15 @@ cbuffer CB : register( b0 )
 	float4 rpShadowMatrices[6 * 4];
 #endif
 	// RB end
+
+	float4 rpUser0;
+	float4 rpUser1;
+	float4 rpUser2;
+	float4 rpUser3;
+	float4 rpUser4;
+	float4 rpUser5;
+	float4 rpUser6;
+	float4 rpUser7;
 };
 
 static float dot2( float2 a, float2 b ) { return dot( a, b ); }

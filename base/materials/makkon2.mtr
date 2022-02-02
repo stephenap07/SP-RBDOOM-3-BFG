@@ -1,0 +1,23 @@
+textures/makkon/stone_blck_1
+{
+	qer_editorimage textures/makkon1/textures/stone_blck_1
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon1/textures/stone_blck_1"
+	}
+}
+
+textures/makkon/woodc1_wbare01
+{
+	qer_editorimage textures/makkon2/woodc1_wbare01
+
+	wood
+
+	{
+		blend diffusemap
+		map textures/makkon2/woodc1_wbare01
+	}
+}

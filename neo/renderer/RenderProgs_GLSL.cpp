@@ -1661,30 +1661,6 @@ idStr idRenderProgManager::ConvertCG2GLSL( const idStr& in, const char* name, rp
 	return out;
 }
 
-
-
-/*
-================================================================================================
-idRenderProgManager::FindGLSLProgram
-================================================================================================
-*/
-int	 idRenderProgManager::FindProgram( const char* name, int vIndex, int fIndex )
-{
-	for( int i = 0; i < renderProgs.Num(); ++i )
-	{
-		if( ( renderProgs[i].vertexShaderIndex == vIndex ) && ( renderProgs[i].fragmentShaderIndex == fIndex ) )
-		{
-			return i;
-		}
-	}
-
-	renderProg_t program;
-	program.name = name;
-	int index = renderProgs.Append( program );
-	LoadProgram( index, vIndex, fIndex );
-	return index;
-}
-
 /*
 ================================================================================================
 idRenderProgManager::GetGLSLParmName

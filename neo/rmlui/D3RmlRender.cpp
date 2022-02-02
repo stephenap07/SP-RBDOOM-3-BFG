@@ -258,7 +258,6 @@ bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml
 {
 	const char* imgName = va( "_rmlImage%d", _texGen );
 	idImage* image = globalImages->ImageFromFunction( imgName, GenerateRmlImage );
-	image->SetReferencedOutsideLevelLoad( );
 
 	const idMaterial* material = declManager->FindMaterial( imgName );
 

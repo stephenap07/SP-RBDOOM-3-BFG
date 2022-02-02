@@ -1754,7 +1754,8 @@ struct deformInfo_t
 
 // if outputVertexes is not NULL, it will point to a newly allocated set of verts that includes the mirrored ones
 deformInfo_t* 		R_BuildDeformInfo( int numVerts, const idDrawVert* verts, int numIndexes, const int* indexes,
-									   bool useUnsmoothedTangents, nvrhi::ICommandList* commandList );
+									   bool useUnsmoothedTangents );
+void				R_CreateDeformStaticVertices( deformInfo_t* deform, nvrhi::ICommandList* commandList );
 void				R_FreeDeformInfo( deformInfo_t* deformInfo );
 int					R_DeformInfoMemoryUsed( deformInfo_t* deformInfo );
 
