@@ -512,19 +512,28 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, buffer
 
 	int numBytes = GetAllocedSize( );
 
-	nvrhi::BufferDesc indexBufferDesc;
-	indexBufferDesc.byteSize = numBytes;
-	indexBufferDesc.isConstantBuffer = true;
-	indexBufferDesc.debugName = "ConstantBuffer";
-	indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-	indexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	nvrhi::BufferDesc bufferDesc;
+	bufferDesc.byteSize = numBytes;
+	bufferDesc.isConstantBuffer = true;
+	bufferDesc.initialState = nvrhi::ResourceStates::Common;
 
-	bufferHandle = deviceManager->GetDevice( )->createBuffer( indexBufferDesc );
+	if( usage == BU_DYNAMIC )
+	{
+		bufferDesc.debugName = "ConstantBuffer";
+		bufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+		bufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	}
+	else
+	{
+		bufferDesc.keepInitialState = true;
+	}
+
+	bufferHandle = deviceManager->GetDevice( )->createBuffer( bufferDesc );
 
 	// copy the data
 	if( data != NULL )
 	{
-		Update( data, allocSize, 0, commandList );
+		Update( data, allocSize, 0, true, commandList );
 	}
 
 	return !allocationFailed;
@@ -544,7 +553,7 @@ void idUniformBuffer::FreeBufferObject()
 idUniformBuffer::Update
 ========================
 */
-void idUniformBuffer::Update( const void* data, int updateSize, int offset, nvrhi::ICommandList* commandList ) const
+void idUniformBuffer::Update( const void* data, int updateSize, int offset, bool initialUpdate, nvrhi::ICommandList* commandList ) const
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
@@ -564,9 +573,16 @@ void idUniformBuffer::Update( const void* data, int updateSize, int offset, nvrh
 	}
 	else
 	{
-		commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::CopyDest );
-		commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
-		commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::ConstantBuffer );
+		if( initialUpdate )
+		{
+			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::Common );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::ConstantBuffer | nvrhi::ResourceStates::ShaderResource );
+		}
+		else
+		{
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+		}
 	}
 }
 

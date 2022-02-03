@@ -275,7 +275,7 @@ vertCacheHandle_t idVertexCache::ActuallyAlloc( geoBufferSet_t& vcs, const void*
 				{
 					MapGeoBufferSet( vcs );
 				}
-				vcs.jointBuffer.Update( data, bytes, offset, commandList );
+				vcs.jointBuffer.Update( data, bytes, offset, false, commandList );
 			}
 
 			break;

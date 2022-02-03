@@ -1012,6 +1012,27 @@ void idRenderBackend::FillDepthBufferGeneric( const drawSurf_t* const* drawSurfs
 				// must render with less-equal for Z-Cull to work properly
 				assert( ( GL_GetCurrentState() & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_LESS );
 
+				if( !currentPipeline )
+				{
+					nvrhi::GraphicsPipelineDesc psoDesc;
+					psoDesc.VS = vertexShader;
+					psoDesc.PS = pixelShader;
+					psoDesc.inputLayout = inputLayout;
+					psoDesc.bindingLayouts = { currentBindingLayout };
+					psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
+					currentRenderState.rasterState.enableScissor( );
+					psoDesc.setRenderState( currentRenderState );
+
+					currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
+				}
+
+				auto bindingSetDesc = nvrhi::BindingSetDesc( )
+					.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+					.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetCurrentImage( )->GetTextureID( ) ) )
+					.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetCurrentImage( )->GetSampler( ) ) );
+
+				currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
+
 				renderProgManager.CommitConstantBuffer( commandList );
 
 				// draw it
@@ -1169,6 +1190,29 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 		// must render with less-equal for Z-Cull to work properly
 		assert( ( GL_GetCurrentState() & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_LESS );
 
+		if( !currentPipeline )
+		{
+			nvrhi::GraphicsPipelineDesc psoDesc;
+			psoDesc.VS = vertexShader;
+			psoDesc.PS = pixelShader;
+			psoDesc.inputLayout = inputLayout;
+			psoDesc.bindingLayouts = { currentBindingLayout };
+			psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
+			currentRenderState.rasterState.enableScissor( );
+			psoDesc.setRenderState( currentRenderState );
+
+			currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
+		}
+
+		auto bindingSetDesc = nvrhi::BindingSetDesc( )
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetCurrentImage( )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetCurrentImage( )->GetSampler( ) ) );
+
+		currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
+
+		renderProgManager.CommitConstantBuffer( commandList );
+		
 		// draw it solid
 		DrawElementsWithCounters( surf );
 
@@ -1660,6 +1704,29 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 	// texture 2 is the per-surface diffuse map
 	GL_SelectTexture( INTERACTION_TEXUNIT_BASECOLOR );
 	din->diffuseImage->Bind();
+
+	if( !currentPipeline )
+	{
+		nvrhi::GraphicsPipelineDesc psoDesc;
+		psoDesc.VS = vertexShader;
+		psoDesc.PS = pixelShader;
+		psoDesc.inputLayout = inputLayout;
+		psoDesc.bindingLayouts = { currentBindingLayout };
+		psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
+		currentRenderState.rasterState.enableScissor( );
+		psoDesc.setRenderState( currentRenderState );
+
+		currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
+	}
+
+	auto bindingSetDesc = nvrhi::BindingSetDesc( )
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( INTERACTION_TEXUNIT_BUMP, ( nvrhi::ITexture* )din->bumpImage->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( INTERACTION_TEXUNIT_BUMP, ( nvrhi::ISampler* )din->bumpImage->GetSampler( ) ) );
+
+	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
+
+	renderProgManager.CommitConstantBuffer( commandList );
 
 	DrawElementsWithCounters( din->surf );
 }
@@ -5888,6 +5955,12 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// fill the geometric buffer with normals and roughness
 	//-------------------------------------------------
 	AmbientPass( drawSurfs, numDrawSurfs, true );
+
+	// TODO(Stephen): Remove me.
+	if( !viewDef->is2Dgui )
+	{
+		return;
+	}
 
 	//-------------------------------------------------
 	// build hierarchical depth buffer and SSAO render target

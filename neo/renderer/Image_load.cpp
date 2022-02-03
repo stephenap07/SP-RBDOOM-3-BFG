@@ -94,6 +94,56 @@ int BitsForFormat( textureFormat_t format )
 	}
 }
 
+int BytesPerBlockForFormat( const textureFormat_t& format )
+{
+	switch( format )
+	{
+	case FMT_NONE:
+		return 0;
+	case FMT_DXT1:
+		return 8;
+	case FMT_DXT5:
+		return 16;
+	default:
+		return 1;
+	}
+}
+
+int BlockSizeForFormat( const textureFormat_t& format )
+{
+	switch( format )
+	{
+	case FMT_NONE:
+		return 0;
+	case FMT_DXT1:
+		return 8;
+	case FMT_DXT5:
+		return 16;
+	default:
+		return 1;
+	}
+}
+
+/*
+=========================
+GetRowBytes
+Returns the row bytes for the given image.
+=========================
+*/
+static int GetRowPitch( const textureFormat_t& format, int width )
+{
+	bool bc = ( format == FMT_DXT1 || format == FMT_DXT5 );
+
+	if( bc )
+	{
+		int blockSize = BlockSizeForFormat( format );
+		return std::max( 1, ( width + 3 ) / 4 ) * blockSize;
+	}
+
+	int bpe = BitsForFormat( format );
+	return width * (bpe / 8);
+}
+
 /*
 ========================
 idImage::DeriveOpts
@@ -544,7 +594,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 				commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 				for( int level = 0; level < opts.numLevels; level++ )
 				{
-					commandList->writeTexture( texture, 0, level, clear.Ptr(), opts.width * info.bytesPerBlock );
+					commandList->writeTexture( texture, 0, level, clear.Ptr(), GetRowPitch( opts.format, opts.width ));
 				}
 				commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
 				commandList->commitBarriers( );
@@ -615,7 +665,8 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 
 	AllocImage( );
 
-	const int bytesPerPixel = BitsForFormat( opts.format ) / 2;
+	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
+	const int bytesPerPixel = info.bytesPerBlock / info.blockSize;
 
 	commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
@@ -647,7 +698,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 				data[i + 1] = imgData[i];
 			}
 
-			commandList->writeTexture( texture, img.destZ, img.level, data, bufferW * bytesPerPixel );
+			commandList->writeTexture( texture, img.destZ, img.level, data, GetRowPitch( opts.format, img.width ) );
 
 			Mem_Free16( data );
 		}
@@ -659,7 +710,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 				bufferW = ( img.width + 3 ) & ~3;
 			}
 
-			commandList->writeTexture( texture, img.destZ, img.level, pic, bufferW * bytesPerPixel );
+			commandList->writeTexture( texture, img.destZ, img.level, pic, GetRowPitch( opts.format, img.width ) );
 		}
 	}
 	commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
@@ -869,6 +920,7 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 	opts.height = height;
 	opts.numLevels = 0;
 	opts.samples = samples;
+	opts.isRenderTarget = isRenderTarget;
 
 	// RB
 	if( cubeFiles == CF_2D_PACKED_MIPCHAIN )
@@ -877,8 +929,6 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 	}
 
 	DeriveOpts();
-
-	opts.isRenderTarget = isRenderTarget;
 
 	// RB: allow pic == NULL for internal framebuffer images
 	if( pic == NULL || opts.textureType == TT_2D_MULTISAMPLE )
@@ -916,7 +966,7 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 		if( commandList )
 		{
 			const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
-			const int bytesPerPixel = info.bytesPerBlock;
+			const int bytesPerBlock = info.bytesPerBlock;
 
 			commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
@@ -924,7 +974,8 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 			{
 				const bimageImage_t& img = im.GetImageHeader( i );
 				const byte* data = im.GetImageData( i );
-				commandList->writeTexture( texture, 0, img.level, data, img.width * bytesPerPixel );
+				int rowPitch = GetRowPitch( opts.format, img.width );
+				commandList->writeTexture( texture, img.destZ, img.level, data, rowPitch );
 			}
 
 			commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
@@ -1002,7 +1053,12 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 	{
 		const bimageImage_t& img = im.GetImageHeader( i );
 		const byte* data = im.GetImageData( i );
-		commandList->writeTexture( texture, 0, img.level, data, img.width * bytesPerPixel );
+		int bufferW = img.width;
+		if( IsCompressed( ) )
+		{
+			bufferW = ( img.width + 3 ) & ~3;
+		}
+		commandList->writeTexture( texture, 0, img.level, data, GetRowPitch( opts.format, img.width ) );
 	}
 
 	commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
@@ -1083,9 +1139,15 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 
 		commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
+		int bufferW = opts.width;
+		if( IsCompressed( ) )
+		{
+			bufferW = ( opts.width + 3 ) & ~3;
+		}
+
 		for( int i = 0; i < 6; i++ )
 		{
-			commandList->writeTexture( texture, i, 0, pic[i], opts.width * bytesPerPixel );
+			commandList->writeTexture( texture, i, 0, pic[i], GetRowPitch( opts.format, opts.width ) );
 		}
 
 		commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
@@ -1119,8 +1181,14 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 
 		SetSamplerState( TF_LINEAR, TR_REPEAT );
 
+		int bufferW = opts.width;
+		if( IsCompressed( ) )
+		{
+			bufferW = ( opts.width + 3 ) & ~3;
+		}
+
 		commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
-		commandList->writeTexture( texture, 0, 0, data, opts.width * bytesPerPixel );
+		commandList->writeTexture( texture, 0, 0, data, GetRowPitch( opts.format, opts.width) );
 		commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
 		commandList->commitBarriers( );
 	}

@@ -363,7 +363,7 @@ static void R_FlatNormalImage( idImage* image, nvrhi::ICommandList* commandList 
 {
 	byte	data[DEFAULT_SIZE][DEFAULT_SIZE][4];
 
-	// flat normal map for default bunp mapping
+	// flat normal map for default bump mapping
 	for( int i = 0 ; i < 4 ; i++ )
 	{
 		data[0][i][0] = 128;
@@ -371,7 +371,7 @@ static void R_FlatNormalImage( idImage* image, nvrhi::ICommandList* commandList 
 		data[0][i][2] = 255;
 		data[0][i][3] = 255;
 	}
-	image->GenerateImage( ( byte* )data, 2, 2, TF_DEFAULT, TR_REPEAT, TD_BUMP, commandList );
+	image->GenerateImage( ( byte* )data, 4, 4, TF_DEFAULT, TR_REPEAT, TD_BUMP, commandList );
 }
 
 /*

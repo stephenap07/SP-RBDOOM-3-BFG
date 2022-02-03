@@ -61,6 +61,14 @@ Framebuffer::Framebuffer( const char* name, int w, int h )
 }
 
 Framebuffer::Framebuffer( const char* name, const nvrhi::FramebufferDesc& desc )
+	: fboName( name )
+	, frameBuffer( 0 )
+	, colorFormat( 0 )
+	, depthBuffer( 0 )
+	, depthFormat( 0 )
+	, stencilFormat( 0 )
+	, stencilBuffer( 0 )
+	, msaaSamples( false )
 {
 	framebuffers.Append( this );
 	apiObject = deviceManager->GetDevice( )->createFramebuffer( desc );
@@ -116,9 +124,40 @@ void Framebuffer::ResizeFramebuffers( )
 		.addColorAttachment( globalImages->currentRenderHDRImage->texture )
 		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
 
+	globalFramebuffers.envprobeFBO = new Framebuffer( "_envprobeRender",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->envprobeHDRImage->texture )
+		.setDepthAttachment( globalImages->envprobeDepthImage->texture ) );
+
 	globalFramebuffers.hdr64FBO = new Framebuffer( "_hdr64",
 		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->currentRenderHDRImage64->texture ));
+		.addColorAttachment( globalImages->currentRenderHDRImage64->texture ) );
+
+	for( int i = 0; i < MAX_SSAO_BUFFERS; i++ )
+	{
+		globalFramebuffers.ambientOcclusionFBO[i] = new Framebuffer( va( "_aoRender%i", i ),
+			nvrhi::FramebufferDesc( )
+			.addColorAttachment( globalImages->ambientOcclusionImage[i]->texture) );
+	}
+
+	// HIERARCHICAL Z BUFFER
+	globalFramebuffers.csDepthFBO[0] = new Framebuffer( "_csz",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->hierarchicalZbufferImage->texture )
+	);
+
+	globalFramebuffers.geometryBufferFBO = new Framebuffer( "_gbuffer",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->currentNormalsImage->texture )
+		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+
+	globalFramebuffers.smaaEdgesFBO = new Framebuffer( "_smaaEdges",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->smaaEdgesImage->texture ) );
+
+	globalFramebuffers.smaaEdgesFBO = new Framebuffer( "_smaaBlend",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->smaaBlendImage->texture ) );
 
 	Framebuffer::Unbind( );
 }

@@ -49,7 +49,7 @@ struct VS_IN {
 };
 
 struct VS_OUT {
-	float4 position : POSITION;
+	float4 position : SV_Position;
 };
 // *INDENT-ON*
 

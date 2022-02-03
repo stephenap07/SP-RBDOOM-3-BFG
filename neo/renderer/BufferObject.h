@@ -226,7 +226,7 @@ public:
 	void				Reference( const idUniformBuffer& other, int refOffset, int refSize );
 
 	// Copies data to the buffer. 'size' may be less than the originally allocated size.
-	void				Update( const void* data, int size, int offset, nvrhi::ICommandList* commandList ) const;
+	void				Update( const void* data, int size, int offset, bool initialUpdate, nvrhi::ICommandList* commandList ) const;
 
 	void* 				MapBuffer( bufferMapType_t mapType );
 	void				UnmapBuffer();

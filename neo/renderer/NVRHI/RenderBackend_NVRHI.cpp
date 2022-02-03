@@ -994,7 +994,7 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 		else
 		{
 			currentDepthStencilState.disableStencil( );
-			currentDepthStencilState.disableDepthWrite( );
+			//currentDepthStencilState.disableDepthWrite( );
 		}
 	}
 	if( diff & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_FUNC_REF_BITS | GLS_STENCIL_FUNC_MASK_BITS ) )
@@ -1570,6 +1570,11 @@ void idRenderBackend::SetCurrentImage( idImage* image )
 idImage* idRenderBackend::GetCurrentImage( )
 {
 	return context.imageParms[context.currentImageParm];
+}
+
+idImage* idRenderBackend::GetImageAt( int index )
+{
+	return context.imageParms[index];
 }
 
 void idRenderBackend::BindProgram( nvrhi::ShaderHandle vShader, nvrhi::ShaderHandle fShader, nvrhi::InputLayoutHandle layout, nvrhi::BindingLayoutHandle bindingLayout )

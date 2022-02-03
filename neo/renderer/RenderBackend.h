@@ -510,6 +510,7 @@ public:
 
 	void				SetCurrentImage( idImage* image );
 	idImage*			GetCurrentImage( );
+	idImage*			GetImageAt( int index );
 };
 
 #endif

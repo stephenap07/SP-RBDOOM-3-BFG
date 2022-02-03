@@ -219,171 +219,6 @@ idImage::SetTexParameters
 */
 void idImage::SetTexParameters()
 {
-	int target = GL_TEXTURE_2D;
-	switch( opts.textureType )
-	{
-	case TT_2D:
-		target = GL_TEXTURE_2D;
-		break;
-	case TT_CUBIC:
-		target = GL_TEXTURE_CUBE_MAP;
-		break;
-		// RB begin
-	case TT_2D_ARRAY:
-		target = GL_TEXTURE_2D_ARRAY;
-		break;
-	case TT_2D_MULTISAMPLE:
-		//target = GL_TEXTURE_2D_MULTISAMPLE;
-		//break;
-		// no texture parameters for MSAA FBO textures
-		return;
-		// RB end
-	default:
-		idLib::FatalError( "%s: bad texture type %d", GetName( ), opts.textureType );
-		return;
-	}
-
-	// ALPHA, LUMINANCE, LUMINANCE_ALPHA, and INTENSITY have been removed
-	// in OpenGL 3.2. In order to mimic those modes, we use the swizzle operators
-	if( opts.colorFormat == CFM_GREEN_ALPHA )
-	{
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, GL_ONE );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, GL_ONE );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, GL_ONE );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_GREEN );
-	}
-	else if( opts.format == FMT_LUM8 )
-	{
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_ONE );
-	}
-	else if( opts.format == FMT_L8A8 )//|| opts.format == FMT_RG16F )
-	{
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_GREEN );
-	}
-	else if( opts.format == FMT_ALPHA )
-	{
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, GL_ONE );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, GL_ONE );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, GL_ONE );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_RED );
-	}
-	else if( opts.format == FMT_INT8 )
-	{
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_RED );
-	}
-	else
-	{
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, GL_RED );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, GL_GREEN );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, GL_BLUE );
-		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_ALPHA );
-	}
-
-	switch( filter )
-	{
-	case TF_DEFAULT:
-		if( r_useTrilinearFiltering.GetBool( ) )
-		{
-			glTexParameterf( target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-		}
-		else
-		{
-			glTexParameterf( target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
-		}
-		glTexParameterf( target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		break;
-	case TF_LINEAR:
-		glTexParameterf( target, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		glTexParameterf( target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		break;
-	case TF_NEAREST:
-	case TF_NEAREST_MIPMAP:
-		glTexParameterf( target, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-		glTexParameterf( target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-		break;
-	default:
-		common->FatalError( "%s: bad texture filter %d", GetName( ), filter );
-	}
-
-	if( glConfig.anisotropicFilterAvailable )
-	{
-		// only do aniso filtering on mip mapped images
-		if( filter == TF_DEFAULT )
-		{
-			int aniso = r_maxAnisotropicFiltering.GetInteger( );
-			if( aniso > glConfig.maxTextureAnisotropy )
-			{
-				aniso = glConfig.maxTextureAnisotropy;
-			}
-			if( aniso < 0 )
-			{
-				aniso = 0;
-			}
-			glTexParameterf( target, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso );
-		}
-		else
-		{
-			glTexParameterf( target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1 );
-		}
-	}
-
-	// RB: disabled use of unreliable extension that can make the game look worse but doesn't save any VRAM
-	/*
-	if( glConfig.textureLODBiasAvailable && ( usage != TD_FONT ) )
-	{
-		// use a blurring LOD bias in combination with high anisotropy to fix our aliasing grate textures...
-		glTexParameterf( target, GL_TEXTURE_LOD_BIAS_EXT, 0.5 ); //r_lodBias.GetFloat() );
-	}
-	*/
-	// RB end
-
-	// set the wrap/clamp modes
-	switch( repeat )
-	{
-	case TR_REPEAT:
-		glTexParameterf( target, GL_TEXTURE_WRAP_S, GL_REPEAT );
-		glTexParameterf( target, GL_TEXTURE_WRAP_T, GL_REPEAT );
-		break;
-	case TR_CLAMP_TO_ZERO:
-	{
-		float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		glTexParameterfv( target, GL_TEXTURE_BORDER_COLOR, color );
-		glTexParameterf( target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
-		glTexParameterf( target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
-	}
-	break;
-	case TR_CLAMP_TO_ZERO_ALPHA:
-	{
-		float color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		glTexParameterfv( target, GL_TEXTURE_BORDER_COLOR, color );
-		glTexParameterf( target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
-		glTexParameterf( target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
-	}
-	break;
-	case TR_CLAMP:
-		glTexParameterf( target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-		glTexParameterf( target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-		break;
-	default:
-		common->FatalError( "%s: bad texture repeat %d", GetName( ), repeat );
-	}
-
-	// RB: added shadow compare parameters for shadow map textures
-	if( opts.format == FMT_SHADOW_ARRAY )
-	{
-		//glTexParameteri( target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-		glTexParameteri( target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE );
-		glTexParameteri( target, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL );
-	}
 }
 
 /*
@@ -440,7 +275,12 @@ void idImage::AllocImage( )
 			break;
 
 		case FMT_DXT5:
+			// This is used for compressed normals
 			format = nvrhi::Format::BC3_UNORM_SRGB;
+			if( usage == TD_BUMP )
+			{
+				format = nvrhi::Format::BC3_UNORM;
+			}
 			break;
 
 		case FMT_DEPTH:
@@ -539,7 +379,9 @@ void idImage::AllocImage( )
 					   .setWidth( scaledWidth )
 					   .setHeight( scaledHeight )
 					   .setFormat( format )
+					   .setSampleCount( opts.samples )
 					   .setMipLevels( opts.numLevels );
+
 
 	if( opts.isRenderTarget )
 	{
