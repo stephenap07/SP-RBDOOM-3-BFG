@@ -3,7 +3,7 @@
 
 #include "BindingCache.h"
 
-void BindingCache::Init( nvrhi::DeviceHandle _device )
+void BindingCache::Init( nvrhi::IDevice* _device )
 {
     device = _device;
 }

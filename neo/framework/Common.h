@@ -224,7 +224,7 @@ public:
 	virtual void				UpdateScreen( bool captureToImage, bool releaseMouse = true ) = 0;
 	// DG end
 
-	virtual void				UpdateLevelLoadPacifier() = 0;
+	virtual void				UpdateLevelLoadPacifier( ) = 0;
 	//virtual void				UpdateLevelLoadPacifier( int mProgress ) = 0;
 	//virtual void				UpdateLevelLoadPacifier( bool updateSecondary ) = 0;
 	//virtual void				UpdateLevelLoadPacifier( bool updateSecondary, int Progress ) = 0;

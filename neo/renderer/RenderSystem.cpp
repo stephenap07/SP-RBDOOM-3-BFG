@@ -776,9 +776,6 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 		commandList = deviceManager->GetDevice( )->createCommandList( );
 	}
 
-	// Command list to set up vertices.
-	commandList->open( );
-
 	// prepare the new command buffer
 	guiModel->BeginFrame( commandList );
 
@@ -830,10 +827,6 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 #endif
 
 #endif
-
-	commandList->close( );
-
-	deviceManager->GetDevice( )->executeCommandList( commandList );
 
 	// the old command buffer can now be rendered, while the new one can
 	// be built in parallel

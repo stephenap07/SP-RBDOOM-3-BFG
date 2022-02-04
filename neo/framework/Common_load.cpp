@@ -707,7 +707,7 @@ idCommonLocal::UpdateLevelLoadPacifier
 Pumps the session and if multiplayer, displays dialogs during the loading process.
 ===============
 */
-void idCommonLocal::UpdateLevelLoadPacifier()
+void idCommonLocal::UpdateLevelLoadPacifier( )
 {
 	autoRenderIconType_t icon = AUTORENDER_DEFAULTICON;
 	bool autoswapsRunning = renderSystem->AreAutomaticBackgroundSwapsRunning( &icon );

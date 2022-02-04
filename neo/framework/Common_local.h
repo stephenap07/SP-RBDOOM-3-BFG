@@ -158,9 +158,9 @@ public:
 	virtual bool				IsInitialized() const;
 	virtual void				Frame();
 	// DG: added possibility to *not* release mouse in UpdateScreen(), it fucks up the view angle for screenshots
-	virtual void				UpdateScreen( bool captureToImage, bool releaseMouse = true );
+	void						UpdateScreen( bool captureToImage, bool releaseMouse = true ) override;
 	// DG end
-	virtual void				UpdateLevelLoadPacifier();  // Indefinate
+	void						UpdateLevelLoadPacifier( ) override;  // Indefinate
 //	virtual void				UpdateLevelLoadPacifier( int mProgress );
 //	virtual void				UpdateLevelLoadPacifier( bool Secondary );
 //	virtual void				UpdateLevelLoadPacifier( bool updateSecondary, int mProgress );

@@ -1012,29 +1012,6 @@ void idRenderBackend::FillDepthBufferGeneric( const drawSurf_t* const* drawSurfs
 				// must render with less-equal for Z-Cull to work properly
 				assert( ( GL_GetCurrentState() & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_LESS );
 
-				if( !currentPipeline )
-				{
-					nvrhi::GraphicsPipelineDesc psoDesc;
-					psoDesc.VS = vertexShader;
-					psoDesc.PS = pixelShader;
-					psoDesc.inputLayout = inputLayout;
-					psoDesc.bindingLayouts = { currentBindingLayout };
-					psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
-					currentRenderState.rasterState.enableScissor( );
-					psoDesc.setRenderState( currentRenderState );
-
-					currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
-				}
-
-				auto bindingSetDesc = nvrhi::BindingSetDesc( )
-					.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-					.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetCurrentImage( )->GetTextureID( ) ) )
-					.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetCurrentImage( )->GetSampler( ) ) );
-
-				currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
-
-				renderProgManager.CommitConstantBuffer( commandList );
-
 				// draw it
 				DrawElementsWithCounters( drawSurf );
 
@@ -1189,29 +1166,6 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 
 		// must render with less-equal for Z-Cull to work properly
 		assert( ( GL_GetCurrentState() & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_LESS );
-
-		if( !currentPipeline )
-		{
-			nvrhi::GraphicsPipelineDesc psoDesc;
-			psoDesc.VS = vertexShader;
-			psoDesc.PS = pixelShader;
-			psoDesc.inputLayout = inputLayout;
-			psoDesc.bindingLayouts = { currentBindingLayout };
-			psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
-			currentRenderState.rasterState.enableScissor( );
-			psoDesc.setRenderState( currentRenderState );
-
-			currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
-		}
-
-		auto bindingSetDesc = nvrhi::BindingSetDesc( )
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetCurrentImage( )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetCurrentImage( )->GetSampler( ) ) );
-
-		currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
-
-		renderProgManager.CommitConstantBuffer( commandList );
 		
 		// draw it solid
 		DrawElementsWithCounters( surf );
@@ -1704,29 +1658,6 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 	// texture 2 is the per-surface diffuse map
 	GL_SelectTexture( INTERACTION_TEXUNIT_BASECOLOR );
 	din->diffuseImage->Bind();
-
-	if( !currentPipeline )
-	{
-		nvrhi::GraphicsPipelineDesc psoDesc;
-		psoDesc.VS = vertexShader;
-		psoDesc.PS = pixelShader;
-		psoDesc.inputLayout = inputLayout;
-		psoDesc.bindingLayouts = { currentBindingLayout };
-		psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
-		currentRenderState.rasterState.enableScissor( );
-		psoDesc.setRenderState( currentRenderState );
-
-		currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
-	}
-
-	auto bindingSetDesc = nvrhi::BindingSetDesc( )
-		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-		.addItem( nvrhi::BindingSetItem::Texture_SRV( INTERACTION_TEXUNIT_BUMP, ( nvrhi::ITexture* )din->bumpImage->GetTextureID() ) )
-		.addItem( nvrhi::BindingSetItem::Sampler( INTERACTION_TEXUNIT_BUMP, ( nvrhi::ISampler* )din->bumpImage->GetSampler( ) ) );
-
-	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
-
-	renderProgManager.CommitConstantBuffer( commandList );
 
 	DrawElementsWithCounters( din->surf );
 }
@@ -2351,6 +2282,10 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 		GL_Clear( true, false, false, 0, 0.0f, 0.0f, 0.0f, 1.0f, false );
 	}
+
+	commandList->setEnableAutomaticBarriers( false );
+	commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
+	commandList->commitBarriers( );
 
 	// RB: not needed
 	// GL_StartDepthPass( backEnd.viewDef->scissor );
@@ -4206,8 +4141,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 					}
 				}
 
-				renderProgManager.CommitConstantBuffer( commandList );
-
 				// draw it
 				DrawElementsWithCounters( surf );
 
@@ -4343,29 +4276,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			GL_State( stageGLState );
 
 			PrepareStageTexturing( pStage, surf );
-
-			if( !currentPipeline )
-			{
-				nvrhi::GraphicsPipelineDesc psoDesc;
-				psoDesc.VS = vertexShader;
-				psoDesc.PS = pixelShader;
-				psoDesc.inputLayout = inputLayout;
-				psoDesc.bindingLayouts = { currentBindingLayout };
-				psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
-				currentRenderState.rasterState.enableScissor( );
-				psoDesc.setRenderState( currentRenderState );
-
-				currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
-			}
-
-			auto bindingSetDesc = nvrhi::BindingSetDesc( )
-				.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-				.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetCurrentImage( )->GetTextureID( ) ) )
-				.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetCurrentImage( )->GetSampler( ) ) );
-
-			currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
-
-			renderProgManager.CommitConstantBuffer( commandList );
 
 			// Draw it
 			DrawElementsWithCounters( surf );
@@ -5141,27 +5051,31 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	if( r_useHierarchicalDepthBuffer.GetBool() )
 	{
 		renderLog.OpenBlock( "Render_HiZ", colorDkGrey );
+		commandList->beginMarker( "Render_HiZ" );
 
 		renderProgManager.BindShader_AmbientOcclusionMinify();
 
 		GL_Color( 0, 0, 0, 1 );
 
-		GL_SelectTexture( 0 );
-		//globalImages->currentDepthImage->Bind();
+		globalImages->currentDepthImage->Bind();
 
-		for( int i = 0; i < MAX_HIERARCHICAL_ZBUFFERS; i++ )
+		for( int i = 0; i < 1; i++ )
 		{
 			int width = globalFramebuffers.csDepthFBO[i]->GetWidth();
 			int height = globalFramebuffers.csDepthFBO[i]->GetHeight();
 
 			globalFramebuffers.csDepthFBO[i]->Bind();
 
+			commandList->setEnableAutomaticBarriers( false );
+			commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
+			commandList->commitBarriers( );
+
 			GL_Viewport( 0, 0, width, height );
 			GL_Scissor( 0, 0, width, height );
 
 			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
-			glClear( GL_COLOR_BUFFER_BIT );
+			GL_SelectTexture( 0 );
 
 			if( i == 0 )
 			{
@@ -5173,7 +5087,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 			{
 				renderProgManager.BindShader_AmbientOcclusionMinify();
 
-				GL_SelectTexture( 0 );
 				globalImages->hierarchicalZbufferImage->Bind();
 			}
 
@@ -5194,8 +5107,14 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 			DrawElementsWithCounters( &unitSquareSurface );
 		}
 
+		hiZGenPass->Dispatch( commandList, MAX_HIERARCHICAL_ZBUFFERS );
+
+		commandList->endMarker( );
 		renderLog.CloseBlock();
 	}
+
+	// TODO(Stephen): Remove me
+	return;
 
 	// set the window clipping
 	int aoScreenWidth = globalFramebuffers.ambientOcclusionFBO[0]->GetWidth();
@@ -5721,8 +5640,6 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 	ResizeImages();
 
-	globalImages->LoadDeferredImages( );
-
 	if( cmds->commandId == RC_NOP && !cmds->next )
 	{
 		return;
@@ -5737,6 +5654,18 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 	renderLog.StartFrame( );
 	GL_StartFrame( );
+
+	void* textureId = globalImages->hierarchicalZbufferImage->GetTextureID( );
+	globalImages->LoadDeferredImages( commandList );
+
+	if( globalImages->hierarchicalZbufferImage->GetTextureID( ) != textureId || !hiZGenPass)
+	{
+		if( hiZGenPass )
+		{
+			delete hiZGenPass;
+		}
+		hiZGenPass = new MipMapGenPass( deviceManager->GetDevice( ), globalImages->hierarchicalZbufferImage->GetTextureHandle( ) );
+	}
 
 	uint64 backEndStartTime = Sys_Microseconds();
 
@@ -5907,6 +5836,11 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	{
 		globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )]->Bind( );
 	}
+
+	commandList->setEnableAutomaticBarriers( false );
+	commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
+	commandList->commitBarriers( );
+
 	// RB end
 
 	//GL_CheckErrors();
@@ -5956,16 +5890,16 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//-------------------------------------------------
 	AmbientPass( drawSurfs, numDrawSurfs, true );
 
+	//-------------------------------------------------
+	// build hierarchical depth buffer and SSAO render target
+	//-------------------------------------------------
+	DrawScreenSpaceAmbientOcclusion( _viewDef, false );
+
 	// TODO(Stephen): Remove me.
 	if( !viewDef->is2Dgui )
 	{
 		return;
 	}
-
-	//-------------------------------------------------
-	// build hierarchical depth buffer and SSAO render target
-	//-------------------------------------------------
-	DrawScreenSpaceAmbientOcclusion( _viewDef, false );
 
 	//-------------------------------------------------
 	// render static lighting and consider SSAO results

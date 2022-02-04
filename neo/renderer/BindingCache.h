@@ -8,14 +8,14 @@ class BindingCache
 public:
     BindingCache( ) {}
 
-    void                    Init( nvrhi::DeviceHandle _device );
+    void                    Init( nvrhi::IDevice* _device );
     void                    Clear( );
 
     nvrhi::BindingSetHandle GetCachedBindingSet(const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout);
     nvrhi::BindingSetHandle GetOrCreateBindingSet(const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout);
 
 private:
-    nvrhi::DeviceHandle             device;
+    nvrhi::IDevice*                 device;
     idList<nvrhi::BindingSetHandle> bindingSets;
     idHashIndex						bindingHash;
     idSysMutex                      mutex;

@@ -63,7 +63,7 @@ public:
 
 	void					Bind();
 	bool					IsBound();
-	static void				Unbind();
+	static void				Unbind( );
 	static bool				IsDefaultFramebufferActive();
 	static Framebuffer*		GetActiveFramebuffer();
 

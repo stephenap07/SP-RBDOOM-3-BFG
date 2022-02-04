@@ -351,7 +351,6 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 	if( generatorFunction )
 	{
 		generatorFunction( this, commandList );
-		isLoaded = commandList != nullptr;
 		return;
 	}
 
@@ -934,6 +933,7 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 	if( pic == NULL || opts.textureType == TT_2D_MULTISAMPLE )
 	{
 		AllocImage();
+		isLoaded = true;
 	}
 	else
 	{

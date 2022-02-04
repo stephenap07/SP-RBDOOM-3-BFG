@@ -838,7 +838,6 @@ void idRenderModelManagerLocal::EndLevelLoad( )
 
 	for( int i = 0; i < models.Num( ); i++ )
 	{
-		common->UpdateLevelLoadPacifier( );
 		idRenderModel* model = models[i];
 		model->CreateBuffers( commandList );
 	}
@@ -846,8 +845,6 @@ void idRenderModelManagerLocal::EndLevelLoad( )
 	// create static vertex/index buffers for all models
 	for( int i = 0; i < models.Num(); i++ )
 	{
-		common->UpdateLevelLoadPacifier();
-
 		idRenderModel* model = models[i];
 		if( model->IsLoaded() )
 		{

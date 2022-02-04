@@ -541,6 +541,8 @@ void idRenderBackend::Init()
 
 	bindingCache.Init( deviceManager->GetDevice( ) );
 	commonPasses.Init( deviceManager->GetDevice( ) );
+	hiZGenPass = nullptr;
+	// Need to reinitialize this pass once this image is resized.
 	renderProgManager.Init( deviceManager->GetDevice( ) );
 
 	tr.SetInitialized();
@@ -628,6 +630,29 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	{
 		currentIndexBuffer = indexBuffer->GetAPIObject( );
 	}
+
+	if( !currentPipeline )
+	{
+		nvrhi::GraphicsPipelineDesc psoDesc;
+		psoDesc.VS = vertexShader;
+		psoDesc.PS = pixelShader;
+		psoDesc.inputLayout = inputLayout;
+		psoDesc.bindingLayouts = { currentBindingLayout };
+		psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
+		currentRenderState.rasterState.enableScissor( );
+		psoDesc.setRenderState( currentRenderState );
+
+		currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
+	}
+
+	auto bindingSetDesc = nvrhi::BindingSetDesc( )
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
+
+	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
+
+	renderProgManager.CommitConstantBuffer( commandList );
 
 	nvrhi::GraphicsState state;
 	state.bindings = { currentBindingSet };
@@ -734,6 +759,9 @@ void idRenderBackend::GL_SetDefaultState()
 
 	// RB begin
 	Framebuffer::Unbind( );
+	commandList->setEnableAutomaticBarriers( false );
+	commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
+	commandList->commitBarriers( );
 	// RB end
 }
 
@@ -1221,12 +1249,14 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 	// TODO: Do something if there is no depth-stencil attachment.
 	if( color )
 	{
-		nvrhi::utils::ClearColorAttachment( commandList, currentFrameBuffer->GetApiObject( ), 0, nvrhi::Color( r, g, b, a ) );
+		nvrhi::utils::ClearColorAttachment( commandList, currentFrameBuffer->GetApiObject( ), 0, nvrhi::Color( 0.f ) );
 	}
 
 	if( depth )
 	{
-		nvrhi::utils::ClearDepthStencilAttachment( commandList, currentFrameBuffer->GetApiObject( ), 1.f, stencilValue );
+		nvrhi::ITexture* depthTexture = ( nvrhi::ITexture* )( globalImages->currentDepthImage->GetTextureID( ) );
+		const nvrhi::FormatInfo& depthFormatInfo = nvrhi::getFormatInfo( depthTexture->getDesc( ).format );
+		commandList->clearDepthStencilTexture( depthTexture, nvrhi::AllSubresources, true, 1.f, depthFormatInfo.hasStencil, 0 );
 	}
 }
 
@@ -1269,10 +1299,8 @@ void idRenderBackend::CheckCVars()
 		R_SetColorMappings( );
 	}
 
-	commandList->open( );
-
 	// filtering
-	if( r_maxAnisotropicFiltering.IsModified( ) || r_useTrilinearFiltering.IsModified( ) || r_lodBias.IsModified( ) )
+	/*if( r_maxAnisotropicFiltering.IsModified( ) || r_useTrilinearFiltering.IsModified( ) || r_lodBias.IsModified( ) )
 	{
 		idLib::Printf( "Updating texture filter parameters.\n" );
 		r_maxAnisotropicFiltering.ClearModified( );
@@ -1287,11 +1315,7 @@ void idRenderBackend::CheckCVars()
 				globalImages->images[i]->SetTexParameters( );
 			}
 		}
-	}
-
-	commandList->close( );
-
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	}*/
 
 	if( r_useSeamlessCubeMap.IsModified( ) )
 	{

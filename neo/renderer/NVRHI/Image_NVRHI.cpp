@@ -382,14 +382,23 @@ void idImage::AllocImage( )
 					   .setSampleCount( opts.samples )
 					   .setMipLevels( opts.numLevels );
 
-
 	if( opts.isRenderTarget )
 	{
-		textureDesc.keepInitialState = true;
-		textureDesc.isRenderTarget = opts.isRenderTarget;
+		//textureDesc.keepInitialState = true;
+		//textureDesc.setKeepInitialState( true );
+		textureDesc.setInitialState( nvrhi::ResourceStates::RenderTarget )
+			.setClearValue( nvrhi::Color( 1.f ) )
+			.setIsRenderTarget( true )
+			.setKeepInitialState( true );
 
-		if( opts.format != FMT_DEPTH && opts.format != FMT_DEPTH_STENCIL )
+		if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL )
 		{
+			textureDesc.setInitialState( nvrhi::ResourceStates::DepthWrite );
+		}
+
+		if( opts.format == FMT_R32F )
+		{
+			// Hack to make cszBuffer uav
 			textureDesc.setIsUAV( true );
 		}
 	}

@@ -19,12 +19,13 @@
 
 
 // *INDENT-OFF*
-Texture2D<float1> t_ViewDepth : register( t0 );
+Texture2D t_ViewDepth : register( t0 );
 
 SamplerState LinearSampler : register( s0 );
 
 struct PS_IN
 {
+	float4 position : SV_Position;
 	float2 texcoord0 : TEXCOORD0_centroid;
 };
 
@@ -71,7 +72,8 @@ void main( PS_IN fragment, out PS_OUT result )
 	// Rotated grid subsampling to avoid XY directional bias or Z precision bias while downsampling.
 	// On DX9, the bit-and can be implemented with floating-point modulo
 	//result.color.mask = texture( samp0, clamp( ssP * 2 + int2( ssP.y & 1, ssP.x & 1 ), int2( 0 ), textureSize( samp0, previousMIPNumber ) - int2( 1 ) ) * rpScreenCorrectionFactor.xy, previousMIPNumber ).mask;
-	result.color.mask = texelFetch( t_ViewDepth, clamp( ssP * 2 + int2( ssP.y & 1, ssP.x & 1 ), int2( 0 ), textureSize( t_ViewDepth, previousMIPNumber ) - int2( 1 ) ), previousMIPNumber ).mask;
+	int2 ssc = clamp( ssP * 2 + int2( ssP.y & 1, ssP.x & 1 ), int2( 0 ), textureSize( t_ViewDepth, previousMIPNumber ) - int2( 1 ) );
+	result.color.mask = texelFetch( t_ViewDepth, ssc, previousMIPNumber ).mask;
 	//result.color.mask = texelFetch2D( samp0, int3( ssP * 2 + int2( ( ssP.y & 1 ) ^ 1, ( ssP.x & 1 ) ^ 1 ), 0 ) );
 
 	// result.color.mask = texelFetch( samp0, ssP, 0 ).r;
@@ -80,6 +82,6 @@ void main( PS_IN fragment, out PS_OUT result )
 	//float2 ssC = float2( ssP ) * rpScreenCorrectionFactor.xy;
 	//float2 ssC = fragment.texcoord0;
 	//float depth = tex2D( samp0, ssC ).r;
-	//result.color.mask = depth;
+	result.color.mask = 0.5;
 #endif
 }

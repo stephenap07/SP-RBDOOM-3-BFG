@@ -34,6 +34,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "RenderLog.h"
 
 #include "Passes/CommonPasses.h"
+#include "Passes/MipMapGenPass.h"
 
 bool			GL_CheckErrors_( const char* filename, int line );
 #if 1 // !defined(RETAIL)
@@ -493,6 +494,7 @@ private:
 	nvrhi::CommandListHandle		commandList;
 	idList<IRenderPass*>			renderPasses;
 	CommonRenderPasses				commonPasses;
+	MipMapGenPass*					hiZGenPass;
 
 	BindingCache					bindingCache;
 

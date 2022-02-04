@@ -72,6 +72,8 @@ Framebuffer::Framebuffer( const char* name, const nvrhi::FramebufferDesc& desc )
 {
 	framebuffers.Append( this );
 	apiObject = deviceManager->GetDevice( )->createFramebuffer( desc );
+	width = apiObject->getFramebufferInfo( ).width;
+	height = apiObject->getFramebufferInfo( ).height;
 }
 
 Framebuffer::~Framebuffer()
@@ -103,10 +105,21 @@ void Framebuffer::ResizeFramebuffers( )
 	globalFramebuffers.swapFramebuffers.Resize( backBufferCount );
 	globalFramebuffers.swapFramebuffers.SetNum( backBufferCount );
 
+	int screenWidth = renderSystem->GetWidth( );
+	int screenHeight = renderSystem->GetHeight( );
+
 	tr.backend.commandList->open( );
 	globalImages->currentDepthImage->Reload( false, tr.backend.commandList );
 	globalImages->currentRenderHDRImage->Reload( false, tr.backend.commandList );
 	globalImages->currentRenderHDRImage64->Reload( false, tr.backend.commandList );
+	for( int i = 0; i < MAX_SSAO_BUFFERS; i++ )
+	{
+		globalImages->ambientOcclusionImage[i]->Reload( false, tr.backend.commandList );
+	}
+	globalImages->hierarchicalZbufferImage->Reload( false, tr.backend.commandList );
+	globalImages->currentNormalsImage->Reload( false, tr.backend.commandList );
+	globalImages->smaaEdgesImage->Reload( false, tr.backend.commandList );
+	globalImages->smaaBlendImage->Reload( false, tr.backend.commandList );
 	tr.backend.commandList->close( );
 	deviceManager->GetDevice( )->executeCommandList( tr.backend.commandList );
 
@@ -141,10 +154,14 @@ void Framebuffer::ResizeFramebuffers( )
 	}
 
 	// HIERARCHICAL Z BUFFER
-	globalFramebuffers.csDepthFBO[0] = new Framebuffer( "_csz",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->hierarchicalZbufferImage->texture )
-	);
+	for( int i = 0; i < MAX_HIERARCHICAL_ZBUFFERS; i++ )
+	{
+		globalFramebuffers.csDepthFBO[i] = new Framebuffer( va("_csz%d", i),
+			nvrhi::FramebufferDesc().addColorAttachment(
+				nvrhi::FramebufferAttachment( )
+				.setTexture( globalImages->hierarchicalZbufferImage->texture )
+				.setMipLevel( i ) ) );
+	}
 
 	globalFramebuffers.geometryBufferFBO = new Framebuffer( "_gbuffer",
 		nvrhi::FramebufferDesc( )
@@ -162,9 +179,15 @@ void Framebuffer::ResizeFramebuffers( )
 	Framebuffer::Unbind( );
 }
 
-void Framebuffer::Bind()
+void Framebuffer::Bind( )
 {
 	RENDERLOG_PRINTF( "Framebuffer::Bind( %s )\n", fboName.c_str() );
+
+	if( tr.backend.currentFrameBuffer != this )
+	{
+		tr.backend.currentPipeline = nullptr;
+	}
+	
 	tr.backend.currentFrameBuffer = this;
 }
 

@@ -871,16 +871,20 @@ void idImageManager::Preload( const idPreloadManifest& manifest, const bool& map
 idImageManager::LoadLevelImages
 ===============
 */
-int idImageManager::LoadLevelImages( bool pacifier, nvrhi::ICommandList* commandList )
+int idImageManager::LoadLevelImages( bool pacifier )
 {
+	if( !commandList )
+	{
+		commandList = deviceManager->GetDevice( )->createCommandList( );
+	}
+
+	common->UpdateLevelLoadPacifier( );
+
+	commandList->open( );
+
 	int	loadCount = 0;
 	for( int i = 0 ; i < images.Num() ; i++ )
 	{
-		if( pacifier )
-		{
-			common->UpdateLevelLoadPacifier();
-		}
-
 		idImage* image = images[ i ];
 
 		if( image->generatorFunction )
@@ -897,6 +901,12 @@ int idImageManager::LoadLevelImages( bool pacifier, nvrhi::ICommandList* command
 
 	globalImages->LoadDeferredImages( commandList );
 
+	commandList->close( );
+
+	deviceManager->GetDevice( )->executeCommandList( commandList );
+
+	common->UpdateLevelLoadPacifier( );
+
 	return loadCount;
 }
 
@@ -907,21 +917,11 @@ idImageManager::EndLevelLoad
 */
 void idImageManager::EndLevelLoad()
 {
-	if( !commandList )
-	{
-		commandList = deviceManager->GetDevice( )->createCommandList( );
-	}
-
-	commandList->open( );
-
 	insideLevelLoad = false;
 
 	idLib::Printf( "----- idImageManager::EndLevelLoad -----\n" );
 	int start = Sys_Milliseconds();
-	int	loadCount = LoadLevelImages( true, commandList );
-
-	commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	int	loadCount = LoadLevelImages( true );
 
 	int	end = Sys_Milliseconds();
 	idLib::Printf( "%5i images loaded in %5.1f seconds\n", loadCount, ( end - start ) * 0.001 );
@@ -994,7 +994,7 @@ void idImageManager::LoadDeferredImages( nvrhi::ICommandList* _commandList )
 	}
 
 	nvrhi::ICommandList* thisCmdList = _commandList;
-	if( !thisCmdList )
+	if( !_commandList )
 	{
 		thisCmdList = commandList;
 		thisCmdList->open( );

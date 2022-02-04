@@ -449,6 +449,11 @@ public:
 	}
 	// DG end
 
+	nvrhi::TextureHandle GetTextureHandle( )
+	{
+		return texture;
+	}
+
 	void*		GetTextureID( )
 	{
 		return ( void* )texture.Get( );
@@ -513,6 +518,7 @@ public:
 	{
 		insideLevelLoad = false;
 		preloadingMapImages = false;
+		commandList = nullptr;
 	}
 
 	void				Init();
@@ -559,7 +565,7 @@ public:
 	void				Preload( const idPreloadManifest& manifest, const bool& mapPreload );
 
 	// Loads unloaded level images
-	int					LoadLevelImages( bool pacifier, nvrhi::ICommandList* commandList );
+	int					LoadLevelImages( bool pacifier );
 
 	void				PrintMemInfo( MemInfo_t* mi );
 

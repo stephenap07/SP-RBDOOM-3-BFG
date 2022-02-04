@@ -241,6 +241,24 @@ struct attribInfo_t
 
 extern attribInfo_t attribsPC[];
 
+// Shader macros are used to pick which permutation of a shader to load from a ShaderBlob
+// binary file.
+struct shaderMacro_t
+{
+	idStr name;
+	idStr definition;
+
+	shaderMacro_t( )
+		: name( )
+		, definition( )
+	{
+	}
+
+	shaderMacro_t( const idStr& _name, const idStr& _definition )
+		: name( _name )
+		, definition( _definition )
+	{ }
+};
 
 /*
 ================================================================================================
@@ -263,6 +281,7 @@ public:
 
 	int		FindShader( const char* name, rpStage_t stage );
 	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
+	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 
 	nvrhi::ShaderHandle GetShader( int index );
 
@@ -901,25 +920,6 @@ private:
 
 	static const uint INVALID_PROGID = 0xFFFFFFFF;
 
-	// Shader macros are used to pick which permutation of a shader to load from a ShaderBlob
-	// binary file.
-	struct ShaderMacro
-	{
-		idStr name;
-		idStr definition;
-
-		ShaderMacro( )
-			: name( )
-			, definition( )
-		{
-		}
-
-		ShaderMacro( const idStr& _name, const idStr& _definition )
-			: name( _name )
-			, definition( _definition )
-		{ }
-	};
-
 	struct shader_t
 	{
 		shader_t( ) :
@@ -937,7 +937,7 @@ private:
 		idStr						nameOutSuffix;
 		uint32						shaderFeatures;
 		bool						builtin;
-		idList<ShaderMacro>			macros;
+		idList<shaderMacro_t>			macros;
 		nvrhi::ShaderHandle			handle;
 		rpStage_t					stage;
 	};

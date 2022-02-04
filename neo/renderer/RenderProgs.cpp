@@ -452,7 +452,7 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 		int feature = ( bool )( 0 & BIT( i ) );
 		idStr macroName( GetGLSLMacroName( ( shaderFeature_t )i ) );
 		idStr value( feature );
-		shader.macros.Append( ShaderMacro( macroName, value ) );
+		shader.macros.Append( shaderMacro_t( macroName, value ) );
 	}
 
 	int index = shaders.Append( shader );
@@ -489,8 +489,38 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 		int feature = (bool)( features & BIT( i ) );
 		idStr macroName( GetGLSLMacroName( ( shaderFeature_t )i ) );
 		idStr value( feature );
-		shader.macros.Append( ShaderMacro( macroName, value ) );
+		shader.macros.Append( shaderMacro_t( macroName, value ) );
 	}
+
+	int index = shaders.Append( shader );
+	LoadShader( index, stage );
+
+	return index;
+}
+
+int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout )
+{
+	idStr shaderName( name );
+	shaderName.StripFileExtension( );
+
+	for( int i = 0; i < shaders.Num( ); i++ )
+	{
+		shader_t& shader = shaders[i];
+		if( shader.name.Icmp( shaderName ) == 0 && shader.stage == stage && shader.nameOutSuffix.Icmp( nameOutSuffix ) == 0 )
+		{
+			LoadShader( i, stage );
+			return i;
+		}
+	}
+
+	// Load it.
+	shader_t shader;
+	shader.name = shaderName;
+	shader.nameOutSuffix = nameOutSuffix;
+	shader.shaderFeatures = 0;
+	shader.builtin = builtin;
+	shader.stage = stage;
+	shader.macros = macros;
 
 	int index = shaders.Append( shader );
 	LoadShader( index, stage );
