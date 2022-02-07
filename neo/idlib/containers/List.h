@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #define __LIST_H__
 
 #include <new>
+#include <initializer_list>
 
 /*
 ===============================================================================
@@ -124,6 +125,7 @@ public:
 
 	idList( int newgranularity = 16 );
 	idList( const idList& other );
+	idList( std::initializer_list<_type_> initializerList );
 	~idList();
 
 	void			Clear();											// clear the list
@@ -258,6 +260,14 @@ ID_INLINE idList<_type_, _tag_>::idList( const idList& other )
 {
 	list = NULL;
 	*this = other;
+}
+
+template< typename _type_, memTag_t _tag_ >
+ID_INLINE idList<_type_, _tag_>::idList( std::initializer_list<_type_> initializerList )
+	: idList( 16 )
+{
+	SetNum( std::size( initializerList ) );
+	std::copy( initializerList.begin( ), initializerList.end( ), list );
 }
 
 /*

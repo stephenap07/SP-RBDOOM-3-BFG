@@ -5113,8 +5113,18 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		renderLog.CloseBlock();
 	}
 
-	// TODO(Stephen): Remove me
+	// TODO(Stephen): Remove Begin
+	if( previousFramebuffer != NULL )
+	{
+		previousFramebuffer->Bind( );
+	}
+	else
+	{
+		Framebuffer::Unbind( );
+	}
+
 	return;
+	// TODO(Stephen): Remove End
 
 	// set the window clipping
 	int aoScreenWidth = globalFramebuffers.ambientOcclusionFBO[0]->GetWidth();
@@ -5123,16 +5133,13 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	GL_Viewport( 0, 0, aoScreenWidth, aoScreenHeight );
 	GL_Scissor( 0, 0, aoScreenWidth, aoScreenHeight );
 
-
-
 	if( downModulateScreen )
 	{
 		if( r_ssaoFiltering.GetBool() )
 		{
 			globalFramebuffers.ambientOcclusionFBO[0]->Bind();
 
-			glClearColor( 0, 0, 0, 0 );
-			glClear( GL_COLOR_BUFFER_BIT );
+			GL_Clear( true, false, false, 0, 0, 0, 0, 0 );
 
 			renderProgManager.BindShader_AmbientOcclusion();
 		}
@@ -5161,8 +5168,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 
 		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
-		glClearColor( 0, 0, 0, 0 );
-		glClear( GL_COLOR_BUFFER_BIT );
+		GL_Clear( true, false, false, 0, 0, 0, 0, 0 );
 
 		if( r_ssaoFiltering.GetBool() )
 		{
@@ -5781,12 +5787,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 	}
 
-	//for( int i = 0; i < renderPasses.Num( ); i++ )
-	//{
-	//	// Render directly to the backbuffer for now.
-	//	renderPasses[i]->Render( framebuffer );
-	//}
-
 	//-------------------------------------------------
 	// RB_BeginDrawingView
 	//
@@ -5807,15 +5807,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
 	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
-
-	/// TODO: Skip for nvrhi
-	//if( !_viewDef->is2Dgui )
-	//{
-	//	return;
-	//}
-
-	// TODO(Stephen): DO.
-	//currentFrameBuffer = framebuffer;
 
 	if( useHDR )
 	{
@@ -5895,16 +5886,35 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//-------------------------------------------------
 	DrawScreenSpaceAmbientOcclusion( _viewDef, false );
 
+	//-------------------------------------------------
+	// render static lighting and consider SSAO results
+	//-------------------------------------------------
+	AmbientPass( drawSurfs, numDrawSurfs, false );
+
+	// Blit hdr buffer to the backbuffer.
+	// TODO(Stephen): Move somewhere else?
+	{
+		BlitParameters blitParms;
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
+		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
+
+		nvrhi::Viewport viewport;
+		viewport.minX = currentViewport.x1;
+		viewport.minY = currentViewport.y1;
+		viewport.maxX = currentViewport.x2;
+		viewport.maxY = currentViewport.y2;
+		viewport.minZ = currentViewport.zmin;
+		viewport.maxZ = currentViewport.zmax;
+		blitParms.targetViewport = viewport;
+
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+	}
+
 	// TODO(Stephen): Remove me.
 	if( !viewDef->is2Dgui )
 	{
 		return;
 	}
-
-	//-------------------------------------------------
-	// render static lighting and consider SSAO results
-	//-------------------------------------------------
-	AmbientPass( drawSurfs, numDrawSurfs, false );
 
 	//-------------------------------------------------
 	// main light renderer
@@ -5934,6 +5944,8 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	{
 		renderLog.OpenMainBlock( MRB_DRAW_SHADER_PASSES );
 		commandList->beginMarker( "DrawShaderPasses" );
+		auto prevFramebuffer = currentFrameBuffer;
+		globalFramebuffers.hdrFBO->Bind( );
 		float guiScreenOffset;
 		if( _viewDef->viewEntitys != NULL )
 		{
@@ -5946,7 +5958,26 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 		processed = DrawShaderPasses( drawSurfs, numDrawSurfs, guiScreenOffset, stereoEye );
 		renderLog.CloseMainBlock();
+		prevFramebuffer->Bind( );
 		commandList->endMarker( );
+	}
+
+	// TODO(Stephen): Move somewhere else?
+	{
+		BlitParameters blitParms;
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
+		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
+
+		nvrhi::Viewport viewport;
+		viewport.minX = currentViewport.x1;
+		viewport.minY = currentViewport.y1;
+		viewport.maxX = currentViewport.x2;
+		viewport.maxY = currentViewport.y2;
+		viewport.minZ = currentViewport.zmin;
+		viewport.maxZ = currentViewport.zmax;
+		blitParms.targetViewport = viewport;
+
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
 	}
 
 	//-------------------------------------------------

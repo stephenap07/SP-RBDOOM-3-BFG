@@ -770,8 +770,13 @@ public:
 	int			FindProgram( const char* name, int vIndex, int fIndex );
 	void		ZeroUniforms();
 
-	void			CommitConstantBuffer( nvrhi::ICommandList* commandList );
-	nvrhi::IBuffer* ConstantBuffer( ) { return constantBuffer; }
+	void						CommitConstantBuffer( nvrhi::ICommandList* commandList );
+
+
+	ID_INLINE nvrhi::IBuffer*				ConstantBuffer( ) { return constantBuffer; }
+	ID_INLINE nvrhi::InputLayoutHandle		InputLayout( ) { return renderProgs[currentIndex].inputLayout; }
+	ID_INLINE nvrhi::BindingLayoutHandle	BindingLayout( ) { return renderProgs[currentIndex].bindingLayout; }
+	ID_INLINE int							BindingLayoutType( ) { return renderProgs[currentIndex].bindingLayoutType; }
 
 	static const char* FindEmbeddedSourceShader( const char* name );
 
@@ -890,6 +895,11 @@ private:
 		BUILTIN_MOTION_BLUR,
 
 		BUILTIN_DEBUG_SHADOWMAP,
+
+		// SP Begin
+		BUILTIN_BLIT,
+		BUILTIN_RECT,
+		// SP End
 
 		MAX_BUILTINS
 	};

@@ -128,8 +128,7 @@ void Framebuffer::ResizeFramebuffers( )
 		globalFramebuffers.swapFramebuffers[index] = new Framebuffer(
 			va("_swapChain%d", index),
 			nvrhi::FramebufferDesc( )
-			.addColorAttachment( deviceManager->GetBackBuffer( index ) )
-			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+			.addColorAttachment( deviceManager->GetBackBuffer( index ) ) );
 	}
 
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",

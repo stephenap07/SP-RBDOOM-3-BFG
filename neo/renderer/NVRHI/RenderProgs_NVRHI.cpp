@@ -187,10 +187,13 @@ void idRenderProgManager::LoadProgram( const int programIndex, const int vertexS
 	renderProg_t& prog = renderProgs[programIndex];
 	prog.fragmentShaderIndex = fragmentShaderIndex;
 	prog.vertexShaderIndex = vertexShaderIndex;
-	prog.inputLayout = device->createInputLayout(
-		&vertexLayoutDescs[prog.vertexLayout][0],
-		vertexLayoutDescs[prog.vertexLayout].Num( ),
-		shaders[prog.vertexShaderIndex].handle );
+	if( prog.vertexLayout > 0 )
+	{
+		prog.inputLayout = device->createInputLayout(
+			&vertexLayoutDescs[prog.vertexLayout][0],
+			vertexLayoutDescs[prog.vertexLayout].Num( ),
+			shaders[prog.vertexShaderIndex].handle );
+	}
 	prog.bindingLayout = bindingLayouts[prog.bindingLayoutType];
 }
 

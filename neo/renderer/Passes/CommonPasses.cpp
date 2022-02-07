@@ -1,6 +1,7 @@
 #include "precompiled.h"
 #pragma hdrstop
 
+#include "renderer/RenderCommon.h"
 #include "CommonPasses.h"
 
 
@@ -27,6 +28,18 @@ static bool IsTextureArray( nvrhi::TextureDimension dimension )
 void CommonRenderPasses::Init( nvrhi::IDevice* device )
 {
 	m_Device = device;
+
+	int rectIndex = renderProgManager.FindShader( "builtin/rect", SHADER_STAGE_VERTEX, "", idList<shaderMacro_t>(), true, LAYOUT_DRAW_VERT );
+	m_RectVS = renderProgManager.GetShader( rectIndex );
+
+	idList<shaderMacro_t> shaderMacros;
+	shaderMacros.Append( shaderMacro_t( "TEXTURE_ARRAY", "0" ) );
+	int blitIndex = renderProgManager.FindShader( "builtin/blit", SHADER_STAGE_FRAGMENT, "", shaderMacros, true, LAYOUT_DRAW_VERT );
+	m_BlitPS = renderProgManager.GetShader( blitIndex );
+
+	shaderMacros[0].definition = "1";
+	blitIndex = renderProgManager.FindShader( "builtin/blit", SHADER_STAGE_FRAGMENT, "", shaderMacros, true, LAYOUT_DRAW_VERT );
+	m_BlitArrayPS = renderProgManager.GetShader( blitIndex );
 
 	auto samplerDesc = nvrhi::SamplerDesc( )
 		.setAllFilters( false )
@@ -125,6 +138,99 @@ void CommonRenderPasses::Init( nvrhi::IDevice* device )
 
 void CommonRenderPasses::BlitTexture( nvrhi::ICommandList* commandList, const BlitParameters& params, BindingCache* bindingCache )
 {
+	assert( commandList );
+	assert( params.targetFramebuffer );
+	assert( params.sourceTexture );
+
+	const nvrhi::FramebufferDesc& targetFramebufferDesc = params.targetFramebuffer->getDesc( );
+	assert( targetFramebufferDesc.colorAttachments.size( ) == 1 );
+	assert( targetFramebufferDesc.colorAttachments[0].valid( ) );
+	assert( !targetFramebufferDesc.depthAttachment.valid( ) );
+
+	const nvrhi::FramebufferInfo& fbinfo = params.targetFramebuffer->getFramebufferInfo( );
+	const nvrhi::TextureDesc& sourceDesc = params.sourceTexture->getDesc( );
+
+	assert( IsSupportedBlitDimension( sourceDesc.dimension ) );
+	bool isTextureArray = IsTextureArray( sourceDesc.dimension );
+
+	nvrhi::Viewport targetViewport = params.targetViewport;
+	if( targetViewport.width( ) == 0 && targetViewport.height( ) == 0 )
+	{
+		// If no viewport is specified, create one based on the framebuffer dimensions.
+		// Note that the FB dimensions may not be the same as target texture dimensions, in case a non-zero mip level is used.
+		targetViewport = nvrhi::Viewport( float( fbinfo.width ), float( fbinfo.height ) );
+	}
+
+	nvrhi::IShader* shader = nullptr;
+	switch( params.sampler )
+	{
+	case BlitSampler::Point:
+	case BlitSampler::Linear: shader = isTextureArray ? m_BlitArrayPS : m_BlitPS; break;
+	case BlitSampler::Sharpen: shader = isTextureArray ? m_SharpenArrayPS : m_SharpenPS; break;
+	default: assert( false );
+	}
+
+	nvrhi::GraphicsPipelineHandle& pso = m_BlitPsoCache[PsoCacheKey{ fbinfo, shader, params.blendState }];
+	if( !pso )
+	{
+		nvrhi::GraphicsPipelineDesc psoDesc;
+		psoDesc.bindingLayouts = { m_BlitBindingLayout };
+		psoDesc.VS = m_RectVS;
+		psoDesc.PS = shader;
+		psoDesc.primType = nvrhi::PrimitiveType::TriangleStrip;
+		psoDesc.renderState.rasterState.setCullNone( );
+		psoDesc.renderState.depthStencilState.depthTestEnable = false;
+		psoDesc.renderState.depthStencilState.stencilEnable = false;
+		psoDesc.renderState.blendState.targets[0] = params.blendState;
+
+		pso = m_Device->createGraphicsPipeline( psoDesc, params.targetFramebuffer );
+	}
+
+	nvrhi::BindingSetDesc bindingSetDesc;
+	{
+		auto sourceDimension = sourceDesc.dimension;
+		if( sourceDimension == nvrhi::TextureDimension::TextureCube || sourceDimension == nvrhi::TextureDimension::TextureCubeArray )
+			sourceDimension = nvrhi::TextureDimension::Texture2DArray;
+
+		auto sourceSubresources = nvrhi::TextureSubresourceSet( params.sourceMip, 1, params.sourceArraySlice, 1 );
+
+		bindingSetDesc.bindings = {
+			nvrhi::BindingSetItem::PushConstants( 0, sizeof( BlitConstants ) ),
+			nvrhi::BindingSetItem::Texture_SRV( 0, params.sourceTexture ).setSubresources( sourceSubresources ).setDimension( sourceDimension ),
+			nvrhi::BindingSetItem::Sampler( 0, params.sampler == BlitSampler::Point ? m_PointClampSampler : m_LinearClampSampler )
+		};
+	}
+
+	// If a binding cache is provided, get the binding set from the cache.
+	// Otherwise, create one and then release it.
+	nvrhi::BindingSetHandle sourceBindingSet;
+	if( bindingCache )
+		sourceBindingSet = bindingCache->GetOrCreateBindingSet( bindingSetDesc, m_BlitBindingLayout );
+	else
+		sourceBindingSet = m_Device->createBindingSet( bindingSetDesc, m_BlitBindingLayout );
+
+	nvrhi::GraphicsState state;
+	state.pipeline = pso;
+	state.framebuffer = params.targetFramebuffer;
+	state.bindings = { sourceBindingSet };
+	state.viewport.addViewport( targetViewport );
+	state.viewport.addScissorRect( nvrhi::Rect( targetViewport ) );
+	state.blendConstantColor = params.blendConstantColor;
+
+	BlitConstants blitConstants = {};
+	blitConstants.sourceOrigin = idVec2( params.sourceBox.x, params.sourceBox.y );
+	blitConstants.sourceSize = idVec2( params.sourceBox.z, params.sourceBox.w );
+	blitConstants.targetOrigin = idVec2( params.targetBox.x, params.targetBox.y );
+	blitConstants.targetSize = idVec2( params.targetBox.z, params.targetBox.w );
+
+	commandList->setGraphicsState( state );
+
+	commandList->setPushConstants( &blitConstants, sizeof( blitConstants ) );
+
+	nvrhi::DrawArguments args;
+	args.instanceCount = 1;
+	args.vertexCount = 4;
+	commandList->draw( args );
 }
 
 void CommonRenderPasses::BlitTexture( nvrhi::ICommandList* commandList, nvrhi::IFramebuffer* targetFramebuffer, nvrhi::ITexture* sourceTexture, BindingCache* bindingCache )

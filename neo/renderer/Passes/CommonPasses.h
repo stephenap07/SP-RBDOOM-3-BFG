@@ -21,12 +21,12 @@ struct BlitParameters
 {
 	nvrhi::IFramebuffer* targetFramebuffer = nullptr;
 	nvrhi::Viewport targetViewport;
-	idVec4 targetBox = idVec4( 0.f, 0.f, .1f, .1f );
+	idVec4 targetBox = idVec4( 0.f, 0.f, 1.f, 1.f );
 
 	nvrhi::ITexture* sourceTexture = nullptr;
 	uint32_t sourceArraySlice = 0;
 	uint32_t sourceMip = 0;
-	idVec4 sourceBox = idVec4( 0.f, 0.f, .1f, .1f );
+	idVec4 sourceBox = idVec4( 0.f, 0.f, 1.f, 1.f );
 
 	BlitSampler sampler = BlitSampler::Linear;
 	nvrhi::BlendState::RenderTarget blendState;

@@ -164,6 +164,36 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	bindingLayouts[BINDING_LAYOUT_DEFAULT] = device->createBindingLayout( defaultLayoutDesc );
 
+	auto lightGridLayoutDesc = nvrhi::BindingLayoutDesc( )
+		.setVisibility( nvrhi::ShaderType::All )
+		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // brdf lut
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // ssao
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 7 ) ) // irradiance cube map
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 8 ) ) // radiance cube map 1
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 9 ) ) // radiance cube map 2
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 10 ) ) // radiance cube map 3
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) ) // normal sampler
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) ) // specular sampler
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) ) // base color sampler
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) ) // brdf lut sampler
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 4 ) ) // ssao sampler
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 7 ) ) // irradiance sampler
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 8 ) ) // radiance sampler 1
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 9 ) ) // radiance sampler 2
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 10 ) ); // radiance sampler 3
+
+	bindingLayouts[BINDING_LAYOUT_LIGHTGRID] = device->createBindingLayout( lightGridLayoutDesc );
+
+	auto blitLayoutDesc = nvrhi::BindingLayoutDesc( )
+		.setVisibility( nvrhi::ShaderType::All )
+		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) ); // blit constants
+
+	bindingLayouts[BINDING_LAYOUT_BLIT] = device->createBindingLayout( blitLayoutDesc );
+
 	// RB: added checks for GPU skinning
 	struct builtinShaders_t
 	{
@@ -190,10 +220,10 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		{ BUILTIN_AMBIENT_LIGHTING_IBL_PBR, "builtin/lighting/ambient_lighting_IBL", "_PBR", BIT( USE_PBR ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_AMBIENT_LIGHTING_IBL_PBR_SKINNED, "builtin/lighting/ambient_lighting_IBL", "_PBR_skinned", BIT( USE_GPU_SKINNING | USE_PBR ), true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 
-		{ BUILTIN_AMBIENT_LIGHTGRID_IBL, "builtin/lighting/ambient_lightgrid_IBL", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_SKINNED, "builtin/lighting/ambient_lightgrid_IBL", "_skinned", BIT( USE_GPU_SKINNING ), true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_PBR, "builtin/lighting/ambient_lightgrid_IBL", "_PBR", BIT( USE_PBR ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_PBR_SKINNED, "builtin/lighting/ambient_lightgrid_IBL", "_PBR_skinned", BIT( USE_GPU_SKINNING | USE_PBR ), true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		{ BUILTIN_AMBIENT_LIGHTGRID_IBL, "builtin/lighting/ambient_lightgrid_IBL", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_LIGHTGRID },
+		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_SKINNED, "builtin/lighting/ambient_lightgrid_IBL", "_skinned", BIT( USE_GPU_SKINNING ), true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_LIGHTGRID },
+		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_PBR, "builtin/lighting/ambient_lightgrid_IBL", "_PBR", BIT( USE_PBR ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_LIGHTGRID },
+		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_PBR_SKINNED, "builtin/lighting/ambient_lightgrid_IBL", "_PBR_skinned", BIT( USE_GPU_SKINNING | USE_PBR ), true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_LIGHTGRID },
 
 		{ BUILTIN_SMALL_GEOMETRY_BUFFER, "builtin/gbuffer", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED, "builtin/gbuffer", "_skinned", BIT( USE_GPU_SKINNING ), true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
@@ -298,7 +328,23 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	};
 	int numBuiltins = sizeof( builtins ) / sizeof( builtins[0] );
 
-	renderProgs.SetNum( numBuiltins );
+	struct newBuiltins_t {
+		int						index;
+		const char*				name;
+		const char*				nameOutSuffix;
+		idList<shaderMacro_t>	macros;
+		bool					requireGPUSkinningSupport;
+		rpStage_t				stages;
+		vertexLayoutType_t		layout;
+		bindingLayoutType_t		bindingLayout;
+	} newBuiltins[] = {
+		// SP begin
+		{ BUILTIN_BLIT, "builtin/blit", "", { { "TEXTURE_ARRAY", "0" } }, false, SHADER_STAGE_FRAGMENT, LAYOUT_UNKNOWN, BINDING_LAYOUT_BLIT },
+		{ BUILTIN_RECT, "builtin/rect", "", { }, false, SHADER_STAGE_VERTEX, LAYOUT_DRAW_VERT, BINDING_LAYOUT_BLIT },
+		// SP end
+	};
+
+	renderProgs.SetNum( numBuiltins + std::size( newBuiltins ) );
 
 	for( int i = 0; i < numBuiltins; i++ )
 	{
@@ -336,6 +382,40 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		}
 
 		idLib::Printf( "Loading shader program %s\n", prog.name.c_str() );
+
+		LoadProgram( i, vIndex, fIndex );
+	}
+
+	for( int i = numBuiltins; i < ( numBuiltins + std::size( newBuiltins ) ); i++ )
+	{
+		renderProg_t& prog = renderProgs[i];
+
+		prog.name = newBuiltins[i].name;
+		prog.builtin = true;
+		prog.vertexLayout = newBuiltins[i].layout;
+		prog.bindingLayoutType = newBuiltins[i].bindingLayout;
+
+		builtinShaders[newBuiltins[i].index] = i;
+
+		if( newBuiltins[i].requireGPUSkinningSupport && !glConfig.gpuSkinningAvailable )
+		{
+			// RB: don't try to load shaders that would break the GLSL compiler in the OpenGL driver
+			continue;
+		}
+
+		int vIndex = -1;
+		if( newBuiltins[i].stages & SHADER_STAGE_VERTEX )
+		{
+			vIndex = FindShader( newBuiltins[i].name, SHADER_STAGE_VERTEX, newBuiltins[i].nameOutSuffix, newBuiltins[i].macros, true, newBuiltins[i].layout );
+		}
+
+		int fIndex = -1;
+		if( newBuiltins[i].stages & SHADER_STAGE_FRAGMENT )
+		{
+			fIndex = FindShader( newBuiltins[i].name, SHADER_STAGE_FRAGMENT, newBuiltins[i].nameOutSuffix, newBuiltins[i].macros, true, newBuiltins[i].layout );
+		}
+
+		idLib::Printf( "Loading shader program %s\n", prog.name.c_str( ) );
 
 		LoadProgram( i, vIndex, fIndex );
 	}

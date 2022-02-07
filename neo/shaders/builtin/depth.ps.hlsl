@@ -30,7 +30,6 @@ If you have questions concerning this license or the applicable additional terms
 
 
 // *INDENT-OFF*
-SamplerState Sampler : register( s0 );
 
 struct PS_OUT {
 	float4 color : SV_Target0;

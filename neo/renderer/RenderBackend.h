@@ -35,6 +35,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Passes/CommonPasses.h"
 #include "Passes/MipMapGenPass.h"
+#include "Passes/FowardShadingPass.h"
 
 bool			GL_CheckErrors_( const char* filename, int line );
 #if 1 // !defined(RETAIL)
@@ -252,6 +253,7 @@ all state modified by the back end is separated from the front end state
 struct ImDrawData;
 
 class IRenderPass;
+class ForwardShadingPass;
 
 class idRenderBackend
 {
@@ -495,6 +497,7 @@ private:
 	idList<IRenderPass*>			renderPasses;
 	CommonRenderPasses				commonPasses;
 	MipMapGenPass*					hiZGenPass;
+	ForwardShadingPass				fowardShadingPass;
 
 	BindingCache					bindingCache;
 

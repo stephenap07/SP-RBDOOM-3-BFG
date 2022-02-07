@@ -76,8 +76,6 @@ void RB_SetMVP( const idRenderMatrix& mvp );
 
 glContext_t glcontext;
 
-static const int MAX_IMAGE_PARMS = 16;
-
 class NvrhiContext
 {
 public:
@@ -539,11 +537,13 @@ void idRenderBackend::Init()
 	// input and sound systems need to be tied to the new window
 	Sys_InitInput();
 
+	// Need to reinitialize this pass once this image is resized.
+	renderProgManager.Init( deviceManager->GetDevice( ) );
+
 	bindingCache.Init( deviceManager->GetDevice( ) );
 	commonPasses.Init( deviceManager->GetDevice( ) );
 	hiZGenPass = nullptr;
-	// Need to reinitialize this pass once this image is resized.
-	renderProgManager.Init( deviceManager->GetDevice( ) );
+	fowardShadingPass.Init( deviceManager->GetDevice( ) );
 
 	tr.SetInitialized();
 
@@ -645,10 +645,43 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
 	}
 
-	auto bindingSetDesc = nvrhi::BindingSetDesc( )
-		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
+	nvrhi::BindingSetDesc bindingSetDesc;
+
+	if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DEFAULT )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
+	}
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_GBUFFER )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
+	}
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_LIGHTGRID )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 7, ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 8, ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 9, ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 10, ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 7, ( nvrhi::ISampler* )GetImageAt( 7 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 8, ( nvrhi::ISampler* )GetImageAt( 8 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( ) ) );
+	}
 
 	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
 
@@ -755,7 +788,20 @@ void idRenderBackend::GL_SetDefaultState()
 	memset( &glcontext.tmu, 0, sizeof( glcontext.tmu ) );
 
 	glStateBits = 0;
+	currentRenderState.depthStencilState.enableDepthWrite( );
+	currentRenderState.depthStencilState.enableStencil( );
+
 	GL_State( 0, true );
+
+	currentRenderState.depthStencilState.enableDepthTest( );
+	currentRenderState.blendState.targets[0].enableBlend( );
+
+	if( r_useScissor.GetBool( ) )
+	{
+		GL_Scissor( 0, 0, renderSystem->GetWidth( ), renderSystem->GetHeight( ) );
+	}
+
+	renderProgManager.Unbind( );
 
 	// RB begin
 	Framebuffer::Unbind( );
@@ -934,7 +980,6 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 		else
 		{
 			currentBlendState.setAlphaToCoverageEnable( true );
-			nvrhi::BlendState::RenderTarget renderTarget;
 			renderTarget.enableBlend( );
 			renderTarget.setSrcBlend( srcFactor );
 			renderTarget.setDestBlend( dstFactor );
@@ -949,12 +994,6 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 		if( stateBits & GLS_DEPTHMASK )
 		{
 			currentDepthStencilState.disableDepthWrite( );
-			currentDepthStencilState.disableDepthTest( );
-		}
-		else
-		{
-			currentDepthStencilState.enableDepthWrite( );
-			currentDepthStencilState.enableDepthTest( );
 		}
 	}
 
@@ -970,6 +1009,7 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 		if( stateBits & GLS_BLUEMASK ) mask = mask & ~nvrhi::ColorMask::Blue;
 		if( stateBits & GLS_ALPHAMASK ) mask = mask & ~nvrhi::ColorMask::Alpha;
 
+		renderTarget.setBlendEnable( true );
 		renderTarget.setColorWriteMask( mask );
 	}
 
@@ -1017,7 +1057,7 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 		if( ( stateBits & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_OP_BITS ) ) != 0 )
 		{
 			currentDepthStencilState.enableStencil( );
-			currentDepthStencilState.enableDepthWrite( );
+			//currentDepthStencilState.enableDepthWrite( );
 		}
 		else
 		{
