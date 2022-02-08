@@ -24,8 +24,9 @@ Texture2D<float3> t_NormalRoughness : register( t0 );
 Texture2D<float1> t_ViewDepth		: register( t1 );
 Texture2D<float1> t_Ao				: register( t2 );
 
-SamplerState LinearSampler			: register( s0 );
-SamplerState PointSampler			: register( s1 );
+SamplerState normalSampler			: register( s0 );
+SamplerState depthSampler			: register( s1 );
+SamplerState blueNoiseSampler		: register( s2 );
 
 #define normal_buffer	t_NormalRoughness
 #define cszBuffer		t_ViewDepth

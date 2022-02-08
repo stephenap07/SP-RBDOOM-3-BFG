@@ -194,6 +194,26 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	bindingLayouts[BINDING_LAYOUT_BLIT] = device->createBindingLayout( blitLayoutDesc );
 
+	auto aoLayoutDesc = nvrhi::BindingLayoutDesc( )
+		.setVisibility( nvrhi::ShaderType::All )
+		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) )
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) )
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) );
+
+	bindingLayouts[BINDING_LAYOUT_DRAW_AO] = device->createBindingLayout( aoLayoutDesc );
+
+	auto aoLayoutDesc2 = nvrhi::BindingLayoutDesc( )
+		.setVisibility( nvrhi::ShaderType::All )
+		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
+		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );
+
+	bindingLayouts[BINDING_LAYOUT_DRAW_AO1] = device->createBindingLayout( aoLayoutDesc2 );
+
 	// RB: added checks for GPU skinning
 	struct builtinShaders_t
 	{
@@ -305,12 +325,12 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		{ BUILTIN_SMAA_BLENDING_WEIGHT_CALCULATION, "builtin/post/SMAA_blending_weight_calc", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_SMAA_NEIGHBORHOOD_BLENDING, "builtin/post/SMAA_final", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 
-		{ BUILTIN_AMBIENT_OCCLUSION, "builtin/SSAO/AmbientOcclusion_AO", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_OCCLUSION_AND_OUTPUT, "builtin/SSAO/AmbientOcclusion_AO", "_write", BIT( BRIGHTPASS ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_OCCLUSION_BLUR, "builtin/SSAO/AmbientOcclusion_blur", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_OCCLUSION_BLUR_AND_OUTPUT, "builtin/SSAO/AmbientOcclusion_blur", "_write", BIT( BRIGHTPASS ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_OCCLUSION_MINIFY, "builtin/SSAO/AmbientOcclusion_minify", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_AMBIENT_OCCLUSION_RECONSTRUCT_CSZ, "builtin/SSAO/AmbientOcclusion_minify", "_mip0", BIT( BRIGHTPASS ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		{ BUILTIN_AMBIENT_OCCLUSION, "builtin/SSAO/AmbientOcclusion_AO", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO },
+		{ BUILTIN_AMBIENT_OCCLUSION_AND_OUTPUT, "builtin/SSAO/AmbientOcclusion_AO", "_write", BIT( BRIGHTPASS ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO },
+		{ BUILTIN_AMBIENT_OCCLUSION_BLUR, "builtin/SSAO/AmbientOcclusion_blur", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO },
+		{ BUILTIN_AMBIENT_OCCLUSION_BLUR_AND_OUTPUT, "builtin/SSAO/AmbientOcclusion_blur", "_write", BIT( BRIGHTPASS ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO },
+		{ BUILTIN_AMBIENT_OCCLUSION_MINIFY, "builtin/SSAO/AmbientOcclusion_minify", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO1 },
+		{ BUILTIN_AMBIENT_OCCLUSION_RECONSTRUCT_CSZ, "builtin/SSAO/AmbientOcclusion_minify", "_mip0", BIT( BRIGHTPASS ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO1 },
 		{ BUILTIN_DEEP_GBUFFER_RADIOSITY_SSGI, "builtin/SSGI/DeepGBufferRadiosity_radiosity", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_DEEP_GBUFFER_RADIOSITY_BLUR, "builtin/SSGI/DeepGBufferRadiosity_blur", "", 0, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_DEEP_GBUFFER_RADIOSITY_BLUR_AND_OUTPUT, "builtin/SSGI/DeepGBufferRadiosity_blur", "_write", BIT( BRIGHTPASS ), false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
@@ -386,16 +406,16 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		LoadProgram( i, vIndex, fIndex );
 	}
 
-	for( int i = numBuiltins; i < ( numBuiltins + std::size( newBuiltins ) ); i++ )
+	for( int i = 0; i < std::size( newBuiltins ); i++ )
 	{
-		renderProg_t& prog = renderProgs[i];
+		renderProg_t& prog = renderProgs[i + std::size(newBuiltins)];
 
 		prog.name = newBuiltins[i].name;
 		prog.builtin = true;
 		prog.vertexLayout = newBuiltins[i].layout;
 		prog.bindingLayoutType = newBuiltins[i].bindingLayout;
 
-		builtinShaders[newBuiltins[i].index] = i;
+		builtinShaders[newBuiltins[i].index] = i + numBuiltins;
 
 		if( newBuiltins[i].requireGPUSkinningSupport && !glConfig.gpuSkinningAvailable )
 		{
@@ -417,7 +437,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 		idLib::Printf( "Loading shader program %s\n", prog.name.c_str( ) );
 
-		LoadProgram( i, vIndex, fIndex );
+		LoadProgram( i + numBuiltins, vIndex, fIndex );
 	}
 
 	r_useHalfLambertLighting.ClearModified();
@@ -613,6 +633,24 @@ nvrhi::ShaderHandle idRenderProgManager::GetShader( int index )
 	return shaders[ index ].handle;
 }
 
+programInfo_t idRenderProgManager::GetProgramInfo( int index )
+{
+	programInfo_t info;
+
+	renderProg_t& prog = renderProgs[index];
+	if( prog.vertexShaderIndex > -1 && prog.vertexShaderIndex < shaders.Num( ) )
+	{
+		info.vs = GetShader( prog.vertexShaderIndex );
+	}
+	if( prog.fragmentShaderIndex > -1 && prog.fragmentShaderIndex < shaders.Num( ) )
+	{
+		info.ps = GetShader( prog.fragmentShaderIndex );
+	}
+	info.inputLayout = prog.inputLayout;
+	info.bindingLayout = prog.bindingLayout;
+
+	return info;
+}
 
 // RB begin
 bool idRenderProgManager::IsShaderBound() const

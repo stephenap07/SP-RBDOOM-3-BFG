@@ -37,6 +37,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "Passes/MipMapGenPass.h"
 #include "Passes/FowardShadingPass.h"
 
+#include "PipelineCache.h"
+
 bool			GL_CheckErrors_( const char* filename, int line );
 #if 1 // !defined(RETAIL)
 	#define         GL_CheckErrors()	GL_CheckErrors_(__FILE__, __LINE__)
@@ -500,6 +502,7 @@ private:
 	ForwardShadingPass				fowardShadingPass;
 
 	BindingCache					bindingCache;
+	PipelineCache					pipelineCache;
 
 	nvrhi::InputLayoutHandle		inputLayout;
 

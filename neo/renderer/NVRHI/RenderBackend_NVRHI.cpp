@@ -541,6 +541,7 @@ void idRenderBackend::Init()
 	renderProgManager.Init( deviceManager->GetDevice( ) );
 
 	bindingCache.Init( deviceManager->GetDevice( ) );
+	pipelineCache.Init( deviceManager->GetDevice( ) );
 	commonPasses.Init( deviceManager->GetDevice( ) );
 	hiZGenPass = nullptr;
 	fowardShadingPass.Init( deviceManager->GetDevice( ) );
@@ -631,19 +632,13 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		currentIndexBuffer = indexBuffer->GetAPIObject( );
 	}
 
-	if( !currentPipeline )
-	{
-		nvrhi::GraphicsPipelineDesc psoDesc;
-		psoDesc.VS = vertexShader;
-		psoDesc.PS = pixelShader;
-		psoDesc.inputLayout = inputLayout;
-		psoDesc.bindingLayouts = { currentBindingLayout };
-		psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
-		currentRenderState.rasterState.enableScissor( );
-		psoDesc.setRenderState( currentRenderState );
+	PipelineKey key;
+	key.framebuffer = currentFrameBuffer;
+	key.mirrored = viewDef->isMirror;
+	key.program = renderProgManager.CurrentProgram( );
+	key.state = glStateBits;
 
-		currentPipeline = deviceManager->GetDevice( )->createGraphicsPipeline( psoDesc, currentFrameBuffer->GetApiObject( ) );
-	}
+	auto pipeline = pipelineCache.GetOrCreatePipeline( key );
 
 	nvrhi::BindingSetDesc bindingSetDesc;
 
@@ -682,8 +677,30 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 			.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( ) ) )
 			.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( ) ) );
 	}
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_AO )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( ) ) );
+	}
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_AO1 )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
+	}
+	else
+	{
+		common->FatalError( "Invalid binding set %d\n", renderProgManager.BindingLayoutType( ) );
+	}
 
-	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );
+	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, renderProgManager.BindingLayout() );
 
 	renderProgManager.CommitConstantBuffer( commandList );
 
@@ -691,7 +708,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	state.bindings = { currentBindingSet };
 	state.indexBuffer = { currentIndexBuffer, nvrhi::Format::R16_UINT, indexOffset };
 	state.vertexBuffers = { { currentVertexBuffer, 0, vertOffset } };
-	state.pipeline = currentPipeline;
+	state.pipeline = pipeline;
 	state.framebuffer = currentFrameBuffer->GetApiObject();
 
 	// TODO(Stephen): use currentViewport instead.
@@ -994,6 +1011,10 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 		if( stateBits & GLS_DEPTHMASK )
 		{
 			currentDepthStencilState.disableDepthWrite( );
+			if( ( stateBits & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_ALWAYS )
+			{
+				currentDepthStencilState.disableDepthTest( );
+			}
 		}
 	}
 

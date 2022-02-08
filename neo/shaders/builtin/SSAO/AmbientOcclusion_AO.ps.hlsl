@@ -94,17 +94,19 @@ static const float projScale = 500.0;
 
 // *INDENT-OFF*
 
-Texture2D<float3> t_NormalRoughness : register( t0 );
-Texture2D<float1> t_ViewDepth		: register( t1 );
-Texture2D t_BlueNoise		: register( t2 );
+Texture2D<float3>	t_NormalRoughness	: register( t0 );
+Texture2D<float1>	t_ViewDepth			: register( t1 );
+Texture2D			t_BlueNoise			: register( t2 );
 
-SamplerState LinearSampler	: register( s0 );
-SamplerState PointSampler	: register( s1 );
+SamplerState		normalSampler		: register( s0 );
+SamplerState		depthSampler		: register( s1 );
+SamplerState		blueNoiseSampler	: register( s2 );
 
 #define CS_Z_buffer		t_ViewDepth
 
 struct PS_IN
 {
+	float4 position : SV_Position;
 	float2 texcoord0 : TEXCOORD0_centroid;
 };
 
@@ -116,7 +118,7 @@ struct PS_OUT
 
 float BlueNoise( float2 n, float x )
 {
-	float noise = t_BlueNoise.Sample( LinearSampler, n.xy * rpJitterTexOffset.xy ).r;
+	float noise = t_BlueNoise.Sample( blueNoiseSampler, n.xy * rpJitterTexOffset.xy ).r;
 
 #if TEMPORALLY_VARY_TAPS
 	noise = frac( noise + 0.61803398875 * rpJitterTexOffset.z * x );

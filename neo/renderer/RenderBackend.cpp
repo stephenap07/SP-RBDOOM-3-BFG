@@ -694,7 +694,7 @@ void idRenderBackend::PrepareStageTexturing( const shaderStage_t* pStage,  const
 
 		const int* parms = surf->material->GetTexGenRegisters();
 
-		float wobbleDegrees = surf->shaderRegisters[ parms[0] ] * ( idMath::PI / 180.0f );
+		float wobbleDegrees = surf->shaderRegisters[ parms[0] ] * ( idMath::PI / 180.0f ); 
 		float wobbleSpeed = surf->shaderRegisters[ parms[1] ] * ( 2.0f * idMath::PI / 60.0f );
 		float rotateSpeed = surf->shaderRegisters[ parms[2] ] * ( 2.0f * idMath::PI / 60.0f );
 
@@ -5123,9 +5123,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		Framebuffer::Unbind( );
 	}
 
-	return;
-	// TODO(Stephen): Remove End
-
 	// set the window clipping
 	int aoScreenWidth = globalFramebuffers.ambientOcclusionFBO[0]->GetWidth();
 	int aoScreenHeight = globalFramebuffers.ambientOcclusionFBO[0]->GetHeight();
@@ -5168,7 +5165,13 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 
 		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
-		GL_Clear( true, false, false, 0, 0, 0, 0, 0 );
+		//GL_Clear( true, false, false, 0, 0, 0, 0, 0 );
+		const nvrhi::FramebufferAttachment& att = globalFramebuffers.ambientOcclusionFBO[0]->GetApiObject()->getDesc( ).colorAttachments[0];
+
+		if( att.texture )
+		{
+			commandList->clearTextureUInt( att.texture, att.subresources, 0 );
+		}
 
 		if( r_ssaoFiltering.GetBool() )
 		{
