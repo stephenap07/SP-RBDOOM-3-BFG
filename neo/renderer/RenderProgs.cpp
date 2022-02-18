@@ -78,8 +78,6 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	uniforms.SetNum( RENDERPARM_TOTAL, vec4_zero );
 
-	vertexLayoutDescs.SetNum( NUM_VERTEX_LAYOUTS, idList<nvrhi::VertexAttributeDesc>() );
-
 	constantBuffer = device->createBuffer(
 		nvrhi::utils::CreateVolatileConstantBufferDesc( uniforms.Allocated(),
 			"RenderParams",
@@ -91,6 +89,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	}
 
 	// === Main draw vertex layout ===
+	vertexLayoutDescs.SetNum( NUM_VERTEX_LAYOUTS, idList<nvrhi::VertexAttributeDesc>( ) );
 
 	vertexLayoutDescs[LAYOUT_DRAW_VERT].Append(
 		nvrhi::VertexAttributeDesc( )

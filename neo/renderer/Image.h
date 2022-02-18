@@ -237,6 +237,7 @@ typedef enum
 	TD_R32F,
 	TD_R11G11B10F,			// memory efficient HDR RGB format with only 32bpp
 	// RB end
+	TD_R8F,					// Stephen: Added for ambient occlusion render target.
 } textureUsage_t;
 
 typedef enum

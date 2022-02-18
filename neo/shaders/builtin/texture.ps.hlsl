@@ -34,7 +34,7 @@ Texture2D tex : register( t0 );
 SamplerState samp0 : register( s0 );
 
 struct PS_IN {
-	float4 position : VPOS;
+	float4 position : SV_Position0;
 	float2 texcoord0 : TEXCOORD0_centroid;
 };
 

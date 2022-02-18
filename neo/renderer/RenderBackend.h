@@ -36,6 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "Passes/CommonPasses.h"
 #include "Passes/MipMapGenPass.h"
 #include "Passes/FowardShadingPass.h"
+#include "Passes/SsaoPass.h"
 
 #include "PipelineCache.h"
 
@@ -334,6 +335,7 @@ private:
 	void				Bloom( const viewDef_t* viewDef );
 
 	void				DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef, bool downModulateScreen );
+	void				DrawScreenSpaceAmbientOcclusion2( const viewDef_t* _viewDef, bool downModulateScreen );
 	void				DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewDef );
 
 	// Experimental feature
@@ -498,7 +500,9 @@ private:
 	nvrhi::CommandListHandle		commandList;
 	idList<IRenderPass*>			renderPasses;
 	CommonRenderPasses				commonPasses;
+	SsaoPass*						ssaoPass;
 	MipMapGenPass*					hiZGenPass;
+
 	ForwardShadingPass				fowardShadingPass;
 
 	BindingCache					bindingCache;
@@ -511,10 +515,7 @@ private:
 
 public:
 
-	void				BindProgram( nvrhi::ShaderHandle vShader,
-		nvrhi::ShaderHandle fShader,
-		nvrhi::InputLayoutHandle layout,
-		nvrhi::BindingLayoutHandle bindingLayout );
+	void				BindProgram( nvrhi::ShaderHandle vShader, nvrhi::ShaderHandle fShader, nvrhi::InputLayoutHandle layout, nvrhi::BindingLayoutHandle bindingLayout );
 
 	void				SetCurrentImage( idImage* image );
 	idImage*			GetCurrentImage( );

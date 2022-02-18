@@ -16,7 +16,7 @@ void PipelineCache::Init( nvrhi::DeviceHandle deviceHandle )
 	device = deviceHandle;
 }
 
-nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( PipelineKey key )
+nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const PipelineKey& key )
 {
 	std::size_t h = std::hash<PipelineKey>{}( key );
 
@@ -227,7 +227,6 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		if( stateBits & GLS_BLUEMASK ) mask = mask & ~nvrhi::ColorMask::Blue;
 		if( stateBits & GLS_ALPHAMASK ) mask = mask & ~nvrhi::ColorMask::Alpha;
 
-		renderTarget.setBlendEnable( true );
 		renderTarget.setColorWriteMask( mask );
 	}
 
@@ -261,7 +260,7 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		}
 		else
 		{
-			currentRasterState.disableQuadFill( );
+			//currentRasterState.disableQuadFill( );
 		}
 	}
 

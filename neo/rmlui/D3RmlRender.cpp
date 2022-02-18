@@ -273,8 +273,8 @@ bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml
 	memcpy( img->pic, source, 4 * source_dimensions.x * source_dimensions.y );
 	img->width = source_dimensions.x;
 	img->height = source_dimensions.y;
-	img->textureFilter = TF_LINEAR;
-	img->textureRepeat = TR_CLAMP;
+	img->textureFilter = TF_NEAREST;
+	img->textureRepeat = TR_REPEAT;
 	img->textureUsage = TD_LOOKUP_TABLE_RGBA;
 
 	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
@@ -387,7 +387,6 @@ void idRmlRender::RenderClipMask()
 	// Render only to the stencil buffer. Replace the stencil value with the stencil ref + the number of masks.
 	uint64_t glState = GLS_OVERRIDE
 					   | GLS_DEPTHFUNC_LESS
-					   | GLS_DEPTHMASK
 					   | GLS_COLORMASK
 					   | GLS_ALPHAMASK
 					   | GLS_STENCIL_OP_PASS_REPLACE

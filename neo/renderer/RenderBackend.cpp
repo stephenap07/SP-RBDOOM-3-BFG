@@ -48,6 +48,7 @@ idCVar r_useStencilShadowPreload( "r_useStencilShadowPreload", "0", CVAR_RENDERE
 idCVar r_skipShaderPasses( "r_skipShaderPasses", "0", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_skipInteractionFastPath( "r_skipInteractionFastPath", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_useLightStencilSelect( "r_useLightStencilSelect", "0", CVAR_RENDERER | CVAR_BOOL, "use stencil select pass" );
+idCVar r_useNewSsaoPass( "r_useNewSSAOPass", "0", CVAR_RENDERER | CVAR_BOOL, "use the new ssao pass from donut" );
 
 extern idCVar stereoRender_swapEyes;
 
@@ -2255,13 +2256,17 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		renderProgManager.SetRenderParm( RENDERPARM_TEXGEN_0_ENABLED, texGenEnabled );
 
 		currentSpace = NULL;
-		RB_SetMVP( renderMatrix_identity );
+		auto mvp = renderMatrix_identity;
+		mvp[1][1] = -mvp[1][1]; // flip y
+		RB_SetMVP( mvp );
 
 		renderProgManager.BindShader_Texture();
 		GL_Color( 1, 1, 1, 1 );
 
 		GL_SelectTexture( 0 );
 		globalImages->ambientOcclusionImage[0]->Bind();
+
+		//commonPasses.BlitTexture( commandList, (nvrhi::IFramebuffer*)globalFramebuffers.hdrFBO->GetApiObject( ), globalImages->ambientOcclusionImage[0]->GetTextureHandle( ).Get(), &bindingCache );
 
 		DrawElementsWithCounters( &unitSquareSurface );
 
@@ -2282,10 +2287,6 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 		GL_Clear( true, false, false, 0, 0.0f, 0.0f, 0.0f, 1.0f, false );
 	}
-
-	commandList->setEnableAutomaticBarriers( false );
-	commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
-	commandList->commitBarriers( );
 
 	// RB: not needed
 	// GL_StartDepthPass( backEnd.viewDef->scissor );
@@ -4781,6 +4782,8 @@ void idRenderBackend::Tonemap( const viewDef_t* _viewDef )
 
 	renderLog.OpenBlock( "Tonemap" );
 
+	commandList->beginMarker( "Tonemap" );
+
 	//postProcessCommand_t* cmd = ( postProcessCommand_t* )data;
 	//const idScreenRect& viewport = cmd->viewDef->viewport;
 	//globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
@@ -4867,6 +4870,7 @@ void idRenderBackend::Tonemap( const viewDef_t* _viewDef )
 
 	GL_State( GLS_DEFAULT );
 
+	commandList->endMarker( );
 	renderLog.CloseBlock();
 }
 
@@ -5013,14 +5017,13 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 
 void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef, bool downModulateScreen )
 {
-#if !defined(USE_VULKAN)
 	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
 	{
 		// 3D views only
 		return;
 	}
 
-	if( r_useSSAO.GetInteger() <= 0 )
+	if( r_useSSAO.GetInteger() <= 0 || r_useSSAO.GetInteger() > 1 )
 	{
 		return;
 	}
@@ -5038,6 +5041,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 
 	renderLog.OpenMainBlock( MRB_SSAO_PASS );
 	renderLog.OpenBlock( "Render_SSAO", colorBlue );
+	commandList->beginMarker( "Render_SSAO" );
 
 	currentSpace = &viewDef->worldSpace;
 	RB_SetMVP( viewDef->worldSpace.mvp );
@@ -5052,60 +5056,12 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	{
 		renderLog.OpenBlock( "Render_HiZ", colorDkGrey );
 		commandList->beginMarker( "Render_HiZ" );
-
-		renderProgManager.BindShader_AmbientOcclusionMinify();
-
-		GL_Color( 0, 0, 0, 1 );
-
-		globalImages->currentDepthImage->Bind();
-
-		for( int i = 0; i < 1; i++ )
-		{
-			int width = globalFramebuffers.csDepthFBO[i]->GetWidth();
-			int height = globalFramebuffers.csDepthFBO[i]->GetHeight();
-
-			globalFramebuffers.csDepthFBO[i]->Bind();
-
-			commandList->setEnableAutomaticBarriers( false );
-			commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
-			commandList->commitBarriers( );
-
-			GL_Viewport( 0, 0, width, height );
-			GL_Scissor( 0, 0, width, height );
-
-			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
-
-			GL_SelectTexture( 0 );
-
-			if( i == 0 )
-			{
-				renderProgManager.BindShader_AmbientOcclusionReconstructCSZ();
-
-				globalImages->currentDepthImage->Bind();
-			}
-			else
-			{
-				renderProgManager.BindShader_AmbientOcclusionMinify();
-
-				globalImages->hierarchicalZbufferImage->Bind();
-			}
-
-			float jitterTexScale[4];
-			jitterTexScale[0] = i - 1;
-			jitterTexScale[1] = 0;
-			jitterTexScale[2] = 0;
-			jitterTexScale[3] = 0;
-			SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
-
-			float screenCorrectionParm[4];
-			screenCorrectionParm[0] = 1.0f / width;
-			screenCorrectionParm[1] = 1.0f / height;
-			screenCorrectionParm[2] = width;
-			screenCorrectionParm[3] = height;
-			SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-
-			DrawElementsWithCounters( &unitSquareSurface );
-		}
+		
+		commonPasses.BlitTexture(
+			commandList,
+			globalFramebuffers.csDepthFBO[0]->GetApiObject( ),
+			globalImages->currentDepthImage->GetTextureHandle( ),
+			&bindingCache );
 
 		hiZGenPass->Dispatch( commandList, MAX_HIERARCHICAL_ZBUFFERS );
 
@@ -5113,7 +5069,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		renderLog.CloseBlock();
 	}
 
-	// TODO(Stephen): Remove Begin
 	if( previousFramebuffer != NULL )
 	{
 		previousFramebuffer->Bind( );
@@ -5170,7 +5125,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 
 		if( att.texture )
 		{
-			commandList->clearTextureUInt( att.texture, att.subresources, 0 );
+			commandList->clearTextureFloat( att.texture, att.subresources, 0 );
 		}
 
 		if( r_ssaoFiltering.GetBool() )
@@ -5338,11 +5293,41 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 
 	GL_State( GLS_DEFAULT );
 
+	commandList->endMarker( );
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();
+}
 
-	//GL_CheckErrors();
-#endif
+
+/*
+NVRHI SSAO using compute shaders.
+*/
+void idRenderBackend::DrawScreenSpaceAmbientOcclusion2( const viewDef_t* _viewDef, bool downModulateScreen )
+{
+	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
+	{
+		// 3D views only
+		return;
+	}
+
+	if( r_useSSAO.GetInteger( ) <= 0 || r_useSSAO.GetInteger( ) < 2 )
+	{
+		return;
+	}
+
+	// skip this in subviews because it is very expensive
+	if( _viewDef->isSubview )
+	{
+		return;
+	}
+
+	if( _viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) )
+	{
+		return;
+	}
+
+	commandList->beginMarker( "SSAO" );
+	commandList->endMarker( );
 }
 
 void idRenderBackend::DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewDef )
@@ -5399,7 +5384,6 @@ void idRenderBackend::DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewD
 		glClearColor( 0, 0, 0, 1 );
 
 		GL_SelectTexture( 0 );
-		//globalImages->currentDepthImage->Bind();
 
 		for( int i = 0; i < MAX_HIERARCHICAL_ZBUFFERS; i++ )
 		{
@@ -5489,9 +5473,9 @@ void idRenderBackend::DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewD
 
 	float screenCorrectionParm[4];
 	screenCorrectionParm[0] = 1.0f / screenWidth;
-	screenCorrectionParm[1] = 1.0f / screenHeight;
+	screenCorrectionParm[1] = -1.0f / screenHeight;
 	screenCorrectionParm[2] = screenWidth;
-	screenCorrectionParm[3] = screenHeight;
+	screenCorrectionParm[3] = -screenHeight;
 	SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
 
 #if 0
@@ -5676,6 +5660,15 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 		hiZGenPass = new MipMapGenPass( deviceManager->GetDevice( ), globalImages->hierarchicalZbufferImage->GetTextureHandle( ) );
 	}
 
+	if( !ssaoPass && r_useNewSsaoPass.GetBool( ) )
+	{
+		ssaoPass = new SsaoPass(
+			deviceManager->GetDevice( ),
+			&commonPasses, globalImages->currentDepthImage->GetTextureHandle( ),
+			globalImages->currentNormalsImage->GetTextureHandle( ),
+			globalImages->ambientOcclusionImage[0]->GetTextureHandle( ) );
+	}
+
 	uint64 backEndStartTime = Sys_Microseconds();
 
 	//// needed for editor rendering
@@ -5831,10 +5824,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )]->Bind( );
 	}
 
-	commandList->setEnableAutomaticBarriers( false );
-	commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
-	commandList->commitBarriers( );
-
 	// RB end
 
 	//GL_CheckErrors();
@@ -5894,28 +5883,19 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//-------------------------------------------------
 	AmbientPass( drawSurfs, numDrawSurfs, false );
 
-	// Blit hdr buffer to the backbuffer.
-	// TODO(Stephen): Move somewhere else?
-	{
-		BlitParameters blitParms;
-		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
-		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
-
-		nvrhi::Viewport viewport;
-		viewport.minX = currentViewport.x1;
-		viewport.minY = currentViewport.y1;
-		viewport.maxX = currentViewport.x2;
-		viewport.maxY = currentViewport.y2;
-		viewport.minZ = currentViewport.zmin;
-		viewport.maxZ = currentViewport.zmax;
-		blitParms.targetViewport = viewport;
-
-		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
-	}
-
 	// TODO(Stephen): Remove me.
 	if( !viewDef->is2Dgui )
 	{
+		// Blit hdr buffer to the backbuffer.
+		// TODO(Stephen): Move somewhere else?
+		{
+			BlitParameters blitParms;
+			blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
+			blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
+			blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth( ), renderSystem->GetHeight( ) );;
+			commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+		}
+
 		return;
 	}
 
@@ -5963,24 +5943,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		renderLog.CloseMainBlock();
 		prevFramebuffer->Bind( );
 		commandList->endMarker( );
-	}
-
-	// TODO(Stephen): Move somewhere else?
-	{
-		BlitParameters blitParms;
-		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
-		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
-
-		nvrhi::Viewport viewport;
-		viewport.minX = currentViewport.x1;
-		viewport.minY = currentViewport.y1;
-		viewport.maxX = currentViewport.x2;
-		viewport.maxY = currentViewport.y2;
-		viewport.minZ = currentViewport.zmin;
-		viewport.maxZ = currentViewport.zmax;
-		blitParms.targetViewport = viewport;
-
-		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
 	}
 
 	//-------------------------------------------------
@@ -6056,8 +6018,16 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		Bloom( _viewDef );
 	}
 
-	renderLog.CloseBlock();
+	// TODO(Stephen): Move somewhere else?
+	{
+		BlitParameters blitParms;
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
+		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
+		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth( ), renderSystem->GetHeight( ) );;
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+	}
 
+	renderLog.CloseBlock( );
 	commandList->endMarker( );
 }
 

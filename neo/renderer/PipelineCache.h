@@ -41,7 +41,7 @@ public:
 
 	void Init( nvrhi::DeviceHandle deviceHandle );
 
-	nvrhi::GraphicsPipelineHandle GetOrCreatePipeline( PipelineKey key );
+	nvrhi::GraphicsPipelineHandle GetOrCreatePipeline( const PipelineKey& key );
 
 private:
 

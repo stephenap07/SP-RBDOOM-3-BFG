@@ -268,14 +268,20 @@ float3 octDecode( float2 o )
 // ----------------------
 // YCoCg Color Conversion
 // ----------------------
-static const half4 matrixRGB1toCoCg1YX = half4( 0.50,  0.0, -0.50, 0.50196078 );	// Co
-static const half4 matrixRGB1toCoCg1YY = half4( -0.25,  0.5, -0.25, 0.50196078 );	// Cg
-static const half4 matrixRGB1toCoCg1YZ = half4( 0.0,   0.0,  0.0,  1.0 );			// 1.0
-static const half4 matrixRGB1toCoCg1YW = half4( 0.25,  0.5,  0.25, 0.0 );			// Y
+// Co
+#define matrixRGB1toCoCg1YX half4( 0.50,  0.0, -0.50, 0.50196078 )
+// Cg
+#define matrixRGB1toCoCg1YY half4( -0.25,  0.5, -0.25, 0.50196078 )
+// 1.0
+#define matrixRGB1toCoCg1YZ half4( 0.0,   0.0,  0.0,  1.0 )
+// Y
+#define matrixRGB1toCoCg1YW half4( 0.25,  0.5,  0.25, 0.0 )
 
-static const half4 matrixCoCg1YtoRGB1X = half4( 1.0, -1.0,  0.0,        1.0 );
-static const half4 matrixCoCg1YtoRGB1Y = half4( 0.0,  1.0, -0.50196078, 1.0 );  // -0.5 * 256.0 / 255.0
-static const half4 matrixCoCg1YtoRGB1Z = half4( -1.0, -1.0,  1.00392156, 1.0 ); // +1.0 * 256.0 / 255.0
+#define matrixCoCg1YtoRGB1X half4( 1.0, -1.0,  0.0,        1.0 )
+// -0.5 * 256.0 / 255.0
+#define matrixCoCg1YtoRGB1Y half4( 0.0,  1.0, -0.50196078, 1.0 )
+ // +1.0 * 256.0 / 255.0
+#define matrixCoCg1YtoRGB1Z half4( -1.0, -1.0,  1.00392156, 1.0 )
 
 static half3 ConvertYCoCgToRGB( half4 YCoCg )
 {
@@ -325,8 +331,8 @@ float rand( float2 co )
 
 #define square( x )		( x * x )
 
-static const half4 LUMINANCE_SRGB = half4( 0.2125, 0.7154, 0.0721, 0.0 );
-static const half4 LUMINANCE_LINEAR = half4( 0.299, 0.587, 0.144, 0.0 );
+#define LUMINANCE_SRGB half4( 0.2125, 0.7154, 0.0721, 0.0 )
+#define LUMINANCE_LINEAR half4( 0.299, 0.587, 0.144, 0.0 )
 
 #define _half2( x )		half2( x, x )
 #define _half3( x )		half3( x, x, x )
@@ -374,6 +380,12 @@ static float1 texelFetch( Texture2D<float1> buffer, int2 ssc, int mipLevel )
 	return c;
 }
 
+static float texelFetch( Texture2D<float> buffer, int2 ssc, int mipLevel )
+{
+	float1 c = buffer.Load( int3( ssc.xy, mipLevel ) );
+	return c;
+}
+
 // returns width and height of the texture in texels
 static int2 textureSize( Texture2D buffer, int mipLevel )
 {
@@ -385,6 +397,15 @@ static int2 textureSize( Texture2D buffer, int mipLevel )
 }
 
 static int2 textureSize( Texture2D<float1> buffer, int mipLevel )
+{
+	int width = 1;
+	int height = 1;
+	int levels = 0;
+	buffer.GetDimensions( mipLevel, width, height, levels );
+	return int2( width, height );
+}
+
+static int2 textureSize( Texture2D<float> buffer, int mipLevel )
 {
 	int width = 1;
 	int height = 1;

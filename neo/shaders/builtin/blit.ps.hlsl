@@ -27,14 +27,19 @@ Texture2D tex : register(t0);
 #endif
 SamplerState samp : register(s0);
 
+struct PS_IN
+{
+	float4 posClip	: SV_Position;
+	float2 uv		: UV;
+};
+
 void main(
-	in float4 pos : SV_Position,
-	in float2 uv : UV,
+	PS_IN fragment,
 	out float4 o_rgba : SV_Target)
 {
 #if TEXTURE_ARRAY
-	o_rgba = tex.Sample(samp, float3(uv, 0));
+	o_rgba = tex.Sample(samp, float3( fragment.uv, 0));
 #else
-	o_rgba = tex.Sample(samp, uv);
+	o_rgba = tex.Sample(samp, fragment.uv);
 #endif
 }

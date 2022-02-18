@@ -31,9 +31,6 @@
 
 #include "global_inc.hlsl"
 
-
-
-
 #define DIFFERENT_DEPTH_RESOLUTIONS 0
 #define USE_DEPTH_PEEL 0
 #define CS_Z_PACKED_TOGETHER 0
@@ -94,25 +91,27 @@ static const float projScale = 500.0;
 
 // *INDENT-OFF*
 
-Texture2D<float3>	t_NormalRoughness	: register( t0 );
-Texture2D<float1>	t_ViewDepth			: register( t1 );
-Texture2D			t_BlueNoise			: register( t2 );
+#define VALUE_TYPE float
 
-SamplerState		normalSampler		: register( s0 );
-SamplerState		depthSampler		: register( s1 );
-SamplerState		blueNoiseSampler	: register( s2 );
+Texture2D				t_NormalRoughness	: register( t0 );
+Texture2D<VALUE_TYPE>	t_ViewDepth			: register( t1 );
+Texture2D				t_BlueNoise			: register( t2 );
+
+SamplerState	normalSampler		: register( s0 );
+SamplerState	depthSampler		: register( s1 );
+SamplerState	blueNoiseSampler	: register( s2 );
 
 #define CS_Z_buffer		t_ViewDepth
 
 struct PS_IN
 {
-	float4 position : SV_Position;
+	float4 position  : SV_POSITION;
 	float2 texcoord0 : TEXCOORD0_centroid;
 };
 
 struct PS_OUT 
 {
-	float4 color : SV_Target0;
+	float1 color : SV_Target0;
 };
 // *INDENT-ON*
 
@@ -182,7 +181,7 @@ float3 reconstructCSPosition( float2 S, float z )
 	return csP.xyz;
 }
 
-float3 sampleNormal( Texture2D<float3> normalBuffer, int2 ssC, int mipLevel )
+float3 sampleNormal( Texture2D normalBuffer, int2 ssC, int mipLevel )
 {
 #if USE_OCT16
 	return decode16( texelFetch( normalBuffer, ssC, mipLevel ).xy * 2.0 - 1.0 );
@@ -205,10 +204,10 @@ float2 tapLocation( int sampleNumber, float spinAngle, out float ssR )
 
 
 /** Read the camera-space position of the point at screen-space pixel ssP */
-float3 getPosition( int2 ssP, Texture2D<float1> cszBuffer )
+float3 getPosition( int2 ssP, Texture2D<VALUE_TYPE> cszBuffer )
 {
 	float3 P;
-	float1 c = texelFetch( cszBuffer, ssP, 0 );
+	float1 c = texelFetch( cszBuffer, ssP, 0 ).r;
 	P.z = c.r;
 
 	// Offset to pixel center
@@ -217,7 +216,7 @@ float3 getPosition( int2 ssP, Texture2D<float1> cszBuffer )
 	return P;
 }
 
-void computeMipInfo( float ssR, int2 ssP, Texture2D<float1> cszBuffer, out int mipLevel, out int2 mipP )
+void computeMipInfo( float ssR, int2 ssP, Texture2D<VALUE_TYPE> cszBuffer, out int mipLevel, out int2 mipP )
 {
 	// Derivation:
 	//  mipLevel = floor(log(ssR / MAX_OFFSET));
@@ -238,7 +237,7 @@ void computeMipInfo( float ssR, int2 ssP, Texture2D<float1> cszBuffer, out int m
 
 /** Read the camera-space position of the point at screen-space pixel ssP + unitOffset * ssR.  Assumes length(unitOffset) == 1.
     Use cszBufferScale if reading from the peeled depth buffer, which has been scaled by (1 / invCszBufferScale) from the original */
-float3 getOffsetPosition( int2 issC, float2 unitOffset, float ssR, Texture2D<float1> cszBuffer, float invCszBufferScale )
+float3 getOffsetPosition( int2 issC, float2 unitOffset, float ssR, Texture2D<VALUE_TYPE> cszBuffer, float invCszBufferScale )
 {
 	int2 ssP = int2( ssR * unitOffset ) + issC;
 
@@ -318,7 +317,7 @@ float aoValueFromPositionsAndNormal( float3 C, float3 n_C, float3 Q )
 
     When sampling from the peeled depth buffer, make sure ssDiskRadius has been premultiplied by cszBufferScale
 */
-float sampleAO( int2 issC, in float3 C, in float3 n_C, in float ssDiskRadius, in int tapIndex, in float randomPatternRotationAngle, in Texture2D<float1> cszBuffer, in float invCszBufferScale )
+float sampleAO( int2 issC, in float3 C, in float3 n_C, in float ssDiskRadius, in int tapIndex, in float randomPatternRotationAngle, in Texture2D<VALUE_TYPE> cszBuffer, in float invCszBufferScale )
 {
 	// Offset on the unit disk, spun for this pixel
 	float ssR;
@@ -340,21 +339,15 @@ float sampleAO( int2 issC, in float3 C, in float3 n_C, in float ssDiskRadius, in
 #endif
 }
 
-const float MIN_RADIUS = 3.0; // pixels
+// pixels
+#define MIN_RADIUS 3.0
 
 #define visibility      result.color.r
 #define bilateralKey    result.color.gb
 
 void main( PS_IN fragment, out PS_OUT result )
 {
-	result.color = float4( 1.0, 0.0, 0.0, 1.0 );
-
-#if 0
-	if( fragment.texcoord0.x < 0.5 )
-	{
-		discard;
-	}
-#endif
+	visibility = 1.0;
 
 	// Pixel being shaded
 	float2 ssC = fragment.texcoord0 * rpScreenCorrectionFactor.xy;
@@ -364,20 +357,6 @@ void main( PS_IN fragment, out PS_OUT result )
 
 	// World space point being shaded
 	float3 C = getPosition( ssP, CS_Z_buffer );
-
-	//float z = length( C - rpGlobalEyePos.xyz );
-	//bilateralKey = CSZToKey( C.z );
-	//packKey( CSZToKey( C.z ), bilateralKey );
-
-	//float key = CSZToKey( C.z );
-
-#if 0
-	if( key >= 1.0 )
-	{
-		visibility = 0.0;
-		return;
-	}
-#endif
 
 	visibility = 0.0;
 
@@ -431,6 +410,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	float ssDiskRadius = -projScale * radius / C.z;
 
 #if 1
+	[branch]
 	if( ssDiskRadius <= MIN_RADIUS )
 	{
 		// There is no way to compute AO at this radius
@@ -470,7 +450,7 @@ void main( PS_IN fragment, out PS_OUT result )
 #if BRIGHTPASS
 	//result.color = float4( visibility, bilateralKey, 0.0, 1.0 );
 	//result.color = float4( bilateralKey, bilateralKey, bilateralKey, 1.0 );
-	result.color = float4( visibility, visibility, visibility, 1.0 );
+	result.color = visibility;
 	//result.color = float4( n_C * 0.5 + 0.5, 1.0 );
 	//result.color = float4( n_C, 1.0 );
 	//result.color = texture( samp0, fragment.texcoord0 ).rgba;

@@ -245,6 +245,7 @@ void main( PS_IN fragment, out PS_OUT result )
 
 	float ao = 1.0;
 	ao = t_Ssao.Sample( samp4, screenTexCoord ).r;
+
 	//diffuseColor.rgb *= ao;
 
 	// evaluate diffuse IBL

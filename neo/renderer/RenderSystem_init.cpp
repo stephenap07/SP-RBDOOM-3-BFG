@@ -311,7 +311,7 @@ idCVar r_ssgiFiltering( "r_ssgiFiltering", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 #if defined( USE_VULKAN )
 	idCVar r_useSSAO( "r_useSSAO", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
 #else
-	idCVar r_useSSAO( "r_useSSAO", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
+	idCVar r_useSSAO( "r_useSSAO", "2", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "use screen space ambient occlusion to darken corners" );
 #endif
 idCVar r_ssaoDebug( "r_ssaoDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
 idCVar r_ssaoFiltering( "r_ssaoFiltering", "0", CVAR_RENDERER | CVAR_BOOL, "" );
@@ -2272,6 +2272,8 @@ idRenderSystemLocal::LoadLevelImages
 void idRenderSystemLocal::LoadLevelImages()
 {
 	globalImages->LoadLevelImages( false );
+	deviceManager->GetDevice( )->waitForIdle( );
+	deviceManager->GetDevice( )->runGarbageCollection( );
 }
 
 /*

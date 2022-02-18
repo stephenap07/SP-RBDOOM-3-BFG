@@ -407,6 +407,8 @@ public:
 	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 
 	nvrhi::ShaderHandle GetShader( int index );
+
+	nvrhi::BufferHandle GetConstantBuffer( ) { return constantBuffer; }
 	
 	programInfo_t GetProgramInfo( int index );
 

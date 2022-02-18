@@ -544,6 +544,7 @@ void idRenderBackend::Init()
 	pipelineCache.Init( deviceManager->GetDevice( ) );
 	commonPasses.Init( deviceManager->GetDevice( ) );
 	hiZGenPass = nullptr;
+	ssaoPass = nullptr;
 	fowardShadingPass.Init( deviceManager->GetDevice( ) );
 
 	tr.SetInitialized();
@@ -572,7 +573,8 @@ void idRenderBackend::Init()
 
 void idRenderBackend::Shutdown()
 {
-	GLimp_Shutdown();
+	delete ssaoPass;
+	GLimp_Shutdown( );
 }
 
 /*
@@ -631,14 +633,6 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	{
 		currentIndexBuffer = indexBuffer->GetAPIObject( );
 	}
-
-	PipelineKey key;
-	key.framebuffer = currentFrameBuffer;
-	key.mirrored = viewDef->isMirror;
-	key.program = renderProgManager.CurrentProgram( );
-	key.state = glStateBits;
-
-	auto pipeline = pipelineCache.GetOrCreatePipeline( key );
 
 	nvrhi::BindingSetDesc bindingSetDesc;
 
@@ -701,8 +695,10 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 
 	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, renderProgManager.BindingLayout() );
-
 	renderProgManager.CommitConstantBuffer( commandList );
+
+	PipelineKey key{ glStateBits, renderProgManager.CurrentProgram(), viewDef->isMirror, currentFrameBuffer };
+	auto pipeline = pipelineCache.GetOrCreatePipeline( key );
 
 	nvrhi::GraphicsState state;
 	state.bindings = { currentBindingSet };
@@ -711,14 +707,12 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	state.pipeline = pipeline;
 	state.framebuffer = currentFrameBuffer->GetApiObject();
 
-	// TODO(Stephen): use currentViewport instead.
-	nvrhi::Viewport viewport;
-	viewport.minX = currentViewport.x1;
-	viewport.minY = currentViewport.y1;
-	viewport.maxX = currentViewport.x2;
-	viewport.maxY = currentViewport.y2;
-	viewport.minZ = currentViewport.zmin;
-	viewport.maxZ = currentViewport.zmax;
+	nvrhi::Viewport viewport{ (float)currentViewport.x1,
+		(float)currentViewport.x2,
+		(float)currentViewport.y1,
+		(float)currentViewport.y2,
+		currentViewport.zmin,
+		currentViewport.zmax };
 	state.viewport.addViewportAndScissorRect( viewport );
 	state.viewport.addScissorRect( nvrhi::Rect( currentScissor.x1, currentScissor.y1, currentScissor.x2, currentScissor.y2 ) );
 
@@ -822,9 +816,6 @@ void idRenderBackend::GL_SetDefaultState()
 
 	// RB begin
 	Framebuffer::Unbind( );
-	commandList->setEnableAutomaticBarriers( false );
-	commandList->setResourceStatesForFramebuffer( currentFrameBuffer->GetApiObject( ) );
-	commandList->commitBarriers( );
 	// RB end
 }
 
@@ -1310,7 +1301,8 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 	// TODO: Do something if there is no depth-stencil attachment.
 	if( color )
 	{
-		nvrhi::utils::ClearColorAttachment( commandList, currentFrameBuffer->GetApiObject( ), 0, nvrhi::Color( 0.f ) );
+		nvrhi::utils::ClearColorAttachment( commandList, deviceManager->GetCurrentFramebuffer( ), 0, nvrhi::Color( 0.f ) );
+		nvrhi::utils::ClearColorAttachment( commandList, globalFramebuffers.hdrFBO->GetApiObject( ), 0, nvrhi::Color( 0.f ) );
 	}
 
 	if( depth )
@@ -1582,6 +1574,8 @@ idRenderBackend::idRenderBackend()
 {
 	glcontext.frameCounter = 0;
 	glcontext.frameParity = 0;
+	hiZGenPass = nullptr;
+	ssaoPass = nullptr;
 
 	memset( glcontext.tmu, 0, sizeof( glcontext.tmu ) );
 	memset( glcontext.stencilOperations, 0, sizeof( glcontext.stencilOperations ) );

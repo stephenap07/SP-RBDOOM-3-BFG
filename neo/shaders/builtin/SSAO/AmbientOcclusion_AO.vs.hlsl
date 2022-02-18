@@ -38,13 +38,14 @@ struct VS_IN
 
 struct VS_OUT
 {
-	float4 position : SV_Position;
-	float2 texcoord0 : TEXCOORD0_centroid;
+	float4 position		: SV_POSITION;
+	float2 texcoord0	: TEXCOORD0_centroid;
 };
 // *INDENT-ON*
 
 void main( VS_IN vertex, out VS_OUT result )
 {
 	result.position = vertex.position;
+	result.position.y = -result.position.y;
 	result.texcoord0 = vertex.texcoord;
 }

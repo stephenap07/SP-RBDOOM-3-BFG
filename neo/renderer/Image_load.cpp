@@ -192,6 +192,10 @@ ID_INLINE void idImage::DeriveOpts()
 				opts.format = FMT_R32F;
 				break;
 
+			case TD_R8F:
+				opts.format = FMT_R8;
+				break;
+
 			case TD_R11G11B10F:
 				opts.format = FMT_R11G11B10F;
 				break;

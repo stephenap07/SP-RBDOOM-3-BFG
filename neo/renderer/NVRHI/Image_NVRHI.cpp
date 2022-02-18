@@ -243,7 +243,7 @@ void idImage::AllocImage( )
 	switch( opts.format )
 	{
 		case FMT_RGBA8:
-			format = nvrhi::Format::RGBA8_UINT;
+			format = nvrhi::Format::RGBA8_UNORM;
 			break;
 
 		case FMT_XRGB8:
@@ -268,6 +268,10 @@ void idImage::AllocImage( )
 
 		case FMT_INT8:
 			format = nvrhi::Format::R8_UINT;
+			break;
+
+		case FMT_R8:
+			format = nvrhi::Format::R8_UNORM;
 			break;
 
 		case FMT_DXT1:
@@ -387,18 +391,19 @@ void idImage::AllocImage( )
 		//textureDesc.keepInitialState = true;
 		//textureDesc.setKeepInitialState( true );
 		textureDesc.setInitialState( nvrhi::ResourceStates::RenderTarget )
-			.setClearValue( nvrhi::Color( 1.f ) )
+			.setClearValue( nvrhi::Color( 0.f ) )
 			.setIsRenderTarget( true )
 			.setKeepInitialState( true );
 
 		if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL )
 		{
-			textureDesc.setInitialState( nvrhi::ResourceStates::DepthWrite );
+			textureDesc.setInitialState( nvrhi::ResourceStates::DepthWrite )
+				.setClearValue( nvrhi::Color( 1.f ) );
 		}
 
-		if( opts.format == FMT_R32F )
+		if( opts.format == FMT_R32F || opts.format == FMT_R8 )
 		{
-			// Hack to make cszBuffer uav
+			// Hack to make cszBuffer and ambient occlusion uav work.
 			textureDesc.setIsUAV( true );
 		}
 	}

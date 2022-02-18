@@ -313,6 +313,11 @@ static void R_SMAAImage_ResNative( idImage* image, nvrhi::ICommandList* commandL
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, nullptr, true );
 }
 
+static void R_AmbientOcclusionImage_ResNative( idImage* image, nvrhi::ICommandList* commandList )
+{
+	image->GenerateImage( NULL, renderSystem->GetWidth( ), renderSystem->GetHeight( ), TF_LINEAR, TR_CLAMP, TD_R8F, nullptr, true );
+}
+
 static void R_GeometryBufferImage_ResNative( idImage* image, nvrhi::ICommandList* commandList )
 {
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_RGBA16F, nullptr, true );

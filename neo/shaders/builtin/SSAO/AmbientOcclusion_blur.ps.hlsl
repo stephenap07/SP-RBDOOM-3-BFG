@@ -20,13 +20,15 @@
 
 
 // *INDENT-OFF*
-Texture2D<float3> t_NormalRoughness : register( t0 );
-Texture2D<float1> t_ViewDepth		: register( t1 );
-Texture2D<float1> t_Ao				: register( t2 );
+#define VALUE_TYPE float
 
-SamplerState normalSampler			: register( s0 );
-SamplerState depthSampler			: register( s1 );
-SamplerState blueNoiseSampler		: register( s2 );
+Texture2D				t_NormalRoughness	: register( t0 );
+Texture2D<VALUE_TYPE>	t_ViewDepth			: register( t1 );
+Texture2D				t_Ao				: register( t2 );
+
+SamplerState	normalSampler		: register( s0 );
+SamplerState	depthSampler		: register( s1 );
+SamplerState	aoSampler			: register( s2 );
 
 #define normal_buffer	t_NormalRoughness
 #define cszBuffer		t_ViewDepth
@@ -34,13 +36,13 @@ SamplerState blueNoiseSampler		: register( s2 );
 
 struct PS_IN
 {
-	float4 position : POSITION;
+	float4 position : SV_Position;
 	float2 texcoord0 : TEXCOORD0_centroid;
 };
 
 struct PS_OUT 
 {
-	float4 color : SV_Target0;
+	float1 color : SV_Target0;
 };
 // *INDENT-ON*
 
@@ -87,12 +89,10 @@ struct PS_OUT
 #define VALUE_IS_KEY       0
 
 
-
-
 /** (1, 0) or (0, 1)*/
 //uniform int2       axis;
 
-float3 sampleNormal( Texture2D<float3> normalBuffer, int2 ssC, int mipLevel )
+float3 sampleNormal( Texture2D normalBuffer, int2 ssC, int mipLevel )
 {
 #if USE_OCT16
 	return decode16( texelFetch( normalBuffer, ssC, mipLevel ).xy * 2.0 - 1.0 );
@@ -103,8 +103,6 @@ float3 sampleNormal( Texture2D<float3> normalBuffer, int2 ssC, int mipLevel )
 
 #define  aoResult       result.color.VALUE_COMPONENTS
 #define  keyPassThrough result.color.KEY_COMPONENTS
-
-
 
 
 /** Used for preventing AO computation on the sky (at infinite depth) and defining the CS Z to bilateral depth key scaling.
@@ -172,7 +170,7 @@ float3 positionFromKey( float key, int2 ssC )
 }
 
 /** Read the camera-space position of the point at screen-space pixel ssP */
-float3 getPosition( int2 ssP, Texture2D<float1> cszBuffer )
+float3 getPosition( int2 ssP, Texture2D<VALUE_TYPE> cszBuffer )
 {
 	float3 P;
 	P.z = texelFetch( cszBuffer, ssP, 0 ).r;
@@ -230,7 +228,6 @@ float calculateBilateralWeight( float key, float tapKey, int2 tapLoc, float3 n_C
 
 void main( PS_IN fragment, out PS_OUT result )
 {
-
 //#   if __VERSION__ < 330
 	float kernel[R + 1];
 //      if R == 0, we never call this shader
@@ -280,7 +277,7 @@ void main( PS_IN fragment, out PS_OUT result )
 #if 0
 	if( fragment.texcoord0.x < 0.75 )
 	{
-		result.color = temp;
+		result.color = temp.r;
 		return;
 	}
 #endif
@@ -300,7 +297,7 @@ void main( PS_IN fragment, out PS_OUT result )
 		// Sky pixel (if you aren't using depth keying, disable this test)
 		aoResult = sum;
 #if defined(BRIGHTPASS)
-		result.color = float4( aoResult, aoResult, aoResult, 1.0 );
+		result.color = aoResult; //float4( aoResult, aoResult, aoResult, 1.0 );
 #endif
 		return;
 	}
@@ -388,6 +385,6 @@ void main( PS_IN fragment, out PS_OUT result )
 	aoResult = sum / ( totalWeight + epsilon );
 
 #if defined(BRIGHTPASS)
-	result.color = float4( aoResult, aoResult, aoResult, 1.0 );
+	result.color = aoResult; // float4( aoResult, aoResult, aoResult, 1.0 );
 #endif
 }
