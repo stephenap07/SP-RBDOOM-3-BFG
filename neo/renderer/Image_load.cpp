@@ -1086,6 +1086,7 @@ void idImage::GenerateShadowArray( int width, int height, textureFilter_t filter
 	opts.width = width;
 	opts.height = height;
 	opts.numLevels = 0;
+	opts.isRenderTarget = true;
 
 	DeriveOpts( );
 

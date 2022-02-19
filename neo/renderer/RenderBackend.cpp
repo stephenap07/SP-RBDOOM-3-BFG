@@ -5883,6 +5883,11 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//-------------------------------------------------
 	AmbientPass( drawSurfs, numDrawSurfs, false );
 
+	//-------------------------------------------------
+	// main light renderer
+	//-------------------------------------------------
+	DrawInteractions( _viewDef );
+
 	// TODO(Stephen): Remove me.
 	if( !viewDef->is2Dgui )
 	{
@@ -5898,11 +5903,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 		return;
 	}
-
-	//-------------------------------------------------
-	// main light renderer
-	//-------------------------------------------------
-	DrawInteractions( _viewDef );
 
 	//-------------------------------------------------
 	// capture the depth for the motion blur before rendering any post process surfaces that may contribute to the depth

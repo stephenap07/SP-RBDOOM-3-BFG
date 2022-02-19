@@ -120,6 +120,10 @@ void Framebuffer::ResizeFramebuffers( )
 	globalImages->currentNormalsImage->Reload( false, tr.backend.commandList );
 	globalImages->smaaEdgesImage->Reload( false, tr.backend.commandList );
 	globalImages->smaaBlendImage->Reload( false, tr.backend.commandList );
+	for( int i = 0; i < MAX_SHADOWMAP_RESOLUTIONS; i++ )
+	{
+		globalImages->shadowImage[i]->Reload( false, tr.backend.commandList );
+	}
 	tr.backend.commandList->close( );
 	deviceManager->GetDevice( )->executeCommandList( tr.backend.commandList );
 
@@ -129,6 +133,15 @@ void Framebuffer::ResizeFramebuffers( )
 			va("_swapChain%d", index),
 			nvrhi::FramebufferDesc( )
 			.addColorAttachment( deviceManager->GetBackBuffer( index ) ) );
+	}
+
+	for( int i = 0; i < MAX_SHADOWMAP_RESOLUTIONS; i++ )
+	{
+		globalFramebuffers.shadowFBO[i] = new Framebuffer( va( "_shadowMap%i", i ),
+			nvrhi::FramebufferDesc().setDepthAttachment(
+				nvrhi::FramebufferAttachment()
+				.setTexture(globalImages->shadowImage[i]->GetTextureHandle( ).Get())
+				.setArraySlice( i ) ) );
 	}
 
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",

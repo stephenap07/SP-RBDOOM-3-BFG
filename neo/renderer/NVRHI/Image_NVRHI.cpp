@@ -94,7 +94,7 @@ void idImage::CreateSampler( )
 		.setAllAddressModes( nvrhi::SamplerAddressMode::Clamp )
 		.setMaxAnisotropy( 1.0f );
 
-	if( opts.format == FMT_DEPTH )
+	if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL  )
 	{
 		samplerDesc.setReductionType( nvrhi::SamplerReductionType::Comparison );
 	}
@@ -395,7 +395,7 @@ void idImage::AllocImage( )
 			.setIsRenderTarget( true )
 			.setKeepInitialState( true );
 
-		if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL )
+		if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL || opts.format == FMT_SHADOW_ARRAY )
 		{
 			textureDesc.setInitialState( nvrhi::ResourceStates::DepthWrite )
 				.setClearValue( nvrhi::Color( 1.f ) );
@@ -403,7 +403,8 @@ void idImage::AllocImage( )
 
 		if( opts.format == FMT_R32F || opts.format == FMT_R8 )
 		{
-			// Hack to make cszBuffer and ambient occlusion uav work.
+			// TODO(Stephen): Probably make this an image option.
+			// This is a hack to make cszBuffer and ambient occlusion uav work.
 			textureDesc.setIsUAV( true );
 		}
 	}
