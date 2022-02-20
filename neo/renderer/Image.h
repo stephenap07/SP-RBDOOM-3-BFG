@@ -613,6 +613,7 @@ public:
 #endif
 	idImage*			currentRenderHDRImageQuarter;
 	idImage*			currentRenderHDRImage64;
+	idImage*			currentRenderLDR;
 	idImage*			bloomRenderImage[2];
 	idImage*			glowImage[2];					// contains any glowable surface information.
 	idImage*			glowDepthImage[2];

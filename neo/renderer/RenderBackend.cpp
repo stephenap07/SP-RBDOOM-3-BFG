@@ -4722,7 +4722,7 @@ void idRenderBackend::CalculateAutomaticExposure()
 		// FIXME
 #if !defined(USE_VULKAN)
 		// read back the contents
-		glReadPixels( 0, 0, 64, 64, GL_RGBA, GL_FLOAT, image );
+		//glReadPixels( 0, 0, 64, 64, GL_RGBA, GL_FLOAT, image );
 #endif
 
 		sum = 0.0f;
@@ -4826,7 +4826,8 @@ void idRenderBackend::Tonemap( const viewDef_t* _viewDef )
 	//const idScreenRect& viewport = cmd->viewDef->viewport;
 	//globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
 
-	Framebuffer::Unbind();
+	// Set up the target framebuffer
+	globalFramebuffers.ldrFBO->Bind( );
 
 	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
@@ -5863,7 +5864,8 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	}
 	else
 	{
-		globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )]->Bind( );
+		globalFramebuffers.ldrFBO->Bind( );
+		//globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )]->Bind( );
 	}
 
 	// RB end
@@ -5953,8 +5955,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	{
 		renderLog.OpenMainBlock( MRB_DRAW_SHADER_PASSES );
 		commandList->beginMarker( "DrawShaderPasses" );
-		auto prevFramebuffer = currentFrameBuffer;
-		globalFramebuffers.hdrFBO->Bind( );
 		float guiScreenOffset;
 		if( _viewDef->viewEntitys != NULL )
 		{
@@ -5967,7 +5967,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 		processed = DrawShaderPasses( drawSurfs, numDrawSurfs, guiScreenOffset, stereoEye );
 		renderLog.CloseMainBlock();
-		prevFramebuffer->Bind( );
 		commandList->endMarker( );
 	}
 
@@ -5997,7 +5996,13 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		GL_SelectTexture( 0 );
 
 		// resolve the screen
-		globalImages->currentRenderImage->CopyFramebuffer( x, y, w, h );
+		BlitParameters blitParms;
+		nvrhi::IFramebuffer* currentFB = ( nvrhi::IFramebuffer* )currentFrameBuffer->GetApiObject( );
+		blitParms.sourceTexture = currentFB->getDesc().colorAttachments[0].texture;
+		blitParms.targetFramebuffer = globalFramebuffers.postProcFBO->GetApiObject();
+		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth( ), renderSystem->GetHeight( ) );;
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+
 		currentRenderCopied = true;
 
 		// RENDERPARM_SCREENCORRECTIONFACTOR amd RENDERPARM_WINDOWCOORD overlap
@@ -6027,23 +6032,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		renderLog.CloseMainBlock();
 	}
 
-	// TODO(Stephen): Remove me.
-	if( !viewDef->is2Dgui )
-	{
-		// Blit hdr buffer to the backbuffer.
-		// TODO(Stephen): Move somewhere else?
-		{
-			BlitParameters blitParms;
-			blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
-			blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
-			blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth( ), renderSystem->GetHeight( ) );;
-			commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
-		}
-
-		commandList->endMarker( );
-		return;
-	}
-
 	//-------------------------------------------------
 	// render debug tools
 	//-------------------------------------------------
@@ -6058,20 +6046,21 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 	if( !r_skipBloom.GetBool() )
 	{
-		Bloom( _viewDef );
+		// TODO(Stephen): implement bloom
+		//Bloom( _viewDef );
 	}
 
-	// TODO(Stephen): Move somewhere else?
+	 //TODO(Stephen): Move somewhere else?
 	{
 		BlitParameters blitParms;
-		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderLDR->GetTextureID( );
 		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
 		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth( ), renderSystem->GetHeight( ) );;
 		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
 	}
 
-	renderLog.CloseBlock( );
 	commandList->endMarker( );
+	renderLog.CloseBlock( );
 }
 
 /*

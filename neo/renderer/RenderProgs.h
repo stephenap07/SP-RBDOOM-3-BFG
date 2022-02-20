@@ -896,7 +896,7 @@ public:
 	void		SetUniformValue( const renderParm_t rp, const float* value );
 	void		CommitUniforms( uint64 stateBits );
 	void		CachePipeline( uint64 stateBits );
-	int			FindProgram( const char* name, int vIndex, int fIndex );
+	int			FindProgram( const char* name, int vIndex, int fIndex, bindingLayoutType_t bindingType = BINDING_LAYOUT_DEFAULT );
 	void		ZeroUniforms();
 
 	void						CommitConstantBuffer( nvrhi::ICommandList* commandList );

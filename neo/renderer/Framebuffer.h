@@ -141,6 +141,8 @@ struct globalFramebuffers_t
 	idList<Framebuffer*>		swapFramebuffers;
 	Framebuffer*				shadowFBO[MAX_SHADOWMAP_RESOLUTIONS][6];
 	Framebuffer*				hdrFBO;
+	Framebuffer*				ldrFBO;
+	Framebuffer*				postProcFBO;
 #if defined(USE_HDR_MSAA)
 	Framebuffer*				hdrNonMSAAFBO;
 #endif

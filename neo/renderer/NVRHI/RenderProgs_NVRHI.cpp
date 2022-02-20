@@ -203,7 +203,7 @@ void idRenderProgManager::LoadProgram( const int programIndex, const int vertexS
 idRenderProgManager::FindProgram
 ================================================================================================
 */
-int	 idRenderProgManager::FindProgram( const char* name, int vIndex, int fIndex )
+int	 idRenderProgManager::FindProgram( const char* name, int vIndex, int fIndex, bindingLayoutType_t bindingType )
 {
 	for( int i = 0; i < renderProgs.Num( ); ++i )
 	{
@@ -216,7 +216,7 @@ int	 idRenderProgManager::FindProgram( const char* name, int vIndex, int fIndex 
 	renderProg_t program;
 	program.name = name;
 	program.vertexLayout = LAYOUT_DRAW_VERT;
-	program.bindingLayoutType = BINDING_LAYOUT_DEFAULT;
+	program.bindingLayoutType = bindingType;
 	int index = renderProgs.Append( program );
 	LoadProgram( index, vIndex, fIndex );
 	return index;

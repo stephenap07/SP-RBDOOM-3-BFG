@@ -39,8 +39,8 @@ SamplerState	samp1 : register(s1); // texture 1 is heatmap
 
 struct PS_IN
 {
-	float4 position : VPOS;
-	float2 texcoord0 : TEXCOORD0_centroid;
+	float4 position		: SV_Position;
+	float2 texcoord0	: TEXCOORD0_centroid;
 };
 
 struct PS_OUT
@@ -79,7 +79,7 @@ void main( PS_IN fragment, out PS_OUT result )
 {
 	float2 tCoords = fragment.texcoord0;
 
-#if defined(BRIGHTPASS_FILTER)
+#if BRIGHTPASS
 	// multiply with 4 because the FBO is only 1/4th of the screen resolution
 	tCoords *= float2( 4.0, 4.0 );
 #endif
@@ -107,7 +107,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	color.rgb = ditherRGB( color.rgb, fragment.position.xy, quantSteps );
 #endif
 
-#if defined(BRIGHTPASS)
+#if BRIGHTPASS
 	if( Y < 0.1 )
 	{
 		//discard;
@@ -195,7 +195,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	color.rgb = curr * whiteScale;
 #endif
 
-#if defined(BRIGHTPASS)
+#if BRIGHTPASS
 	// adjust contrast
 	//L = pow( L, 1.32 );
 
@@ -231,7 +231,7 @@ void main( PS_IN fragment, out PS_OUT result )
 
 #endif
 
-#if defined(HDR_DEBUG)
+#if HDR_DEBUG
 	// https://google.github.io/filament/Filament.md.html#figure_luminanceviz
 
 	const float3 debugColors[16] = {

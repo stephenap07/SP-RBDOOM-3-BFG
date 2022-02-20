@@ -110,6 +110,8 @@ void Framebuffer::ResizeFramebuffers( )
 	int screenHeight = renderSystem->GetHeight( );
 
 	tr.backend.commandList->open( );
+	globalImages->currentRenderLDR->Reload( false, tr.backend.commandList );
+	globalImages->currentRenderImage->Reload( false, tr.backend.commandList );
 	globalImages->currentDepthImage->Reload( false, tr.backend.commandList );
 	globalImages->currentRenderHDRImage->Reload( false, tr.backend.commandList );
 	globalImages->currentRenderHDRImage64->Reload( false, tr.backend.commandList );
@@ -148,10 +150,19 @@ void Framebuffer::ResizeFramebuffers( )
 		}
 	}
 
+	globalFramebuffers.ldrFBO = new Framebuffer( "_ldr",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->currentRenderLDR->texture )
+		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",
 		nvrhi::FramebufferDesc( )
 		.addColorAttachment( globalImages->currentRenderHDRImage->texture )
 		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+
+	globalFramebuffers.postProcFBO = new Framebuffer( "_postProc",
+		nvrhi::FramebufferDesc( )
+		.addColorAttachment( globalImages->currentRenderImage->texture ) );
 
 	globalFramebuffers.envprobeFBO = new Framebuffer( "_envprobeRender",
 		nvrhi::FramebufferDesc( )

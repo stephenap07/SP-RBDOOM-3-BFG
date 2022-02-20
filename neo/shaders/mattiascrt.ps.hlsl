@@ -27,14 +27,14 @@ If you have questions concerning this license or the applicable additional terms
 =================================================a==========================
 */
 
-#include "renderprogs/global.inc.hlsl"
+#include "global_inc.hlsl"
 
 
 // *INDENT-OFF*
 uniform sampler2D   samp0 : register(s0); // texture 0 is texture to apply crt to.
 
 struct PS_IN {
-    float4 position     : VPOS;
+    float4 position     : SV_Position;
 	float4 texcoord0	: TEXCOORD0_centroid;
 	float4 texcoord1	: TEXCOORD1_centroid;
 };

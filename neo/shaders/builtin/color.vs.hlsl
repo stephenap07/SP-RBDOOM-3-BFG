@@ -30,7 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "global_inc.hlsl"
 
 
-#if defined(USE_GPU_SKINNING) && USE_GPU_SKINNING
+#if USE_GPU_SKINNING
 cbuffer CB : register( b1 )
 {
 	float4 matrices[408];
@@ -48,13 +48,13 @@ struct VS_IN {
 };
 
 struct VS_OUT {
-	float4 position : POSITION;
+	float4 position : SV_Position;
 };
 // *INDENT-ON*
 
 void main( VS_IN vertex, out VS_OUT result )
 {
-#if defined(USE_GPU_SKINNING) && USE_GPU_SKINNING
+#if USE_GPU_SKINNING
 	//--------------------------------------------------------------
 	// GPU transformation of the position
 	//

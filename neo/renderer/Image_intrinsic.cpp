@@ -221,6 +221,11 @@ static void R_RGBA8LinearImage( idImage* image, nvrhi::ICommandList* commandList
 	image->GenerateImage( ( byte* )data, DEFAULT_SIZE, DEFAULT_SIZE, TF_LINEAR, TR_REPEAT, TD_LOOKUP_TABLE_RGBA, commandList );
 }
 
+static void R_LdrNativeImage( idImage* image, nvrhi::ICommandList* commandList )
+{
+	image->GenerateImage( NULL, renderSystem->GetWidth( ), renderSystem->GetHeight( ), TF_NEAREST, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, nullptr, true );//, msaaSamples );
+}
+
 static void R_DepthImage( idImage* image, nvrhi::ICommandList* commandList )
 {
 	// RB: NULL data and MSAA support
@@ -1044,6 +1049,7 @@ void idImageManager::CreateIntrinsicImages()
 #endif
 	currentRenderHDRImageQuarter = globalImages->ImageFromFunction( "_currentRenderHDRQuarter", R_HDR_RGBA16FImage_ResQuarter );
 	currentRenderHDRImage64 = globalImages->ImageFromFunction( "_currentRenderHDR64", R_HDR_RGBA16FImage_Res64 );
+	currentRenderLDR = globalImages->ImageFromFunction( "_currentRenderLDR", R_LdrNativeImage );
 
 	envprobeHDRImage = globalImages->ImageFromFunction( "_envprobeHDR", R_EnvprobeImage_HDR );
 	envprobeDepthImage = ImageFromFunction( "_envprobeDepth", R_EnvprobeImage_Depth );
@@ -1090,7 +1096,7 @@ void idImageManager::CreateIntrinsicImages()
 	scratchImage = ImageFromFunction( "_scratch", R_RGBA8Image );
 	scratchImage2 = ImageFromFunction( "_scratch2", R_RGBA8Image );
 	accumImage = ImageFromFunction( "_accum", R_RGBA8Image );
-	currentRenderImage = ImageFromFunction( "_currentRender", R_RGBA8Image );
+	currentRenderImage = ImageFromFunction( "_currentRender", R_HDR_RGBA16FImage_ResNative );
 	currentDepthImage = ImageFromFunction( "_currentDepth", R_DepthImage );
 
 	// save a copy of this for material comparison, because currentRenderImage may get

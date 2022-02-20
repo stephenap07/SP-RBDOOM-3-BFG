@@ -156,7 +156,7 @@ void main( PS_IN fragment, out PS_OUT result )
 		}
 	}
 
-#endif // #if defined( POINTLIGHT )
+#endif // #if defined( LIGHT_POINT )
 
 #if LIGHT_PARALLEL
 
