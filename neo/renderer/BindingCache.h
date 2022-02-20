@@ -21,4 +21,23 @@ private:
     idSysMutex                      mutex;
 };
 
+class SamplerCache
+{
+public:
+
+    SamplerCache( ) {}
+
+    void                    Init( nvrhi::IDevice* _device );
+    void                    Clear( );
+
+    nvrhi::SamplerHandle    GetOrCreateSampler( nvrhi::SamplerDesc samplerDesc );
+
+private:
+
+    nvrhi::IDevice* device;
+    idList<nvrhi::SamplerHandle>	samplers;
+    idHashIndex						samplerHash;
+    idSysMutex                      mutex;
+};
+
 #endif

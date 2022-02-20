@@ -16,6 +16,12 @@ void PipelineCache::Init( nvrhi::DeviceHandle deviceHandle )
 	device = deviceHandle;
 }
 
+void PipelineCache::Clear( )
+{
+	pipelines.Clear( );
+	pipelineHash.Clear( );
+}
+
 nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const PipelineKey& key )
 {
 	std::size_t h = std::hash<PipelineKey>{}( key );
@@ -260,7 +266,7 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		}
 		else
 		{
-			//currentRasterState.disableQuadFill( );
+			currentRasterState.disableQuadFill( );
 		}
 	}
 

@@ -541,6 +541,7 @@ void idRenderBackend::Init()
 	renderProgManager.Init( deviceManager->GetDevice( ) );
 
 	bindingCache.Init( deviceManager->GetDevice( ) );
+	samplerCache.Init( deviceManager->GetDevice( ) );
 	pipelineCache.Init( deviceManager->GetDevice( ) );
 	commonPasses.Init( deviceManager->GetDevice( ) );
 	hiZGenPass = nullptr;
@@ -566,6 +567,9 @@ void idRenderBackend::Init()
 
 	// Reset our gamma
 	R_SetColorMappings();
+
+	slopeScaleBias = 0.f;
+	depthBias = 0.f;
 
 	// RB: prepare ImGui system
 	//ImGui_Init();
@@ -641,14 +645,14 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		bindingSetDesc
 			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
 	}
 	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_GBUFFER )
 	{
 		bindingSetDesc
 			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_LIGHTGRID )
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_AMBIENT_LIGHTING_IBL )
 	{
 		bindingSetDesc
 			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
@@ -661,15 +665,15 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 8, ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID( ) ) )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 9, ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID( ) ) )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 10, ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 7, ( nvrhi::ISampler* )GetImageAt( 7 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 8, ( nvrhi::ISampler* )GetImageAt( 8 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( ) ) );
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 7, ( nvrhi::ISampler* )GetImageAt( 7 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 8, ( nvrhi::ISampler* )GetImageAt( 8 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( samplerCache ) ) );
 	}
 	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_AO )
 	{
@@ -678,16 +682,54 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( ) ) );
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) );
 	}
 	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_AO1 )
 	{
 		bindingSetDesc
 			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
 			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
+	}
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_INTERACTION )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( samplerCache ) ) );
+	}
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_INTERACTION_SM )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 5, ( nvrhi::ITexture* )GetImageAt( 5 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 6, ( nvrhi::ITexture* )GetImageAt( 6 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearWrapSampler ) );
+	}
+	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_FOG )
+	{
+		bindingSetDesc
+			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) );
 	}
 	else
 	{
@@ -758,13 +800,14 @@ void idRenderBackend::GL_EndFrame()
 
 	deviceManager->GetDevice( )->executeCommandList( commandList );
 
-	deviceManager->Present( );
-
 	// Make sure that all frames have finished rendering
 	deviceManager->GetDevice()->waitForIdle( );
 
 	// Release all in-flight references to the render targets
 	deviceManager->GetDevice( )->runGarbageCollection( );
+
+	// Present to the swap chain.
+	deviceManager->Present( );
 }
 
 /*
@@ -778,9 +821,6 @@ void idRenderBackend::GL_BlockingSwapBuffers()
 {
 	// Make sure that all frames have finished rendering
 	deviceManager->GetDevice( )->waitForIdle( );
-
-	// Release all in-flight references to the render targets
-	deviceManager->GetDevice( )->runGarbageCollection( );
 }
 
 /*
@@ -1251,6 +1291,8 @@ idRenderBackend::GL_PolygonOffset
 */
 void idRenderBackend::GL_PolygonOffset( float scale, float bias )
 {
+	slopeScaleBias = scale;
+	depthBias = bias;
 }
 
 /*

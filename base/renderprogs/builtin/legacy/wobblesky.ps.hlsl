@@ -26,20 +26,20 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "renderprogs/global.inc.hlsl"
+#include "global_inc.hlsl"
 
 
 // *INDENT-OFF*
 uniform samplerCUBE samp0 : register(s0);
 
 struct PS_IN {
-	float4 position : VPOS;
+	float4 position : SV_Position;
 	float3 texcoord0 : TEXCOORD0_centroid;
 	float4 color : COLOR0;
 };
 
 struct PS_OUT {
-	float4 color : COLOR;
+	float4 color : SV_Target;
 };
 // *INDENT-ON*
 

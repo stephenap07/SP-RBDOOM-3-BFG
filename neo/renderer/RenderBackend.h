@@ -495,6 +495,8 @@ private:
 	nvrhi::BindingLayoutHandle		currentBindingLayout;
 	nvrhi::GraphicsPipelineHandle	currentPipeline;
 	nvrhi::RenderState				currentRenderState;
+	float							slopeScaleBias;
+	float							depthBias;
 
 	Framebuffer*					currentFrameBuffer;
 	nvrhi::CommandListHandle		commandList;
@@ -506,6 +508,7 @@ private:
 	ForwardShadingPass				fowardShadingPass;
 
 	BindingCache					bindingCache;
+	SamplerCache					samplerCache;
 	PipelineCache					pipelineCache;
 
 	nvrhi::InputLayoutHandle		inputLayout;

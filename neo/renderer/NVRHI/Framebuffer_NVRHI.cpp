@@ -101,6 +101,7 @@ void Framebuffer::Shutdown()
 
 void Framebuffer::ResizeFramebuffers( )
 {
+	tr.backend.pipelineCache.Clear( );
 	uint32_t backBufferCount = deviceManager->GetBackBufferCount( );
 	globalFramebuffers.swapFramebuffers.Resize( backBufferCount );
 	globalFramebuffers.swapFramebuffers.SetNum( backBufferCount );
@@ -135,13 +136,16 @@ void Framebuffer::ResizeFramebuffers( )
 			.addColorAttachment( deviceManager->GetBackBuffer( index ) ) );
 	}
 
-	for( int i = 0; i < MAX_SHADOWMAP_RESOLUTIONS; i++ )
+	for( int arr = 0; arr < 6; arr++ )
 	{
-		globalFramebuffers.shadowFBO[i] = new Framebuffer( va( "_shadowMap%i", i ),
-			nvrhi::FramebufferDesc().setDepthAttachment(
-				nvrhi::FramebufferAttachment()
-				.setTexture(globalImages->shadowImage[i]->GetTextureHandle( ).Get())
-				.setArraySlice( i ) ) );
+		for( int mip = 0; mip < MAX_SHADOWMAP_RESOLUTIONS; mip++ )
+		{
+			globalFramebuffers.shadowFBO[mip][arr] = new Framebuffer( va( "_shadowMap%i_%i", mip, arr ),
+				nvrhi::FramebufferDesc( ).setDepthAttachment(
+					nvrhi::FramebufferAttachment( )
+					.setTexture( globalImages->shadowImage[mip]->GetTextureHandle( ).Get( ) )
+					.setArraySlice( arr ) ) );
+		}
 	}
 
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",

@@ -139,7 +139,7 @@ private:
 struct globalFramebuffers_t
 {
 	idList<Framebuffer*>		swapFramebuffers;
-	Framebuffer*				shadowFBO[MAX_SHADOWMAP_RESOLUTIONS];
+	Framebuffer*				shadowFBO[MAX_SHADOWMAP_RESOLUTIONS][6];
 	Framebuffer*				hdrFBO;
 #if defined(USE_HDR_MSAA)
 	Framebuffer*				hdrNonMSAAFBO;

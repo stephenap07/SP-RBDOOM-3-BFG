@@ -38,7 +38,6 @@ cbuffer CB : register( b1 )
 #endif
 
 // *INDENT-OFF*
-
 struct VS_IN {
 	float4 position : POSITION;
 	float2 texcoord : TEXCOORD0;
@@ -50,18 +49,16 @@ struct VS_IN {
 
 struct VS_OUT {
 	float4 position		: SV_Position;
-	float4 texcoord0	: TEXCOORD0;
-	float4 texcoord1	: TEXCOORD1;
-	float4 texcoord2	: TEXCOORD2;
+	float4 texcoord0	: TEXCOORD0_centroid;
+	float4 texcoord1	: TEXCOORD1_centroid;
+	float4 texcoord2	: TEXCOORD2_centroid;
 	float4 color		: COLOR0;
 };
 // *INDENT-ON*
 
 void main( VS_IN vertex, out VS_OUT result )
 {
-
 #include "skinning.inc.hlsl"
-
 
 	// texture 0 takes the texture coordinates unmodified
 	result.texcoord0 = float4( vertex.texcoord, 0 , 0 );

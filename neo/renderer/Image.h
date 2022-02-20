@@ -460,9 +460,24 @@ public:
 		return ( void* )texture.Get( );
 	}
 
-	void* GetSampler( )
+	void* GetSampler( SamplerCache& samplerCache )
 	{
-		return ( void* )sampler.Get( );
+		if( !sampler )
+		{
+			sampler = samplerCache.GetOrCreateSampler( samplerDesc );
+		}
+
+		return (void*)sampler.Get();
+	}
+
+	void SetSampler( nvrhi::SamplerHandle _sampler )
+	{
+		sampler = _sampler;
+	}
+
+	const nvrhi::SamplerDesc& GetSamplerDesc( )
+	{
+		return samplerDesc;
 	}
 
 private:
@@ -495,8 +510,9 @@ private:
 
 	static const uint32 TEXTURE_NOT_LOADED = 0xFFFFFFFF;
 
-	nvrhi::TextureHandle texture;
-	nvrhi::SamplerHandle sampler;
+	nvrhi::TextureHandle	texture;
+	nvrhi::SamplerHandle	sampler;
+	nvrhi::SamplerDesc		samplerDesc;
 };
 
 // data is RGBA

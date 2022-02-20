@@ -1100,6 +1100,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 
 	renderLog.OpenMainBlock( MRB_FILL_DEPTH_BUFFER );
 	renderLog.OpenBlock( "Render_FillDepthBufferFast", colorBlue );
+	commandList->beginMarker( "Render_FillDepthBufferFast" );
 
 	// force MVP change on first surface
 	currentSpace = NULL;
@@ -1155,6 +1156,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 		}
 
 		renderLog.OpenBlock( shader->GetName(), colorMdGrey );
+		commandList->beginMarker( shader->GetName( ) );
 
 		if( surf->jointCache )
 		{
@@ -1171,6 +1173,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 		// draw it solid
 		DrawElementsWithCounters( surf );
 
+		commandList->endMarker( );
 		renderLog.CloseBlock();
 	}
 
@@ -1180,6 +1183,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 		FillDepthBufferGeneric( perforatedSurfaces, numPerforatedSurfaces );
 	}
 
+	commandList->endMarker( );
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();
 }
@@ -2239,6 +2243,11 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 	}
 	*/
 
+	if( fillGbuffer )
+	{
+		commandList->clearTextureFloat( globalImages->currentNormalsImage->GetTextureHandle( ), nvrhi::AllSubresources, nvrhi::Color( 0.f ) );
+	}
+
 	if( !fillGbuffer && r_useSSAO.GetBool() && r_ssaoDebug.GetBool() )
 	{
 		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
@@ -2280,6 +2289,8 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 	renderLog.OpenMainBlock( fillGbuffer ? MRB_FILL_GEOMETRY_BUFFER : MRB_AMBIENT_PASS );
 	renderLog.OpenBlock( fillGbuffer ? "Fill_GeometryBuffer" : "Render_AmbientPass", colorBlue );
+
+	commandList->beginMarker( fillGbuffer ? "Fill_GeometryBuffer" : "Render_AmbientPass" );
 
 	if( fillGbuffer )
 	{
@@ -2498,6 +2509,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		if( surfaceMaterial->GetFastPathBumpImage() && !r_skipInteractionFastPath.GetBool() )
 		{
 			renderLog.OpenBlock( surfaceMaterial->GetName(), colorMdGrey );
+			commandList->beginMarker( surfaceMaterial->GetName( ) );
 
 			inter.bumpImage = surfaceMaterial->GetFastPathBumpImage();
 			inter.specularImage = surfaceMaterial->GetFastPathSpecularImage();
@@ -2505,11 +2517,13 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 			DrawSingleInteraction( &inter, true, useIBL, false );
 
+			commandList->endMarker( );
 			renderLog.CloseBlock();
 			continue;
 		}
 
 		renderLog.OpenBlock( surfaceMaterial->GetName(), colorMdGrey );
+		commandList->beginMarker( surfaceMaterial->GetName( ) );
 
 		//bool drawSolid = false;
 
@@ -2656,6 +2670,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 		DrawSingleInteraction( &inter, false, useIBL, false );
 
+		commandList->endMarker( );
 		renderLog.CloseBlock();
 	}
 
@@ -2679,6 +2694,8 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 	}
 
 	renderProgManager.Unbind();
+
+	commandList->endMarker( );
 
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();
@@ -3077,6 +3094,8 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 	RENDERLOG_PRINTF( "---------- RB_ShadowMapPass( side = %i ) ----------\n", side );
 
+	commandList->beginMarker( "ShadowMap Side" );
+
 	renderProgManager.BindShader_Depth();
 
 	GL_SelectTexture( 0 );
@@ -3400,23 +3419,24 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 	// FIXME
 #if !defined(USE_VULKAN)
-	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Bind();
-
 	if( side < 0 )
 	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], 0 );
+		side = 0;
 	}
-	else
+	if( side > 5 )
 	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], side );
+		side = 5;
 	}
 
-	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Check();
+	globalFramebuffers.shadowFBO[vLight->shadowLOD][side]->Bind();
 
 	GL_ViewportAndScissor( 0, 0, shadowMapResolutions[vLight->shadowLOD], shadowMapResolutions[vLight->shadowLOD] );
 
-
-	glClear( GL_DEPTH_BUFFER_BIT );
+	const nvrhi::FramebufferAttachment& att = currentFrameBuffer->GetApiObject( )->getDesc( ).depthAttachment;
+	if( att.texture )
+	{
+		commandList->clearDepthStencilTexture( att.texture, nvrhi::TextureSubresourceSet().setArraySlices( side, 1 ), true, 1.f, false, 0x80 );
+	}
 #endif
 
 	// process the chain of shadows with the current rendering state
@@ -3602,6 +3622,8 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 			DrawElementsWithCounters( drawSurf );
 		}
 	}
+
+	commandList->endMarker( );
 }
 
 /*
@@ -3654,6 +3676,7 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 
 		const idMaterial* lightShader = vLight->lightShader;
 		renderLog.OpenBlock( lightShader->GetName(), colorMdGrey );
+		commandList->beginMarker( lightShader->GetName( ) );
 
 		// set the depth bounds for the whole light
 		if( useLightDepthBounds )
@@ -3716,14 +3739,18 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 			if( vLight->localInteractions != NULL )
 			{
 				renderLog.OpenBlock( "Local Light Interactions", colorPurple );
+				commandList->beginMarker( "Local Light Interactions" );
 				RenderInteractions( vLight->localInteractions, vLight, GLS_DEPTHFUNC_EQUAL, false, useLightDepthBounds );
+				commandList->endMarker( );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->globalInteractions != NULL )
 			{
 				renderLog.OpenBlock( "Global Light Interactions", colorPurple );
+				commandList->beginMarker( "Global Light Interactions" );
 				RenderInteractions( vLight->globalInteractions, vLight, GLS_DEPTHFUNC_EQUAL, false, useLightDepthBounds );
+				commandList->endMarker( );
 				renderLog.CloseBlock();
 			}
 		}
@@ -3769,28 +3796,36 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 			if( vLight->globalShadows != NULL )
 			{
 				renderLog.OpenBlock( "Global Light Shadows", colorBrown );
+				commandList->beginMarker( "Global Light Shadows" );
 				StencilShadowPass( vLight->globalShadows, vLight );
+				commandList->endMarker( );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->localInteractions != NULL )
 			{
 				renderLog.OpenBlock( "Local Light Interactions", colorPurple );
+				commandList->beginMarker( "Local Light Interactions" );
 				RenderInteractions( vLight->localInteractions, vLight, GLS_DEPTHFUNC_EQUAL, performStencilTest, useLightDepthBounds );
+				commandList->endMarker( );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->localShadows != NULL )
 			{
 				renderLog.OpenBlock( "Local Light Shadows", colorBrown );
+				commandList->beginMarker( "Local Light Shadows" );
 				StencilShadowPass( vLight->localShadows, vLight );
+				commandList->endMarker( );
 				renderLog.CloseBlock();
 			}
 
 			if( vLight->globalInteractions != NULL )
 			{
 				renderLog.OpenBlock( "Global Light Interactions", colorPurple );
+				commandList->beginMarker( "Global Light Interactions" );
 				RenderInteractions( vLight->globalInteractions, vLight, GLS_DEPTHFUNC_EQUAL, performStencilTest, useLightDepthBounds );
+				commandList->endMarker( );
 				renderLog.CloseBlock();
 			}
 		}
@@ -3799,6 +3834,7 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 		if( vLight->translucentInteractions != NULL && !r_skipTranslucent.GetBool() )
 		{
 			renderLog.OpenBlock( "Translucent Interactions", colorCyan );
+			commandList->beginMarker( "Translucent Interactions" );
 
 			// Disable the depth bounds test because translucent surfaces don't work with
 			// the depth bounds tests since they did not write depth during the depth pass.
@@ -3816,9 +3852,11 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 			// buffer and translucent surfaces do not contribute to the view depth buffer.
 			RenderInteractions( vLight->translucentInteractions, vLight, GLS_DEPTHFUNC_LESS, false, false );
 
+			commandList->endMarker( );
 			renderLog.CloseBlock();
 		}
 
+		commandList->endMarker( );
 		renderLog.CloseBlock();
 	}
 
@@ -5051,6 +5089,10 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	int screenWidth = renderSystem->GetWidth();
 	int screenHeight = renderSystem->GetHeight();
 
+	commandList->clearTextureFloat( globalImages->hierarchicalZbufferImage->GetTextureHandle( ), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
+	commandList->clearTextureFloat( globalImages->ambientOcclusionImage[0]->GetTextureHandle( ), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
+	commandList->clearTextureFloat( globalImages->ambientOcclusionImage[1]->GetTextureHandle( ), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
+
 	// build hierarchical depth buffer
 	if( r_useHierarchicalDepthBuffer.GetBool() )
 	{
@@ -5888,22 +5930,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//-------------------------------------------------
 	DrawInteractions( _viewDef );
 
-	// TODO(Stephen): Remove me.
-	if( !viewDef->is2Dgui )
-	{
-		// Blit hdr buffer to the backbuffer.
-		// TODO(Stephen): Move somewhere else?
-		{
-			BlitParameters blitParms;
-			blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
-			blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
-			blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth( ), renderSystem->GetHeight( ) );;
-			commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
-		}
-
-		return;
-	}
-
 	//-------------------------------------------------
 	// capture the depth for the motion blur before rendering any post process surfaces that may contribute to the depth
 	//-------------------------------------------------
@@ -5999,6 +6025,23 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		DrawShaderPasses( drawSurfs + processed, numDrawSurfs - processed, 0.0f /* definitely not a gui */, stereoEye );
 		commandList->endMarker( );
 		renderLog.CloseMainBlock();
+	}
+
+	// TODO(Stephen): Remove me.
+	if( !viewDef->is2Dgui )
+	{
+		// Blit hdr buffer to the backbuffer.
+		// TODO(Stephen): Move somewhere else?
+		{
+			BlitParameters blitParms;
+			blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderHDRImage->GetTextureID( );
+			blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer( );
+			blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth( ), renderSystem->GetHeight( ) );;
+			commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+		}
+
+		commandList->endMarker( );
+		return;
 	}
 
 	//-------------------------------------------------

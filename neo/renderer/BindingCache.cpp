@@ -95,3 +95,65 @@ void BindingCache::Clear()
     bindingHash.Clear( );
     mutex.Unlock( );
 }
+
+void SamplerCache::Init( nvrhi::IDevice* _device )
+{
+    device = _device;
+}
+
+void SamplerCache::Clear( )
+{
+    mutex.Lock( );
+    samplers.Clear( );
+    samplerHash.Clear( );
+    mutex.Unlock( );
+}
+
+nvrhi::SamplerHandle SamplerCache::GetOrCreateSampler( nvrhi::SamplerDesc desc )
+{
+    size_t hash = std::hash<nvrhi::SamplerDesc>{}( desc );
+
+    mutex.Lock( );
+
+    nvrhi::SamplerHandle result = nullptr;
+    for( int i = samplerHash.First( hash ); i != -1; i = samplerHash.Next( i ) )
+    {
+        nvrhi::SamplerHandle sampler = samplers[i];
+        if( sampler->getDesc() == desc )
+        {
+            result = sampler;
+            break;
+        }
+    }
+
+    mutex.Unlock( );
+
+    if( !result )
+    {
+        mutex.Lock( );
+
+        int entryIndex = samplers.Append( result );
+        samplerHash.Add( hash, entryIndex );
+
+        nvrhi::SamplerHandle& entry = samplers[entryIndex];
+
+        if( !entry )
+        {
+            result = device->createSampler( desc );
+            entry = result;
+        }
+        else
+        {
+            result = entry;
+        }
+
+        mutex.Unlock( );
+    }
+
+    if( result )
+    {
+        assert( result->getDesc( ) == desc );
+    }
+
+    return result;
+}

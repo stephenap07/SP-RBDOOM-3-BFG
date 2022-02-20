@@ -21,6 +21,7 @@ protected:
 	nvrhi::BindingLayoutHandle	geometryBindingLayout;
 	nvrhi::BindingLayoutHandle  texturedBindingLayout;
 	nvrhi::BindingSetDesc		geometryBindingSetDesc;
+	SamplerCache				samplerCache;
 
 	nvrhi::GraphicsPipelineHandle CreateGraphicsPipeline( nvrhi::IFramebuffer* framebuffer );
 

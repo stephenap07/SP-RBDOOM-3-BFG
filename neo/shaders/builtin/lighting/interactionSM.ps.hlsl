@@ -33,25 +33,20 @@ If you have questions concerning this license or the applicable additional terms
 
 
 // *INDENT-OFF*
-Texture2D t_Normal			: register( t0 );
-Texture2D t_Specular		: register( t1 );
-Texture2D t_BaseColor		: register( t2 );
-Texture2D t_LightFalloff	: register( t3 );
-Texture2D t_LightProjection	: register( t4 );
-Texture2D t_ShadowMapArray	: register( t5 );
-Texture2D t_Jitter			: register( t6 );
+Texture2D		t_Normal			: register( t0 );
+Texture2D		t_Specular			: register( t1 );
+Texture2D		t_BaseColor			: register( t2 );
+Texture2D		t_LightFalloff		: register( t3 );
+Texture2D		t_LightProjection	: register( t4 );
+Texture2DArray	t_ShadowMapArray	: register( t5 );
+Texture2D		t_Jitter			: register( t6 );
 
-SamplerState	samp0 : register(s0); // texture 1 is the per-surface normal map
-SamplerState	samp1 : register(s1); // texture 3 is the per-surface specular or roughness/metallic/AO mixer map
-SamplerState	samp2 : register(s2); // texture 2 is the per-surface baseColor map 
-SamplerState	samp3 : register(s3); // texture 4 is the light falloff texture
-SamplerState	samp4 : register(s4); // texture 5 is the light projection texture
-SamplerState	samp5 : register(s5); // texture 6 is the shadowmap array
-SamplerState	samp6 : register(s6); // texture 7 is the jitter texture 
+SamplerState	samp0 : register(s0); // for the normal/specular/color/light fall/light projection textures
+SamplerState	samp1 : register(s1); // for the shadow map sampler and jitter sampler
 
 struct PS_IN
 {
-	half4 position		: VPOS;
+	half4 position		: SV_Position;
 	half4 texcoord0		: TEXCOORD0_centroid;
 	half4 texcoord1		: TEXCOORD1_centroid;
 	half4 texcoord2		: TEXCOORD2_centroid;
@@ -75,7 +70,7 @@ float BlueNoise( float2 n, float x )
 {
 	float2 uv = n.xy * rpJitterTexOffset.xy;
 
-	float noise = t_Jitter.Sample( samp6, uv ).r;
+	float noise = t_Jitter.Sample( samp1, uv ).r;
 
 	noise = frac( noise + c_goldenRatioConjugate * rpJitterTexOffset.w * x );
 
@@ -101,10 +96,10 @@ float2 VogelDiskSample( float sampleIndex, float samplesCount, float phi )
 void main( PS_IN fragment, out PS_OUT result )
 {
 	half4 bumpMap =			t_Normal.Sample( samp0, fragment.texcoord1.xy );
-	half4 lightFalloff =	idtex2Dproj( samp3, t_LightFalloff, fragment.texcoord2 );
-	half4 lightProj =		idtex2Dproj( samp4, t_LightProjection, fragment.texcoord3 );
-	half4 YCoCG =			t_BaseColor.Sample( samp2, fragment.texcoord4.xy );
-	half4 specMapSRGB =		t_Specular.Sample( samp1, fragment.texcoord5.xy );
+	half4 lightFalloff =	idtex2Dproj( samp0, t_LightFalloff, fragment.texcoord2 );
+	half4 lightProj =		idtex2Dproj( samp0, t_LightProjection, fragment.texcoord3 );
+	half4 YCoCG =			t_BaseColor.Sample( samp0, fragment.texcoord4.xy );
+	half4 specMapSRGB =		t_Specular.Sample( samp0, fragment.texcoord5.xy );
 	half4 specMap =			sRGBAToLinearRGBA( specMapSRGB );
 
 	half3 lightVector = normalize( fragment.texcoord0.xyz );
@@ -253,10 +248,10 @@ void main( PS_IN fragment, out PS_OUT result )
 	float2 jitterTC = ( fragment.position.xy * rpScreenCorrectionFactor.xy ) + rpJitterTexOffset.ww;
 	for( float i = 0.0; i < numSamples; i += 1.0 )
 	{
-		float4 jitter = base + t_Jitter.Sample( samp6, jitterTC.xy ) * rpJitterTexScale;
+		float4 jitter = base + t_Jitter.Sample( samp1, jitterTC.xy ) * rpJitterTexScale;
 		jitter.zw = shadowTexcoord.zw;
 
-		shadow += idtex2Dproj( samp5, t_Jitter, jitter.xy / jitter.z );
+		shadow += idtex2Dproj( samp1, t_Jitter, jitter.xy / jitter.z );
 		jitterTC.x += stepSize;
 	}
 
@@ -288,7 +283,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	float stepSize = 1.0 / numSamples;
 
 	float4 jitterTC = ( fragment.position * rpScreenCorrectionFactor ) + rpJitterTexOffset;
-	float4 random = t_Jitter.Sample( samp6, jitterTC.xy ) * PI;
+	float4 random = t_Jitter.Sample( samp1, jitterTC.xy ) * PI;
 	//float4 random = fragment.position;
 
 	float2 rot;
@@ -305,7 +300,7 @@ void main( PS_IN fragment, out PS_OUT result )
 
 		float4 shadowTexcoordJittered = float4( shadowTexcoord.xy + jitterRotated * shadowTexelSize, shadowTexcoord.z, shadowTexcoord.w );
 
-		shadow += idtex2Dproj( samp5, t_ShadowMapArray, shadowTexcoordJittered );
+		shadow += idtex2Dproj( samp1, t_ShadowMapArray, shadowTexcoordJittered );
 	}
 
 	shadow *= stepSize;
@@ -355,7 +350,7 @@ void main( PS_IN fragment, out PS_OUT result )
 
 		float4 shadowTexcoordJittered = float4( shadowTexcoord.xy + jitterRotated * shadowTexelSize, shadowTexcoord.z, shadowTexcoord.w );
 
-		shadow += idtex2Dproj( samp5, t_ShadowMapArray, shadowTexcoordJittered );
+		shadow += idtex2Dproj( samp1, t_ShadowMapArray, shadowTexcoordJittered );
 	}
 
 	shadow *= stepSize;
@@ -383,15 +378,15 @@ void main( PS_IN fragment, out PS_OUT result )
 
 		float4 shadowTexcoordJittered = float4( shadowTexcoord.xy + jitter * shadowTexelSize, shadowTexcoord.z, shadowTexcoord.w );
 
-		// TODO(Stephen): I don't know if this is correct.
-		shadow += t_ShadowMapArray.SampleLevel( samp5, shadowTexcoordJittered.xy, 0 ).r;
+		// TODO(Stephen): I don't know if this is correct. It could be that the index into the array is held in shadowTexcoord.w instead of the z-component.
+		shadow += t_ShadowMapArray.Sample( samp1, shadowTexcoordJittered.xyz ).r;
 	}
 
 	shadow *= stepSize;
 #endif
 
 #else
-	float shadow = idtex2Dproj( samp5, t_ShadowMapArray, shadowTexcoord );
+	float shadow = idtex2Dproj( samp1, t_ShadowMapArray, shadowTexcoord );
 #endif
 
 

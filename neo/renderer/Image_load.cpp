@@ -1092,6 +1092,8 @@ void idImage::GenerateShadowArray( int width, int height, textureFilter_t filter
 
 	// The image will be uploaded to the gpu on a deferred state.
 	AllocImage( );
+
+	isLoaded = true;
 }
 // RB end
 

@@ -89,7 +89,9 @@ bool idImage::IsLoaded() const
 
 void idImage::CreateSampler( )
 {
-	auto samplerDesc = nvrhi::SamplerDesc( )
+	sampler.Reset( );
+
+	samplerDesc = nvrhi::SamplerDesc( )
 		.setAllFilters( false )
 		.setAllAddressModes( nvrhi::SamplerAddressMode::Clamp )
 		.setMaxAnisotropy( 1.0f );
@@ -156,7 +158,7 @@ void idImage::CreateSampler( )
 		idLib::FatalError( "idImage::CreateSampler: unrecognized texture repeat mode %d", repeat );
 	}
 
-	sampler = deviceManager->GetDevice( )->createSampler( samplerDesc );
+	//sampler = deviceManager->GetDevice( )->createSampler( samplerDesc );
 }
 
 /*

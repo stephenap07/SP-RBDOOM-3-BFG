@@ -37,7 +37,7 @@ SamplerState samp0 : register( s0 );
 SamplerState samp1 : register( s1 );
 
 struct PS_IN {
-	float4 position : VPOS;
+	float4 position : SV_Position;
 	float4 texcoord0 : TEXCOORD0_centroid;
 	float2 texcoord1 : TEXCOORD1_centroid;
 };

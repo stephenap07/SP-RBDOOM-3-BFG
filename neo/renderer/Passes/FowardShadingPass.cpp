@@ -58,6 +58,8 @@ void ForwardShadingPass::Init( nvrhi::DeviceHandle deviceHandle )
 	geometryBindingSetDesc = nvrhi::BindingSetDesc( )
 		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
 
+	samplerCache.Init( deviceHandle.Get( ) );
+
 	pipeline = nullptr;
 }
 
@@ -481,17 +483,6 @@ void ForwardShadingPass::ShadowMapPass( nvrhi::ICommandList* commandList, const 
 		shadowP[0] = lightProjectionRenderMatrix;
 	}
 
-	GL_BindFramebuffer( globalFramebuffers.shadowFBO[vLight->shadowLOD] );
-
-	if( side < 0 )
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], 0 );
-	}
-	else
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], side );
-	}
-
 	GL_ViewportAndScissor( 0, 0, shadowMapResolutions[vLight->shadowLOD], shadowMapResolutions[vLight->shadowLOD] );
 
 	//glClear( GL_DEPTH_BUFFER_BIT );
@@ -678,7 +669,7 @@ void ForwardShadingPass::ShadowMapPass( nvrhi::ICommandList* commandList, const 
 					auto bindingSetDesc = nvrhi::BindingSetDesc( )
 						.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
 						.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )imageParms[0]->GetTextureID( ) ) )
-						.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )imageParms[0]->GetSampler( ) ) );
+						.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )imageParms[0]->GetSampler( samplerCache ) ) );
 
 					auto currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, renderProgManager.BindingLayout() );
 

@@ -48,17 +48,17 @@ struct VS_IN {
 };
 
 struct VS_OUT {
-	float4 position		: POSITION;
-	float4 texcoord0	: TEXCOORD0;
-	float4 texcoord1	: TEXCOORD1;
-	float4 texcoord2	: TEXCOORD2;
-	float4 texcoord3	: TEXCOORD3;
-	float4 texcoord4	: TEXCOORD4;
-	float4 texcoord5	: TEXCOORD5;
-	float4 texcoord6	: TEXCOORD6;
-	float4 texcoord7	: TEXCOORD7;
-	float4 texcoord8	: TEXCOORD8;
-	float4 texcoord9	: TEXCOORD9;
+	float4 position		: SV_Position;
+	float4 texcoord0	: TEXCOORD0_centroid;
+	float4 texcoord1	: TEXCOORD1_centroid;
+	float4 texcoord2	: TEXCOORD2_centroid;
+	float4 texcoord3	: TEXCOORD3_centroid;
+	float4 texcoord4	: TEXCOORD4_centroid;
+	float4 texcoord5	: TEXCOORD5_centroid;
+	float4 texcoord6	: TEXCOORD6_centroid;
+	float4 texcoord7	: TEXCOORD7_centroid;
+	float4 texcoord8	: TEXCOORD8_centroid;
+	float4 texcoord9	: TEXCOORD9_centroid;
 	float4 color		: COLOR0;
 };
 // *INDENT-ON*
