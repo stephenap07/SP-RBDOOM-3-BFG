@@ -381,7 +381,7 @@ static void R_FlatNormalImage( idImage* image, nvrhi::ICommandList* commandList 
 		data[0][i][2] = 255;
 		data[0][i][3] = 255;
 	}
-	image->GenerateImage( ( byte* )data, 4, 4, TF_DEFAULT, TR_REPEAT, TD_BUMP, commandList );
+	image->GenerateImage( ( byte* )data, 2, 2, TF_DEFAULT, TR_REPEAT, TD_BUMP, commandList );
 }
 
 /*

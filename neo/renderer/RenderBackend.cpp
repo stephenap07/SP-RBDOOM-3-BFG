@@ -4563,6 +4563,7 @@ idRenderBackend::FogPass
 void idRenderBackend::FogPass( const drawSurf_t* drawSurfs,  const drawSurf_t* drawSurfs2, const viewLight_t* vLight )
 {
 	renderLog.OpenBlock( vLight->lightShader->GetName(), colorCyan );
+	commandList->beginMarker( vLight->lightShader->GetName( ) );
 
 	// find the current color and density of the fog
 	const idMaterial* lightShader = vLight->lightShader;
@@ -4650,6 +4651,7 @@ void idRenderBackend::FogPass( const drawSurf_t* drawSurfs,  const drawSurf_t* d
 
 	renderProgManager.Unbind();
 
+	commandList->endMarker( );
 	renderLog.CloseBlock();
 }
 
@@ -4668,6 +4670,7 @@ void idRenderBackend::FogAllLights()
 
 	renderLog.OpenMainBlock( MRB_FOG_ALL_LIGHTS );
 	renderLog.OpenBlock( "Render_FogAllLights", colorBlue );
+	commandList->beginMarker( "Render_FogAllLights" );
 
 	// force fog plane to recalculate
 	currentSpace = NULL;
@@ -4684,6 +4687,7 @@ void idRenderBackend::FogAllLights()
 		}
 	}
 
+	commandList->endMarker( );
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();
 }
@@ -4923,22 +4927,18 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 
 	renderLog.OpenMainBlock( MRB_BLOOM );
 	renderLog.OpenBlock( "Render_Bloom", colorBlue );
+	commandList->beginMarker( "Render_Bloom" );
 
 	RENDERLOG_PRINTF( "---------- RB_Bloom( avg = %f, max = %f, key = %f ) ----------\n", hdrAverageLuminance, hdrMaxLuminance, hdrKey );
 
 	// BRIGHTPASS
 	renderLog.OpenBlock( "Brightpass" );
+	commandList->beginMarker( "Brightpass" );
 
 	//GL_CheckErrors();
 
 	//Framebuffer::Unbind();
 	//globalFramebuffers.hdrQuarterFBO->Bind();
-
-	// FIXME
-#if !defined(USE_VULKAN)
-	glClearColor( 0, 0, 0, 1 );
-//	glClear( GL_COLOR_BUFFER_BIT );
-#endif
 
 	GL_State( /*GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO |*/ GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
@@ -4968,8 +4968,13 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 
 		RENDERLOG_PRINTF( "Resolve to %i x %i buffer\n", w, h );
 
-		// resolve the screen
+		// TODO(Stephen): Test this.
 		globalImages->currentRenderImage->CopyFramebuffer( x, y, w, h );
+		commonPasses.BlitTexture(
+			commandList,
+			globalFramebuffers.bloomRenderFBO[0]->GetApiObject( ),
+			globalImages->currentRenderLDR->GetTextureHandle( ),
+			&bindingCache );
 
 		renderProgManager.BindShader_Brightpass();
 	}
@@ -5008,9 +5013,11 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 	// Draw
 	DrawElementsWithCounters( &unitSquareSurface );
 
+	commandList->endMarker( );
 	renderLog.CloseBlock(); // Brightpass
 
 	renderLog.OpenBlock( "Bloom Ping Pong" );
+	commandList->beginMarker( "Bloom Ping Pong" );
 
 	// BLOOM PING PONG rendering
 	renderProgManager.BindShader_HDRGlareChromatic();
@@ -5018,12 +5025,10 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 	int j;
 	for( j = 0; j < r_hdrGlarePasses.GetInteger(); j++ )
 	{
-		globalFramebuffers.bloomRenderFBO[( j + 1 ) % 2 ]->Bind();
+		int index = ( j + 1 ) % 2;
+		globalFramebuffers.bloomRenderFBO[ index ]->Bind();
 
-		// FIXME
-#if !defined(USE_VULKAN)
-		glClear( GL_COLOR_BUFFER_BIT );
-#endif
+		commandList->clearTextureFloat( globalImages->bloomRenderImage[index]->GetTextureHandle( ), nvrhi::AllSubresources, nvrhi::Color( 0.f, 0.f, 0.f, 1.f ) );
 
 		globalImages->bloomRenderImage[j % 2]->Bind();
 
@@ -5031,7 +5036,7 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 	}
 
 	// add filtered glare back to main context
-	Framebuffer::Unbind();
+	globalFramebuffers.ldrFBO->Bind( );
 
 	ResetViewportAndScissorToDefaultCamera( _viewDef );
 
@@ -5043,12 +5048,14 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 
 	DrawElementsWithCounters( &unitSquareSurface );
 
+	commandList->endMarker( );
 	renderLog.CloseBlock(); // Bloom Ping Pong
 
 	renderProgManager.Unbind();
 
 	GL_State( GLS_DEFAULT );
 
+	commandList->endMarker( );
 	renderLog.CloseBlock(); // Render_Bloom
 	renderLog.CloseMainBlock(); // MRB_BLOOM
 }
@@ -6046,11 +6053,10 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 	if( !r_skipBloom.GetBool() )
 	{
-		// TODO(Stephen): implement bloom
-		//Bloom( _viewDef );
+		Bloom( _viewDef );
 	}
 
-	 //TODO(Stephen): Move somewhere else?
+	// Blit LDR to swap chain.
 	{
 		BlitParameters blitParms;
 		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->currentRenderLDR->GetTextureID( );

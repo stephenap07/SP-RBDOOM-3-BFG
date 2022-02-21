@@ -345,14 +345,13 @@ float rand( float2 co )
 #define vec3			float3
 #define vec4			float4
 
-#define VPOS WPOS
+#define VPOS SV_Position
 
 #define dFdx ddx
 #define dFdy ddy
 
 static float4 idtex2Dproj( SamplerState samp, Texture2D t, float4 texCoords )
 {
-	// TODO(Stephen): Divide by z or w?
 	return t.Sample( samp, texCoords.xy / texCoords.w );
 }
 
@@ -473,8 +472,7 @@ static float3 ditherRGB( float3 color, float2 uvSeed, float quantSteps )
 	//float3 noise = Hash33( float3( uvSeed, rpJitterTexOffset.w ) );
 
 	//float3 noise = float3( InterleavedGradientNoise( uvSeed ) );
-	// TODO(Stephen): Determine if the remaining two values should be 0 or something like 1.
-	float3 noise = float3( InterleavedGradientNoiseAnim( uvSeed, rpJitterTexOffset.w ), 0, 0 );
+	float3 noise = _float3( InterleavedGradientNoiseAnim( uvSeed, rpJitterTexOffset.w ) );
 
 	// triangular noise [-0.5;1.5[
 

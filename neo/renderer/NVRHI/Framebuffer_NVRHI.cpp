@@ -127,6 +127,10 @@ void Framebuffer::ResizeFramebuffers( )
 	{
 		globalImages->shadowImage[i]->Reload( false, tr.backend.commandList );
 	}
+	for( int i = 0; i < MAX_BLOOM_BUFFERS; i++ )
+	{
+		globalImages->bloomRenderImage[i]->Reload( false, tr.backend.commandList );
+	}
 	tr.backend.commandList->close( );
 	deviceManager->GetDevice( )->executeCommandList( tr.backend.commandList );
 
@@ -202,6 +206,13 @@ void Framebuffer::ResizeFramebuffers( )
 	globalFramebuffers.smaaEdgesFBO = new Framebuffer( "_smaaBlend",
 		nvrhi::FramebufferDesc( )
 		.addColorAttachment( globalImages->smaaBlendImage->texture ) );
+
+	for( int i = 0; i < MAX_BLOOM_BUFFERS; i++ )
+	{
+		globalFramebuffers.bloomRenderFBO[i] = new Framebuffer( va( "_bloomRender%i", i ),
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->bloomRenderImage[i]->texture ) );
+	}
 
 	Framebuffer::Unbind( );
 }

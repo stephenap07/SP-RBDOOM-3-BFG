@@ -379,7 +379,8 @@ void main( PS_IN fragment, out PS_OUT result )
 		float4 shadowTexcoordJittered = float4( shadowTexcoord.xy + jitter * shadowTexelSize, shadowTexcoord.z, shadowTexcoord.w );
 
 		// TODO(Stephen): I don't know if this is correct. It could be that the index into the array is held in shadowTexcoord.w instead of the z-component.
-		shadow += t_ShadowMapArray.Sample( samp1, shadowTexcoordJittered.xyz ).r;
+		float3 coords = float3( shadowTexcoordJittered.xy, shadowTexcoordJittered.w );
+		shadow += t_ShadowMapArray.SampleLevel( samp1, coords, shadowTexcoordJittered.z ).r;
 	}
 
 	shadow *= stepSize;
