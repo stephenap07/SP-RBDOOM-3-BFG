@@ -257,7 +257,7 @@ void idImage::AllocImage( )
 			break;
 
 		case FMT_ALPHA:
-			format = nvrhi::Format::R8_UINT;
+			format = nvrhi::Format::R8_UNORM;
 			break;
 
 		case FMT_L8A8:
@@ -277,16 +277,11 @@ void idImage::AllocImage( )
 			break;
 
 		case FMT_DXT1:
-			format = nvrhi::Format::BC1_UNORM_SRGB;
+			format = nvrhi::Format::BC1_UNORM;
 			break;
 
 		case FMT_DXT5:
-			// This is used for compressed normals
-			format = nvrhi::Format::BC3_UNORM_SRGB;
-			if( usage == TD_BUMP )
-			{
-				format = nvrhi::Format::BC3_UNORM;
-			}
+			format = nvrhi::Format::BC3_UNORM;
 			break;
 
 		case FMT_DEPTH:
@@ -332,6 +327,10 @@ void idImage::AllocImage( )
 		// see http://what-when-how.com/Tutorial/topic-615ll9ug/Praise-for-OpenGL-ES-30-Programming-Guide-291.html
 		case FMT_R11G11B10F:
 			format = nvrhi::Format::R11G11B10_FLOAT;
+			break;
+
+		case FMT_SRGB8:
+			format = nvrhi::Format::SRGBA8_UNORM;
 			break;
 
 		default:

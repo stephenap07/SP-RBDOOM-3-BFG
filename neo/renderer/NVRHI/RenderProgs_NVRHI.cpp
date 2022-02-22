@@ -171,7 +171,7 @@ ShaderBlob idRenderProgManager::GetBytecode( const char* fileName )
 
 	if( !blob.data )
 	{
-		common->Error( "Couldn't read the binary file for shader %s", fileName);
+		common->FatalError( "Couldn't read the binary file for shader %s", fileName);
 	}
 
 	return blob;
@@ -188,6 +188,20 @@ void idRenderProgManager::LoadProgram( const int programIndex, const int vertexS
 	prog.fragmentShaderIndex = fragmentShaderIndex;
 	prog.vertexShaderIndex = vertexShaderIndex;
 	if( prog.vertexLayout > 0 )
+	{
+		prog.inputLayout = device->createInputLayout(
+			&vertexLayoutDescs[prog.vertexLayout][0],
+			vertexLayoutDescs[prog.vertexLayout].Num( ),
+			shaders[prog.vertexShaderIndex].handle );
+	}
+	prog.bindingLayout = bindingLayouts[prog.bindingLayoutType];
+}
+
+void idRenderProgManager::LoadComputeProgram( const int programIndex, const int computeShaderIndex )
+{
+	renderProg_t& prog = renderProgs[programIndex];
+	prog.computeShaderIndex = computeShaderIndex;
+	if( prog.vertexLayout != LAYOUT_UNKNOWN )
 	{
 		prog.inputLayout = device->createInputLayout(
 			&vertexLayoutDescs[prog.vertexLayout][0],

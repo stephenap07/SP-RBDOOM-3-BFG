@@ -42,6 +42,8 @@ nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const Pipeline
 	pipelineDesc.primType = nvrhi::PrimitiveType::TriangleList;
 	pipelineDesc.renderState.rasterState.enableScissor( );
 	pipelineDesc.renderState.depthStencilState.enableDepthTest( ).enableDepthWrite( );
+	pipelineDesc.renderState.rasterState.depthBias = key.depthBias;
+	pipelineDesc.renderState.rasterState.slopeScaledDepthBias = key.slopeBias;
 	GetRenderState( key.state, key, pipelineDesc.renderState );
 
 	auto pipeline = device->createGraphicsPipeline( pipelineDesc, key.framebuffer->GetApiObject( ) );
@@ -54,7 +56,12 @@ nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const Pipeline
 
 void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& renderState )
 {
-	uint64 diff = 0xFFFFFFFFFFFFFFFF;
+	uint64 diff = stateBits ^ GLS_DEFAULT;
+
+	if( diff == 0 )
+	{
+		return;
+	}
 
 	auto& currentBlendState = renderState.blendState;
 	auto& currentDepthStencilState = renderState.depthStencilState;
@@ -233,6 +240,7 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		if( stateBits & GLS_BLUEMASK ) mask = mask & ~nvrhi::ColorMask::Blue;
 		if( stateBits & GLS_ALPHAMASK ) mask = mask & ~nvrhi::ColorMask::Alpha;
 
+		renderTarget.enableBlend( );
 		renderTarget.setColorWriteMask( mask );
 	}
 
@@ -246,12 +254,12 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		if( stateBits & GLS_POLYMODE_LINE )
 		{
 			currentRasterState.setFillMode( nvrhi::RasterFillMode::Line );
-			currentRasterState.setCullNone( );
+			//currentRasterState.setCullNone( );
 		}
 		else
 		{
 			currentRasterState.setCullNone( );
-			currentRasterState.setFillMode( nvrhi::RasterFillMode::Fill );
+			//currentRasterState.setFillMode( nvrhi::RasterFillMode::Fill );
 		}
 	}
 

@@ -88,8 +88,6 @@ enum textureFormat_t
 
 	FMT_DEPTH,			// 24 bpp
 
-	FMT_DEPTH_STENCIL,  // 32 bpp
-
 	//------------------------
 	//
 	//------------------------
@@ -107,7 +105,9 @@ enum textureFormat_t
 	FMT_R32F,			// 32 bpp
 	FMT_R11G11B10F,		// 32 bpp
 	FMT_R8,
+	FMT_DEPTH_STENCIL,  // 32 bpp
 	// RB end
+	FMT_SRGB8,
 };
 
 int BitsForFormat( textureFormat_t format );
@@ -238,6 +238,7 @@ typedef enum
 	TD_R11G11B10F,			// memory efficient HDR RGB format with only 32bpp
 	// RB end
 	TD_R8F,					// Stephen: Added for ambient occlusion render target.
+	TD_LDR,					// Stephen: Added for SRGB render target when tonemapping.
 } textureUsage_t;
 
 typedef enum

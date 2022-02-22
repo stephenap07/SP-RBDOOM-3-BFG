@@ -264,6 +264,35 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	bindingLayouts[BINDING_LAYOUT_POST_PROCESS_CNM] = device->createBindingLayout( ppFxBindingLayout );
 
+	nvrhi::BindingLayoutDesc tonemapLayout;
+	tonemapLayout.visibility = nvrhi::ShaderType::Pixel;
+	tonemapLayout.bindings = {
+		nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ),
+		nvrhi::BindingLayoutItem::Texture_SRV( 0 ),
+		nvrhi::BindingLayoutItem::TypedBuffer_SRV( 1 ),
+		nvrhi::BindingLayoutItem::Texture_SRV( 2 ),
+		nvrhi::BindingLayoutItem::Sampler( 0 )
+	};
+	bindingLayouts[BINDING_LAYOUT_TONEMAP] = device->createBindingLayout( tonemapLayout );
+
+	nvrhi::BindingLayoutDesc histogramLayout;
+	histogramLayout.visibility = nvrhi::ShaderType::Compute;
+	histogramLayout.bindings = {
+		nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ),
+		nvrhi::BindingLayoutItem::Texture_SRV( 0 ),
+		nvrhi::BindingLayoutItem::TypedBuffer_UAV( 0 )
+	};
+	bindingLayouts[BINDING_LAYOUT_HISTOGRAM] = device->createBindingLayout( histogramLayout );
+
+	nvrhi::BindingLayoutDesc exposureLayout;
+	exposureLayout.visibility = nvrhi::ShaderType::Compute;
+	exposureLayout.bindings = {
+		nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ),
+		nvrhi::BindingLayoutItem::TypedBuffer_SRV( 0 ),
+		nvrhi::BindingLayoutItem::TypedBuffer_UAV( 0 )
+	};
+	bindingLayouts[BINDING_LAYOUT_EXPOSURE] = device->createBindingLayout( exposureLayout );
+
 	// RB: added checks for GPU skinning
 	struct builtinShaders_t
 	{
@@ -359,8 +388,8 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		{ BUILTIN_SHADOW_DEBUG_SKINNED, "builtin/debug/shadowDebug", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 
 		{ BUILTIN_BLENDLIGHT, "builtin/fog/blendlight", "", { { "USE_LINEAR_RGB", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_FOG, "builtin/fog/fog", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_FOG },
-		{ BUILTIN_FOG_SKINNED, "builtin/fog/fog", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_FOG },
+		{ BUILTIN_FOG, "builtin/fog/fog", "", { {"USE_GPU_SKINNING", "0" }, { "USE_LINEAR_RGB", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_FOG },
+		{ BUILTIN_FOG_SKINNED, "builtin/fog/fog", "_skinned", { {"USE_GPU_SKINNING", "1" }, { "USE_LINEAR_RGB", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_FOG },
 		{ BUILTIN_SKYBOX, "builtin/legacy/skybox", "",  {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_WOBBLESKY, "builtin/legacy/wobblesky", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_POSTPROCESS, "builtin/post/postprocess", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
@@ -395,8 +424,16 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		// RB begin
 		{ BUILTIN_DEBUG_SHADOWMAP, "builtin/debug/debug_shadowmap", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		// RB end
+
+		// SP begin
 		{ BUILTIN_BLIT, "builtin/blit", "", { { "TEXTURE_ARRAY", "0" } }, false, SHADER_STAGE_FRAGMENT, LAYOUT_UNKNOWN, BINDING_LAYOUT_BLIT },
 		{ BUILTIN_RECT, "builtin/rect", "", { }, false, SHADER_STAGE_VERTEX, LAYOUT_DRAW_VERT, BINDING_LAYOUT_BLIT },
+		{ BUILTIN_TONEMAPPING, "builtin/post/tonemapping", "", { { "HISTOGRAM_BINS", "256" }, { "SOURCE_ARRAY", "0" }, { "QUAD_Z", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_UNKNOWN, BINDING_LAYOUT_TONEMAP },
+		{ BUILTIN_TONEMAPPING_TEX_ARRAY, "builtin/post/tonemapping", "", { { "HISTOGRAM_BINS", "256" }, { "SOURCE_ARRAY", "1" }, { "QUAD_Z", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_UNKNOWN, BINDING_LAYOUT_TONEMAP },
+		{ BUILTIN_HISTOGRAM_CS, "builtin/post/histogram", "", { { "HISTOGRAM_BINS", "256" }, { "SOURCE_ARRAY", "0" } }, false, SHADER_STAGE_COMPUTE, LAYOUT_UNKNOWN, BINDING_LAYOUT_HISTOGRAM },
+		{ BUILTIN_HISTOGRAM_TEX_ARRAY_CS, "builtin/post/histogram", "", { { "HISTOGRAM_BINS", "256" }, { "SOURCE_ARRAY", "1" } }, false, SHADER_STAGE_COMPUTE, LAYOUT_UNKNOWN, BINDING_LAYOUT_HISTOGRAM },
+		{ BUILTIN_EXPOSURE_CS, "builtin/post/exposure", "", { { "HISTOGRAM_BINS", "256" } }, false, SHADER_STAGE_COMPUTE, LAYOUT_UNKNOWN, BINDING_LAYOUT_EXPOSURE },
+		// SP end
 	};
 	int numBuiltins = sizeof( builtins ) / sizeof( builtins[0] );
 
@@ -431,9 +468,23 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 			fIndex = FindShader( builtins[ i ].name, SHADER_STAGE_FRAGMENT, builtins[i].nameOutSuffix, builtins[i].macros, true, builtins[i].layout );
 		}
 
+		int cIndex = -1;
+		if( builtins[i].stages & SHADER_STAGE_COMPUTE )
+		{
+			cIndex = FindShader( builtins[ i ].name, SHADER_STAGE_COMPUTE, builtins[i].nameOutSuffix, builtins[i].macros, true, builtins[i].layout );
+		}
+
 		idLib::Printf( "Loading shader program %s\n", prog.name.c_str() );
 
-		LoadProgram( i, vIndex, fIndex );
+		if( vIndex > -1 && fIndex > -1 )
+		{
+			LoadProgram( i, vIndex, fIndex );
+		}
+
+		if( cIndex > -1 )
+		{
+			LoadComputeProgram( i, cIndex );
+		}
 	}
 
 	r_useHalfLambertLighting.ClearModified();
@@ -641,6 +692,10 @@ programInfo_t idRenderProgManager::GetProgramInfo( int index )
 	if( prog.fragmentShaderIndex > -1 && prog.fragmentShaderIndex < shaders.Num( ) )
 	{
 		info.ps = GetShader( prog.fragmentShaderIndex );
+	}
+	if( prog.computeShaderIndex > -1 && prog.computeShaderIndex < shaders.Num( ) )
+	{
+		info.cs = GetShader( prog.computeShaderIndex );
 	}
 	info.inputLayout = prog.inputLayout;
 	info.bindingLayout = prog.bindingLayout;

@@ -37,6 +37,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "Passes/MipMapGenPass.h"
 #include "Passes/FowardShadingPass.h"
 #include "Passes/SsaoPass.h"
+#include "Passes/TonemapPass.h"
 
 #include "PipelineCache.h"
 
@@ -465,6 +466,9 @@ public:
 	drawSurf_t			zeroOneSphereSurface; // RB
 	drawSurf_t			testImageSurface;
 
+	float				slopeScaleBias;
+	float				depthBias;
+
 private:
 	uint64				glStateBits;
 
@@ -495,8 +499,6 @@ private:
 	nvrhi::BindingLayoutHandle		currentBindingLayout;
 	nvrhi::GraphicsPipelineHandle	currentPipeline;
 	nvrhi::RenderState				currentRenderState;
-	float							slopeScaleBias;
-	float							depthBias;
 
 	Framebuffer*					currentFrameBuffer;
 	nvrhi::CommandListHandle		commandList;
@@ -504,6 +506,7 @@ private:
 	CommonRenderPasses				commonPasses;
 	SsaoPass*						ssaoPass;
 	MipMapGenPass*					hiZGenPass;
+	TonemapPass						toneMapPass;
 
 	ForwardShadingPass				fowardShadingPass;
 

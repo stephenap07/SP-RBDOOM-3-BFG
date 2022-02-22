@@ -177,7 +177,7 @@ float PhotoLuma( float3 c )
 
 float3 sRGBToLinearRGB( float3 c )
 {
-#if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
+#if ( defined( USE_LINEAR_RGB ) && USE_LINEAR_RGB ) && ( !defined( USE_SRGB ) || !USE_SRGB )
 	c = clamp( c, 0.0, 1.0 );
 
 	return Linear3( c );
@@ -188,7 +188,7 @@ float3 sRGBToLinearRGB( float3 c )
 
 float4 sRGBAToLinearRGBA( float4 c )
 {
-#if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
+#if ( defined( USE_LINEAR_RGB ) && USE_LINEAR_RGB ) && ( !defined( USE_SRGB ) || !USE_SRGB )
 	c = clamp( c, 0.0, 1.0 );
 
 	return float4( Linear1( c.r ), Linear1( c.g ), Linear1( c.b ), Linear1( c.a ) );
@@ -199,7 +199,7 @@ float4 sRGBAToLinearRGBA( float4 c )
 
 float3 LinearRGBToSRGB( float3 c )
 {
-#if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
+#if ( defined( USE_LINEAR_RGB ) && USE_LINEAR_RGB ) && ( !defined( USE_SRGB ) || !USE_SRGB )
 	c = clamp( c, 0.0, 1.0 );
 
 	return Srgb3( c );
@@ -210,7 +210,7 @@ float3 LinearRGBToSRGB( float3 c )
 
 float4 LinearRGBToSRGB( float4 c )
 {
-#if defined( USE_LINEAR_RGB ) && !defined( USE_SRGB )
+#if ( defined( USE_LINEAR_RGB ) && USE_LINEAR_RGB ) && ( !defined( USE_SRGB ) || !USE_SRGB )
 	c = clamp( c, 0.0, 1.0 );
 
 	return float4( Srgb1( c.r ), Srgb1( c.g ), Srgb1( c.b ), c.a );
@@ -497,10 +497,6 @@ static float3 ditherRGB( float3 color, float2 uvSeed, float quantSteps )
 	color = floor( color * scale ) / scale;
 
 	//float3 color = c + whiteNoise / 255.0;
-
-#if defined( USE_LINEAR_RGB )
-
-#endif
 
 	return color;
 }

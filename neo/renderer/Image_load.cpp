@@ -267,6 +267,9 @@ ID_INLINE void idImage::DeriveOpts()
 				opts.format = FMT_DXT5;
 				opts.gammaMips = true;
 				break;
+			case TD_LDR:
+				opts.format = FMT_SRGB8;
+				break;
 			default:
 				assert( false );
 				opts.format = FMT_RGBA8;

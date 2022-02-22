@@ -223,7 +223,7 @@ static void R_RGBA8LinearImage( idImage* image, nvrhi::ICommandList* commandList
 
 static void R_LdrNativeImage( idImage* image, nvrhi::ICommandList* commandList )
 {
-	image->GenerateImage( NULL, renderSystem->GetWidth( ), renderSystem->GetHeight( ), TF_NEAREST, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, nullptr, true );//, msaaSamples );
+	image->GenerateImage( NULL, renderSystem->GetWidth( ), renderSystem->GetHeight( ), TF_NEAREST, TR_CLAMP, TD_LDR, nullptr, true );//, msaaSamples );
 }
 
 static void R_DepthImage( idImage* image, nvrhi::ICommandList* commandList )

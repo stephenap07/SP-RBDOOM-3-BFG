@@ -5719,6 +5719,12 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 			globalImages->ambientOcclusionImage[0]->GetTextureHandle( ) );
 	}
 
+	if( !toneMapPass.IsLoaded( ) )
+	{
+		TonemapPass::CreateParameters tonemapParms;
+		toneMapPass.Init( deviceManager->GetDevice( ), &commonPasses, tonemapParms, globalFramebuffers.ldrFBO->GetApiObject( ) );
+	}
+
 	uint64 backEndStartTime = Sys_Microseconds();
 
 	//// needed for editor rendering
@@ -5741,6 +5747,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 					// SRS - Capture separate timestamps for overlay GUI rendering when RC_DRAW_VIEW_3D timestamps are active
 					renderLog.OpenMainBlock( MRB_DRAW_GUI );
 					renderLog.OpenBlock( "Render_DrawViewGUI", colorBlue );
+					commandList->beginMarker( "Render_DrawViewGUI" );
 					// SRS - Disable detailed timestamps during overlay GUI rendering so they do not overwrite timestamps from 3D rendering
 					glConfig.timerQueryAvailable = false;
 
@@ -5748,6 +5755,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 					// SRS - Restore timestamp capture state after overlay GUI rendering is finished
 					glConfig.timerQueryAvailable = timerQueryAvailable;
+					commandList->endMarker( );
 					renderLog.CloseBlock();
 					renderLog.CloseMainBlock();
 				}
@@ -6047,8 +6055,10 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// RB: convert back from HDR to LDR range
 	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) && !_viewDef->targetRender )
 	{
-		CalculateAutomaticExposure();
-		Tonemap( _viewDef );
+		//CalculateAutomaticExposure();
+		//Tonemap( _viewDef );
+		ToneMappingParameters parms;
+		toneMapPass.SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle( ), globalFramebuffers.ldrFBO->GetApiObject( ) );
 	}
 
 	if( !r_skipBloom.GetBool() )

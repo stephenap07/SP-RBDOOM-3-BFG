@@ -264,6 +264,7 @@ struct programInfo_t
 {
 	nvrhi::ShaderHandle vs;
 	nvrhi::ShaderHandle ps;
+	nvrhi::ShaderHandle cs;
 	nvrhi::InputLayoutHandle inputLayout;
 	nvrhi::BindingLayoutHandle bindingLayout;
 };
@@ -378,6 +379,11 @@ enum
 	// SP Begin
 	BUILTIN_BLIT,
 	BUILTIN_RECT,
+	BUILTIN_TONEMAPPING,
+	BUILTIN_TONEMAPPING_TEX_ARRAY,
+	BUILTIN_HISTOGRAM_CS,
+	BUILTIN_HISTOGRAM_TEX_ARRAY_CS,
+	BUILTIN_EXPOSURE_CS,
 	// SP End
 
 	MAX_BUILTINS
@@ -942,6 +948,7 @@ private:
 
 	bool	CompileGLSL( uint target, const char* name );
 	void	LoadProgram( const int programIndex, const int vertexShaderIndex, const int fragmentShaderIndex );
+	void	LoadComputeProgram( const int programIndex, const int computeShaderIndex );
 
 	static const uint INVALID_PROGID = 0xFFFFFFFF;
 
@@ -973,6 +980,7 @@ private:
 			name( ),
 			vertexShaderIndex( -1 ),
 			fragmentShaderIndex( -1 ),
+			computeShaderIndex( -1 ),
 			builtin( true ),
 			usesJoints( false ),
 			vertexLayout( LAYOUT_UNKNOWN ),
@@ -985,6 +993,7 @@ private:
 		idStr						name;
 		int							vertexShaderIndex;
 		int							fragmentShaderIndex;
+		int							computeShaderIndex;
 		bool						builtin;
 		bool						usesJoints;
 		vertexLayoutType_t			vertexLayout;

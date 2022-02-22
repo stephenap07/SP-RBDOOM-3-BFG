@@ -748,7 +748,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, renderProgManager.BindingLayout() );
 	renderProgManager.CommitConstantBuffer( commandList );
 
-	PipelineKey key{ glStateBits, renderProgManager.CurrentProgram(), viewDef->isMirror, currentFrameBuffer };
+	PipelineKey key{ glStateBits, renderProgManager.CurrentProgram(), viewDef->isMirror, depthBias, slopeScaleBias, currentFrameBuffer };
 	auto pipeline = pipelineCache.GetOrCreatePipeline( key );
 
 	nvrhi::GraphicsState state;
