@@ -66,7 +66,6 @@ If you have questions concerning this license or the applicable additional terms
 // this allows to have the com_showFPS stats in screenshots
 #define IMGUI_BFGUI 1
 
-
 // maximum texture units
 const int MAX_PROG_TEXTURE_PARMS	= 16;
 
@@ -1375,9 +1374,7 @@ struct glimpParms_t
 
 #define CLAMP(x, lo, hi)    ((x) < (lo) ? (lo) : (x) > (hi) ? (hi) : (x))
 // Helper function for using SDL2 and Vulkan on Linux.
-std::vector<const char*> get_required_extensions( const std::vector<const char*>& instanceExtensions, bool enableValidationLayers );
-
-const std::vector<const char*> sdlInstanceExtensions = {};
+std::vector<const char*> get_required_extensions();
 
 extern vulkanContext_t vkcontext;
 

@@ -15,6 +15,73 @@ Thank you for downloading RBDOOM-3-BFG.
 
 _______________________________________
 
+TBD - RBDOOM-3-BFG 1.4.0
+_______________________________
+
+## .plan
+
+This version improves support for mapping with TrenchBroom. Until now you needed to extract and copy the vanilla Doom 3 models and textures over to the base/ folder to see the content in the TrenchBroom entity browser and texture viewer.
+Owning the original game next to the BFG edition is not necessary anymore.
+This version comes with a couple of new console commands that lets you export particular parts of the .resources files to the base/_tb/ folder.
+You need to call exportImagesToTrenchBroom and exportModelsToTrenchBroom once and you are good to go to start mapping with the TrenchBroom level editor.
+
+## Changelog
+
+[TRENCHBROOM]
+
+* Tweaked exportFGD command for new icons
+
+* Added new icons to TrenchBroom for certain entities like lights, speakers or particle emitters
+
+* TrenchBroom offers a dropdown menu to select the Quake 1 light style for lights
+
+* Drastically improved loading time of textures for materials in TrenchBroom
+
+* Added RBDoom console command convertMapToValve220 `<map>`
+
+* Added RBDoom console command exportImagesToTrenchBroom which decompresses and saves all .bimage images to _tb/*.png files
+
+* Added RBDoom console command exportModelsToTrenchBroom which saves all .base|.blwo|.bmd5mesh models to _tb/*.obj files
+
+* TrenchBroom got several Doom 3 specific issue generators to help mappers avoiding pitfalls during mapping
+
+[MISCELLANEOUS]
+
+* Added CMake options STANDALONE and DOOM_CLASSIC
+
+* Added command convertMapQuakeToDoom `<map>` that expects a Quake 1 .map in the Valve220 format and does some Doom 3 specific fixes
+
+* The gamecode ignores func_group entities if they were created by TrenchBroom instead to warn that there is no spawn function
+
+* dmap / idMapFile move brushes of func_group entities to worldspawn before compiling the BSP. 
+  This also means func_group brushes are structural. 
+  If you want to optimize the BSP then move those to func_static instead which is the same as func_detail in Quake.
+  
+* Fixed that dmap failed writing the BSP .proc file if the command was interrupted by an error
+
+[COMMUNITY]
+
+Steve Saunders contributed
+
+* Updated mac OS support
+
+* Improved Vulkan / Molten support
+
+* Fixed FFmpeg 5 compatibility for newer Linux distros
+
+* Bink videos can play audio if they contain audio tracks (merged from DOOM BFA by Mr.GK)
+
+
+[ASSETS]
+
+* Added TrenchBroom helper entityDefs like a Quake 3 style misc_model to comply with TrenchBroom's Solid/PointClass rules for editing entities
+
+* Added new Creative Commons CC0 textures/common/ and textures/editor/ replacement textures because they didn't ship with the BFG edition
+
+* Added base/convert_maps_to_valve220.cfg which lets you convert all maps to the Valve 220 .map format in one shot
+
+_______________________________________
+
 30 October 2021 - RBDOOM-3-BFG 1.3.0 - Download it from the [RBDOOM-3-BFG ModDB Page](https://www.moddb.com/mods/rbdoom-3-bfg) 
 _______________________________
 
@@ -232,7 +299,6 @@ Here is an overview of the changes made to TrenchBroom:
 * Game FGDs for Doom 3 and Doom 3 BFG
 
 ***Issues***
-* D3Radiant usually does not allow to use just textures. Only valid materials work and only materials should be shown in the texture collection overview. However this branch still displays all found textures.
 * It has no support for BFG .resource files and .bimage files. BFG only shipped for precompressed textures and no .tga files so people who want to mod for BFG have to copy the vanilla D3 base/textures/* and base/models/* to D3BFG/base/
 * Many entities work differently in Doom 3 if they have an origin. Brush work in D3 is usually stored in entity space and not world space. This is a major issue and not solved. I couldn't figure out how to parse the origin first and then translate the brushes accordingly.
 * Doom 3's primary model formats are LWO and ASE. LWO and .md5mesh model support is missing.
