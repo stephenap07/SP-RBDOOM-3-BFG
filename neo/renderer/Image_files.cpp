@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2012-2021 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -45,7 +46,6 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 
-
 /*
 
 This file only has a single entry point:
@@ -64,7 +64,6 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, bool ma
 
 #include <jpeglib.h>
 #include <jerror.h>
-
 
 // hooks from jpeg lib to our system
 
@@ -1226,6 +1225,17 @@ cleanup:
 }
 // RB end
 
+
+/*
+=========================================================
+
+HDR LOADING
+
+Interfaces with stb_image
+=========================================================
+*/
+
+
 /*
 =======================
 LoadHDR
@@ -1390,6 +1400,15 @@ void R_LoadImage( const char* cname, byte** pic, int* width, int* height, ID_TIM
 
 		pbrImageLookup = true;
 	}
+#if 0
+	else if( usage && *usage == TD_R11G11B10F )
+	{
+		name.StripFileExtension();
+
+		ext = "exr";
+		name.DefaultFileExtension( ".exr" );
+	}
+#endif
 
 retry:
 
@@ -1453,7 +1472,7 @@ retry:
 	else
 	{
 		// Try loading from a deferred image hash list
-		int hash = name.FileNameHash( );
+		int hash = name.FileNameHash();
 		for( int i = globalImages->deferredImageHash.First( hash ); i != -1; i = globalImages->deferredImageHash.Next( i ) )
 		{
 			idDeferredImage* image = globalImages->deferredImages[i];

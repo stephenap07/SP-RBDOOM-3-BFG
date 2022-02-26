@@ -5,6 +5,7 @@ Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2012-2021 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -959,6 +960,7 @@ public:
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false );
 	virtual void			CaptureRenderToFile( const char* fileName, bool fixAlpha );
 	virtual void			UnCrop();
+	virtual bool			UploadImage( const char* imageName, const byte* data, int width, int height );
 
 	void					PrintPerformanceCounters();
 
@@ -986,7 +988,11 @@ public:
 
 public:
 	// renderer globals
+
+#if defined( USE_NVRHI )
 	nvrhi::CommandListHandle commandList;
+#endif
+
 	bool					registered;		// cleared at shutdown, set at InitOpenGL
 
 	bool					takingScreenshot;
@@ -1484,99 +1490,6 @@ void R_SampleCubeMapHDR( const idVec3& dir, int size, byte* buffers[6], float re
 void R_SampleCubeMapHDR16F( const idVec3& dir, int size, halfFloat_t* buffers[6], float result[3], float& u, float& v );
 
 idVec2 NormalizedOctCoord( int x, int y, const int probeSideLength );
-
-class CommandlineProgressBar
-{
-private:
-	size_t tics = 0;
-	size_t nextTicCount = 0;
-	int	count = 0;
-	int expectedCount = 0;
-
-	int sysWidth = 1280;
-	int sysHeight = 720;
-
-public:
-	CommandlineProgressBar( int _expectedCount, int width, int height )
-	{
-		expectedCount = _expectedCount;
-		sysWidth = width;
-		sysHeight = height;
-	}
-
-	void Start()
-	{
-		// restore the original resolution, same as "vid_restart"
-		glConfig.nativeScreenWidth = sysWidth;
-		glConfig.nativeScreenHeight = sysHeight;
-		R_SetNewMode( false );
-
-		common->Printf( "0%%  10   20   30   40   50   60   70   80   90   100%%\n" );
-		common->Printf( "|----|----|----|----|----|----|----|----|----|----|\n" );
-
-		common->UpdateScreen( false );
-	}
-
-	void Increment( bool updateScreen )
-	{
-		if( ( count + 1 ) >= nextTicCount )
-		{
-			if( updateScreen )
-			{
-				// restore the original resolution, same as "vid_restart"
-				glConfig.nativeScreenWidth = sysWidth;
-				glConfig.nativeScreenHeight = sysHeight;
-				R_SetNewMode( false );
-
-				// resize frame buffers (this triggers SwapBuffers)
-				tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
-			}
-
-			size_t ticsNeeded = ( size_t )( ( ( double )( count + 1 ) / expectedCount ) * 50.0 );
-
-			do
-			{
-				common->Printf( "*" );
-			}
-			while( ++tics < ticsNeeded );
-
-			nextTicCount = ( size_t )( ( tics / 50.0 ) * expectedCount );
-			if( count == ( expectedCount - 1 ) )
-			{
-				if( tics < 51 )
-				{
-					common->Printf( "*" );
-				}
-				common->Printf( "\n" );
-			}
-
-			if( updateScreen )
-			{
-				common->UpdateScreen( false );
-
-				// swap front / back buffers
-				tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
-			}
-		}
-
-		count++;
-	}
-
-	void Reset()
-	{
-		count = 0;
-		tics = 0;
-		nextTicCount = 0;
-	}
-
-	void Reset( int expected )
-	{
-		expectedCount = expected;
-		count = 0;
-		tics = 0;
-		nextTicCount = 0;
-	}
-};
 
 /*
 ====================================================================

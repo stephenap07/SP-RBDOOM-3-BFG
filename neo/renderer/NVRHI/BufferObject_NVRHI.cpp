@@ -4,7 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013 Robert Beckebans
-Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2016-2017 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -80,7 +80,7 @@ idVertexBuffer::idVertexBuffer()
 {
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
-	bufferHandle.Reset( );
+	bufferHandle.Reset();
 	SetUnmapped();
 }
 
@@ -122,11 +122,11 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 		vertexBufferDesc.keepInitialState = true;
 	}
 
-	bufferHandle = deviceManager->GetDevice( )->createBuffer( vertexBufferDesc );
+	bufferHandle = deviceManager->GetDevice()->createBuffer( vertexBufferDesc );
 
-	if( r_showBuffers.GetBool( ) )
+	if( r_showBuffers.GetBool() )
 	{
-		idLib::Printf( "vertex buffer alloc %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize( ) );
+		idLib::Printf( "vertex buffer alloc %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
 	}
 
 	// copy the data
@@ -164,10 +164,10 @@ void idVertexBuffer::FreeBufferObject()
 
 	if( r_showBuffers.GetBool() )
 	{
-		idLib::Printf( "vertex buffer free %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize( ) );
+		idLib::Printf( "vertex buffer free %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
 	}
 
-	bufferHandle.Reset( );
+	bufferHandle.Reset();
 
 	ClearWithoutFreeing();
 }
@@ -199,12 +199,12 @@ void idVertexBuffer::Update( const void* data, int updateSize, int offset, bool 
 		if( initialUpdate )
 		{
 			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::Common );
-			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
 			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::ShaderResource | nvrhi::ResourceStates::VertexBuffer );
 		}
 		else
 		{
-			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
 		}
 	}
 }
@@ -217,7 +217,7 @@ idVertexBuffer::MapBuffer
 void* idVertexBuffer::MapBuffer( bufferMapType_t mapType )
 {
 	assert( bufferHandle );
-	assert( IsMapped( ) == false );
+	assert( IsMapped() == false );
 
 	nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
 	if( mapType == bufferMapType_t::BM_READ )
@@ -225,9 +225,9 @@ void* idVertexBuffer::MapBuffer( bufferMapType_t mapType )
 		accessMode = nvrhi::CpuAccessMode::Read;
 	}
 
-	buffer = deviceManager->GetDevice( )->mapBuffer( bufferHandle, accessMode );
+	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
 
-	SetMapped( );
+	SetMapped();
 
 	if( buffer == NULL )
 	{
@@ -245,14 +245,14 @@ idVertexBuffer::UnmapBuffer
 void idVertexBuffer::UnmapBuffer()
 {
 	assert( bufferHandle );
-	assert( IsMapped( ) );
+	assert( IsMapped() );
 
-	if( deviceManager && deviceManager->GetDevice( ) )
+	if( deviceManager && deviceManager->GetDevice() )
 	{
-		deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+		deviceManager->GetDevice()->unmapBuffer( bufferHandle );
 	}
 
-	SetUnmapped( );
+	SetUnmapped();
 }
 
 /*
@@ -264,7 +264,7 @@ void idVertexBuffer::ClearWithoutFreeing()
 {
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
-	bufferHandle.Reset( );
+	bufferHandle.Reset();
 }
 
 /*
@@ -285,7 +285,7 @@ idIndexBuffer::idIndexBuffer()
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	bufferHandle.Reset();
-	SetUnmapped( );
+	SetUnmapped();
 }
 
 /*
@@ -306,7 +306,7 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 	size = allocSize;
 	usage = _usage;
 
-	int numBytes = GetAllocedSize( );
+	int numBytes = GetAllocedSize();
 
 	nvrhi::BufferDesc indexBufferDesc;
 	indexBufferDesc.byteSize = numBytes;
@@ -328,7 +328,7 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 		indexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
 	}
 
-	bufferHandle  = deviceManager->GetDevice( )->createBuffer( indexBufferDesc );
+	bufferHandle  = deviceManager->GetDevice()->createBuffer( indexBufferDesc );
 
 	if( data )
 	{
@@ -345,15 +345,15 @@ idIndexBuffer::FreeBufferObject
 */
 void idIndexBuffer::FreeBufferObject()
 {
-	if( IsMapped( ) )
+	if( IsMapped() )
 	{
-		UnmapBuffer( );
+		UnmapBuffer();
 	}
 
 	// if this is a sub-allocation inside a larger buffer, don't actually free anything.
-	if( OwnsBuffer( ) == false )
+	if( OwnsBuffer() == false )
 	{
-		ClearWithoutFreeing( );
+		ClearWithoutFreeing();
 		return;
 	}
 
@@ -362,14 +362,14 @@ void idIndexBuffer::FreeBufferObject()
 		return;
 	}
 
-	if( r_showBuffers.GetBool( ) )
+	if( r_showBuffers.GetBool() )
 	{
-		idLib::Printf( "index buffer free %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize( ) );
+		idLib::Printf( "index buffer free %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
 	}
 
-	bufferHandle.Reset( );
+	bufferHandle.Reset();
 
-	ClearWithoutFreeing( );
+	ClearWithoutFreeing();
 }
 
 /*
@@ -381,18 +381,18 @@ void idIndexBuffer::Update( const void* data, int updateSize, int offset, bool i
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
-	assert( ( GetOffset( ) & 15 ) == 0 );
+	assert( ( GetOffset() & 15 ) == 0 );
 
-	if( updateSize > GetSize( ) )
+	if( updateSize > GetSize() )
 	{
-		idLib::FatalError( "idIndexBuffer::Update: size overrun, %i > %i\n", updateSize, GetSize( ) );
+		idLib::FatalError( "idIndexBuffer::Update: size overrun, %i > %i\n", updateSize, GetSize() );
 	}
 
 	int numBytes = ( updateSize + 15 ) & ~15;
 
 	if( usage == BU_DYNAMIC )
 	{
-		void* buffer = deviceManager->GetDevice( )->mapBuffer( bufferHandle, nvrhi::CpuAccessMode::Write );
+		void* buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, nvrhi::CpuAccessMode::Write );
 		CopyBuffer( ( byte* )buffer + offset, ( const byte* )data, numBytes );
 	}
 	else
@@ -400,13 +400,13 @@ void idIndexBuffer::Update( const void* data, int updateSize, int offset, bool i
 		if( initialUpdate )
 		{
 			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::Common );
-			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
 			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::IndexBuffer | nvrhi::ResourceStates::ShaderResource );
-			commandList->commitBarriers( );
+			commandList->commitBarriers();
 		}
 		else
 		{
-			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
 		}
 	}
 }
@@ -419,7 +419,7 @@ idIndexBuffer::MapBuffer
 void* idIndexBuffer::MapBuffer( bufferMapType_t mapType )
 {
 	assert( bufferHandle );
-	assert( IsMapped( ) == false );
+	assert( IsMapped() == false );
 
 	nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
 	if( mapType == bufferMapType_t::BM_READ )
@@ -427,9 +427,9 @@ void* idIndexBuffer::MapBuffer( bufferMapType_t mapType )
 		accessMode = nvrhi::CpuAccessMode::Read;
 	}
 
-	buffer = deviceManager->GetDevice( )->mapBuffer( bufferHandle, accessMode );
+	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
 
-	SetMapped( );
+	SetMapped();
 
 	if( buffer == NULL )
 	{
@@ -447,14 +447,14 @@ idIndexBuffer::UnmapBuffer
 void idIndexBuffer::UnmapBuffer()
 {
 	assert( bufferHandle );
-	assert( IsMapped( ) );
+	assert( IsMapped() );
 
-	if( deviceManager && deviceManager->GetDevice( ) )
+	if( deviceManager && deviceManager->GetDevice() )
 	{
-		deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+		deviceManager->GetDevice()->unmapBuffer( bufferHandle );
 	}
 
-	SetUnmapped( );
+	SetUnmapped();
 }
 
 /*
@@ -466,7 +466,7 @@ void idIndexBuffer::ClearWithoutFreeing()
 {
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
-	bufferHandle.Reset( );
+	bufferHandle.Reset();
 }
 
 /*
@@ -510,7 +510,7 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, buffer
 
 	bool allocationFailed = false;
 
-	int numBytes = GetAllocedSize( );
+	int numBytes = GetAllocedSize();
 
 	nvrhi::BufferDesc bufferDesc;
 	bufferDesc.byteSize = numBytes;
@@ -528,7 +528,7 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, buffer
 		bufferDesc.keepInitialState = true;
 	}
 
-	bufferHandle = deviceManager->GetDevice( )->createBuffer( bufferDesc );
+	bufferHandle = deviceManager->GetDevice()->createBuffer( bufferDesc );
 
 	// copy the data
 	if( data != NULL )
@@ -557,18 +557,18 @@ void idUniformBuffer::Update( const void* data, int updateSize, int offset, bool
 {
 	assert( bufferHandle );
 	assert_16_byte_aligned( data );
-	assert( ( GetOffset( ) & 15 ) == 0 );
+	assert( ( GetOffset() & 15 ) == 0 );
 
-	if( updateSize > GetSize( ) )
+	if( updateSize > GetSize() )
 	{
-		idLib::FatalError( "idIndexBuffer::Update: size overrun, %i > %i\n", updateSize, GetSize( ) );
+		idLib::FatalError( "idIndexBuffer::Update: size overrun, %i > %i\n", updateSize, GetSize() );
 	}
 
 	int numBytes = ( updateSize + 15 ) & ~15;
 
 	if( usage == BU_DYNAMIC )
 	{
-		void* buffer = deviceManager->GetDevice( )->mapBuffer( bufferHandle, nvrhi::CpuAccessMode::Write );
+		void* buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, nvrhi::CpuAccessMode::Write );
 		CopyBuffer( ( byte* )buffer + offset, ( const byte* )data, numBytes );
 	}
 	else
@@ -576,12 +576,12 @@ void idUniformBuffer::Update( const void* data, int updateSize, int offset, bool
 		if( initialUpdate )
 		{
 			commandList->beginTrackingBufferState( bufferHandle, nvrhi::ResourceStates::Common );
-			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
 			commandList->setPermanentBufferState( bufferHandle, nvrhi::ResourceStates::ConstantBuffer | nvrhi::ResourceStates::ShaderResource );
 		}
 		else
 		{
-			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset( ) + offset );
+			commandList->writeBuffer( bufferHandle, data, numBytes, GetOffset() + offset );
 		}
 	}
 }
@@ -594,7 +594,7 @@ idUniformBuffer::MapBuffer
 void* idUniformBuffer::MapBuffer( bufferMapType_t mapType )
 {
 	assert( bufferHandle );
-	assert( IsMapped( ) == false );
+	assert( IsMapped() == false );
 
 	nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
 	if( mapType == bufferMapType_t::BM_READ )
@@ -602,9 +602,9 @@ void* idUniformBuffer::MapBuffer( bufferMapType_t mapType )
 		accessMode = nvrhi::CpuAccessMode::Read;
 	}
 
-	buffer = deviceManager->GetDevice( )->mapBuffer( bufferHandle, accessMode );
+	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
 
-	SetMapped( );
+	SetMapped();
 
 	if( buffer == NULL )
 	{
@@ -622,14 +622,14 @@ idUniformBuffer::UnmapBuffer
 void idUniformBuffer::UnmapBuffer()
 {
 	assert( bufferHandle );
-	assert( IsMapped( ) );
+	assert( IsMapped() );
 
-	if( deviceManager && deviceManager->GetDevice( ) )
+	if( deviceManager && deviceManager->GetDevice() )
 	{
-		deviceManager->GetDevice( )->unmapBuffer( bufferHandle );
+		deviceManager->GetDevice()->unmapBuffer( bufferHandle );
 	}
 
-	SetUnmapped( );
+	SetUnmapped();
 }
 
 /*
@@ -641,5 +641,5 @@ void idUniformBuffer::ClearWithoutFreeing()
 {
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
-	bufferHandle.Reset( );
+	bufferHandle.Reset();
 }

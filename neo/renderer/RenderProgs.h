@@ -3,8 +3,9 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2018 Robert Beckebans
+Copyright (C) 2013-2022 Robert Beckebans
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -213,7 +214,7 @@ enum rpBinding_t
 
 struct ShaderBlob
 {
-	void* data = nullptr;;
+	void* data = nullptr;
 	size_t size = 0;
 };
 
@@ -248,9 +249,9 @@ struct shaderMacro_t
 	idStr name;
 	idStr definition;
 
-	shaderMacro_t( )
-		: name( )
-		, definition( )
+	shaderMacro_t()
+		: name()
+		, definition()
 	{
 	}
 
@@ -260,6 +261,7 @@ struct shaderMacro_t
 	{ }
 };
 
+#if defined( USE_NVRHI )
 struct programInfo_t
 {
 	nvrhi::ShaderHandle vs;
@@ -268,6 +270,7 @@ struct programInfo_t
 	nvrhi::InputLayoutHandle inputLayout;
 	nvrhi::BindingLayoutHandle bindingLayout;
 };
+#endif
 
 enum
 {
@@ -412,33 +415,41 @@ public:
 	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 
+#if defined( USE_NVRHI )
 	nvrhi::ShaderHandle GetShader( int index );
 
-	nvrhi::BufferHandle GetConstantBuffer( ) { return constantBuffer; }
-	
+	nvrhi::BufferHandle GetConstantBuffer()
+	{
+		return constantBuffer;
+	}
+
 	programInfo_t GetProgramInfo( int index );
 
-	int		CurrentProgram( ) const { return currentIndex; }
+	int		CurrentProgram() const
+	{
+		return currentIndex;
+	}
+#endif
 
 	void	BindProgram( int progIndex );
 
-	void	BindShader_GUI( )
+	void	BindShader_GUI()
 	{
 		BindShader_Builtin( BUILTIN_GUI );
 	}
 
-	void	BindShader_Color( )
+	void	BindShader_Color()
 	{
 		BindShader_Builtin( BUILTIN_COLOR );
 	}
 
 	// RB begin
-	void	BindShader_ColorSkinned( )
+	void	BindShader_ColorSkinned()
 	{
 		BindShader_Builtin( BUILTIN_COLOR_SKINNED );
 	}
 
-	void	BindShader_VertexColor( )
+	void	BindShader_VertexColor()
 	{
 		BindShader_Builtin( BUILTIN_VERTEX_COLOR );
 	}
@@ -506,7 +517,7 @@ public:
 	}
 	// RB end
 
-	void	BindShader_Texture( )
+	void	BindShader_Texture()
 	{
 		BindShader_Builtin( BUILTIN_TEXTURED );
 	}
@@ -875,14 +886,22 @@ public:
 	// the joints buffer should only be bound for vertex programs that use joints
 	bool		ShaderUsesJoints() const
 	{
+#if defined( USE_NVRHI )
+		// FIXME
 		return false;
-		//return renderProgs[current].usesJoints;
+#else
+		return renderProgs[current].usesJoints;
+#endif
 	}
 	// the rpEnableSkinning render parm should only be set for vertex programs that use it
 	bool		ShaderHasOptionalSkinning() const
 	{
+#if defined( USE_NVRHI )
+		// FIXME
 		return false;
-		//return renderProgs[current].optionalSkinning;
+#else
+		return renderProgs[current].optionalSkinning;
+#endif
 	}
 
 	// unbind the currently bound render program
@@ -905,13 +924,29 @@ public:
 	int			FindProgram( const char* name, int vIndex, int fIndex, bindingLayoutType_t bindingType = BINDING_LAYOUT_DEFAULT );
 	void		ZeroUniforms();
 
+#if defined( USE_NVRHI )
 	void						CommitConstantBuffer( nvrhi::ICommandList* commandList );
 
-
-	ID_INLINE nvrhi::IBuffer*				ConstantBuffer( ) { return constantBuffer; }
-	ID_INLINE nvrhi::InputLayoutHandle		InputLayout( ) { return renderProgs[currentIndex].inputLayout; }
-	ID_INLINE nvrhi::BindingLayoutHandle	BindingLayout( ) { return renderProgs[currentIndex].bindingLayout; }
-	ID_INLINE int							BindingLayoutType( ) { return renderProgs[currentIndex].bindingLayoutType; }
+	ID_INLINE nvrhi::IBuffer*				ConstantBuffer()
+	{
+		return constantBuffer;
+	}
+	ID_INLINE nvrhi::InputLayoutHandle		InputLayout()
+	{
+		return renderProgs[currentIndex].inputLayout;
+	}
+	ID_INLINE nvrhi::BindingLayoutHandle	BindingLayout()
+	{
+		return renderProgs[currentIndex].bindingLayout;
+	}
+	ID_INLINE int							BindingLayoutType()
+	{
+		return renderProgs[currentIndex].bindingLayoutType;
+	}
+#elif defined(USE_VULKAN)
+	void		PrintPipelines();
+	void		ClearPipelines();
+#endif
 
 	static const char* FindEmbeddedSourceShader( const char* name );
 
@@ -952,14 +987,15 @@ private:
 
 	static const uint INVALID_PROGID = 0xFFFFFFFF;
 
+#if defined( USE_NVRHI )
 	struct shader_t
 	{
-		shader_t( ) :
-			name( ),
-			nameOutSuffix( ),
+		shader_t() :
+			name(),
+			nameOutSuffix(),
 			shaderFeatures( 0 ),
-			builtin(false),
-			macros( ),
+			builtin( false ),
+			macros(),
 			handle( nullptr ),
 			stage( SHADER_STAGE_DEFAULT )
 		{
@@ -976,8 +1012,8 @@ private:
 
 	struct renderProg_t
 	{
-		renderProg_t( ) :
-			name( ),
+		renderProg_t() :
+			name(),
 			vertexShaderIndex( -1 ),
 			fragmentShaderIndex( -1 ),
 			computeShaderIndex( -1 ),
@@ -1022,6 +1058,134 @@ private:
 	nvrhi::BindingLayoutHandle    bindingLayout;
 	nvrhi::BindingSetHandle       bindingSet;
 	renderProg_t*			      currentShader;
+
+#else
+
+#if defined(USE_VULKAN)
+	struct shader_t
+	{
+		shader_t() :
+			shaderFeatures( 0 ),
+			builtin( false ),
+			vertexLayout( LAYOUT_DRAW_VERT ),
+			module( VK_NULL_HANDLE ) {}
+		idStr				name;
+		idStr				nameOutSuffix;
+		uint32				shaderFeatures;		// RB: Cg compile macros
+		bool				builtin;			// RB: part of the core shaders built into the executable
+		rpStage_t			stage;
+		vertexLayoutType_t	vertexLayout;
+		VkShaderModule		module;
+		idList<rpBinding_t>	bindings;
+		idList<int>			parmIndices;
+	};
+
+	struct renderProg_t
+	{
+		renderProg_t() :
+			progId( INVALID_PROGID ),
+			usesJoints( false ),
+			optionalSkinning( false ),
+			builtin( false ),
+			vertexShaderIndex( -1 ),
+			fragmentShaderIndex( -1 ),
+			vertexLayout( LAYOUT_DRAW_VERT ),
+			pipelineLayout( VK_NULL_HANDLE ),
+			descriptorSetLayout( VK_NULL_HANDLE ) {}
+
+		struct pipelineState_t
+		{
+			pipelineState_t() :
+				stateBits( 0 ),
+				pipeline( VK_NULL_HANDLE )
+			{
+			}
+
+			uint64		stateBits;
+			VkPipeline	pipeline;
+		};
+
+		VkPipeline GetPipeline( uint64 stateBits, VkShaderModule vertexShader, VkShaderModule fragmentShader );
+
+		idStr				name;
+		uint				progId;
+		bool				usesJoints;
+		bool				optionalSkinning;
+		bool				builtin;			// RB: part of the core shaders built into the executable
+		int					vertexShaderIndex;
+		int					fragmentShaderIndex;
+
+		vertexLayoutType_t		vertexLayout;
+		VkPipelineLayout		pipelineLayout;
+		VkDescriptorSetLayout	descriptorSetLayout;
+		idList<rpBinding_t>		bindings;
+		idList<pipelineState_t>	pipelines;
+	};
+
+	static void		CreateDescriptorSetLayout( const shader_t& vertexShader, const shader_t& fragmentShader, renderProg_t& renderProg );
+	void			AllocParmBlockBuffer( const idList<int>& parmIndices, idUniformBuffer& ubo );
+#else
+	struct shader_t
+	{
+		shader_t() :
+			progId( INVALID_PROGID ),
+			shaderFeatures( 0 ),
+			builtin( false ),
+			vertexLayout( LAYOUT_DRAW_VERT ),
+			uniformArray( -1 ) {}
+		idStr			name;
+		idStr			nameOutSuffix;
+		uint32			shaderFeatures;		// RB: Cg compile macros
+		bool			builtin;			// RB: part of the core shaders built into the executable
+		vertexLayoutType_t	vertexLayout;
+		rpStage_t		stage;
+		uint			progId;
+		int				uniformArray;
+		idList<int>		uniforms;
+	};
+
+	struct renderProg_t
+	{
+		renderProg_t() :
+			progId( INVALID_PROGID ),
+			usesJoints( false ),
+			optionalSkinning( false ),
+			builtin( false ),
+			vertexLayout( LAYOUT_UNKNOWN ),
+			vertexShaderIndex( -1 ),
+			fragmentShaderIndex( -1 ) {}
+
+		idStr				name;
+		uint				progId;
+		bool				usesJoints;
+		bool				optionalSkinning;
+		bool				builtin;			// RB: part of the core shaders built into the executable
+		vertexLayoutType_t	vertexLayout;
+		int					vertexShaderIndex;
+		int					fragmentShaderIndex;
+	};
+#endif
+
+	void							LoadShader( shader_t& shader );
+
+	int											current;
+	idList<renderProg_t, TAG_RENDER>			renderProgs;
+	idList<shader_t, TAG_RENDER>				shaders;
+
+	idStaticList < idVec4, RENDERPARM_TOTAL >	uniforms;
+
+#if defined( USE_VULKAN )
+	int					counter;
+	int					currentData;
+	int					currentDescSet;
+	int					currentParmBufferOffset;
+	VkDescriptorPool	descriptorPools[ NUM_FRAME_DATA ];
+	VkDescriptorSet		descriptorSets[ NUM_FRAME_DATA ][ MAX_DESC_SETS ];
+
+	idUniformBuffer* 	parmBuffers[ NUM_FRAME_DATA ];
+#endif
+
+#endif //#if defined( USE_NVRHI )
 };
 
 extern idRenderProgManager renderProgManager;

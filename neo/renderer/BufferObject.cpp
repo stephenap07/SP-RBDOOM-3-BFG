@@ -5,6 +5,7 @@ Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013 Robert Beckebans
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -126,8 +127,23 @@ idBufferObject::idBufferObject()
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	usage = BU_STATIC;
-	bufferHandle.Reset( );
-	inputLayout.Reset( );
+
+#if defined( USE_VULKAN )
+	apiObject = VK_NULL_HANDLE;
+
+#if defined( USE_AMD_ALLOCATOR )
+	vmaAllocation = NULL;
+#endif
+
+#elif defined( USE_NVRHI )
+	bufferHandle.Reset();
+	inputLayout.Reset();
+	buffer = NULL;
+
+#else
+	apiObject = NULL;
+	buffer = NULL;
+#endif
 }
 
 /*
@@ -164,7 +180,9 @@ void idVertexBuffer::Reference( const idVertexBuffer& other )
 	offsetInOtherBuffer = other.GetOffset();	// this strips the OWNS_BUFFER_FLAG
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
-
+#if defined( USE_VULKAN )
+	allocation = other.allocation;
+#endif
 	assert( OwnsBuffer() == false );
 }
 

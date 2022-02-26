@@ -48,7 +48,7 @@ idImage::idImage
 */
 idImage::idImage( const char* name ) : imgName( name )
 {
-	texture.Reset( );
+	texture.Reset();
 	generatorFunction = NULL;
 	filter = TF_DEFAULT;
 	repeat = TR_REPEAT;
@@ -64,7 +64,7 @@ idImage::idImage( const char* name ) : imgName( name )
 	binaryFileTime = FILE_NOT_FOUND_TIMESTAMP;
 	refCount = 0;
 
-	DeferredLoadImage( );
+	DeferredLoadImage();
 }
 
 /*
@@ -87,78 +87,78 @@ bool idImage::IsLoaded() const
 	return isLoaded;
 }
 
-void idImage::CreateSampler( )
+void idImage::CreateSampler()
 {
-	sampler.Reset( );
+	sampler.Reset();
 
-	samplerDesc = nvrhi::SamplerDesc( )
-		.setAllFilters( false )
-		.setAllAddressModes( nvrhi::SamplerAddressMode::Clamp )
-		.setMaxAnisotropy( 1.0f );
+	samplerDesc = nvrhi::SamplerDesc()
+				  .setAllFilters( false )
+				  .setAllAddressModes( nvrhi::SamplerAddressMode::Clamp )
+				  .setMaxAnisotropy( 1.0f );
 
-	if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL  )
+	if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL )
 	{
 		samplerDesc.setReductionType( nvrhi::SamplerReductionType::Comparison );
 	}
 
 	switch( filter )
 	{
-	case TF_DEFAULT:
-		samplerDesc.minFilter = true;
-		samplerDesc.setAllFilters( true )
-			.setMaxAnisotropy( r_maxAnisotropicFiltering.GetInteger( ) );
+		case TF_DEFAULT:
+			samplerDesc.minFilter = true;
+			samplerDesc.setAllFilters( true )
+			.setMaxAnisotropy( r_maxAnisotropicFiltering.GetInteger() );
 
-		break;
+			break;
 
-	case TF_LINEAR:
-		samplerDesc.setAllFilters( true );
-		break;
+		case TF_LINEAR:
+			samplerDesc.setAllFilters( true );
+			break;
 
-	case TF_NEAREST:
-		samplerDesc.setAllFilters( false );
-		break;
+		case TF_NEAREST:
+			samplerDesc.setAllFilters( false );
+			break;
 
 		// RB:
-	case TF_NEAREST_MIPMAP:
-		samplerDesc.setAllFilters( false );
-		break;
+		case TF_NEAREST_MIPMAP:
+			samplerDesc.setAllFilters( false );
+			break;
 
-	default:
-		idLib::FatalError( "idImage::CreateSampler: unrecognized texture filter %d", filter );
+		default:
+			idLib::FatalError( "idImage::CreateSampler: unrecognized texture filter %d", filter );
 	}
 
 	switch( repeat )
 	{
-	case TR_REPEAT:
-		samplerDesc.setAddressU( nvrhi::SamplerAddressMode::Repeat )
+		case TR_REPEAT:
+			samplerDesc.setAddressU( nvrhi::SamplerAddressMode::Repeat )
 			.setAddressV( nvrhi::SamplerAddressMode::Repeat )
 			.setAddressW( nvrhi::SamplerAddressMode::Repeat );
-		break;
+			break;
 
-	case TR_CLAMP:
-		samplerDesc.setAddressU( nvrhi::SamplerAddressMode::ClampToEdge )
+		case TR_CLAMP:
+			samplerDesc.setAddressU( nvrhi::SamplerAddressMode::ClampToEdge )
 			.setAddressV( nvrhi::SamplerAddressMode::ClampToEdge )
 			.setAddressW( nvrhi::SamplerAddressMode::ClampToEdge );
-		break;
+			break;
 
-	case TR_CLAMP_TO_ZERO_ALPHA:
-		samplerDesc.setBorderColor( nvrhi::Color(0.f, 0.f, 0.f, 0.f) )
+		case TR_CLAMP_TO_ZERO_ALPHA:
+			samplerDesc.setBorderColor( nvrhi::Color( 0.f, 0.f, 0.f, 0.f ) )
 			.setAddressU( nvrhi::SamplerAddressMode::ClampToBorder )
 			.setAddressV( nvrhi::SamplerAddressMode::ClampToBorder )
 			.setAddressW( nvrhi::SamplerAddressMode::ClampToBorder );
-		break;
+			break;
 
-	case TR_CLAMP_TO_ZERO:
-		samplerDesc.setBorderColor( nvrhi::Color( 0.f, 0.f, 0.f, 1.f ) )
+		case TR_CLAMP_TO_ZERO:
+			samplerDesc.setBorderColor( nvrhi::Color( 0.f, 0.f, 0.f, 1.f ) )
 			.setAddressU( nvrhi::SamplerAddressMode::ClampToBorder )
 			.setAddressV( nvrhi::SamplerAddressMode::ClampToBorder )
 			.setAddressW( nvrhi::SamplerAddressMode::ClampToBorder );
-		break;
-	default:
-		idLib::FatalError( "idImage::CreateSampler: unrecognized texture repeat mode %d", repeat );
+			break;
+		default:
+			idLib::FatalError( "idImage::CreateSampler: unrecognized texture repeat mode %d", repeat );
 	}
 
-	//sampler = deviceManager->GetDevice( )->createSampler( samplerDesc );
+	//sampler = deviceManager->GetDevice()->createSampler( samplerDesc );
 }
 
 /*
@@ -168,7 +168,7 @@ Bind
 Automatically enables 2D mapping or cube mapping if needed
 ==============
 */
-void idImage::Bind( )
+void idImage::Bind()
 {
 	RENDERLOG_PRINTF( "idImage::Bind( %s )\n", GetName() );
 
@@ -233,14 +233,14 @@ Image, but doesn't put anything in them.
 This should not be done during normal game-play, if you can avoid it.
 ========================
 */
-void idImage::AllocImage( )
+void idImage::AllocImage()
 {
 	PurgeImage();
 
 	nvrhi::Format format = nvrhi::Format::RGBA8_UINT;
 	int bpp = 4;
 
-	CreateSampler( );
+	CreateSampler();
 
 	switch( opts.format )
 	{
@@ -269,7 +269,7 @@ void idImage::AllocImage( )
 			break;
 
 		case FMT_INT8:
-			format = nvrhi::Format::R8_UINT;
+			format = nvrhi::Format::R8_UNORM;
 			break;
 
 		case FMT_R8:
@@ -350,7 +350,7 @@ void idImage::AllocImage( )
 	uint originalWidth = opts.width;
 	uint originalHeight = opts.height;
 
-	if( IsCompressed( ) )
+	if( IsCompressed() )
 	{
 		originalWidth = ( originalWidth + 3 ) & ~3;
 		originalHeight = ( originalHeight + 3 ) & ~3;
@@ -378,7 +378,7 @@ void idImage::AllocImage( )
 		}
 	}
 
-	auto textureDesc = nvrhi::TextureDesc( )
+	auto textureDesc = nvrhi::TextureDesc()
 					   .setDebugName( GetName() )
 					   .setDimension( nvrhi::TextureDimension::Texture2D )
 					   .setWidth( scaledWidth )
@@ -387,19 +387,55 @@ void idImage::AllocImage( )
 					   .setSampleCount( opts.samples )
 					   .setMipLevels( opts.numLevels );
 
+	if( opts.colorFormat == CFM_GREEN_ALPHA )
+	{
+		textureDesc.componentMapping.bits.r = 5;
+		textureDesc.componentMapping.bits.g = 5;
+		textureDesc.componentMapping.bits.b = 5;
+		textureDesc.componentMapping.bits.a = 1;
+	}
+	else if( opts.format == FMT_LUM8 )
+	{
+		textureDesc.componentMapping.bits.r = 0;
+		textureDesc.componentMapping.bits.g = 0;
+		textureDesc.componentMapping.bits.b = 0;
+		textureDesc.componentMapping.bits.a = 5;
+	}
+	else if( opts.format == FMT_L8A8 )//|| opts.format == FMT_RG16F )
+	{
+		textureDesc.componentMapping.bits.r = 0;
+		textureDesc.componentMapping.bits.g = 0;
+		textureDesc.componentMapping.bits.b = 0;
+		textureDesc.componentMapping.bits.a = 1;
+	}
+	else if( opts.format == FMT_ALPHA )
+	{
+		textureDesc.componentMapping.bits.r = 5;
+		textureDesc.componentMapping.bits.g = 5;
+		textureDesc.componentMapping.bits.b = 5;
+		textureDesc.componentMapping.bits.a = 0;
+	}
+	else if( opts.format == FMT_INT8 )
+	{
+		textureDesc.componentMapping.bits.r = 0;
+		textureDesc.componentMapping.bits.g = 0;
+		textureDesc.componentMapping.bits.b = 0;
+		textureDesc.componentMapping.bits.a = 0;
+	}
+
 	if( opts.isRenderTarget )
 	{
 		//textureDesc.keepInitialState = true;
 		//textureDesc.setKeepInitialState( true );
 		textureDesc.setInitialState( nvrhi::ResourceStates::RenderTarget )
-			.setClearValue( nvrhi::Color( 0.f ) )
-			.setIsRenderTarget( true )
-			.setKeepInitialState( true );
+		.setClearValue( nvrhi::Color( 0.f ) )
+		.setIsRenderTarget( true )
+		.setKeepInitialState( true );
 
 		if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL || opts.format == FMT_SHADOW_ARRAY )
 		{
 			textureDesc.setInitialState( nvrhi::ResourceStates::DepthWrite )
-				.setClearValue( nvrhi::Color( 1.f ) );
+			.setClearValue( nvrhi::Color( 1.f ) );
 		}
 
 		if( opts.format == FMT_R32F || opts.format == FMT_R8 )
@@ -431,7 +467,7 @@ void idImage::AllocImage( )
 		textureDesc.setArraySize( 1 );
 	}
 
-	texture = deviceManager->GetDevice( )->createTexture( textureDesc );
+	texture = deviceManager->GetDevice()->createTexture( textureDesc );
 
 	assert( texture );
 }
@@ -443,8 +479,8 @@ idImage::PurgeImage
 */
 void idImage::PurgeImage()
 {
-	texture.Reset( );
-	sampler.Reset( );
+	texture.Reset();
+	sampler.Reset();
 	isLoaded = false;
 	defaulted = false;
 }

@@ -32,7 +32,11 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "RenderCommon.h"
-#include <sys/DeviceManager.h>
+
+#if defined( USE_NVRHI )
+	#include <sys/DeviceManager.h>
+	extern DeviceManager* deviceManager;
+#endif
 
 /*
 ===================
@@ -1092,9 +1096,6 @@ void idRenderWorldLocal::RenderScene( const renderView_t* renderView )
 		windowWidth = ( windowWidth * r_screenFraction.GetInteger() ) / 100;
 		windowHeight = ( windowHeight * r_screenFraction.GetInteger() ) / 100;
 	}
-
-	//tr.CropRenderSize( renderView->x1, renderView->y1, windowWidth, windowHeight );
-
 	tr.CropRenderSize( windowWidth, windowHeight );
 	tr.GetCroppedViewport( &parms->viewport );
 
@@ -1941,8 +1942,6 @@ void idRenderWorldLocal::AddEnvprobeRefToArea( RenderEnvprobeLocal* probe, porta
 }
 // RB end
 
-extern DeviceManager* deviceManager;
-
 /*
 ===================
 idRenderWorldLocal::GenerateAllInteractions
@@ -1951,7 +1950,7 @@ Force the generation of all light / surface interactions at the start of a level
 If this isn't called, they will all be dynamically generated
 ===================
 */
-void idRenderWorldLocal::GenerateAllInteractions( )
+void idRenderWorldLocal::GenerateAllInteractions()
 {
 	if( !tr.IsInitialized() )
 	{
@@ -1973,7 +1972,9 @@ void idRenderWorldLocal::GenerateAllInteractions( )
 	int	size =  interactionTableWidth * interactionTableHeight * sizeof( *interactionTable );
 	interactionTable = ( idInteraction** )R_ClearedStaticAlloc( size );
 
-	tr.commandList->open( );
+#if defined( USE_NVRHI )
+	tr.commandList->open();
+#endif
 
 	// iterate through all lights
 	int	count = 0;
@@ -2028,8 +2029,10 @@ void idRenderWorldLocal::GenerateAllInteractions( )
 		session->Pump();
 	}
 
-	tr.commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( tr.commandList );
+#if defined( USE_NVRHI )
+	tr.commandList->close();
+	deviceManager->GetDevice()->executeCommandList( tr.commandList );
+#endif
 
 	int end = Sys_Milliseconds();
 	int	msec = end - start;

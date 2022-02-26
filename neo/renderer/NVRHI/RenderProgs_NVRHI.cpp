@@ -4,7 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013-2018 Robert Beckebans
-Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -62,14 +62,14 @@ void idRenderProgManager::BindProgram( int index )
 	}
 
 	currentIndex = index;
-	RENDERLOG_PRINTF( "Binding HLSL Program %s\n", renderProgs[index].name.c_str( ) );
+	RENDERLOG_PRINTF( "Binding HLSL Program %s\n", renderProgs[index].name.c_str() );
 
 	renderProg_t& prog = renderProgs[index];
 
 	tr.backend.BindProgram( shaders[prog.vertexShaderIndex].handle,
-		shaders[prog.fragmentShaderIndex].handle,
-		prog.inputLayout,
-		prog.bindingLayout );
+							shaders[prog.fragmentShaderIndex].handle,
+							prog.inputLayout,
+							prog.bindingLayout );
 
 	renderProgs[index].bindingLayout;
 }
@@ -128,7 +128,7 @@ void idRenderProgManager::LoadShader( shader_t& shader )
 	}
 
 	idStr adjustedName = shader.name;
-	adjustedName.StripFileExtension( );
+	adjustedName.StripFileExtension();
 	adjustedName = idStr( "renderprogs/dxil/" ) + adjustedName + "." + stage + ".bin";
 
 	ShaderBlob shaderBlob = GetBytecode( adjustedName );
@@ -139,17 +139,17 @@ void idRenderProgManager::LoadShader( shader_t& shader )
 	}
 
 	idList<nvrhi::ShaderConstant> constants;
-	for( int i = 0; i < shader.macros.Num( ); i++ )
+	for( int i = 0; i < shader.macros.Num(); i++ )
 	{
 		constants.Append( nvrhi::ShaderConstant
 		{
 			shader.macros[i].name.c_str(),
-			shader.macros[i].definition.c_str( )
+			shader.macros[i].definition.c_str()
 		} );
 	}
 
 	nvrhi::ShaderDesc desc = nvrhi::ShaderDesc( shaderType );
-	desc.debugName = shader.name;
+	desc.debugName = ( idStr( shader.name ) + idStr( shader.nameOutSuffix ) ).c_str();
 
 	nvrhi::ShaderDesc descCopy = desc;
 	// TODO(Stephen): Might not want to hard-code this.
@@ -158,7 +158,7 @@ void idRenderProgManager::LoadShader( shader_t& shader )
 	nvrhi::ShaderConstant* shaderConstant( nullptr );
 
 	nvrhi::ShaderHandle shaderHandle = nvrhi::createShaderPermutation( device, descCopy, shaderBlob.data, shaderBlob.size,
-									   ( constants.Num() > 0 ) ? &constants[0] : shaderConstant, uint32_t( constants.Num( ) ) );
+									   ( constants.Num() > 0 ) ? &constants[0] : shaderConstant, uint32_t( constants.Num() ) );
 
 	shader.handle = shaderHandle;
 }
@@ -171,7 +171,7 @@ ShaderBlob idRenderProgManager::GetBytecode( const char* fileName )
 
 	if( !blob.data )
 	{
-		common->FatalError( "Couldn't read the binary file for shader %s", fileName);
+		common->FatalError( "Couldn't read the binary file for shader %s", fileName );
 	}
 
 	return blob;
@@ -190,9 +190,9 @@ void idRenderProgManager::LoadProgram( const int programIndex, const int vertexS
 	if( prog.vertexLayout > 0 )
 	{
 		prog.inputLayout = device->createInputLayout(
-			&vertexLayoutDescs[prog.vertexLayout][0],
-			vertexLayoutDescs[prog.vertexLayout].Num( ),
-			shaders[prog.vertexShaderIndex].handle );
+							   &vertexLayoutDescs[prog.vertexLayout][0],
+							   vertexLayoutDescs[prog.vertexLayout].Num(),
+							   shaders[prog.vertexShaderIndex].handle );
 	}
 	prog.bindingLayout = bindingLayouts[prog.bindingLayoutType];
 }
@@ -204,9 +204,9 @@ void idRenderProgManager::LoadComputeProgram( const int programIndex, const int 
 	if( prog.vertexLayout != LAYOUT_UNKNOWN )
 	{
 		prog.inputLayout = device->createInputLayout(
-			&vertexLayoutDescs[prog.vertexLayout][0],
-			vertexLayoutDescs[prog.vertexLayout].Num( ),
-			shaders[prog.vertexShaderIndex].handle );
+							   &vertexLayoutDescs[prog.vertexLayout][0],
+							   vertexLayoutDescs[prog.vertexLayout].Num( ),
+							   shaders[prog.vertexShaderIndex].handle );
 	}
 	prog.bindingLayout = bindingLayouts[prog.bindingLayoutType];
 }
@@ -219,7 +219,7 @@ idRenderProgManager::FindProgram
 */
 int	 idRenderProgManager::FindProgram( const char* name, int vIndex, int fIndex, bindingLayoutType_t bindingType )
 {
-	for( int i = 0; i < renderProgs.Num( ); ++i )
+	for( int i = 0; i < renderProgs.Num(); ++i )
 	{
 		if( ( renderProgs[i].vertexShaderIndex == vIndex ) && ( renderProgs[i].fragmentShaderIndex == fIndex ) )
 		{
@@ -254,11 +254,13 @@ void idRenderProgManager::KillAllShaders()
 {
 	Unbind();
 
+	tr.backend.ResetPipelineCache();
+
 	for( int i = 0; i < shaders.Num( ); i++ )
 	{
 		if( shaders[i].handle )
 		{
-			shaders[i].handle.Reset( );
+			shaders[i].handle.Reset();
 		}
 	}
 }
@@ -281,9 +283,9 @@ void idRenderProgManager::SetUniformValue( const renderParm_t rp, const float* v
 idRenderProgManager::ZeroUniforms
 ================================================================================================
 */
-void idRenderProgManager::ZeroUniforms( )
+void idRenderProgManager::ZeroUniforms()
 {
-	memset( uniforms.Ptr( ), 0, uniforms.Allocated( ) );
+	memset( uniforms.Ptr(), 0, uniforms.Allocated() );
 }
 
 /*
@@ -293,6 +295,6 @@ idRenderProgManager::CommitConstantBuffer
 */
 void idRenderProgManager::CommitConstantBuffer( nvrhi::ICommandList* commandList )
 {
-	uniforms.Size( );
+	uniforms.Size();
 	commandList->writeBuffer( constantBuffer, &uniforms[0], uniforms.Allocated() );
 }

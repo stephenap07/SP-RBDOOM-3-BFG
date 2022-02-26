@@ -87,7 +87,8 @@ enum graphicsVendor_t
 {
 	VENDOR_NVIDIA,
 	VENDOR_AMD,
-	VENDOR_INTEL
+	VENDOR_INTEL,
+	VENDOR_APPLE                            // SRS - Added support for Apple GPUs
 };
 
 // RB: similar to Q3A - allow separate codepaths between OpenGL 3.x, OpenGL ES versions
@@ -250,6 +251,10 @@ struct glconfig_t
 	float				physicalScreenWidthInCentimeters;
 
 	float				pixelAspect;
+
+#if !defined(USE_NVRHI) && !defined(USE_VULKAN)
+	GLuint				global_vao;
+#endif
 };
 
 
@@ -427,6 +432,11 @@ public:
 	// to use the default tga loading code without having dimmed down areas in many places
 	virtual void			CaptureRenderToFile( const char* fileName, bool fixAlpha = false ) = 0;
 	virtual void			UnCrop() = 0;
+
+	// the image has to be already loaded ( most straightforward way would be through a FindMaterial )
+	// texture filter / mipmapping / repeat won't be modified by the upload
+	// returns false if the image wasn't found
+	virtual bool			UploadImage( const char* imageName, const byte* data, int width, int height ) = 0;
 
 	// consoles switch stereo 3D eye views each 60 hz frame
 	virtual int				GetFrameCount() const = 0;

@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -31,9 +32,12 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Model_local.h"
 #include "RenderCommon.h"	// just for R_FreeWorldInteractions and R_CreateWorldInteractions
-#include <sys/DeviceManager.h>
 
-extern DeviceManager* deviceManager;
+#if defined( USE_NVRHI )
+	#include <sys/DeviceManager.h>
+
+	extern DeviceManager* deviceManager;
+#endif
 
 idCVar binaryLoadRenderModels( "binaryLoadRenderModels", "1", 0, "enable binary load/write of render models" );
 idCVar preload_MapModels( "preload_MapModels", "1", CVAR_SYSTEM | CVAR_BOOL, "preload models during begin or end levelload" );
@@ -239,10 +243,12 @@ idRenderModelManagerLocal::Init
 */
 void idRenderModelManagerLocal::Init()
 {
+#if defined( USE_NVRHI )
 	if( !commandList )
 	{
-		commandList = deviceManager->GetDevice( )->createCommandList( );
+		commandList = deviceManager->GetDevice()->createCommandList();
 	}
+#endif
 
 	cmdSystem->AddCommand( "listModels", ListModels_f, CMD_FL_RENDERER, "lists all models" );
 	cmdSystem->AddCommand( "printModel", PrintModel_f, CMD_FL_RENDERER, "prints model info", idCmdSystem::ArgCompletion_ModelName );
@@ -656,9 +662,10 @@ void idRenderModelManagerLocal::ReloadModels( bool forceAll )
 
 void idRenderModelManagerLocal::CreateMeshBuffers( nvrhi::ICommandList* commandList )
 {
-	for( int i = 0; i < models.Num( ); i++ )
+	for( int i = 0; i < models.Num(); i++ )
 	{
 		idRenderModel* model = models[i];
+
 		// Upload vertices and indices and shadow vertices into the vertex cache.
 		assert( false && "Stephen should implement me!" );
 	}
@@ -781,7 +788,7 @@ void idRenderModelManagerLocal::Preload( const idPreloadManifest& manifest )
 idRenderModelManagerLocal::EndLevelLoad
 =================
 */
-void idRenderModelManagerLocal::EndLevelLoad( )
+void idRenderModelManagerLocal::EndLevelLoad()
 {
 	common->Printf( "----- idRenderModelManagerLocal::EndLevelLoad -----\n" );
 
@@ -834,9 +841,9 @@ void idRenderModelManagerLocal::EndLevelLoad( )
 		}
 	}
 
-	commandList->open( );
+	commandList->open();
 
-	for( int i = 0; i < models.Num( ); i++ )
+	for( int i = 0; i < models.Num(); i++ )
 	{
 		idRenderModel* model = models[i];
 		model->CreateBuffers( commandList );
@@ -855,8 +862,8 @@ void idRenderModelManagerLocal::EndLevelLoad( )
 		}
 	}
 
-	commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	commandList->close();
+	deviceManager->GetDevice()->executeCommandList( commandList );
 
 	// _D3XP added this
 	int	end = Sys_Milliseconds();

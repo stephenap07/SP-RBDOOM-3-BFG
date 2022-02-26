@@ -5,6 +5,7 @@ Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013-2021 Robert Beckebans
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -225,7 +226,6 @@ typedef enum
 	TD_COVERAGE,			// coverage map for fill depth pass when YCoCG is used
 	TD_DEPTH,				// depth buffer copy for motion blur
 	// RB begin
-	TD_DEPTH_STENCIL,       // depth buffer and stencil buffer
 	TD_SPECULAR_PBR_RMAO,	// may be compressed, and always zeros the alpha channel, linear RGB R = roughness, G = metal, B = ambient occlusion
 	TD_SPECULAR_PBR_RMAOD,	// may be compressed, alpha channel contains displacement map
 	TD_HIGHQUALITY_CUBE,	// motorsep - Uncompressed cubemap texture (RGB colorspace)
@@ -239,6 +239,7 @@ typedef enum
 	// RB end
 	TD_R8F,					// Stephen: Added for ambient occlusion render target.
 	TD_LDR,					// Stephen: Added for SRGB render target when tonemapping.
+	TD_DEPTH_STENCIL,
 } textureUsage_t;
 
 typedef enum
@@ -266,7 +267,7 @@ class idDeferredImage
 {
 public:
 	idDeferredImage( const char* imageName );
-	~idDeferredImage( );
+	~idDeferredImage();
 
 	idStr			name;
 	byte* pic;
@@ -288,7 +289,7 @@ ID_INLINE idDeferredImage::idDeferredImage( const char* imageName )
 {
 }
 
-ID_INLINE idDeferredImage::~idDeferredImage( )
+ID_INLINE idDeferredImage::~idDeferredImage()
 {
 	if( pic )
 	{
@@ -317,7 +318,7 @@ public:
 	// Makes this image active on the current texture unit.
 	// automatically enables or disables cube mapping
 	// May perform file loading if the image was not preloaded.
-	void		Bind( );
+	void		Bind();
 
 	// RB begin
 	void		GenerateShadowArray( int width, int height, textureFilter_t filter, textureRepeat_t repeat, textureUsage_t usage, nvrhi::ICommandList* commandList );
@@ -380,6 +381,27 @@ public:
 	// Platform specific implementations
 	//---------------------------------------------
 
+#if defined( USE_VULKAN )
+	static void	EmptyGarbage();
+
+	VkImage		GetImage() const
+	{
+		return image;
+	}
+	VkImageView	GetView() const
+	{
+		return view;
+	}
+	VkImageLayout GetLayout() const
+	{
+		return layout;
+	}
+	VkSampler	GetSampler() const
+	{
+		return sampler;
+	}
+#endif
+
 	void		AllocImage( const idImageOpts& imgOpts, textureFilter_t filter, textureRepeat_t repeat );
 
 	// Deletes the texture object, but leaves the structure so it can be reloaded
@@ -415,10 +437,10 @@ public:
 	bool				IsLoaded() const;
 
 	// Creates a sampler for this texture to use in the shader.
-	void				CreateSampler( );
+	void				CreateSampler();
 
 	// RB
-	bool				IsDefaulted( ) const
+	bool				IsDefaulted() const
 	{
 		return defaulted;
 	}
@@ -451,14 +473,14 @@ public:
 	}
 	// DG end
 
-	nvrhi::TextureHandle GetTextureHandle( )
+	nvrhi::TextureHandle GetTextureHandle()
 	{
 		return texture;
 	}
 
-	void*		GetTextureID( )
+	void*		GetTextureID()
 	{
-		return ( void* )texture.Get( );
+		return ( void* )texture.Get();
 	}
 
 	void* GetSampler( SamplerCache& samplerCache )
@@ -468,7 +490,7 @@ public:
 			sampler = samplerCache.GetOrCreateSampler( samplerDesc );
 		}
 
-		return (void*)sampler.Get();
+		return ( void* )sampler.Get();
 	}
 
 	void SetSampler( nvrhi::SamplerHandle _sampler )
@@ -476,7 +498,7 @@ public:
 		sampler = _sampler;
 	}
 
-	const nvrhi::SamplerDesc& GetSamplerDesc( )
+	const nvrhi::SamplerDesc& GetSamplerDesc()
 	{
 		return samplerDesc;
 	}
@@ -484,8 +506,8 @@ public:
 private:
 	friend class idImageManager;
 
-	void				DeriveOpts( );
-	void				AllocImage( );
+	void				DeriveOpts();
+	void				AllocImage();
 	void				SetSamplerState( textureFilter_t tf, textureRepeat_t tr );
 
 	// parameters that define this image
@@ -511,9 +533,44 @@ private:
 
 	static const uint32 TEXTURE_NOT_LOADED = 0xFFFFFFFF;
 
+#if defined( USE_NVRHI )
 	nvrhi::TextureHandle	texture;
 	nvrhi::SamplerHandle	sampler;
 	nvrhi::SamplerDesc		samplerDesc;
+
+#elif defined( USE_VULKAN )
+	void				CreateSampler();
+	// SRS - added method to set image layout
+	void                SetImageLayout( VkImage image, VkImageSubresourceRange subresourceRange, VkImageLayout oldImageLayout, VkImageLayout newImageLayout );
+	// SRS End
+
+	bool				bIsSwapChainImage;
+	VkFormat			internalFormat;
+	VkImage				image;
+	VkImageView			view;
+	VkImageLayout		layout;
+	VkSampler			sampler;
+
+#if defined( USE_AMD_ALLOCATOR )
+	VmaAllocation		allocation;
+	static idList< VmaAllocation >		allocationGarbage[ NUM_FRAME_DATA ];
+#else
+	vulkanAllocation_t	allocation;
+	static idList< vulkanAllocation_t > allocationGarbage[ NUM_FRAME_DATA ];
+#endif
+
+	static int						garbageIndex;
+	static idList< VkImage >		imageGarbage[ NUM_FRAME_DATA ];
+	static idList< VkImageView >	viewGarbage[ NUM_FRAME_DATA ];
+	static idList< VkSampler >		samplerGarbage[ NUM_FRAME_DATA ];
+#else
+	GLuint				texnum;				// gl texture binding
+
+	// we could derive these in subImageUpload each time if necessary
+	GLuint				internalFormat;
+	GLuint				dataFormat;
+	GLuint				dataType;
+#endif
 };
 
 // data is RGBA

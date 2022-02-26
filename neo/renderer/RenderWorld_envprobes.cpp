@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2020-2021 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -33,11 +34,13 @@ If you have questions concerning this license or the applicable additional terms
 #include "../libs/mesa/format_r11g11b10f.h"
 
 #include "RenderCommon.h"
+#include "CmdlineProgressbar.h"
 #include "../framework/Common_local.h" // commonLocal.WaitGameThread();
-#include <sys/DeviceManager.h>
 
-
-extern DeviceManager* deviceManager;
+#if defined( USE_NVRHI )
+	#include <sys/DeviceManager.h>
+	extern DeviceManager* deviceManager;
+#endif
 
 /*
 =============
@@ -1152,10 +1155,11 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 
 	int	totalEnd = Sys_Milliseconds();
 
+#if defined( USE_NVRHI )
+	nvrhi::CommandListHandle commandList = deviceManager->GetDevice()->createCommandList();
 
-	nvrhi::CommandListHandle commandList = deviceManager->GetDevice( )->createCommandList( );
-
-	commandList->open( );
+	commandList->open();
+#endif
 
 	//--------------------------------------------
 	// LOAD CONVOLVED OCTAHEDRONS INTO THE GPU
@@ -1172,8 +1176,10 @@ CONSOLE_COMMAND( bakeEnvironmentProbes, "Bake environment probes", NULL )
 		def->radianceImage->Reload( true, commandList );
 	}
 
-	commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+#if defined( USE_NVRHI )
+	commandList->close();
+	deviceManager->GetDevice()->executeCommandList( commandList );
+#endif
 
 	idLib::Printf( "----------------------------------\n" );
 	idLib::Printf( "Processed %i light probes\n", totalProcessedProbes );

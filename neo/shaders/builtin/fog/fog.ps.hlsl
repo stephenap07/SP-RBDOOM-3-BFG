@@ -31,16 +31,16 @@ If you have questions concerning this license or the applicable additional terms
 
 
 // *INDENT-OFF*
-Texture2D<float> t_Fog1 : register( t0 );
-Texture2D<float> t_Fog2 : register( t1 );
+Texture2D t_Fog1	: register( t0 );
+Texture2D t_Fog2	: register( t1 );
 
-SamplerState samp0 : register(s0);
-SamplerState samp1 : register(s1);
+SamplerState samp0	: register(s0);
+SamplerState samp1	: register(s1);
 
 struct PS_IN {
-	float4 position : SV_Position;
-	float2 texcoord0 : TEXCOORD0_centroid;
-	float2 texcoord1 : TEXCOORD1_centroid;
+	float4 position		: SV_Position;
+	float2 texcoord0	: TEXCOORD0_centroid;
+	float2 texcoord1	: TEXCOORD1_centroid;
 };
 
 struct PS_OUT {

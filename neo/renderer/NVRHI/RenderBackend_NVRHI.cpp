@@ -538,29 +538,29 @@ void idRenderBackend::Init()
 	Sys_InitInput();
 
 	// Need to reinitialize this pass once this image is resized.
-	renderProgManager.Init( deviceManager->GetDevice( ) );
+	renderProgManager.Init( deviceManager->GetDevice() );
 
-	bindingCache.Init( deviceManager->GetDevice( ) );
-	samplerCache.Init( deviceManager->GetDevice( ) );
-	pipelineCache.Init( deviceManager->GetDevice( ) );
-	commonPasses.Init( deviceManager->GetDevice( ) );
+	bindingCache.Init( deviceManager->GetDevice() );
+	samplerCache.Init( deviceManager->GetDevice() );
+	pipelineCache.Init( deviceManager->GetDevice() );
+	commonPasses.Init( deviceManager->GetDevice() );
 	hiZGenPass = nullptr;
 	ssaoPass = nullptr;
-	fowardShadingPass.Init( deviceManager->GetDevice( ) );
+	fowardShadingPass.Init( deviceManager->GetDevice() );
 
 	tr.SetInitialized();
 
 	if( !commandList )
 	{
-		commandList = deviceManager->GetDevice( )->createCommandList( );
+		commandList = deviceManager->GetDevice()->createCommandList();
 	}
 
 	// allocate the vertex array range or vertex objects
-	commandList->open( );
+	commandList->open();
 	vertexCache.Init( glConfig.uniformBufferOffsetAlignment, commandList );
 	renderProgManager.CommitConstantBuffer( commandList );
-	commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	commandList->close();
+	deviceManager->GetDevice()->executeCommandList( commandList );
 
 	// allocate the frame data, which may be more if smp is enabled
 	R_InitFrameData();
@@ -578,7 +578,7 @@ void idRenderBackend::Init()
 void idRenderBackend::Shutdown()
 {
 	delete ssaoPass;
-	GLimp_Shutdown( );
+	GLimp_Shutdown();
 }
 
 /*
@@ -607,9 +607,9 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 	const uint vertOffset = ( uint )( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 
-	if( currentVertexBuffer != ( nvrhi::IBuffer* )vertexBuffer->GetAPIObject( ) || !r_useStateCaching.GetBool( ) )
+	if( currentVertexBuffer != ( nvrhi::IBuffer* )vertexBuffer->GetAPIObject() || !r_useStateCaching.GetBool() )
 	{
-		currentVertexBuffer = vertexBuffer->GetAPIObject( );
+		currentVertexBuffer = vertexBuffer->GetAPIObject();
 	}
 
 	// Get index buffer
@@ -633,116 +633,117 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 
 	RENDERLOG_PRINTF( "Binding Buffers: %p:%i %p:%i\n", vertexBuffer, vertOffset, indexBuffer, indexOffset );
 
-	if( currentIndexBuffer != ( nvrhi::IBuffer* )indexBuffer->GetAPIObject( ) || !r_useStateCaching.GetBool( ) )
+	if( currentIndexBuffer != ( nvrhi::IBuffer* )indexBuffer->GetAPIObject() || !r_useStateCaching.GetBool() )
 	{
-		currentIndexBuffer = indexBuffer->GetAPIObject( );
+		currentIndexBuffer = indexBuffer->GetAPIObject();
 	}
 
 	nvrhi::BindingSetDesc bindingSetDesc;
 
-	if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DEFAULT )
+	if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_DEFAULT )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_GBUFFER )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_GBUFFER )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_AMBIENT_LIGHTING_IBL )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_AMBIENT_LIGHTING_IBL )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 7, ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 8, ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 9, ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 10, ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 7, ( nvrhi::ISampler* )GetImageAt( 7 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 8, ( nvrhi::ISampler* )GetImageAt( 8 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( samplerCache ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 7, ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 8, ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 9, ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 10, ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 7, ( nvrhi::ISampler* )GetImageAt( 7 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 8, ( nvrhi::ISampler* )GetImageAt( 8 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( samplerCache ) ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_AO )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_DRAW_AO )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_AO1 )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_DRAW_AO1 )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_INTERACTION )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_DRAW_INTERACTION )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( samplerCache ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( samplerCache ) ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_INTERACTION_SM )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_DRAW_INTERACTION_SM )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 5, ( nvrhi::ITexture* )GetImageAt( 5 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 6, ( nvrhi::ITexture* )GetImageAt( 6 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearWrapSampler ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 5, ( nvrhi::ITexture* )GetImageAt( 5 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 6, ( nvrhi::ITexture* )GetImageAt( 6 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearClampSampler ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 2, commonPasses.m_LinearClampCompareSampler ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DRAW_FOG )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_DRAW_FOG )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( samplerCache ) ) );
 	}
-	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_POST_PROCESS_CNM )
+	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_POST_PROCESS_CNM )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
 	}
 	else
 	{
-		common->FatalError( "Invalid binding set %d\n", renderProgManager.BindingLayoutType( ) );
+		common->FatalError( "Invalid binding set %d\n", renderProgManager.BindingLayoutType() );
 	}
 
 	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, renderProgManager.BindingLayout() );
@@ -758,14 +759,18 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	state.pipeline = pipeline;
 	state.framebuffer = currentFrameBuffer->GetApiObject();
 
-	nvrhi::Viewport viewport{ (float)currentViewport.x1,
-		(float)currentViewport.x2,
-		(float)currentViewport.y1,
-		(float)currentViewport.y2,
-		currentViewport.zmin,
-		currentViewport.zmax };
+	nvrhi::Viewport viewport{ ( float )currentViewport.x1,
+							  ( float )currentViewport.x2,
+							  ( float )currentViewport.y1,
+							  ( float )currentViewport.y2,
+							  currentViewport.zmin,
+							  currentViewport.zmax };
 	state.viewport.addViewportAndScissorRect( viewport );
-	state.viewport.addScissorRect( nvrhi::Rect( currentScissor.x1, currentScissor.y1, currentScissor.x2, currentScissor.y2 ) );
+
+	if( !currentScissor.IsEmpty( ) )
+	{
+		state.viewport.addScissorRect( nvrhi::Rect( currentScissor.x1, currentScissor.x2, currentScissor.y1, currentScissor.y2 ) );
+	}
 
 	commandList->setGraphicsState( state );
 
@@ -793,9 +798,9 @@ idRenderBackend::GL_StartFrame
 */
 void idRenderBackend::GL_StartFrame()
 {
-	deviceManager->BeginFrame( );
+	deviceManager->BeginFrame();
 
-	commandList->open( );
+	commandList->open();
 }
 
 /*
@@ -805,18 +810,18 @@ idRenderBackend::GL_EndFrame
 */
 void idRenderBackend::GL_EndFrame()
 {
-	commandList->close( );
+	commandList->close();
 
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	deviceManager->GetDevice()->executeCommandList( commandList );
 
 	// Make sure that all frames have finished rendering
-	deviceManager->GetDevice()->waitForIdle( );
+	deviceManager->GetDevice()->waitForIdle();
 
 	// Release all in-flight references to the render targets
-	deviceManager->GetDevice( )->runGarbageCollection( );
+	deviceManager->GetDevice()->runGarbageCollection();
 
 	// Present to the swap chain.
-	deviceManager->Present( );
+	deviceManager->Present();
 }
 
 /*
@@ -829,7 +834,7 @@ We want to exit this with the GPU idle, right at vsync
 void idRenderBackend::GL_BlockingSwapBuffers()
 {
 	// Make sure that all frames have finished rendering
-	deviceManager->GetDevice( )->waitForIdle( );
+	deviceManager->GetDevice()->waitForIdle();
 }
 
 /*
@@ -848,23 +853,23 @@ void idRenderBackend::GL_SetDefaultState()
 	memset( &glcontext.tmu, 0, sizeof( glcontext.tmu ) );
 
 	glStateBits = 0;
-	currentRenderState.depthStencilState.enableDepthWrite( );
-	currentRenderState.depthStencilState.enableStencil( );
+	currentRenderState.depthStencilState.enableDepthWrite();
+	currentRenderState.depthStencilState.enableStencil();
 
 	GL_State( 0, true );
 
-	currentRenderState.depthStencilState.enableDepthTest( );
-	currentRenderState.blendState.targets[0].enableBlend( );
+	currentRenderState.depthStencilState.enableDepthTest();
+	currentRenderState.blendState.targets[0].enableBlend();
 
-	if( r_useScissor.GetBool( ) )
+	if( r_useScissor.GetBool() )
 	{
-		GL_Scissor( 0, 0, renderSystem->GetWidth( ), renderSystem->GetHeight( ) );
+		GL_Scissor( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight() );
 	}
 
-	renderProgManager.Unbind( );
+	renderProgManager.Unbind();
 
 	// RB begin
-	Framebuffer::Unbind( );
+	Framebuffer::Unbind();
 	// RB end
 }
 
@@ -879,7 +884,7 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 {
 	uint64 diff = stateBits ^ glStateBits;
 
-	if( !r_useStateCaching.GetBool( ) || forceGlState )
+	if( !r_useStateCaching.GetBool() || forceGlState )
 	{
 		// make sure everything is set all the time, so we
 		// can see if our delta checking is screwing up
@@ -904,34 +909,34 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 	{
 		switch( stateBits & GLS_CULL_BITS )
 		{
-		case GLS_CULL_TWOSIDED:
-			currentRasterState.setCullNone( );
-			break;
+			case GLS_CULL_TWOSIDED:
+				currentRasterState.setCullNone();
+				break;
 
-		case GLS_CULL_BACKSIDED:
-			if( viewDef != NULL && viewDef->isMirror )
-			{
-				stateBits |= GLS_MIRROR_VIEW;
-				currentRasterState.setCullFront( );
-			}
-			else
-			{
-				currentRasterState.setCullBack( );
-			}
-			break;
+			case GLS_CULL_BACKSIDED:
+				if( viewDef != NULL && viewDef->isMirror )
+				{
+					stateBits |= GLS_MIRROR_VIEW;
+					currentRasterState.setCullFront();
+				}
+				else
+				{
+					currentRasterState.setCullBack();
+				}
+				break;
 
-		case GLS_CULL_FRONTSIDED:
-		default:
-			if( viewDef != NULL && viewDef->isMirror )
-			{
-				stateBits |= GLS_MIRROR_VIEW;
-				currentRasterState.setCullBack( );
-			}
-			else
-			{
-				currentRasterState.setCullFront( );
-			}
-			break;
+			case GLS_CULL_FRONTSIDED:
+			default:
+				if( viewDef != NULL && viewDef->isMirror )
+				{
+					stateBits |= GLS_MIRROR_VIEW;
+					currentRasterState.setCullBack();
+				}
+				else
+				{
+					currentRasterState.setCullFront();
+				}
+				break;
 		}
 	}
 
@@ -942,18 +947,18 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 	{
 		switch( stateBits & GLS_DEPTHFUNC_BITS )
 		{
-		case GLS_DEPTHFUNC_EQUAL:
-			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Equal;
-			break;
-		case GLS_DEPTHFUNC_ALWAYS:
-			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Always;
-			break;
-		case GLS_DEPTHFUNC_LESS:
-			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Less;
-			break;
-		case GLS_DEPTHFUNC_GREATER:
-			currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Greater;
-			break;
+			case GLS_DEPTHFUNC_EQUAL:
+				currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Equal;
+				break;
+			case GLS_DEPTHFUNC_ALWAYS:
+				currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Always;
+				break;
+			case GLS_DEPTHFUNC_LESS:
+				currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Less;
+				break;
+			case GLS_DEPTHFUNC_GREATER:
+				currentDepthStencilState.depthFunc = nvrhi::ComparisonFunc::Greater;
+				break;
 		}
 	}
 
@@ -969,75 +974,75 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 
 		switch( stateBits & GLS_SRCBLEND_BITS )
 		{
-		case GLS_SRCBLEND_ZERO:
-			srcFactor = nvrhi::BlendFactor::Zero;
-			break;
-		case GLS_SRCBLEND_ONE:
-			srcFactor = nvrhi::BlendFactor::One;
-			break;
-		case GLS_SRCBLEND_DST_COLOR:
-			srcFactor = nvrhi::BlendFactor::DstColor;
-			break;
-		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
-			srcFactor = nvrhi::BlendFactor::OneMinusDstColor;
-			break;
-		case GLS_SRCBLEND_SRC_ALPHA:
-			srcFactor = nvrhi::BlendFactor::SrcAlpha;
-			break;
-		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
-			srcFactor = nvrhi::BlendFactor::OneMinusSrcAlpha;
-			break;
-		case GLS_SRCBLEND_DST_ALPHA:
-			srcFactor = nvrhi::BlendFactor::DstAlpha;
-			break;
-		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
-			srcFactor = nvrhi::BlendFactor::OneMinusDstAlpha;
-			break;
-		default:
-			assert( !"GL_State: invalid src blend state bits\n" );
-			break;
+			case GLS_SRCBLEND_ZERO:
+				srcFactor = nvrhi::BlendFactor::Zero;
+				break;
+			case GLS_SRCBLEND_ONE:
+				srcFactor = nvrhi::BlendFactor::One;
+				break;
+			case GLS_SRCBLEND_DST_COLOR:
+				srcFactor = nvrhi::BlendFactor::DstColor;
+				break;
+			case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
+				srcFactor = nvrhi::BlendFactor::OneMinusDstColor;
+				break;
+			case GLS_SRCBLEND_SRC_ALPHA:
+				srcFactor = nvrhi::BlendFactor::SrcAlpha;
+				break;
+			case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
+				srcFactor = nvrhi::BlendFactor::OneMinusSrcAlpha;
+				break;
+			case GLS_SRCBLEND_DST_ALPHA:
+				srcFactor = nvrhi::BlendFactor::DstAlpha;
+				break;
+			case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
+				srcFactor = nvrhi::BlendFactor::OneMinusDstAlpha;
+				break;
+			default:
+				assert( !"GL_State: invalid src blend state bits\n" );
+				break;
 		}
 
 		switch( stateBits & GLS_DSTBLEND_BITS )
 		{
-		case GLS_DSTBLEND_ZERO:
-			dstFactor = nvrhi::BlendFactor::Zero;
-			break;
-		case GLS_DSTBLEND_ONE:
-			dstFactor = nvrhi::BlendFactor::One;
-			break;
-		case GLS_DSTBLEND_SRC_COLOR:
-			dstFactor = nvrhi::BlendFactor::SrcColor;
-			break;
-		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
-			dstFactor = nvrhi::BlendFactor::OneMinusSrcColor;
-			break;
-		case GLS_DSTBLEND_SRC_ALPHA:
-			dstFactor = nvrhi::BlendFactor::SrcAlpha;
-			break;
-		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
-			dstFactor = nvrhi::BlendFactor::OneMinusSrcAlpha;
-			break;
-		case GLS_DSTBLEND_DST_ALPHA:
-			dstFactor = nvrhi::BlendFactor::DstAlpha;
-			break;
-		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
-			dstFactor = nvrhi::BlendFactor::OneMinusDstAlpha;
-			break;
-		default:
-			assert( !"GL_State: invalid dst blend state bits\n" );
-			break;
+			case GLS_DSTBLEND_ZERO:
+				dstFactor = nvrhi::BlendFactor::Zero;
+				break;
+			case GLS_DSTBLEND_ONE:
+				dstFactor = nvrhi::BlendFactor::One;
+				break;
+			case GLS_DSTBLEND_SRC_COLOR:
+				dstFactor = nvrhi::BlendFactor::SrcColor;
+				break;
+			case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
+				dstFactor = nvrhi::BlendFactor::OneMinusSrcColor;
+				break;
+			case GLS_DSTBLEND_SRC_ALPHA:
+				dstFactor = nvrhi::BlendFactor::SrcAlpha;
+				break;
+			case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
+				dstFactor = nvrhi::BlendFactor::OneMinusSrcAlpha;
+				break;
+			case GLS_DSTBLEND_DST_ALPHA:
+				dstFactor = nvrhi::BlendFactor::DstAlpha;
+				break;
+			case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
+				dstFactor = nvrhi::BlendFactor::OneMinusDstAlpha;
+				break;
+			default:
+				assert( !"GL_State: invalid dst blend state bits\n" );
+				break;
 		}
 
 		// Only actually update GL's blend func if blending is enabled.
 		if( srcFactor == nvrhi::BlendFactor::One && dstFactor == nvrhi::BlendFactor::Zero )
 		{
-			renderTarget.disableBlend( );
+			renderTarget.disableBlend();
 		}
 		else
 		{
 			currentBlendState.setAlphaToCoverageEnable( true );
-			renderTarget.enableBlend( );
+			renderTarget.enableBlend();
 			renderTarget.setSrcBlend( srcFactor );
 			renderTarget.setDestBlend( dstFactor );
 		}
@@ -1050,10 +1055,10 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 	{
 		if( stateBits & GLS_DEPTHMASK )
 		{
-			currentDepthStencilState.disableDepthWrite( );
+			currentDepthStencilState.disableDepthWrite();
 			if( ( stateBits & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_ALWAYS )
 			{
-				currentDepthStencilState.disableDepthTest( );
+				currentDepthStencilState.disableDepthTest();
 			}
 		}
 	}
@@ -1064,11 +1069,23 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 	if( diff & ( GLS_REDMASK | GLS_GREENMASK | GLS_BLUEMASK | GLS_ALPHAMASK ) )
 	{
 		nvrhi::ColorMask mask{ nvrhi::ColorMask::All };
-		
-		if( stateBits & GLS_REDMASK ) mask = mask & ~nvrhi::ColorMask::Red;
-		if( stateBits & GLS_GREENMASK ) mask = mask & ~nvrhi::ColorMask::Green;
-		if( stateBits & GLS_BLUEMASK ) mask = mask & ~nvrhi::ColorMask::Blue;
-		if( stateBits & GLS_ALPHAMASK ) mask = mask & ~nvrhi::ColorMask::Alpha;
+
+		if( stateBits & GLS_REDMASK )
+		{
+			mask = mask & ~nvrhi::ColorMask::Red;
+		}
+		if( stateBits & GLS_GREENMASK )
+		{
+			mask = mask & ~nvrhi::ColorMask::Green;
+		}
+		if( stateBits & GLS_BLUEMASK )
+		{
+			mask = mask & ~nvrhi::ColorMask::Blue;
+		}
+		if( stateBits & GLS_ALPHAMASK )
+		{
+			mask = mask & ~nvrhi::ColorMask::Alpha;
+		}
 
 		renderTarget.setBlendEnable( true );
 		renderTarget.setColorWriteMask( mask );
@@ -1084,11 +1101,11 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 		if( stateBits & GLS_POLYMODE_LINE )
 		{
 			currentRasterState.setFillMode( nvrhi::RasterFillMode::Line );
-			currentRasterState.setCullNone( );
+			currentRasterState.setCullNone();
 		}
 		else
 		{
-			currentRasterState.setCullNone( );
+			currentRasterState.setCullNone();
 			currentRasterState.setFillMode( nvrhi::RasterFillMode::Fill );
 		}
 	}
@@ -1100,7 +1117,7 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 	{
 		if( stateBits & GLS_POLYGON_OFFSET )
 		{
-			currentRasterState.enableQuadFill( );
+			currentRasterState.enableQuadFill();
 		}
 		else
 		{
@@ -1117,13 +1134,13 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 	{
 		if( ( stateBits & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_OP_BITS ) ) != 0 )
 		{
-			currentDepthStencilState.enableStencil( );
-			//currentDepthStencilState.enableDepthWrite( );
+			currentDepthStencilState.enableStencil();
+			//currentDepthStencilState.enableDepthWrite();
 		}
 		else
 		{
-			currentDepthStencilState.disableStencil( );
-			//currentDepthStencilState.disableDepthWrite( );
+			currentDepthStencilState.disableStencil();
+			//currentDepthStencilState.disableDepthWrite();
 		}
 	}
 	if( diff & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_FUNC_REF_BITS | GLS_STENCIL_FUNC_MASK_BITS ) )
@@ -1138,30 +1155,30 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 
 		switch( stateBits & GLS_STENCIL_FUNC_BITS )
 		{
-		case GLS_STENCIL_FUNC_NEVER:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Never );
-			break;
-		case GLS_STENCIL_FUNC_LESS:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Less );
-			break;
-		case GLS_STENCIL_FUNC_EQUAL:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Equal );
-			break;
-		case GLS_STENCIL_FUNC_LEQUAL:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::LessOrEqual );
-			break;
-		case GLS_STENCIL_FUNC_GREATER:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Greater );
-			break;
-		case GLS_STENCIL_FUNC_NOTEQUAL:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::NotEqual );
-			break;
-		case GLS_STENCIL_FUNC_GEQUAL:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::GreaterOrEqual );
-			break;
-		case GLS_STENCIL_FUNC_ALWAYS:
-			stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Always );
-			break;
+			case GLS_STENCIL_FUNC_NEVER:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Never );
+				break;
+			case GLS_STENCIL_FUNC_LESS:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Less );
+				break;
+			case GLS_STENCIL_FUNC_EQUAL:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Equal );
+				break;
+			case GLS_STENCIL_FUNC_LEQUAL:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::LessOrEqual );
+				break;
+			case GLS_STENCIL_FUNC_GREATER:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Greater );
+				break;
+			case GLS_STENCIL_FUNC_NOTEQUAL:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::NotEqual );
+				break;
+			case GLS_STENCIL_FUNC_GEQUAL:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::GreaterOrEqual );
+				break;
+			case GLS_STENCIL_FUNC_ALWAYS:
+				stencilOp.setStencilFunc( nvrhi::ComparisonFunc::Always );
+				break;
 		}
 	}
 	if( diff & ( GLS_STENCIL_OP_FAIL_BITS | GLS_STENCIL_OP_ZFAIL_BITS | GLS_STENCIL_OP_PASS_BITS ) )
@@ -1172,84 +1189,84 @@ void idRenderBackend::GL_State( uint64 stateBits, bool forceGlState )
 
 		switch( stateBits & GLS_STENCIL_OP_FAIL_BITS )
 		{
-		case GLS_STENCIL_OP_FAIL_KEEP:
-			stencilOp.setFailOp( nvrhi::StencilOp::Keep );
-			break;
-		case GLS_STENCIL_OP_FAIL_ZERO:
-			stencilOp.setFailOp( nvrhi::StencilOp::Zero );
-			break;
-		case GLS_STENCIL_OP_FAIL_REPLACE:
-			stencilOp.setFailOp( nvrhi::StencilOp::Replace );
-			break;
-		case GLS_STENCIL_OP_FAIL_INCR:
-			stencilOp.setFailOp( nvrhi::StencilOp::IncrementAndClamp );
-			break;
-		case GLS_STENCIL_OP_FAIL_DECR:
-			stencilOp.setFailOp( nvrhi::StencilOp::DecrementAndClamp );
-			break;
-		case GLS_STENCIL_OP_FAIL_INVERT:
-			stencilOp.setFailOp( nvrhi::StencilOp::Invert );
-			break;
-		case GLS_STENCIL_OP_FAIL_INCR_WRAP:
-			stencilOp.setFailOp( nvrhi::StencilOp::IncrementAndWrap );
-			break;
-		case GLS_STENCIL_OP_FAIL_DECR_WRAP:
-			stencilOp.setFailOp( nvrhi::StencilOp::DecrementAndWrap );
-			break;
+			case GLS_STENCIL_OP_FAIL_KEEP:
+				stencilOp.setFailOp( nvrhi::StencilOp::Keep );
+				break;
+			case GLS_STENCIL_OP_FAIL_ZERO:
+				stencilOp.setFailOp( nvrhi::StencilOp::Zero );
+				break;
+			case GLS_STENCIL_OP_FAIL_REPLACE:
+				stencilOp.setFailOp( nvrhi::StencilOp::Replace );
+				break;
+			case GLS_STENCIL_OP_FAIL_INCR:
+				stencilOp.setFailOp( nvrhi::StencilOp::IncrementAndClamp );
+				break;
+			case GLS_STENCIL_OP_FAIL_DECR:
+				stencilOp.setFailOp( nvrhi::StencilOp::DecrementAndClamp );
+				break;
+			case GLS_STENCIL_OP_FAIL_INVERT:
+				stencilOp.setFailOp( nvrhi::StencilOp::Invert );
+				break;
+			case GLS_STENCIL_OP_FAIL_INCR_WRAP:
+				stencilOp.setFailOp( nvrhi::StencilOp::IncrementAndWrap );
+				break;
+			case GLS_STENCIL_OP_FAIL_DECR_WRAP:
+				stencilOp.setFailOp( nvrhi::StencilOp::DecrementAndWrap );
+				break;
 		}
 		switch( stateBits & GLS_STENCIL_OP_ZFAIL_BITS )
 		{
-		case GLS_STENCIL_OP_ZFAIL_KEEP:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::Keep );
-			break;
-		case GLS_STENCIL_OP_ZFAIL_ZERO:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::Zero );
-			break;
-		case GLS_STENCIL_OP_ZFAIL_REPLACE:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::Replace );
-			break;
-		case GLS_STENCIL_OP_ZFAIL_INCR:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::IncrementAndClamp );
-			break;
-		case GLS_STENCIL_OP_ZFAIL_DECR:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::DecrementAndClamp );
-			break;
-		case GLS_STENCIL_OP_ZFAIL_INVERT:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::Invert );
-			break;
-		case GLS_STENCIL_OP_ZFAIL_INCR_WRAP:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::IncrementAndWrap );
-			break;
-		case GLS_STENCIL_OP_ZFAIL_DECR_WRAP:
-			stencilOp.setDepthFailOp( nvrhi::StencilOp::DecrementAndWrap );
-			break;
+			case GLS_STENCIL_OP_ZFAIL_KEEP:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::Keep );
+				break;
+			case GLS_STENCIL_OP_ZFAIL_ZERO:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::Zero );
+				break;
+			case GLS_STENCIL_OP_ZFAIL_REPLACE:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::Replace );
+				break;
+			case GLS_STENCIL_OP_ZFAIL_INCR:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::IncrementAndClamp );
+				break;
+			case GLS_STENCIL_OP_ZFAIL_DECR:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::DecrementAndClamp );
+				break;
+			case GLS_STENCIL_OP_ZFAIL_INVERT:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::Invert );
+				break;
+			case GLS_STENCIL_OP_ZFAIL_INCR_WRAP:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::IncrementAndWrap );
+				break;
+			case GLS_STENCIL_OP_ZFAIL_DECR_WRAP:
+				stencilOp.setDepthFailOp( nvrhi::StencilOp::DecrementAndWrap );
+				break;
 		}
 		switch( stateBits & GLS_STENCIL_OP_PASS_BITS )
 		{
-		case GLS_STENCIL_OP_PASS_KEEP:
-			stencilOp.setPassOp( nvrhi::StencilOp::Keep );
-			break;
-		case GLS_STENCIL_OP_PASS_ZERO:
-			stencilOp.setPassOp( nvrhi::StencilOp::Zero );
-			break;
-		case GLS_STENCIL_OP_PASS_REPLACE:
-			stencilOp.setPassOp( nvrhi::StencilOp::Replace );
-			break;
-		case GLS_STENCIL_OP_PASS_INCR:
-			stencilOp.setPassOp( nvrhi::StencilOp::IncrementAndClamp );
-			break;
-		case GLS_STENCIL_OP_PASS_DECR:
-			stencilOp.setPassOp( nvrhi::StencilOp::DecrementAndClamp );
-			break;
-		case GLS_STENCIL_OP_PASS_INVERT:
-			stencilOp.setPassOp( nvrhi::StencilOp::Invert );
-			break;
-		case GLS_STENCIL_OP_PASS_INCR_WRAP:
-			stencilOp.setPassOp( nvrhi::StencilOp::IncrementAndWrap );
-			break;
-		case GLS_STENCIL_OP_PASS_DECR_WRAP:
-			stencilOp.setPassOp( nvrhi::StencilOp::DecrementAndWrap );
-			break;
+			case GLS_STENCIL_OP_PASS_KEEP:
+				stencilOp.setPassOp( nvrhi::StencilOp::Keep );
+				break;
+			case GLS_STENCIL_OP_PASS_ZERO:
+				stencilOp.setPassOp( nvrhi::StencilOp::Zero );
+				break;
+			case GLS_STENCIL_OP_PASS_REPLACE:
+				stencilOp.setPassOp( nvrhi::StencilOp::Replace );
+				break;
+			case GLS_STENCIL_OP_PASS_INCR:
+				stencilOp.setPassOp( nvrhi::StencilOp::IncrementAndClamp );
+				break;
+			case GLS_STENCIL_OP_PASS_DECR:
+				stencilOp.setPassOp( nvrhi::StencilOp::DecrementAndClamp );
+				break;
+			case GLS_STENCIL_OP_PASS_INVERT:
+				stencilOp.setPassOp( nvrhi::StencilOp::Invert );
+				break;
+			case GLS_STENCIL_OP_PASS_INCR_WRAP:
+				stencilOp.setPassOp( nvrhi::StencilOp::IncrementAndWrap );
+				break;
+			case GLS_STENCIL_OP_PASS_DECR_WRAP:
+				stencilOp.setPassOp( nvrhi::StencilOp::DecrementAndWrap );
+				break;
 		}
 	}
 
@@ -1276,9 +1293,9 @@ idRenderBackend::GL_Scissor
 void idRenderBackend::GL_Scissor( int x /* left*/, int y /* bottom */, int w, int h )
 {
 	// TODO Check if this is right.
-	currentScissor.Clear( );
-	currentScissor.AddPoint( x, y );
-	currentScissor.AddPoint( x + w, y + h );
+	//currentScissor.Clear( );
+	//currentScissor.AddPoint( x, y );
+	//currentScissor.AddPoint( x + w, y + h );
 }
 
 /*
@@ -1288,7 +1305,7 @@ idRenderBackend::GL_Viewport
 */
 void idRenderBackend::GL_Viewport( int x /* left */, int y /* bottom */, int w, int h )
 {
-	currentViewport.Clear( );
+	currentViewport.Clear();
 	currentViewport.AddPoint( x, y );
 	currentViewport.AddPoint( x + w, y + h );
 }
@@ -1311,20 +1328,19 @@ idRenderBackend::GL_DepthBoundsTest
 */
 void idRenderBackend::GL_DepthBoundsTest( const float zmin, const float zmax )
 {
-	if( !glConfig.depthBoundsTestAvailable || zmin > zmax )
+	if( /*!glConfig.depthBoundsTestAvailable || */zmin > zmax )
 	{
 		return;
 	}
 
-	//if( zmin == 0.0f && zmax == 0.0f )
-	//{
-	//	glDisable( GL_DEPTH_BOUNDS_TEST_EXT );
-	//}
-	//else
-	//{
-	//	glEnable( GL_DEPTH_BOUNDS_TEST_EXT );
-	//	glDepthBoundsEXT( zmin, zmax );
-	//}
+	if( zmin == 0.0f && zmax == 0.0f )
+	{
+	}
+	else
+	{
+		currentViewport.zmin = zmin;
+		currentViewport.zmax = zmax;
+	}
 }
 
 /*
@@ -1352,14 +1368,14 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 	// TODO: Do something if there is no depth-stencil attachment.
 	if( color )
 	{
-		nvrhi::utils::ClearColorAttachment( commandList, deviceManager->GetCurrentFramebuffer( ), 0, nvrhi::Color( 0.f ) );
-		nvrhi::utils::ClearColorAttachment( commandList, globalFramebuffers.hdrFBO->GetApiObject( ), 0, nvrhi::Color( 0.f ) );
+		nvrhi::utils::ClearColorAttachment( commandList, deviceManager->GetCurrentFramebuffer(), 0, nvrhi::Color( 0.f ) );
+		nvrhi::utils::ClearColorAttachment( commandList, globalFramebuffers.hdrFBO->GetApiObject(), 0, nvrhi::Color( 0.f ) );
 	}
 
 	if( depth )
 	{
-		nvrhi::ITexture* depthTexture = ( nvrhi::ITexture* )( globalImages->currentDepthImage->GetTextureID( ) );
-		const nvrhi::FormatInfo& depthFormatInfo = nvrhi::getFormatInfo( depthTexture->getDesc( ).format );
+		nvrhi::ITexture* depthTexture = ( nvrhi::ITexture* )( globalImages->currentDepthImage->GetTextureID() );
+		const nvrhi::FormatInfo& depthFormatInfo = nvrhi::getFormatInfo( depthTexture->getDesc().format );
 		commandList->clearDepthStencilTexture( depthTexture, nvrhi::AllSubresources, true, 1.f, depthFormatInfo.hasStencil, 0 );
 	}
 }
@@ -1382,7 +1398,7 @@ idRenderBackend::GL_GetCurrentStateMinusStencil
 */
 uint64 idRenderBackend::GL_GetCurrentStateMinusStencil() const
 {
-	return GL_GetCurrentState( ) & ~( GLS_STENCIL_OP_BITS | GLS_STENCIL_FUNC_BITS | GLS_STENCIL_FUNC_REF_BITS | GLS_STENCIL_FUNC_MASK_BITS );
+	return GL_GetCurrentState() & ~( GLS_STENCIL_OP_BITS | GLS_STENCIL_FUNC_BITS | GLS_STENCIL_FUNC_REF_BITS | GLS_STENCIL_FUNC_MASK_BITS );
 }
 
 
@@ -1396,37 +1412,37 @@ See if some cvars that we watch have changed
 void idRenderBackend::CheckCVars()
 {
 	// gamma stuff
-	if( r_gamma.IsModified( ) || r_brightness.IsModified( ) )
+	if( r_gamma.IsModified() || r_brightness.IsModified() )
 	{
-		r_gamma.ClearModified( );
-		r_brightness.ClearModified( );
-		R_SetColorMappings( );
+		r_gamma.ClearModified();
+		r_brightness.ClearModified();
+		R_SetColorMappings();
 	}
 
 	// filtering
-	/*if( r_maxAnisotropicFiltering.IsModified( ) || r_useTrilinearFiltering.IsModified( ) || r_lodBias.IsModified( ) )
+	/*if( r_maxAnisotropicFiltering.IsModified() || r_useTrilinearFiltering.IsModified() || r_lodBias.IsModified() )
 	{
 		idLib::Printf( "Updating texture filter parameters.\n" );
-		r_maxAnisotropicFiltering.ClearModified( );
-		r_useTrilinearFiltering.ClearModified( );
-		r_lodBias.ClearModified( );
+		r_maxAnisotropicFiltering.ClearModified();
+		r_useTrilinearFiltering.ClearModified();
+		r_lodBias.ClearModified();
 
-		for( int i = 0; i < globalImages->images.Num( ); i++ )
+		for( int i = 0; i < globalImages->images.Num(); i++ )
 		{
 			if( globalImages->images[i] )
 			{
-				globalImages->images[i]->Bind( );
-				globalImages->images[i]->SetTexParameters( );
+				globalImages->images[i]->Bind();
+				globalImages->images[i]->SetTexParameters();
 			}
 		}
 	}*/
 
-	if( r_useSeamlessCubeMap.IsModified( ) )
+	if( r_useSeamlessCubeMap.IsModified() )
 	{
-		r_useSeamlessCubeMap.ClearModified( );
+		r_useSeamlessCubeMap.ClearModified();
 		if( glConfig.seamlessCubeMapAvailable )
 		{
-			if( r_useSeamlessCubeMap.GetBool( ) )
+			if( r_useSeamlessCubeMap.GetBool() )
 			{
 				//glEnable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
 			}
@@ -1441,16 +1457,16 @@ void idRenderBackend::CheckCVars()
 	// SRS - Enable SDL-driven vync changes without restart for UNIX-like OSs
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
 	extern idCVar r_swapInterval;
-	if( r_swapInterval.IsModified( ) )
+	if( r_swapInterval.IsModified() )
 	{
-		r_swapInterval.ClearModified( );
+		r_swapInterval.ClearModified();
 #if SDL_VERSION_ATLEAST(2, 0, 0)
-		if( SDL_GL_SetSwapInterval( r_swapInterval.GetInteger( ) ) < 0 )
+		if( SDL_GL_SetSwapInterval( r_swapInterval.GetInteger() ) < 0 )
 		{
 			common->Warning( "Vsync changes not supported without restart" );
 		}
 #else
-		if( SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, r_swapInterval.GetInteger( ) ) < 0 )
+		if( SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, r_swapInterval.GetInteger() ) < 0 )
 		{
 			common->Warning( "Vsync changes not supported without restart" );
 		}
@@ -1458,67 +1474,67 @@ void idRenderBackend::CheckCVars()
 	}
 #endif
 	// SRS end
-	if( r_antiAliasing.IsModified( ) )
+	if( r_antiAliasing.IsModified() )
 	{
-		switch( r_antiAliasing.GetInteger( ) )
+		switch( r_antiAliasing.GetInteger() )
 		{
-		case ANTI_ALIASING_MSAA_2X:
-		case ANTI_ALIASING_MSAA_4X:
-		case ANTI_ALIASING_MSAA_8X:
-			if( r_antiAliasing.GetInteger( ) > 0 )
-			{
-				//glEnable( GL_MULTISAMPLE );
-			}
-			break;
+			case ANTI_ALIASING_MSAA_2X:
+			case ANTI_ALIASING_MSAA_4X:
+			case ANTI_ALIASING_MSAA_8X:
+				if( r_antiAliasing.GetInteger() > 0 )
+				{
+					//glEnable( GL_MULTISAMPLE );
+				}
+				break;
 
-		default:
-			//glDisable( GL_MULTISAMPLE );
-			break;
+			default:
+				//glDisable( GL_MULTISAMPLE );
+				break;
 		}
 	}
 
-	if( r_usePBR.IsModified( ) ||
-		r_useHDR.IsModified( ) ||
-		r_useHalfLambertLighting.IsModified( ) ||
-		r_pbrDebug.IsModified( ) )
+	if( r_usePBR.IsModified() ||
+			r_useHDR.IsModified() ||
+			r_useHalfLambertLighting.IsModified() ||
+			r_pbrDebug.IsModified() )
 	{
 		bool needShaderReload = false;
 
-		if( r_usePBR.GetBool( ) && r_useHalfLambertLighting.GetBool( ) )
+		if( r_usePBR.GetBool() && r_useHalfLambertLighting.GetBool() )
 		{
 			r_useHalfLambertLighting.SetBool( false );
 
 			needShaderReload = true;
 		}
 
-		needShaderReload |= r_useHDR.IsModified( );
-		needShaderReload |= r_pbrDebug.IsModified( );
+		needShaderReload |= r_useHDR.IsModified();
+		needShaderReload |= r_pbrDebug.IsModified();
 
-		r_usePBR.ClearModified( );
-		r_useHDR.ClearModified( );
-		r_useHalfLambertLighting.ClearModified( );
-		r_pbrDebug.ClearModified( );
+		r_usePBR.ClearModified();
+		r_useHDR.ClearModified();
+		r_useHalfLambertLighting.ClearModified();
+		r_pbrDebug.ClearModified();
 
-		renderProgManager.KillAllShaders( );
-		renderProgManager.LoadAllShaders( );
+		renderProgManager.KillAllShaders();
+		renderProgManager.LoadAllShaders();
 	}
 
 	// RB: turn off shadow mapping for OpenGL drivers that are too slow
 	switch( glConfig.driverType )
 	{
-	case GLDRV_OPENGL_ES2:
-	case GLDRV_OPENGL_ES3:
-		//case GLDRV_OPENGL_MESA:
-		r_useShadowMapping.SetInteger( 0 );
-		break;
+		case GLDRV_OPENGL_ES2:
+		case GLDRV_OPENGL_ES3:
+			//case GLDRV_OPENGL_MESA:
+			r_useShadowMapping.SetInteger( 0 );
+			break;
 
-	default:
-		break;
+		default:
+			break;
 	}
 	// RB end
 }
 
-void idRenderBackend::BackBufferResizing( )
+void idRenderBackend::BackBufferResizing()
 {
 	currentPipeline = nullptr;
 }
@@ -1538,7 +1554,7 @@ idRenderBackend::DrawFlickerBox
 */
 void idRenderBackend::DrawFlickerBox()
 {
-	if( !r_drawFlickerBox.GetBool( ) )
+	if( !r_drawFlickerBox.GetBool() )
 	{
 		return;
 	}
@@ -1567,25 +1583,25 @@ void idRenderBackend::SetBuffer( const void* data )
 
 	RENDERLOG_PRINTF( "---------- RB_SetBuffer ---------- to buffer # %d\n", cmd->buffer );
 
-	currentScissor.Clear( );
+	currentScissor.Clear();
 	currentScissor.AddPoint( 0, 0 );
-	currentScissor.AddPoint( tr.GetWidth( ), tr.GetHeight( ) );
+	currentScissor.AddPoint( tr.GetWidth(), tr.GetHeight() );
 
 	// clear screen for debugging
 	// automatically enable this with several other debug tools
 	// that might leave unrendered portions of the screen
-	if( r_clear.GetFloat( ) || idStr::Length( r_clear.GetString( ) ) != 1 || r_singleArea.GetBool( ) || r_showOverDraw.GetBool( ) )
+	if( r_clear.GetFloat() || idStr::Length( r_clear.GetString() ) != 1 || r_singleArea.GetBool() || r_showOverDraw.GetBool() )
 	{
 		float c[3];
-		if( sscanf( r_clear.GetString( ), "%f %f %f", &c[0], &c[1], &c[2] ) == 3 )
+		if( sscanf( r_clear.GetString(), "%f %f %f", &c[0], &c[1], &c[2] ) == 3 )
 		{
 			GL_Clear( true, false, false, 0, c[0], c[1], c[2], 1.0f, true );
 		}
-		else if( r_clear.GetInteger( ) == 2 )
+		else if( r_clear.GetInteger() == 2 )
 		{
 			GL_Clear( true, false, false, 0, 0.0f, 0.0f, 0.0f, 1.0f, true );
 		}
-		else if( r_showOverDraw.GetBool( ) )
+		else if( r_showOverDraw.GetBool() )
 		{
 			GL_Clear( true, false, false, 0, 1.0f, 1.0f, 1.0f, 1.0f, true );
 		}
@@ -1680,7 +1696,7 @@ void idRenderBackend::ImGui_RenderDrawLists( ImDrawData* draw_data )
 idRenderBackend::ResizeImages
 ====================
 */
-void idRenderBackend::ResizeImages( )
+void idRenderBackend::ResizeImages()
 {
 }
 
@@ -1688,7 +1704,7 @@ void idRenderBackend::SetCurrentImage( idImage* image )
 {
 	// load the image if necessary (FIXME: not SMP safe!)
 	// RB: don't try again if last time failed
-	if( !image->IsLoaded( ) && !image->IsDefaulted( ) )
+	if( !image->IsLoaded() && !image->IsDefaulted() )
 	{
 		// TODO(Stephen): Fix me.
 		image->FinalizeImage( true, commandList );
@@ -1697,7 +1713,7 @@ void idRenderBackend::SetCurrentImage( idImage* image )
 	context.imageParms[context.currentImageParm] = image;
 }
 
-idImage* idRenderBackend::GetCurrentImage( )
+idImage* idRenderBackend::GetCurrentImage()
 {
 	return context.imageParms[context.currentImageParm];
 }
@@ -1716,4 +1732,9 @@ void idRenderBackend::BindProgram( nvrhi::ShaderHandle vShader, nvrhi::ShaderHan
 
 	// reset the pipeline.
 	currentPipeline = nullptr;
+}
+
+void idRenderBackend::ResetPipelineCache( )
+{
+	pipelineCache.Clear( );
 }

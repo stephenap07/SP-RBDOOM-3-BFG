@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -71,11 +72,15 @@ void R_ReloadImages_f( const idCmdArgs& args )
 		}
 	}
 
-	nvrhi::CommandListHandle commandList = deviceManager->GetDevice( )->createCommandList( );
-	commandList->open( );
+#if defined( USE_NVRHI )
+	nvrhi::CommandListHandle commandList = deviceManager->GetDevice()->createCommandList();
+	commandList->open();
 	globalImages->ReloadImages( all, commandList );
-	commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	commandList->close();
+	deviceManager->GetDevice()->executeCommandList( commandList );
+#else
+	globalImages->ReloadImages( all );
+#endif
 }
 
 typedef struct
@@ -332,7 +337,7 @@ idDeferredImage* idImageManager::AllocDeferredImage( const char* name )
 {
 	idDeferredImage* image = new( TAG_IMAGE ) idDeferredImage( name );
 
-	int hash = idStr( name ).FileNameHash( );
+	int hash = idStr( name ).FileNameHash();
 	deferredImageHash.Add( hash, deferredImages.Append( image ) );
 
 	return image;
@@ -472,10 +477,13 @@ idImage*	idImageManager::ImageFromFile( const char* _name, textureFilter_t filte
 	image->levelLoadReferenced = true;
 
 	// load it if we aren't in a level preload
+#if defined( USE_NVRHI )
 	if( !insideLevelLoad || preloadingMapImages )
+#else
+	if( ( !insideLevelLoad || preloadingMapImages ) && idLib::IsMainThread() )
+#endif
 	{
 		image->referencedOutsideLevelLoad = ( !insideLevelLoad && !preloadingMapImages );
-
 		image->FinalizeImage( false, nullptr );
 
 		declManager->MediaPrint( "%ix%i %s\n", image->GetUploadWidth(), image->GetUploadHeight(), image->GetName() );
@@ -758,7 +766,7 @@ void idImageManager::Init()
 	cmdSystem->AddCommand( "combineCubeImages", R_CombineCubeImages_f, CMD_FL_RENDERER, "combines six images for roq compression" );
 
 	// should forceLoadImages be here?
-	LoadDeferredImages( );
+	LoadDeferredImages();
 }
 
 /*
@@ -771,7 +779,7 @@ void idImageManager::Shutdown()
 	images.DeleteContents( true );
 	imageHash.Clear();
 	deferredImages.DeleteContents( true );
-	deferredImageHash.Clear( );
+	deferredImageHash.Clear();
 }
 
 /*
@@ -873,19 +881,26 @@ idImageManager::LoadLevelImages
 */
 int idImageManager::LoadLevelImages( bool pacifier )
 {
+#if defined( USE_NVRHI )
 	if( !commandList )
 	{
-		commandList = deviceManager->GetDevice( )->createCommandList( );
+		commandList = deviceManager->GetDevice()->createCommandList();
 	}
 
-	common->UpdateLevelLoadPacifier( );
+	common->UpdateLevelLoadPacifier();
 
-	commandList->open( );
+	commandList->open();
+#endif
 
 	int	loadCount = 0;
 	for( int i = 0 ; i < images.Num() ; i++ )
 	{
 		idImage* image = images[ i ];
+
+		if( pacifier )
+		{
+			common->UpdateLevelLoadPacifier();
+		}
 
 		if( image->generatorFunction )
 		{
@@ -899,13 +914,15 @@ int idImageManager::LoadLevelImages( bool pacifier )
 		}
 	}
 
+#if defined( USE_NVRHI )
 	globalImages->LoadDeferredImages( commandList );
 
-	commandList->close( );
+	commandList->close();
 
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+	deviceManager->GetDevice()->executeCommandList( commandList );
 
-	common->UpdateLevelLoadPacifier( );
+	common->UpdateLevelLoadPacifier();
+#endif
 
 	return loadCount;
 }
@@ -990,17 +1007,17 @@ void idImageManager::LoadDeferredImages( nvrhi::ICommandList* _commandList )
 {
 	if( !commandList )
 	{
-		commandList = deviceManager->GetDevice( )->createCommandList( );
+		commandList = deviceManager->GetDevice()->createCommandList();
 	}
 
 	nvrhi::ICommandList* thisCmdList = _commandList;
 	if( !_commandList )
 	{
 		thisCmdList = commandList;
-		thisCmdList->open( );
+		thisCmdList->open();
 	}
 
-	for( int i = 0; i < globalImages->imagesToLoad.Num( ); i++ )
+	for( int i = 0; i < globalImages->imagesToLoad.Num(); i++ )
 	{
 		// This is a "deferred" load of textures to the gpu.
 		globalImages->imagesToLoad[i]->FinalizeImage( false, thisCmdList );
@@ -1008,9 +1025,9 @@ void idImageManager::LoadDeferredImages( nvrhi::ICommandList* _commandList )
 
 	if( !_commandList )
 	{
-		thisCmdList->close( );
-		deviceManager->GetDevice( )->executeCommandList( thisCmdList );
+		thisCmdList->close();
+		deviceManager->GetDevice()->executeCommandList( thisCmdList );
 	}
 
-	globalImages->imagesToLoad.Clear( );
+	globalImages->imagesToLoad.Clear();
 }

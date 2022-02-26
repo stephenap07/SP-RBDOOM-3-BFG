@@ -243,12 +243,12 @@ void GenerateRmlImage( idImage* image, nvrhi::ICommandList* commandList )
 		if( name.Icmp( deferredImage->name ) == 0 )
 		{
 			image->GenerateImage( deferredImage->pic,
-				deferredImage->width,
-				deferredImage->height,
-				deferredImage->textureFilter,
-				deferredImage->textureRepeat,
-				deferredImage->textureUsage,
-				commandList );
+								  deferredImage->width,
+								  deferredImage->height,
+								  deferredImage->textureFilter,
+								  deferredImage->textureRepeat,
+								  deferredImage->textureUsage,
+								  commandList );
 			return;
 		}
 	}

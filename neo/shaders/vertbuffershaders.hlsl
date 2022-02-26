@@ -26,16 +26,22 @@
 
 struct VS_INPUT
 {
-	float3 pos		: POSITION;
-	float4 color	: COLOR;
-	float2 uv		: TEXCOORD0;
+float3 pos		:
+	POSITION;
+float4 color	:
+	COLOR;
+float2 uv		:
+	TEXCOORD0;
 };
 
 struct PS_INPUT
 {
-	float4 pos		: SV_POSITION;
-	float4 color	: COLOR0;
-	float2 uv		: TEXCOORD0;
+float4 pos		:
+	SV_POSITION;
+float4 color	:
+	COLOR0;
+float2 uv		:
+	TEXCOORD0;
 };
 
 PS_INPUT main_vs( VS_INPUT input )
@@ -55,8 +61,10 @@ PS_INPUT main_vs( VS_INPUT input )
 	return output;
 }
 
-Texture2D t_Texture : register( t0 );
-SamplerState s_Sampler : register( s0 );
+Texture2D t_Texture :
+register( t0 );
+SamplerState s_Sampler :
+register( s0 );
 
 float4 main_ps( PS_INPUT input ) : SV_Target
 {

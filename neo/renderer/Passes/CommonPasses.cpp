@@ -1,3 +1,30 @@
+/*
+===========================================================================
+
+Doom 3 BFG Edition GPL Source Code
+Copyright (C) 2022 Stephen Pridham
+
+This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
+
+Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Doom 3 BFG Edition Source Code is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Doom 3 BFG Edition Source Code.  If not, see <http://www.gnu.org/licenses/>.
+
+In addition, the Doom 3 BFG Edition Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the Doom 3 BFG Edition Source Code.  If not, please request a copy in writing from id Software at the address below.
+
+If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
+
+===========================================================================
+*/
 #include "precompiled.h"
 #pragma hdrstop
 
@@ -5,7 +32,7 @@
 #include "CommonPasses.h"
 
 
-CommonRenderPasses::CommonRenderPasses( )
+CommonRenderPasses::CommonRenderPasses()
 	: m_Device( nullptr )
 {
 }
@@ -41,13 +68,16 @@ void CommonRenderPasses::Init( nvrhi::IDevice* device )
 	blitIndex = renderProgManager.FindShader( "builtin/blit", SHADER_STAGE_FRAGMENT, "", shaderMacros, true, LAYOUT_DRAW_VERT );
 	m_BlitArrayPS = renderProgManager.GetShader( blitIndex );
 
-	auto samplerDesc = nvrhi::SamplerDesc( )
-		.setAllFilters( false )
-		.setAllAddressModes( nvrhi::SamplerAddressMode::Clamp );
+	auto samplerDesc = nvrhi::SamplerDesc()
+					   .setAllFilters( false )
+					   .setAllAddressModes( nvrhi::SamplerAddressMode::Clamp );
 	m_PointClampSampler = m_Device->createSampler( samplerDesc );
 
 	samplerDesc.setAllFilters( true );
 	m_LinearClampSampler = m_Device->createSampler( samplerDesc );
+
+	samplerDesc.setReductionType( nvrhi::SamplerReductionType::Comparison );
+	m_LinearClampCompareSampler = m_Device->createSampler( samplerDesc );
 
 	samplerDesc.setAllAddressModes( nvrhi::SamplerAddressMode::Wrap );
 	m_LinearWrapSampler = m_Device->createSampler( samplerDesc );
@@ -89,8 +119,8 @@ void CommonRenderPasses::Init( nvrhi::IDevice* device )
 
 		// Write the textures using a temporary CL
 
-		nvrhi::CommandListHandle commandList = m_Device->createCommandList( );
-		commandList->open( );
+		nvrhi::CommandListHandle commandList = m_Device->createCommandList();
+		commandList->open();
 
 		commandList->beginTrackingTextureState( m_BlackTexture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 		commandList->beginTrackingTextureState( m_GrayTexture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
@@ -116,9 +146,9 @@ void CommonRenderPasses::Init( nvrhi::IDevice* device )
 		commandList->setPermanentTextureState( m_BlackCubeMapArray, nvrhi::ResourceStates::ShaderResource );
 		commandList->setPermanentTextureState( m_BlackTexture2DArray, nvrhi::ResourceStates::ShaderResource );
 		commandList->setPermanentTextureState( m_WhiteTexture2DArray, nvrhi::ResourceStates::ShaderResource );
-		commandList->commitBarriers( );
+		commandList->commitBarriers();
 
-		commandList->close( );
+		commandList->close();
 		m_Device->executeCommandList( commandList );
 	}
 
@@ -142,19 +172,19 @@ void CommonRenderPasses::BlitTexture( nvrhi::ICommandList* commandList, const Bl
 	assert( params.targetFramebuffer );
 	assert( params.sourceTexture );
 
-	const nvrhi::FramebufferDesc& targetFramebufferDesc = params.targetFramebuffer->getDesc( );
-	assert( targetFramebufferDesc.colorAttachments.size( ) == 1 );
-	assert( targetFramebufferDesc.colorAttachments[0].valid( ) );
-	assert( !targetFramebufferDesc.depthAttachment.valid( ) );
+	const nvrhi::FramebufferDesc& targetFramebufferDesc = params.targetFramebuffer->getDesc();
+	assert( targetFramebufferDesc.colorAttachments.size() == 1 );
+	assert( targetFramebufferDesc.colorAttachments[0].valid() );
+	assert( !targetFramebufferDesc.depthAttachment.valid() );
 
-	const nvrhi::FramebufferInfo& fbinfo = params.targetFramebuffer->getFramebufferInfo( );
-	const nvrhi::TextureDesc& sourceDesc = params.sourceTexture->getDesc( );
+	const nvrhi::FramebufferInfo& fbinfo = params.targetFramebuffer->getFramebufferInfo();
+	const nvrhi::TextureDesc& sourceDesc = params.sourceTexture->getDesc();
 
 	assert( IsSupportedBlitDimension( sourceDesc.dimension ) );
 	bool isTextureArray = IsTextureArray( sourceDesc.dimension );
 
 	nvrhi::Viewport targetViewport = params.targetViewport;
-	if( targetViewport.width( ) == 0 && targetViewport.height( ) == 0 )
+	if( targetViewport.width() == 0 && targetViewport.height() == 0 )
 	{
 		// If no viewport is specified, create one based on the framebuffer dimensions.
 		// Note that the FB dimensions may not be the same as target texture dimensions, in case a non-zero mip level is used.
@@ -164,10 +194,15 @@ void CommonRenderPasses::BlitTexture( nvrhi::ICommandList* commandList, const Bl
 	nvrhi::IShader* shader = nullptr;
 	switch( params.sampler )
 	{
-	case BlitSampler::Point:
-	case BlitSampler::Linear: shader = isTextureArray ? m_BlitArrayPS : m_BlitPS; break;
-	case BlitSampler::Sharpen: shader = isTextureArray ? m_SharpenArrayPS : m_SharpenPS; break;
-	default: assert( false );
+		case BlitSampler::Point:
+		case BlitSampler::Linear:
+			shader = isTextureArray ? m_BlitArrayPS : m_BlitPS;
+			break;
+		case BlitSampler::Sharpen:
+			shader = isTextureArray ? m_SharpenArrayPS : m_SharpenPS;
+			break;
+		default:
+			assert( false );
 	}
 
 	nvrhi::GraphicsPipelineHandle& pso = m_BlitPsoCache[PsoCacheKey{ fbinfo, shader, params.blendState }];
@@ -178,7 +213,7 @@ void CommonRenderPasses::BlitTexture( nvrhi::ICommandList* commandList, const Bl
 		psoDesc.VS = m_RectVS;
 		psoDesc.PS = shader;
 		psoDesc.primType = nvrhi::PrimitiveType::TriangleStrip;
-		psoDesc.renderState.rasterState.setCullNone( );
+		psoDesc.renderState.rasterState.setCullNone();
 		psoDesc.renderState.depthStencilState.depthTestEnable = false;
 		psoDesc.renderState.depthStencilState.stencilEnable = false;
 		psoDesc.renderState.blendState.targets[0] = params.blendState;
@@ -190,11 +225,14 @@ void CommonRenderPasses::BlitTexture( nvrhi::ICommandList* commandList, const Bl
 	{
 		auto sourceDimension = sourceDesc.dimension;
 		if( sourceDimension == nvrhi::TextureDimension::TextureCube || sourceDimension == nvrhi::TextureDimension::TextureCubeArray )
+		{
 			sourceDimension = nvrhi::TextureDimension::Texture2DArray;
+		}
 
 		auto sourceSubresources = nvrhi::TextureSubresourceSet( params.sourceMip, 1, params.sourceArraySlice, 1 );
 
-		bindingSetDesc.bindings = {
+		bindingSetDesc.bindings =
+		{
 			nvrhi::BindingSetItem::PushConstants( 0, sizeof( BlitConstants ) ),
 			nvrhi::BindingSetItem::Texture_SRV( 0, params.sourceTexture ).setSubresources( sourceSubresources ).setDimension( sourceDimension ),
 			nvrhi::BindingSetItem::Sampler( 0, params.sampler == BlitSampler::Point ? m_PointClampSampler : m_LinearClampSampler )
@@ -205,9 +243,13 @@ void CommonRenderPasses::BlitTexture( nvrhi::ICommandList* commandList, const Bl
 	// Otherwise, create one and then release it.
 	nvrhi::BindingSetHandle sourceBindingSet;
 	if( bindingCache )
+	{
 		sourceBindingSet = bindingCache->GetOrCreateBindingSet( bindingSetDesc, m_BlitBindingLayout );
+	}
 	else
+	{
 		sourceBindingSet = m_Device->createBindingSet( bindingSetDesc, m_BlitBindingLayout );
+	}
 
 	nvrhi::GraphicsState state;
 	state.pipeline = pso;

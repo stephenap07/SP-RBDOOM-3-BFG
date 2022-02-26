@@ -45,37 +45,37 @@ class DeviceManager_DX12 : public DeviceManager
 	std::string                                 renderString;
 
 public:
-	const char* GetRendererString( ) const override
+	const char* GetRendererString() const override
 	{
-		return renderString.c_str( );
+		return renderString.c_str();
 	}
 
-	nvrhi::IDevice* GetDevice( ) const override
+	nvrhi::IDevice* GetDevice() const override
 	{
 		return nvrhiDevice;
 	}
 
-	void ReportLiveObjects( ) override;
+	void ReportLiveObjects() override;
 
-	nvrhi::GraphicsAPI GetGraphicsAPI( ) const override
+	nvrhi::GraphicsAPI GetGraphicsAPI() const override
 	{
 		return nvrhi::GraphicsAPI::D3D12;
 	}
 
 protected:
-	bool CreateDeviceAndSwapChain( ) override;
-	void DestroyDeviceAndSwapChain( ) override;
-	void ResizeSwapChain( ) override;
-	nvrhi::ITexture* GetCurrentBackBuffer( ) override;
+	bool CreateDeviceAndSwapChain() override;
+	void DestroyDeviceAndSwapChain() override;
+	void ResizeSwapChain() override;
+	nvrhi::ITexture* GetCurrentBackBuffer() override;
 	nvrhi::ITexture* GetBackBuffer( uint32_t index ) override;
-	uint32_t GetCurrentBackBufferIndex( ) override;
-	uint32_t GetBackBufferCount( ) override;
-	void BeginFrame( ) override;
-	void Present( ) override;
+	uint32_t GetCurrentBackBufferIndex() override;
+	uint32_t GetBackBufferCount() override;
+	void BeginFrame() override;
+	void Present() override;
 
 private:
-	bool CreateRenderTargets( );
-	void ReleaseRenderTargets( );
+	bool CreateRenderTargets();
+	void ReleaseRenderTargets();
 
 	glconfig_t config;
 };
@@ -111,7 +111,7 @@ static RefCountPtr<IDXGIAdapter> FindAdapter( const std::wstring& targetName )
 
 			// If no name is specified, return the first adapater.  This is the same behaviour as the
 			// default specified for D3D11CreateDevice when no adapter is specified.
-			if( targetName.length( ) == 0 )
+			if( targetName.length() == 0 )
 			{
 				targetAdapter = pAdapter;
 				break;
@@ -170,7 +170,7 @@ static bool MoveWindowOntoAdapter( IDXGIAdapter* targetAdapter, RECT& rect )
 	return false;
 }
 
-void DeviceManager_DX12::ReportLiveObjects( )
+void DeviceManager_DX12::ReportLiveObjects()
 {
 	nvrhi::RefCountPtr<IDXGIDebug> pDebug;
 	DXGIGetDebugInterface1( 0, IID_PPV_ARGS( &pDebug ) );
@@ -181,7 +181,7 @@ void DeviceManager_DX12::ReportLiveObjects( )
 	}
 }
 
-bool DeviceManager_DX12::CreateDeviceAndSwapChain( )
+bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 {
 	UINT windowStyle = deviceParms.startFullscreen
 					   ? ( WS_POPUP | WS_SYSMENU | WS_VISIBLE )
@@ -204,8 +204,8 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain( )
 
 		if( !targetAdapter )
 		{
-			std::wstring adapterNameStr( deviceParms.adapterNameSubstring.begin( ), deviceParms.adapterNameSubstring.end( ) );
-			common->FatalError( "Could not find an adapter matching %s\n", adapterNameStr.c_str( ) );
+			std::wstring adapterNameStr( deviceParms.adapterNameSubstring.begin(), deviceParms.adapterNameSubstring.end() );
+			common->FatalError( "Could not find an adapter matching %s\n", adapterNameStr.c_str() );
 			return false;
 		}
 	}
@@ -223,7 +223,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain( )
 		{
 			ss << wss.narrow( c, '?' );
 		}
-		renderString = ss.str( );
+		renderString = ss.str();
 
 		isNvidia = IsNvDeviceID( aDesc.VendorId );
 	}
@@ -271,7 +271,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain( )
 		RefCountPtr<ID3D12Debug> pDebug;
 		hr = D3D12GetDebugInterface( IID_PPV_ARGS( &pDebug ) );
 		HR_RETURN( hr );
-		pDebug->EnableDebugLayer( );
+		pDebug->EnableDebugLayer();
 	}
 
 	RefCountPtr<IDXGIFactory2> pDxgiFactory;
@@ -367,7 +367,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain( )
 	HR_RETURN( hr );
 
 	nvrhi::d3d12::DeviceDesc deviceDesc;
-	deviceDesc.errorCB = &DefaultMessageCallback::GetInstance( );
+	deviceDesc.errorCB = &DefaultMessageCallback::GetInstance();
 	deviceDesc.pDevice = m_Device12;
 	deviceDesc.pGraphicsCommandQueue = m_GraphicsQueue;
 	deviceDesc.pComputeCommandQueue = m_ComputeQueue;
@@ -382,7 +382,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain( )
 		nvrhiDevice = nvrhi::validation::createValidationLayer( nvrhiDevice );
 	}
 
-	if( !CreateRenderTargets( ) )
+	if( !CreateRenderTargets() )
 	{
 		return false;
 	}
@@ -398,12 +398,12 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain( )
 	return true;
 }
 
-void DeviceManager_DX12::DestroyDeviceAndSwapChain( )
+void DeviceManager_DX12::DestroyDeviceAndSwapChain()
 {
-	m_RhiSwapChainBuffers.clear( );
-	renderString.clear( );
+	m_RhiSwapChainBuffers.clear();
+	renderString.clear();
 
-	ReleaseRenderTargets( );
+	ReleaseRenderTargets();
 
 	nvrhiDevice = nullptr;
 
@@ -413,14 +413,14 @@ void DeviceManager_DX12::DestroyDeviceAndSwapChain( )
 		CloseHandle( fenceEvent );
 	}
 
-	m_FrameFenceEvents.clear( );
+	m_FrameFenceEvents.clear();
 
 	if( m_SwapChain )
 	{
 		m_SwapChain->SetFullscreenState( false, nullptr );
 	}
 
-	m_SwapChainBuffers.clear( );
+	m_SwapChainBuffers.clear();
 
 	m_FrameFence = nullptr;
 	m_SwapChain = nullptr;
@@ -431,7 +431,7 @@ void DeviceManager_DX12::DestroyDeviceAndSwapChain( )
 	m_DxgiAdapter = nullptr;
 }
 
-bool DeviceManager_DX12::CreateRenderTargets( )
+bool DeviceManager_DX12::CreateRenderTargets()
 {
 	m_SwapChainBuffers.resize( m_SwapChainDesc.BufferCount );
 	m_RhiSwapChainBuffers.resize( m_SwapChainDesc.BufferCount );
@@ -459,7 +459,7 @@ bool DeviceManager_DX12::CreateRenderTargets( )
 	return true;
 }
 
-void DeviceManager_DX12::ReleaseRenderTargets( )
+void DeviceManager_DX12::ReleaseRenderTargets()
 {
 	if( !nvrhiDevice )
 	{
@@ -467,10 +467,10 @@ void DeviceManager_DX12::ReleaseRenderTargets( )
 	}
 
 	// Make sure that all frames have finished rendering
-	nvrhiDevice->waitForIdle( );
+	nvrhiDevice->waitForIdle();
 
 	// Release all in-flight references to the render targets
-	nvrhiDevice->runGarbageCollection( );
+	nvrhiDevice->runGarbageCollection();
 
 	// Set the events so that WaitForSingleObject in OneFrame will not hang later
 	for( auto e : m_FrameFenceEvents )
@@ -479,13 +479,13 @@ void DeviceManager_DX12::ReleaseRenderTargets( )
 	}
 
 	// Release the old buffers because ResizeBuffers requires that
-	m_RhiSwapChainBuffers.clear( );
-	m_SwapChainBuffers.clear( );
+	m_RhiSwapChainBuffers.clear();
+	m_SwapChainBuffers.clear();
 }
 
-void DeviceManager_DX12::ResizeSwapChain( )
+void DeviceManager_DX12::ResizeSwapChain()
 {
-	ReleaseRenderTargets( );
+	ReleaseRenderTargets();
 
 	if( !nvrhiDevice )
 	{
@@ -508,14 +508,14 @@ void DeviceManager_DX12::ResizeSwapChain( )
 		common->FatalError( "ResizeBuffers failed" );
 	}
 
-	bool ret = CreateRenderTargets( );
+	bool ret = CreateRenderTargets();
 	if( !ret )
 	{
 		common->FatalError( "CreateRenderTarget failed" );
 	}
 }
 
-void DeviceManager_DX12::BeginFrame( )
+void DeviceManager_DX12::BeginFrame()
 {
 	DXGI_SWAP_CHAIN_DESC1 newSwapChainDesc;
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC newFullScreenDesc;
@@ -523,7 +523,7 @@ void DeviceManager_DX12::BeginFrame( )
 	{
 		if( fullScreenDesc.Windowed != newFullScreenDesc.Windowed )
 		{
-			BackBufferResizing( );
+			BackBufferResizing();
 
 			fullScreenDesc = newFullScreenDesc;
 			m_SwapChainDesc = newSwapChainDesc;
@@ -535,48 +535,48 @@ void DeviceManager_DX12::BeginFrame( )
 				//glfwSetWindowMonitor( m_Window, nullptr, 50, 50, newSwapChainDesc.Width, newSwapChainDesc.Height, 0 );
 			}
 
-			ResizeSwapChain( );
-			BackBufferResized( );
+			ResizeSwapChain();
+			BackBufferResized();
 		}
 	}
 
-	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex( );
+	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
 	WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
 }
 
-nvrhi::ITexture* DeviceManager_DX12::GetCurrentBackBuffer( )
+nvrhi::ITexture* DeviceManager_DX12::GetCurrentBackBuffer()
 {
-	return m_RhiSwapChainBuffers[m_SwapChain->GetCurrentBackBufferIndex( )];
+	return m_RhiSwapChainBuffers[m_SwapChain->GetCurrentBackBufferIndex()];
 }
 
 nvrhi::ITexture* DeviceManager_DX12::GetBackBuffer( uint32_t index )
 {
-	if( index < m_RhiSwapChainBuffers.size( ) )
+	if( index < m_RhiSwapChainBuffers.size() )
 	{
 		return m_RhiSwapChainBuffers[index];
 	}
 	return nullptr;
 }
 
-uint32_t DeviceManager_DX12::GetCurrentBackBufferIndex( )
+uint32_t DeviceManager_DX12::GetCurrentBackBufferIndex()
 {
-	return m_SwapChain->GetCurrentBackBufferIndex( );
+	return m_SwapChain->GetCurrentBackBufferIndex();
 }
 
-uint32_t DeviceManager_DX12::GetBackBufferCount( )
+uint32_t DeviceManager_DX12::GetBackBufferCount()
 {
 	return m_SwapChainDesc.BufferCount;
 }
 
-void DeviceManager_DX12::Present( )
+void DeviceManager_DX12::Present()
 {
 	if( !windowVisible )
 	{
 		return;
 	}
 
-	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex( );
+	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
 	UINT presentFlags = 0;
 	if( !deviceParms.vsyncEnabled && !glConfig.isFullscreen && glConfig.swapControlTearAvailable )
@@ -591,7 +591,7 @@ void DeviceManager_DX12::Present( )
 	m_FrameCount++;
 }
 
-DeviceManager* DeviceManager::CreateD3D12( )
+DeviceManager* DeviceManager::CreateD3D12()
 {
 	return new DeviceManager_DX12();
 }

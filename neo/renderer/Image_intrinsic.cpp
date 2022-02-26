@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013-2021 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -223,7 +224,7 @@ static void R_RGBA8LinearImage( idImage* image, nvrhi::ICommandList* commandList
 
 static void R_LdrNativeImage( idImage* image, nvrhi::ICommandList* commandList )
 {
-	image->GenerateImage( NULL, renderSystem->GetWidth( ), renderSystem->GetHeight( ), TF_NEAREST, TR_CLAMP, TD_LDR, nullptr, true );//, msaaSamples );
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, nullptr, true );//, msaaSamples );
 }
 
 static void R_DepthImage( idImage* image, nvrhi::ICommandList* commandList )
@@ -241,46 +242,22 @@ static void R_DepthImage( idImage* image, nvrhi::ICommandList* commandList )
 // RB begin
 static void R_HDR_RGBA16FImage_ResNative( idImage* image, nvrhi::ICommandList* commandList )
 {
-	// FIXME
-#if defined(USE_HDR_MSAA)
-	int msaaSamples = glConfig.multisamples;
-#else
-	int msaaSamples = 0;
-#endif
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_RGBA16F, nullptr, true );//, msaaSamples );
 }
 
 static void R_HDR_RGBA16FImage_ResGui( idImage* image, nvrhi::ICommandList* commandList )
 {
-	// FIXME
-#if defined(USE_HDR_MSAA)
-	int msaaSamples = glConfig.multisamples;
-#else
-	int msaaSamples = 0;
-#endif
-	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F, nullptr, true ); //, msaaSamples );
+	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_NEAREST, TR_CLAMP, TD_RGBA16F, nullptr, true );
 }
 
 static void R_RGBA8Image_ResGui( idImage* image, nvrhi::ICommandList* commandList )
 {
-	// FIXME
-#if defined(USE_HDR_MSAA)
-	int msaaSamples = glConfig.multisamples;
-#else
-	int msaaSamples = 0;
-#endif
-	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_DEFAULT, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, nullptr, true ); //, msaaSamples );
+	image->GenerateImage( NULL, SCREEN_WIDTH, SCREEN_HEIGHT, TF_DEFAULT, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, nullptr, true );
 }
 
 static void R_HDR_RGBA16FImage_ResNative_Linear( idImage* image, nvrhi::ICommandList* commandList )
 {
-	// FIXME
-#if defined(USE_HDR_MSAA)
-	int msaaSamples = glConfig.multisamples;
-#else
-	int msaaSamples = 0;
-#endif
-	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_RGBA16F, nullptr, true ); //, msaaSamples );
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_RGBA16F, nullptr, true );
 }
 
 static void R_HDR_RGBA16FImage_ResNative_NoMSAA( idImage* image, nvrhi::ICommandList* commandList )
@@ -320,7 +297,7 @@ static void R_SMAAImage_ResNative( idImage* image, nvrhi::ICommandList* commandL
 
 static void R_AmbientOcclusionImage_ResNative( idImage* image, nvrhi::ICommandList* commandList )
 {
-	image->GenerateImage( NULL, renderSystem->GetWidth( ), renderSystem->GetHeight( ), TF_LINEAR, TR_CLAMP, TD_R8F, nullptr, true );
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_R8F, nullptr, true );
 }
 
 static void R_GeometryBufferImage_ResNative( idImage* image, nvrhi::ICommandList* commandList )
@@ -346,13 +323,7 @@ static void R_R8Image_ResNative_Linear( idImage* image, nvrhi::ICommandList* com
 
 static void R_HDR_RGBA8Image_ResNative( idImage* image, nvrhi::ICommandList* commandList )
 {
-	// FIXME
-#if defined(USE_HDR_MSAA)
-	int msaaSamples = glConfig.multisamples;
-#else
-	int msaaSamples = 0;
-#endif
-	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, commandList, true ); //, msaaSamples );
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, commandList, true );
 }
 
 static void R_AlphaNotchImage( idImage* image, nvrhi::ICommandList* commandList )
@@ -374,14 +345,18 @@ static void R_FlatNormalImage( idImage* image, nvrhi::ICommandList* commandList 
 	byte	data[DEFAULT_SIZE][DEFAULT_SIZE][4];
 
 	// flat normal map for default bump mapping
-	for( int i = 0 ; i < 4 ; i++ )
+	for( int i = 0; i < DEFAULT_SIZE; i++ )
 	{
-		data[0][i][0] = 128;
-		data[0][i][1] = 128;
-		data[0][i][2] = 255;
-		data[0][i][3] = 255;
+		for( int j = 0; j < DEFAULT_SIZE; j++ )
+		{
+			data[j][i][0] = 128;
+			data[j][i][1] = 128;
+			data[j][i][2] = 255;
+			data[j][i][3] = 255;
+		}
 	}
-	image->GenerateImage( ( byte* )data, 2, 2, TF_DEFAULT, TR_REPEAT, TD_BUMP, commandList );
+
+	image->GenerateImage( ( byte* )data, 16, 16, TF_DEFAULT, TR_REPEAT, TD_BUMP, commandList );
 }
 
 /*

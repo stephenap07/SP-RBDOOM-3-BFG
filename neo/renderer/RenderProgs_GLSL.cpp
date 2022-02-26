@@ -1679,4 +1679,52 @@ const char* idRenderProgManager::GetGLSLMacroName( shaderFeature_t sf ) const
 
 	return GLSLMacroNames[ sf ];
 }
-// RB end
+
+#if !defined( USE_NVRHI )
+/*
+================================================================================================
+idRenderProgManager::FindGLSLProgram
+================================================================================================
+*/
+int	 idRenderProgManager::FindGLSLProgram( const char* name, int vIndex, int fIndex )
+{
+	for( int i = 0; i < renderProgs.Num(); ++i )
+	{
+		if( ( renderProgs[i].vertexShaderIndex == vIndex ) && ( renderProgs[i].fragmentShaderIndex == fIndex ) )
+		{
+			return i;
+		}
+	}
+
+	renderProg_t program;
+	program.name = name;
+	int index = renderProgs.Append( program );
+	LoadGLSLProgram( index, vIndex, fIndex );
+	return index;
+}
+
+/*
+================================================================================================
+idRenderProgManager::SetUniformValue
+================================================================================================
+*/
+void idRenderProgManager::SetUniformValue( const renderParm_t rp, const float* value )
+{
+	for( int i = 0; i < 4; i++ )
+	{
+		uniforms[rp][i] = value[i];
+	}
+}
+
+
+/*
+================================================================================================
+idRenderProgManager::ZeroUniforms
+================================================================================================
+*/
+void idRenderProgManager::ZeroUniforms()
+{
+	memset( uniforms.Ptr(), 0, uniforms.Allocated() );
+}
+
+#endif

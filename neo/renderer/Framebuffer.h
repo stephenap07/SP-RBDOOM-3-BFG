@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -51,7 +52,7 @@ class Framebuffer
 public:
 
 	Framebuffer( const char* name, int width, int height );
-	Framebuffer( const char* name, const nvrhi::FramebufferDesc& desc);
+	Framebuffer( const char* name, const nvrhi::FramebufferDesc& desc );
 
 	virtual ~Framebuffer();
 
@@ -59,11 +60,11 @@ public:
 	static void				Shutdown();
 	static void				CheckFramebuffers();
 	static Framebuffer*		Find( const char* name );
-	static void				ResizeFramebuffers( );
+	static void				ResizeFramebuffers();
 
 	void					Bind();
 	bool					IsBound();
-	static void				Unbind( );
+	static void				Unbind();
 	static bool				IsDefaultFramebufferActive();
 	static Framebuffer*		GetActiveFramebuffer();
 
@@ -104,12 +105,12 @@ public:
 		height = height_;
 	}
 
-	nvrhi::IFramebuffer*	GetApiObject( )
+	nvrhi::IFramebuffer*	GetApiObject()
 	{
 		return apiObject;
 	}
 
-	idScreenRect			GetViewPortInfo( ) const;
+	idScreenRect			GetViewPortInfo() const;
 
 private:
 	idStr					fboName;

@@ -28,18 +28,27 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../global_inc.hlsl"
 
-Texture2D texGui : register( t0 );
-SamplerState samp0 : register( s0 );
+Texture2D texGui :
+register( t0 );
+SamplerState samp0 :
+register( s0 );
 
-struct PS_IN {
-	float4 position	 : SV_POSITION;
-	float2 texcoord0 : TEXCOORD0_centroid;
-	float4 texcoord1 : TEXCOORD1;
-	float4 color	 : COLOR0;
+struct PS_IN
+{
+float4 position	 :
+	SV_POSITION;
+float2 texcoord0 :
+	TEXCOORD0_centroid;
+float4 texcoord1 :
+	TEXCOORD1;
+float4 color	 :
+	COLOR0;
 };
 
-struct PS_OUT {
-	float4 color : SV_Target0;
+struct PS_OUT
+{
+float4 color :
+	SV_Target0;
 };
 
 void main( PS_IN fragment, out PS_OUT result )

@@ -25,13 +25,13 @@
 
 struct BlitConstants
 {
-    float2  sourceOrigin;
-    float2  sourceSize;
+	float2  sourceOrigin;
+	float2  sourceSize;
 
-    float2  targetOrigin;
-    float2  targetSize;
-    
-    float   sharpenFactor;
+	float2  targetOrigin;
+	float2  targetSize;
+
+	float   sharpenFactor;
 };
 
 #endif // BLIT_CB_H

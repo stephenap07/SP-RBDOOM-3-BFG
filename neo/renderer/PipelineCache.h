@@ -16,11 +16,11 @@ struct PipelineKey
 inline bool operator==( const PipelineKey& lhs, const PipelineKey& rhs )
 {
 	return lhs.state == rhs.state &&
-		lhs.program == rhs.program &&
-		lhs.mirrored == rhs.mirrored &&
-		lhs.framebuffer == rhs.framebuffer &&
-		lhs.depthBias == rhs.depthBias &&
-		lhs.slopeBias == rhs.slopeBias;
+		   lhs.program == rhs.program &&
+		   lhs.mirrored == rhs.mirrored &&
+		   lhs.framebuffer == rhs.framebuffer &&
+		   lhs.depthBias == rhs.depthBias &&
+		   lhs.slopeBias == rhs.slopeBias;
 }
 
 template<>

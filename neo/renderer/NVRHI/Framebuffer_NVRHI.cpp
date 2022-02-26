@@ -71,9 +71,9 @@ Framebuffer::Framebuffer( const char* name, const nvrhi::FramebufferDesc& desc )
 	, msaaSamples( false )
 {
 	framebuffers.Append( this );
-	apiObject = deviceManager->GetDevice( )->createFramebuffer( desc );
-	width = apiObject->getFramebufferInfo( ).width;
-	height = apiObject->getFramebufferInfo( ).height;
+	apiObject = deviceManager->GetDevice()->createFramebuffer( desc );
+	width = apiObject->getFramebufferInfo().width;
+	height = apiObject->getFramebufferInfo().height;
 }
 
 Framebuffer::~Framebuffer()
@@ -85,7 +85,7 @@ void Framebuffer::Init()
 	cmdSystem->AddCommand( "listFramebuffers", R_ListFramebuffers_f, CMD_FL_RENDERER, "lists framebuffers" );
 
 	// HDR
-	ResizeFramebuffers( );
+	ResizeFramebuffers();
 }
 
 void Framebuffer::CheckFramebuffers()
@@ -99,17 +99,17 @@ void Framebuffer::Shutdown()
 	framebuffers.DeleteContents( true );
 }
 
-void Framebuffer::ResizeFramebuffers( )
+void Framebuffer::ResizeFramebuffers()
 {
-	tr.backend.pipelineCache.Clear( );
-	uint32_t backBufferCount = deviceManager->GetBackBufferCount( );
+	tr.backend.pipelineCache.Clear();
+	uint32_t backBufferCount = deviceManager->GetBackBufferCount();
 	globalFramebuffers.swapFramebuffers.Resize( backBufferCount );
 	globalFramebuffers.swapFramebuffers.SetNum( backBufferCount );
 
-	int screenWidth = renderSystem->GetWidth( );
-	int screenHeight = renderSystem->GetHeight( );
+	int screenWidth = renderSystem->GetWidth();
+	int screenHeight = renderSystem->GetHeight();
 
-	tr.backend.commandList->open( );
+	tr.backend.commandList->open();
 	globalImages->currentRenderLDR->Reload( false, tr.backend.commandList );
 	globalImages->currentRenderImage->Reload( false, tr.backend.commandList );
 	globalImages->currentDepthImage->Reload( false, tr.backend.commandList );
@@ -137,8 +137,8 @@ void Framebuffer::ResizeFramebuffers( )
 	for( uint32_t index = 0; index < backBufferCount; index++ )
 	{
 		globalFramebuffers.swapFramebuffers[index] = new Framebuffer(
-			va("_swapChain%d", index),
-			nvrhi::FramebufferDesc( )
+			va( "_swapChain%d", index ),
+			nvrhi::FramebufferDesc()
 			.addColorAttachment( deviceManager->GetBackBuffer( index ) ) );
 	}
 
@@ -147,71 +147,71 @@ void Framebuffer::ResizeFramebuffers( )
 		for( int mip = 0; mip < MAX_SHADOWMAP_RESOLUTIONS; mip++ )
 		{
 			globalFramebuffers.shadowFBO[mip][arr] = new Framebuffer( va( "_shadowMap%i_%i", mip, arr ),
-				nvrhi::FramebufferDesc( ).setDepthAttachment(
-					nvrhi::FramebufferAttachment( )
-					.setTexture( globalImages->shadowImage[mip]->GetTextureHandle( ).Get( ) )
-					.setArraySlice( arr ) ) );
+					nvrhi::FramebufferDesc().setDepthAttachment(
+						nvrhi::FramebufferAttachment()
+						.setTexture( globalImages->shadowImage[mip]->GetTextureHandle().Get() )
+						.setArraySlice( arr ) ) );
 		}
 	}
 
 	globalFramebuffers.ldrFBO = new Framebuffer( "_ldr",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->currentRenderLDR->texture )
-		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->currentRenderLDR->texture )
+			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
 
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->currentRenderHDRImage->texture )
-		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->currentRenderHDRImage->texture )
+			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
 
 	globalFramebuffers.postProcFBO = new Framebuffer( "_postProc",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->currentRenderImage->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->currentRenderImage->texture ) );
 
 	globalFramebuffers.envprobeFBO = new Framebuffer( "_envprobeRender",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->envprobeHDRImage->texture )
-		.setDepthAttachment( globalImages->envprobeDepthImage->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->envprobeHDRImage->texture )
+			.setDepthAttachment( globalImages->envprobeDepthImage->texture ) );
 
 	globalFramebuffers.hdr64FBO = new Framebuffer( "_hdr64",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->currentRenderHDRImage64->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->currentRenderHDRImage64->texture ) );
 
 	for( int i = 0; i < MAX_SSAO_BUFFERS; i++ )
 	{
 		globalFramebuffers.ambientOcclusionFBO[i] = new Framebuffer( va( "_aoRender%i", i ),
-			nvrhi::FramebufferDesc( )
-			.addColorAttachment( globalImages->ambientOcclusionImage[i]->texture) );
+				nvrhi::FramebufferDesc()
+				.addColorAttachment( globalImages->ambientOcclusionImage[i]->texture ) );
 	}
 
 	// HIERARCHICAL Z BUFFER
 	for( int i = 0; i < MAX_HIERARCHICAL_ZBUFFERS; i++ )
 	{
-		globalFramebuffers.csDepthFBO[i] = new Framebuffer( va("_csz%d", i),
-			nvrhi::FramebufferDesc().addColorAttachment(
-				nvrhi::FramebufferAttachment( )
-				.setTexture( globalImages->hierarchicalZbufferImage->texture )
-				.setMipLevel( i ) ) );
+		globalFramebuffers.csDepthFBO[i] = new Framebuffer( va( "_csz%d", i ),
+				nvrhi::FramebufferDesc().addColorAttachment(
+					nvrhi::FramebufferAttachment()
+					.setTexture( globalImages->hierarchicalZbufferImage->texture )
+					.setMipLevel( i ) ) );
 	}
 
 	globalFramebuffers.geometryBufferFBO = new Framebuffer( "_gbuffer",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->currentNormalsImage->texture )
-		.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->currentNormalsImage->texture )
+			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
 
 	globalFramebuffers.smaaEdgesFBO = new Framebuffer( "_smaaEdges",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->smaaEdgesImage->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->smaaEdgesImage->texture ) );
 
 	globalFramebuffers.smaaEdgesFBO = new Framebuffer( "_smaaBlend",
-		nvrhi::FramebufferDesc( )
-		.addColorAttachment( globalImages->smaaBlendImage->texture ) );
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->smaaBlendImage->texture ) );
 
 	for( int i = 0; i < MAX_BLOOM_BUFFERS; i++ )
 	{
 		globalFramebuffers.bloomRenderFBO[i] = new Framebuffer( va( "_bloomRender%i", i ),
-			nvrhi::FramebufferDesc()
-			.addColorAttachment( globalImages->bloomRenderImage[i]->texture ) );
+				nvrhi::FramebufferDesc()
+				.addColorAttachment( globalImages->bloomRenderImage[i]->texture ) );
 	}
 
 	Framebuffer::Unbind( );
@@ -225,7 +225,8 @@ void Framebuffer::Bind( )
 	{
 		tr.backend.currentPipeline = nullptr;
 	}
-	
+
+	tr.backend.lastFrameBuffer = tr.backend.currentFrameBuffer;
 	tr.backend.currentFrameBuffer = this;
 }
 
@@ -237,12 +238,12 @@ bool Framebuffer::IsBound()
 void Framebuffer::Unbind()
 {
 	RENDERLOG_PRINTF( "Framebuffer::Unbind()\n" );
-	globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )]->Bind( );
+	globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex()]->Bind();
 }
 
 bool Framebuffer::IsDefaultFramebufferActive()
 {
-	return tr.backend.currentFrameBuffer == globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex( )];
+	return tr.backend.currentFrameBuffer == globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex()];
 }
 
 Framebuffer* Framebuffer::GetActiveFramebuffer()
@@ -278,11 +279,11 @@ void Framebuffer::Check()
 {
 }
 
-idScreenRect Framebuffer::GetViewPortInfo( ) const
+idScreenRect Framebuffer::GetViewPortInfo() const
 {
-	nvrhi::Viewport viewport = apiObject->getFramebufferInfo( ).getViewport( );
+	nvrhi::Viewport viewport = apiObject->getFramebufferInfo().getViewport();
 	idScreenRect screenRect;
-	screenRect.Clear( );
+	screenRect.Clear();
 	screenRect.AddPoint( viewport.minX, viewport.minY );
 	screenRect.AddPoint( viewport.maxX, viewport.maxY );
 	return screenRect;

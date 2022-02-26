@@ -1,3 +1,30 @@
+/*
+===========================================================================
+
+Doom 3 BFG Edition GPL Source Code
+Copyright (C) 2022 Stephen Pridham
+
+This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
+
+Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Doom 3 BFG Edition Source Code is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Doom 3 BFG Edition Source Code.  If not, see <http://www.gnu.org/licenses/>.
+
+In addition, the Doom 3 BFG Edition Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the Doom 3 BFG Edition Source Code.  If not, please request a copy in writing from id Software at the address below.
+
+If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
+
+===========================================================================
+*/
 #include <precompiled.h>
 #pragma hdrstop
 
@@ -37,26 +64,26 @@ void ForwardShadingPass::Init( nvrhi::DeviceHandle deviceHandle )
 	device = deviceHandle;
 
 	auto texturedBindingLayoutDesc = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );
+									 .setVisibility( nvrhi::ShaderType::All )
+									 .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+									 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
+									 .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );
 
 	auto geometrySkinnedBindingLayoutDesc = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 1 ) );
+											.setVisibility( nvrhi::ShaderType::All )
+											.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+											.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 1 ) );
 
 	auto geometryBindingLayoutDesc = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) );
+									 .setVisibility( nvrhi::ShaderType::All )
+									 .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) );
 
 	texturedBindingLayout = device->createBindingLayout( texturedBindingLayoutDesc );
 	geometryBindingLayout = device->createBindingLayout( geometryBindingLayoutDesc );
 	pipelineDesc.bindingLayouts = { geometryBindingLayout };
 
 	geometryBindingSetDesc = nvrhi::BindingSetDesc( )
-		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
+							 .addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
 
 	samplerCache.Init( deviceHandle.Get( ) );
 
@@ -207,20 +234,20 @@ void ForwardShadingPass::ShadowMapPass( nvrhi::ICommandList* commandList, const 
 
 	switch( r_shadowMapOccluderFacing.GetInteger( ) )
 	{
-	case 0:
-		GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
-		GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat( ), r_shadowMapPolygonOffset.GetFloat( ) );
-		break;
+		case 0:
+			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
+			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat( ), r_shadowMapPolygonOffset.GetFloat( ) );
+			break;
 
-	case 1:
-		GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_BACKSIDED );
-		GL_PolygonOffset( -r_shadowMapPolygonFactor.GetFloat( ), -r_shadowMapPolygonOffset.GetFloat( ) );
-		break;
+		case 1:
+			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_BACKSIDED );
+			GL_PolygonOffset( -r_shadowMapPolygonFactor.GetFloat( ), -r_shadowMapPolygonOffset.GetFloat( ) );
+			break;
 
-	default:
-		GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_TWOSIDED );
-		GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat( ), r_shadowMapPolygonOffset.GetFloat( ) );
-		break;
+		default:
+			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_TWOSIDED );
+			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat( ), r_shadowMapPolygonOffset.GetFloat( ) );
+			break;
 	}
 
 	idRenderMatrix lightProjectionRenderMatrix;
@@ -368,36 +395,36 @@ void ForwardShadingPass::ShadowMapPass( nvrhi::ICommandList* commandList, const 
 		memset( viewMatrix, 0, sizeof( viewMatrix ) );
 		switch( side )
 		{
-		case 0:
-			viewMatrix[0] = 1;
-			viewMatrix[9] = 1;
-			viewMatrix[6] = -1;
-			break;
-		case 1:
-			viewMatrix[0] = -1;
-			viewMatrix[9] = -1;
-			viewMatrix[6] = -1;
-			break;
-		case 2:
-			viewMatrix[4] = 1;
-			viewMatrix[1] = -1;
-			viewMatrix[10] = 1;
-			break;
-		case 3:
-			viewMatrix[4] = -1;
-			viewMatrix[1] = -1;
-			viewMatrix[10] = -1;
-			break;
-		case 4:
-			viewMatrix[8] = 1;
-			viewMatrix[1] = -1;
-			viewMatrix[6] = -1;
-			break;
-		case 5:
-			viewMatrix[8] = -1;
-			viewMatrix[1] = 1;
-			viewMatrix[6] = -1;
-			break;
+			case 0:
+				viewMatrix[0] = 1;
+				viewMatrix[9] = 1;
+				viewMatrix[6] = -1;
+				break;
+			case 1:
+				viewMatrix[0] = -1;
+				viewMatrix[9] = -1;
+				viewMatrix[6] = -1;
+				break;
+			case 2:
+				viewMatrix[4] = 1;
+				viewMatrix[1] = -1;
+				viewMatrix[10] = 1;
+				break;
+			case 3:
+				viewMatrix[4] = -1;
+				viewMatrix[1] = -1;
+				viewMatrix[10] = -1;
+				break;
+			case 4:
+				viewMatrix[8] = 1;
+				viewMatrix[1] = -1;
+				viewMatrix[6] = -1;
+				break;
+			case 5:
+				viewMatrix[8] = -1;
+				viewMatrix[1] = 1;
+				viewMatrix[6] = -1;
+				break;
 		}
 
 		viewMatrix[12] = -origin[0] * viewMatrix[0] + -origin[1] * viewMatrix[4] + -origin[2] * viewMatrix[8];
@@ -667,9 +694,9 @@ void ForwardShadingPass::ShadowMapPass( nvrhi::ICommandList* commandList, const 
 				if( imageChanged )
 				{
 					auto bindingSetDesc = nvrhi::BindingSetDesc( )
-						.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-						.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )imageParms[0]->GetTextureID( ) ) )
-						.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )imageParms[0]->GetSampler( samplerCache ) ) );
+										  .addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+										  .addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )imageParms[0]->GetTextureID( ) ) )
+										  .addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )imageParms[0]->GetSampler( samplerCache ) ) );
 
 					auto currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, renderProgManager.BindingLayout() );
 

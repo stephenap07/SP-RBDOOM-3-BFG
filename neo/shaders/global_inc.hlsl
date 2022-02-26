@@ -280,7 +280,7 @@ float3 octDecode( float2 o )
 #define matrixCoCg1YtoRGB1X half4( 1.0, -1.0,  0.0,        1.0 )
 // -0.5 * 256.0 / 255.0
 #define matrixCoCg1YtoRGB1Y half4( 0.0,  1.0, -0.50196078, 1.0 )
- // +1.0 * 256.0 / 255.0
+// +1.0 * 256.0 / 255.0
 #define matrixCoCg1YtoRGB1Z half4( -1.0, -1.0,  1.00392156, 1.0 )
 
 static half3 ConvertYCoCgToRGB( half4 YCoCg )
@@ -351,6 +351,16 @@ float rand( float2 co )
 #define dFdy ddy
 
 static float4 idtex2Dproj( SamplerState samp, Texture2D t, float4 texCoords )
+{
+	return t.Sample( samp, texCoords.xy / texCoords.w );
+}
+
+static float idtex2Dproj( SamplerState samp, Texture2D<float> t, float4 texCoords )
+{
+	return t.Sample( samp, texCoords.xy / texCoords.w );
+}
+
+static float3 idtex2Dproj( SamplerState samp, Texture2D<float3> t, float4 texCoords )
 {
 	return t.Sample( samp, texCoords.xy / texCoords.w );
 }
@@ -481,7 +491,7 @@ static float3 ditherRGB( float3 color, float2 uvSeed, float quantSteps )
 	noise = noise * 2.0 - 0.5;
 #endif
 
-	noise = float3( noise.x, 0, 0 );
+	noise = _float3( noise.x );
 
 	// quantize/truncate color and dither the result
 	//float scale = exp2( float( TARGET_BITS ) ) - 1.0;

@@ -183,7 +183,7 @@ public:
 
 	virtual bool			CheckAreaForPortalSky( int areaNum );
 
-	virtual	void			GenerateAllInteractions( );
+	virtual	void			GenerateAllInteractions();
 	virtual void			RegenerateWorld();
 
 	virtual void			ProjectDecalOntoWorld( const idFixedWinding& winding, const idVec3& projectionOrigin, const bool parallel, const float fadeDepth, const idMaterial* material, const int startTime );

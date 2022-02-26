@@ -450,7 +450,7 @@ struct sysEvent_t
 	{
 		return evValue2 != 0;
 	}
-	bool			IsKeyUp( ) const
+	bool			IsKeyUp() const
 	{
 		return evValue2 == 0;
 	}

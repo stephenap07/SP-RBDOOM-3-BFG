@@ -487,6 +487,7 @@ if(USE_NVRHI)
 
 	set(NVRHI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/nvrhi)
 	add_subdirectory(${NVRHI_DIR})
+	add_definitions(-DUSE_NVRHI)
 
 	if(USE_DX11)
         find_package(FXC REQUIRED)
@@ -559,17 +560,17 @@ file(GLOB RENDERER_VULKAN_SOURCES renderer/Vulkan/*.cpp)
 file(GLOB RENDERER_NVRHI_INCLUDES renderer/NVRHI/*.h)
 file(GLOB RENDERER_NVRHI_SOURCES renderer/NVRHI/*.cpp)
 
-file(GLOB SHADERS ../base/renderprogs/*.hlsl ../base/renderprogs/*.inc )
-file(GLOB SHADERS_BUILTIN ../base/renderprogs/builtin/*.hlsl )
-file(GLOB SHADERS_BUILTIN_DEBUG ../base/renderprogs/builtin/debug/*.hlsl )
-file(GLOB SHADERS_BUILTIN_FOG ../base/renderprogs/builtin/fog/*.hlsl )
-file(GLOB SHADERS_BUILTIN_LEGACY ../base/renderprogs/builtin/legacy/*.hlsl )
-file(GLOB SHADERS_BUILTIN_LIGHTING ../base/renderprogs/builtin/lighting/*.hlsl )
-file(GLOB SHADERS_BUILTIN_POST ../base/renderprogs/builtin/post/*.hlsl )
-file(GLOB SHADERS_BUILTIN_SSAO ../base/renderprogs/builtin/SSAO/*.hlsl )
-file(GLOB SHADERS_BUILTIN_SSGI ../base/renderprogs/builtin/SSGI/*.hlsl )
-file(GLOB SHADERS_BUILTIN_VIDEO ../base/renderprogs/builtin/video/*.hlsl )
-file(GLOB SHADERS_BUILTIN_VR ../base/renderprogs/builtin/VR/*.hlsl )
+file(GLOB SHADERS shaders/*.hlsl shaders/*.inc )
+file(GLOB SHADERS_BUILTIN shaders/builtin/*.hlsl )
+file(GLOB SHADERS_BUILTIN_DEBUG shaders/builtin/debug/*.hlsl )
+file(GLOB SHADERS_BUILTIN_FOG shaders/builtin/fog/*.hlsl )
+file(GLOB SHADERS_BUILTIN_LEGACY .shaders/builtin/legacy/*.hlsl )
+file(GLOB SHADERS_BUILTIN_LIGHTING shaders/builtin/lighting/*.hlsl )
+file(GLOB SHADERS_BUILTIN_POST shaders/builtin/post/*.hlsl )
+file(GLOB SHADERS_BUILTIN_SSAO shaders/builtin/SSAO/*.hlsl )
+file(GLOB SHADERS_BUILTIN_SSGI shaders/builtin/SSGI/*.hlsl )
+file(GLOB SHADERS_BUILTIN_VIDEO shaders/builtin/video/*.hlsl )
+file(GLOB SHADERS_BUILTIN_VR shaders/builtin/VR/*.hlsl )
 
 file(GLOB IRRXML_INCLUDES libs/irrxml/src/*.h)
 file(GLOB IRRXML_SOURCES libs/irrxml/src/*.cpp)
@@ -730,7 +731,8 @@ set(SOUND_INCLUDES
 	sound/snd_local.h
 	sound/sound.h
 	sound/SoundVoice.h
-	sound/WaveFile.h)
+	sound/WaveFile.h
+	sound/CinematicAudio.h)
 	
 set(SOUND_SOURCES
 	sound/snd_emitter.cpp
@@ -738,28 +740,31 @@ set(SOUND_SOURCES
 	sound/snd_system.cpp
 	sound/snd_world.cpp
 	sound/SoundVoice.cpp
-	sound/WaveFile.cpp
-	)
+	sound/WaveFile.cpp)
 	
 set(XAUDIO2_INCLUDES
 	sound/XAudio2/XA2_SoundHardware.h
 	sound/XAudio2/XA2_SoundSample.h
-	sound/XAudio2/XA2_SoundVoice.h)
+	sound/XAudio2/XA2_SoundVoice.h
+	sound/Xaudio2/XA2_CinematicAudio.h)
 	
 set(XAUDIO2_SOURCES
 	sound/XAudio2/XA2_SoundHardware.cpp
 	sound/XAudio2/XA2_SoundSample.cpp
-	sound/XAudio2/XA2_SoundVoice.cpp)
+	sound/XAudio2/XA2_SoundVoice.cpp
+	sound/Xaudio2/XA2_CinematicAudio.cpp)
 	
 set(OPENAL_INCLUDES
 	sound/OpenAL/AL_SoundHardware.h
 	sound/OpenAL/AL_SoundSample.h
-	sound/OpenAL/AL_SoundVoice.h)
+	sound/OpenAL/AL_SoundVoice.h
+	sound/OpenAL/AL_CinematicAudio.h)
 	
 set(OPENAL_SOURCES
 	sound/OpenAL/AL_SoundHardware.cpp
 	sound/OpenAL/AL_SoundSample.cpp
-	sound/OpenAL/AL_SoundVoice.cpp)
+	sound/OpenAL/AL_SoundVoice.cpp
+	sound/OpenAL/AL_CinematicAudio.cpp)
 
 set(STUBAUDIO_INCLUDES
 	sound/stub/SoundStub.h)

@@ -202,8 +202,8 @@ LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
 					if( glConfig.nativeScreenWidth != originalWidth || glConfig.nativeScreenHeight != originalHeight )
 					{
-						deviceManager->UpdateWindowSize( );
-						Framebuffer::ResizeFramebuffers( );
+						deviceManager->UpdateWindowSize();
+						Framebuffer::ResizeFramebuffers();
 					}
 				}
 			}

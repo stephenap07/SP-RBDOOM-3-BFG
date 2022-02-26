@@ -6,6 +6,7 @@ Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013-2021 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -88,6 +89,8 @@ int BitsForFormat( textureFormat_t format )
 			return 16;
 		case FMT_Y16_X16:
 			return 32;
+		// TODO case FMT_F8:
+		//	return 32;
 		default:
 			assert( 0 );
 			return 0;
@@ -98,14 +101,14 @@ int BytesPerBlockForFormat( const textureFormat_t& format )
 {
 	switch( format )
 	{
-	case FMT_NONE:
-		return 0;
-	case FMT_DXT1:
-		return 8;
-	case FMT_DXT5:
-		return 16;
-	default:
-		return 1;
+		case FMT_NONE:
+			return 0;
+		case FMT_DXT1:
+			return 8;
+		case FMT_DXT5:
+			return 16;
+		default:
+			return 1;
 	}
 }
 
@@ -113,14 +116,14 @@ int BlockSizeForFormat( const textureFormat_t& format )
 {
 	switch( format )
 	{
-	case FMT_NONE:
-		return 0;
-	case FMT_DXT1:
-		return 8;
-	case FMT_DXT5:
-		return 16;
-	default:
-		return 1;
+		case FMT_NONE:
+			return 0;
+		case FMT_DXT1:
+			return 8;
+		case FMT_DXT5:
+			return 16;
+		default:
+			return 1;
 	}
 }
 
@@ -141,7 +144,7 @@ static int GetRowPitch( const textureFormat_t& format, int width )
 	}
 
 	int bpe = BitsForFormat( format );
-	return width * (bpe / 8);
+	return width * ( bpe / 8 );
 }
 
 /*
@@ -600,7 +603,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 				commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 				for( int level = 0; level < opts.numLevels; level++ )
 				{
-					commandList->writeTexture( texture, 0, level, clear.Ptr(), GetRowPitch( opts.format, opts.width ));
+					commandList->writeTexture( texture, 0, level, clear.Ptr(), GetRowPitch( opts.format, opts.width ) );
 				}
 				commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
 				commandList->commitBarriers( );
@@ -710,12 +713,6 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 		}
 		else
 		{
-			int bufferW = img.width;
-			if( IsCompressed( ) )
-			{
-				bufferW = ( img.width + 3 ) & ~3;
-			}
-
 			commandList->writeTexture( texture, img.destZ, img.level, pic, GetRowPitch( opts.format, img.width ) );
 		}
 	}
@@ -972,9 +969,6 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 
 		if( commandList )
 		{
-			const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
-			const int bytesPerBlock = info.bytesPerBlock;
-
 			commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
 			for( int i = 0; i < im.NumImages( ); i++ )
@@ -1198,7 +1192,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 		}
 
 		commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
-		commandList->writeTexture( texture, 0, 0, data, GetRowPitch( opts.format, opts.width) );
+		commandList->writeTexture( texture, 0, 0, data, GetRowPitch( opts.format, opts.width ) );
 		commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
 		commandList->commitBarriers( );
 	}

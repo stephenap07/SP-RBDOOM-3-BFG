@@ -3,8 +3,9 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2021 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -35,7 +36,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 
-#include "sys/DeviceManager.h"
+#if defined( USE_NVRHI )
+	#include "sys/DeviceManager.h"
+#endif
 
 // RB begin
 #if defined(_WIN32)
@@ -283,9 +286,9 @@ idCVar r_shadowMapSunDepthBiasScale( "r_shadowMapSunDepthBiasScale", "0.999991",
 #endif
 
 idCVar r_hdrAutoExposure( "r_hdrAutoExposure", "0", CVAR_RENDERER | CVAR_BOOL, "EXPENSIVE: enables adapative HDR tone mapping otherwise the exposure is derived by r_exposure" );
-idCVar r_hdrAdaptionRate( "r_hdrAdaptionRate", "3", CVAR_RENDERER | CVAR_FLOAT, "The rate of adapting the hdr exposure value`. Defaulted to a third of a second." );
-idCVar r_hdrMinLuminance( "r_hdrMinLuminance", "0.005", CVAR_RENDERER | CVAR_FLOAT, "" );
-idCVar r_hdrMaxLuminance( "r_hdrMaxLuminance", "300", CVAR_RENDERER | CVAR_FLOAT, "" );
+idCVar r_hdrAdaptionRate( "r_hdrAdaptionRate", "1", CVAR_RENDERER | CVAR_FLOAT, "The rate of adapting the hdr exposure value`. Defaulted to a second." );
+idCVar r_hdrMinLuminance( "r_hdrMinLuminance", "0.02", CVAR_RENDERER | CVAR_FLOAT, "" );
+idCVar r_hdrMaxLuminance( "r_hdrMaxLuminance", "0.5", CVAR_RENDERER | CVAR_FLOAT, "" );
 idCVar r_hdrKey( "r_hdrKey", "0.015", CVAR_RENDERER | CVAR_FLOAT, "magic exposure key that works well with Doom 3 maps" );
 idCVar r_hdrContrastDynamicThreshold( "r_hdrContrastDynamicThreshold", "2", CVAR_RENDERER | CVAR_FLOAT, "if auto exposure is on, all pixels brighter than this cause HDR bloom glares" );
 idCVar r_hdrContrastStaticThreshold( "r_hdrContrastStaticThreshold", "3", CVAR_RENDERER | CVAR_FLOAT, "if auto exposure is off, all pixels brighter than this cause HDR bloom glares" );
@@ -325,14 +328,16 @@ idCVar r_showLightGrid( "r_showLightGrid", "0", CVAR_RENDERER | CVAR_INTEGER, "s
 
 idCVar r_useLightGrid( "r_useLightGrid", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 
-idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [0.0 .. 1.0]", 0.0f, 1.0f );
+idCVar r_exposure( "r_exposure", "-0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [-1.0 .. 0.0]", -1.0f, 0.0f );
 // RB end
 
 const char* fileExten[4] = { "tga", "png", "jpg", "exr" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
 const char* skyDirection[6] = { "_forward", "_back", "_left", "_right", "_up", "_down" };
 
-DeviceManager* deviceManager;
+#if defined( USE_NVRHI )
+	DeviceManager* deviceManager;
+#endif
 
 /*
 =============================
@@ -449,8 +454,16 @@ void R_SetNewMode( const bool fullInit )
 		if( fullInit )
 		{
 			// create the context as well as setting up the window
-			deviceManager = DeviceManager::Create( nvrhi::GraphicsAPI::D3D12 ); 
+
+#if defined( USE_NVRHI )
+			deviceManager = DeviceManager::Create( nvrhi::GraphicsAPI::D3D12 );
+#endif
+
+#if defined( USE_VULKAN )
+			if( VKimp_Init( parms ) )
+#else
 			if( GLimp_Init( parms ) )
+#endif
 			{
 				ImGuiHook::Init( parms.width, parms.height );
 				break;
@@ -458,9 +471,15 @@ void R_SetNewMode( const bool fullInit )
 		}
 		else
 		{
+			// just rebuild the window
+
+#if defined( USE_VULKAN )
+			if( VKimp_SetScreenParms( parms ) )
+#else
 			if( GLimp_SetScreenParms( parms ) )
+#endif
 			{
-				Framebuffer::ResizeFramebuffers( );
+				Framebuffer::ResizeFramebuffers();
 				ImGuiHook::NotifyDisplaySizeChanged( parms.width, parms.height );
 				break;
 			}
@@ -518,13 +537,19 @@ static void R_ReloadSurface_f( const idCmdArgs& args )
 	// reload the decl
 	mt.material->base->Reload();
 
-	nvrhi::CommandListHandle commandList = deviceManager->GetDevice( )->createCommandList( );
+#if defined( USE_NVRHI )
+	nvrhi::CommandListHandle commandList = deviceManager->GetDevice()->createCommandList();
 
-	commandList->open( );
+	commandList->open();
+#endif
+
 	// reload any images used by the decl
 	mt.material->ReloadImages( false, commandList );
-	commandList->close( );
-	deviceManager->GetDevice( )->executeCommandList( commandList );
+
+#if defined( USE_NVRHI )
+	commandList->close();
+	deviceManager->GetDevice()->executeCommandList( commandList );
+#endif
 }
 
 /*
@@ -766,7 +791,6 @@ void R_ReadTiledPixels( int width, int height, byte* buffer, renderView_t* ref =
 	{
 		sysWidth = width;
 	}
-
 
 	if( sysHeight > height )
 	{
@@ -2231,9 +2255,9 @@ void idRenderSystemLocal::Shutdown()
 
 	Clear();
 
-	bInitialized = false;
-
 	ShutdownOpenGL();
+
+	bInitialized = false;
 }
 
 /*
@@ -2241,7 +2265,7 @@ void idRenderSystemLocal::Shutdown()
 idRenderSystemLocal::ResetGuiModels
 ========================
 */
-void idRenderSystemLocal::ResetGuiModels( )
+void idRenderSystemLocal::ResetGuiModels()
 {
 	delete guiModel;
 	guiModel = new( TAG_RENDER ) idGuiModel;
@@ -2272,8 +2296,11 @@ idRenderSystemLocal::LoadLevelImages
 void idRenderSystemLocal::LoadLevelImages()
 {
 	globalImages->LoadLevelImages( false );
-	deviceManager->GetDevice( )->waitForIdle( );
-	deviceManager->GetDevice( )->runGarbageCollection( );
+
+#if defined( USE_NVRHI )
+	deviceManager->GetDevice()->waitForIdle();
+	deviceManager->GetDevice()->runGarbageCollection();
+#endif
 }
 
 /*
@@ -2335,6 +2362,7 @@ idRenderSystemLocal::RegisterFont
 */
 idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 {
+
 	idStrStatic< MAX_OSPATH > baseFontName = fontName;
 	baseFontName.Replace( "fonts/", "" );
 	for( int i = 0; i < fonts.Num(); i++ )
@@ -2420,16 +2448,32 @@ void idRenderSystemLocal::InitBackend()
 	{
 		backend.Init();
 
+#if defined( USE_NVRHI )
 		if( !commandList )
 		{
-			commandList = deviceManager->GetDevice( )->createCommandList( );
+			commandList = deviceManager->GetDevice()->createCommandList();
 		}
 
-		commandList->open( );
+		commandList->open();
+
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		globalImages->ReloadImages( true, commandList );
-		commandList->close( );
-		deviceManager->GetDevice( )->executeCommandList( commandList );
+
+		commandList->close();
+		deviceManager->GetDevice()->executeCommandList( commandList );
+#else
+		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
+		//globalImages->ReloadImages( true );
+
+#if !defined(USE_VULKAN)
+		int err = glGetError();
+		if( err != GL_NO_ERROR )
+		{
+			common->Printf( "glGetError() = 0x%x\n", err );
+		}
+#endif
+
+#endif
 	}
 }
 

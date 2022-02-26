@@ -94,7 +94,7 @@ struct DeviceCreationParameters
 
 struct DefaultMessageCallback : public nvrhi::IMessageCallback
 {
-	static DefaultMessageCallback& GetInstance( );
+	static DefaultMessageCallback& GetInstance();
 
 	void message( nvrhi::MessageSeverity severity, const char* messageText ) override;
 };
@@ -121,7 +121,7 @@ public:
 		y = dpiScaleFactorY;
 	}
 
-	void UpdateWindowSize( );
+	void UpdateWindowSize();
 
 protected:
 	friend class idRenderBackend;
@@ -141,47 +141,47 @@ protected:
 
 	idList<IRenderPass*> renderPasses;
 
-	DeviceManager( ) = default;
+	DeviceManager() = default;
 
-	void BackBufferResizing( );
-	void BackBufferResized( );
+	void BackBufferResizing();
+	void BackBufferResized();
 
 	// device-specific methods
-	virtual bool CreateDeviceAndSwapChain( ) = 0;
-	virtual void DestroyDeviceAndSwapChain( ) = 0;
-	virtual void ResizeSwapChain( ) = 0;
-	virtual void BeginFrame( ) = 0;
-	virtual void Present( ) = 0;
+	virtual bool CreateDeviceAndSwapChain() = 0;
+	virtual void DestroyDeviceAndSwapChain() = 0;
+	virtual void ResizeSwapChain() = 0;
+	virtual void BeginFrame() = 0;
+	virtual void Present() = 0;
 
 public:
-	[[nodiscard]] virtual nvrhi::IDevice* GetDevice( ) const = 0;
-	[[nodiscard]] virtual const char* GetRendererString( ) const = 0;
-	[[nodiscard]] virtual nvrhi::GraphicsAPI GetGraphicsAPI( ) const = 0;
+	[[nodiscard]] virtual nvrhi::IDevice* GetDevice() const = 0;
+	[[nodiscard]] virtual const char* GetRendererString() const = 0;
+	[[nodiscard]] virtual nvrhi::GraphicsAPI GetGraphicsAPI() const = 0;
 
-	const DeviceCreationParameters& GetDeviceParams( );
+	const DeviceCreationParameters& GetDeviceParams();
 	virtual void SetVsyncEnabled( bool enabled )
 	{
 		requestedVSync = enabled; /* will be processed later */
 	}
-	virtual void ReportLiveObjects( ) {}
+	virtual void ReportLiveObjects() {}
 
-	[[nodiscard]] uint32_t GetFrameIndex( ) const
+	[[nodiscard]] uint32_t GetFrameIndex() const
 	{
 		return m_FrameIndex;
 	}
 
-	virtual nvrhi::ITexture* GetCurrentBackBuffer( ) = 0;
+	virtual nvrhi::ITexture* GetCurrentBackBuffer() = 0;
 	virtual nvrhi::ITexture* GetBackBuffer( uint32_t index ) = 0;
-	virtual uint32_t GetCurrentBackBufferIndex( ) = 0;
-	virtual uint32_t GetBackBufferCount( ) = 0;
+	virtual uint32_t GetCurrentBackBufferIndex() = 0;
+	virtual uint32_t GetBackBufferCount() = 0;
 
-	nvrhi::IFramebuffer* GetCurrentFramebuffer( );
+	nvrhi::IFramebuffer* GetCurrentFramebuffer();
 	nvrhi::IFramebuffer* GetFramebuffer( uint32_t index );
 
 	void AddRenderPassToBack( IRenderPass* pRenderPass );
 
-	void Shutdown( );
-	virtual ~DeviceManager( ) = default;
+	void Shutdown();
+	virtual ~DeviceManager() = default;
 
 	void SetWindowTitle( const char* title );
 
@@ -202,9 +202,9 @@ public:
 	virtual void GetEnabledVulkanLayers( std::vector<std::string>& layers ) const { }
 
 private:
-	static DeviceManager* CreateD3D11( );
-	static DeviceManager* CreateD3D12( );
-	static DeviceManager* CreateVK( );
+	static DeviceManager* CreateD3D11();
+	static DeviceManager* CreateD3D12();
+	static DeviceManager* CreateVK();
 
 	std::string m_WindowTitle;
 };

@@ -28,8 +28,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "global_inc.hlsl"
 
-Texture2D t_Texture : register( t0 );
-SamplerState samp0 : register( s0 );
+Texture2D t_Texture :
+register( t0 );
+SamplerState samp0 :
+register( s0 );
 
 // *INDENT-OFF*
 struct PS_IN {

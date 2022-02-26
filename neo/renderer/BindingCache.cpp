@@ -5,155 +5,155 @@
 
 void BindingCache::Init( nvrhi::IDevice* _device )
 {
-    device = _device;
+	device = _device;
 }
 
-nvrhi::BindingSetHandle BindingCache::GetCachedBindingSet(const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout)
+nvrhi::BindingSetHandle BindingCache::GetCachedBindingSet( const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout )
 {
-    size_t hash = 0;
-    nvrhi::hash_combine(hash, desc);
-    nvrhi::hash_combine(hash, layout);
+	size_t hash = 0;
+	nvrhi::hash_combine( hash, desc );
+	nvrhi::hash_combine( hash, layout );
 
-    mutex.Lock( );
+	mutex.Lock();
 
-    nvrhi::BindingSetHandle result = nullptr;
-    for( int i = bindingHash.First( hash ); i != -1; i = bindingHash.Next( i ) )
-    {
-        nvrhi::BindingSetHandle bindingSet = bindingSets[i];
-        if( *bindingSet->getDesc() == desc)
-        {
-            result = bindingSet;
-            break;
-        }
-    }
+	nvrhi::BindingSetHandle result = nullptr;
+	for( int i = bindingHash.First( hash ); i != -1; i = bindingHash.Next( i ) )
+	{
+		nvrhi::BindingSetHandle bindingSet = bindingSets[i];
+		if( *bindingSet->getDesc() == desc )
+		{
+			result = bindingSet;
+			break;
+		}
+	}
 
-    mutex.Unlock( );
+	mutex.Unlock();
 
-    if (result)
-    {
-        assert(result->getDesc() && *result->getDesc( ) == desc );
-    }
+	if( result )
+	{
+		assert( result->getDesc() && *result->getDesc() == desc );
+	}
 
-    return result;
+	return result;
 }
 
-nvrhi::BindingSetHandle BindingCache::GetOrCreateBindingSet(const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout)
+nvrhi::BindingSetHandle BindingCache::GetOrCreateBindingSet( const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout )
 {
-    size_t hash = 0;
-    nvrhi::hash_combine(hash, desc);
-    nvrhi::hash_combine(hash, layout);
+	size_t hash = 0;
+	nvrhi::hash_combine( hash, desc );
+	nvrhi::hash_combine( hash, layout );
 
-    mutex.Lock( );
+	mutex.Lock();
 
-    nvrhi::BindingSetHandle result = nullptr;
-    for( int i = bindingHash.First( hash ); i != -1; i = bindingHash.Next( i ) )
-    {
-        nvrhi::BindingSetHandle bindingSet = bindingSets[i];
-        if( *bindingSet->getDesc( ) == desc )
-        {
-            result = bindingSet;
-            break;
-        }
-    }
-    
-    mutex.Unlock( );
+	nvrhi::BindingSetHandle result = nullptr;
+	for( int i = bindingHash.First( hash ); i != -1; i = bindingHash.Next( i ) )
+	{
+		nvrhi::BindingSetHandle bindingSet = bindingSets[i];
+		if( *bindingSet->getDesc() == desc )
+		{
+			result = bindingSet;
+			break;
+		}
+	}
 
-    if (!result)
-    {
-        mutex.Lock( );
+	mutex.Unlock();
 
-        int entryIndex = bindingSets.Append( result );
-        bindingHash.Add( hash, entryIndex );
+	if( !result )
+	{
+		mutex.Lock();
 
-        nvrhi::BindingSetHandle& entry = bindingSets[entryIndex];
+		int entryIndex = bindingSets.Append( result );
+		bindingHash.Add( hash, entryIndex );
 
-        if( !entry )
-        {
-            result = device->createBindingSet(desc, layout);
-            entry = result;
-        }
-        else
-        {
-            result = entry;
-        }
+		nvrhi::BindingSetHandle& entry = bindingSets[entryIndex];
 
-        mutex.Unlock( );
-    }
+		if( !entry )
+		{
+			result = device->createBindingSet( desc, layout );
+			entry = result;
+		}
+		else
+		{
+			result = entry;
+		}
 
-    if (result)
-    {
-        assert(result->getDesc() && *result->getDesc( ) == desc );
-    }
+		mutex.Unlock();
+	}
 
-    return result;
+	if( result )
+	{
+		assert( result->getDesc() && *result->getDesc() == desc );
+	}
+
+	return result;
 }
 
 void BindingCache::Clear()
 {
-    mutex.Lock( );
-    bindingSets.Clear( );
-    bindingHash.Clear( );
-    mutex.Unlock( );
+	mutex.Lock();
+	bindingSets.Clear();
+	bindingHash.Clear();
+	mutex.Unlock();
 }
 
 void SamplerCache::Init( nvrhi::IDevice* _device )
 {
-    device = _device;
+	device = _device;
 }
 
-void SamplerCache::Clear( )
+void SamplerCache::Clear()
 {
-    mutex.Lock( );
-    samplers.Clear( );
-    samplerHash.Clear( );
-    mutex.Unlock( );
+	mutex.Lock();
+	samplers.Clear();
+	samplerHash.Clear();
+	mutex.Unlock();
 }
 
 nvrhi::SamplerHandle SamplerCache::GetOrCreateSampler( nvrhi::SamplerDesc desc )
 {
-    size_t hash = std::hash<nvrhi::SamplerDesc>{}( desc );
+	size_t hash = std::hash<nvrhi::SamplerDesc> {}( desc );
 
-    mutex.Lock( );
+	mutex.Lock();
 
-    nvrhi::SamplerHandle result = nullptr;
-    for( int i = samplerHash.First( hash ); i != -1; i = samplerHash.Next( i ) )
-    {
-        nvrhi::SamplerHandle sampler = samplers[i];
-        if( sampler->getDesc() == desc )
-        {
-            result = sampler;
-            break;
-        }
-    }
+	nvrhi::SamplerHandle result = nullptr;
+	for( int i = samplerHash.First( hash ); i != -1; i = samplerHash.Next( i ) )
+	{
+		nvrhi::SamplerHandle sampler = samplers[i];
+		if( sampler->getDesc() == desc )
+		{
+			result = sampler;
+			break;
+		}
+	}
 
-    mutex.Unlock( );
+	mutex.Unlock();
 
-    if( !result )
-    {
-        mutex.Lock( );
+	if( !result )
+	{
+		mutex.Lock();
 
-        int entryIndex = samplers.Append( result );
-        samplerHash.Add( hash, entryIndex );
+		int entryIndex = samplers.Append( result );
+		samplerHash.Add( hash, entryIndex );
 
-        nvrhi::SamplerHandle& entry = samplers[entryIndex];
+		nvrhi::SamplerHandle& entry = samplers[entryIndex];
 
-        if( !entry )
-        {
-            result = device->createSampler( desc );
-            entry = result;
-        }
-        else
-        {
-            result = entry;
-        }
+		if( !entry )
+		{
+			result = device->createSampler( desc );
+			entry = result;
+		}
+		else
+		{
+			result = entry;
+		}
 
-        mutex.Unlock( );
-    }
+		mutex.Unlock();
+	}
 
-    if( result )
-    {
-        assert( result->getDesc( ) == desc );
-    }
+	if( result )
+	{
+		assert( result->getDesc() == desc );
+	}
 
-    return result;
+	return result;
 }

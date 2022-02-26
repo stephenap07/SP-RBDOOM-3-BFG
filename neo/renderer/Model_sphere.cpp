@@ -692,13 +692,13 @@ idRenderModel* idRenderModelSphere::InstantiateDynamicModel( const struct render
 		{
 			tri->verts[i].Clear( );
 			idVec3 xyz = *( const idVec3* )&sphere.getVertices()[i * 3];
-			xyz.x = -xyz.x;
+			//xyz.x = -xyz.x;
 			tri->verts[i].xyz = xyz;
-			idVec3 normal = *( const idVec3* )&sphere.getNormals( )[i * 3];
-			normal.x = -normal.x;
-			tri->verts[i].SetNormal( normal );
-			tri->verts[i].SetTangent( 0.0f, 1.0f, 0.0f );
-			tri->verts[i].SetBiTangent( 0.0f, 0.0f, 1.0f );
+			//idVec3 normal = *( const idVec3* )&sphere.getNormals( )[i * 3];
+			//normal.x = -normal.x;
+			//tri->verts[i].SetNormal( normal );
+			//tri->verts[i].SetTangent( 0.0f, 1.0f, 0.0f );
+			//tri->verts[i].SetBiTangent( 0.0f, 0.0f, 1.0f );
 			const idVec2* texCoord = ( const idVec2* )&sphere.getTexCoords( )[i * 2];
 			tri->verts[i].SetTexCoord( *texCoord );
 		}
@@ -707,14 +707,14 @@ idRenderModel* idRenderModelSphere::InstantiateDynamicModel( const struct render
 
 		tri->numVerts = sphere.getVertexCount( );
 		tri->numIndexes = sphere.getIndexCount( );
-		tri->generateNormals = false;
+		tri->generateNormals = true;
 
 		surf.geometry = tri;
 		surf.id = 0;
-		surf.shader = tr.defaultMaterial;
+		surf.shader = tr.whiteMaterial;
 
 		staticModel->AddSurface( surf );
-		staticModel->FinishSurfaces( false );
+		staticModel->FinishSurfaces( true );
 	}
 
 	int	red = idMath::Ftoi( renderEntity->shaderParms[SHADERPARM_RED] * 255.0f );

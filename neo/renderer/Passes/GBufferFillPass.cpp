@@ -1,3 +1,30 @@
+/*
+===========================================================================
+
+Doom 3 BFG Edition GPL Source Code
+Copyright (C) 2022 Stephen Pridham
+
+This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
+
+Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Doom 3 BFG Edition Source Code is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Doom 3 BFG Edition Source Code.  If not, see <http://www.gnu.org/licenses/>.
+
+In addition, the Doom 3 BFG Edition Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the Doom 3 BFG Edition Source Code.  If not, please request a copy in writing from id Software at the address below.
+
+If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
+
+===========================================================================
+*/
 #include <precompiled.h>
 #pragma hdrstop
 
@@ -71,7 +98,7 @@ void GBufferFillPass::RenderView( nvrhi::ICommandList* commandList, const drawSu
 		RB_SetMVP( renderMatrix_identity );
 
 		renderProgManager.BindShader_Texture( );
-		GL_Color( idVec4(1) );
+		GL_Color( idVec4( 1 ) );
 
 		GL_SelectTexture( 0 );
 		globalImages->ambientOcclusionImage[0]->Bind( );
@@ -341,115 +368,115 @@ void GBufferFillPass::RenderView( nvrhi::ICommandList* commandList, const drawSu
 
 			switch( surfaceStage->lighting )
 			{
-			case SL_COVERAGE:
-			{
-				// ignore any coverage stages since they should only be used for the depth fill pass
-				// for diffuse stages that use alpha test.
-				break;
-			}
-
-			case SL_AMBIENT:
-			{
-				// ignore ambient stages while drawing interactions
-				break;
-			}
-
-			case SL_BUMP:
-			{
-				// ignore stage that fails the condition
-				if( !surfaceRegs[surfaceStage->conditionRegister] )
+				case SL_COVERAGE:
 				{
-					break;
-				}
-				// draw any previous interaction
-				if( inter.bumpImage != NULL )
-				{
-#if BLEND_NORMALS
-					if( inter.vertexColor == SVC_IGNORE )
-					{
-						GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-					}
-					else
-					{
-						// RB: this is a bit hacky: use additive blending to blend the normals
-						GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-					}
-#endif
-
-					DrawSingleInteraction( &inter, false, useIBL, false );
-				}
-				inter.bumpImage = surfaceStage->texture.image;
-				inter.diffuseImage = NULL;
-				inter.specularImage = NULL;
-				SetupInteractionStage( surfaceStage, surfaceRegs, NULL,
-					inter.bumpMatrix, NULL );
-				break;
-			}
-
-			case SL_DIFFUSE:
-			{
-				// ignore stage that fails the condition
-				if( !surfaceRegs[surfaceStage->conditionRegister] )
-				{
+					// ignore any coverage stages since they should only be used for the depth fill pass
+					// for diffuse stages that use alpha test.
 					break;
 				}
 
-				// draw any previous interaction
-				if( inter.diffuseImage != NULL )
+				case SL_AMBIENT:
 				{
-#if BLEND_NORMALS
-					if( inter.vertexColor == SVC_IGNORE )
-					{
-						GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-					}
-					else
-					{
-						// RB: this is a bit hacky: use additive blending to blend the normals
-						GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-					}
-#endif
-
-					DrawSingleInteraction( &inter, false, useIBL, false );
-				}
-
-				inter.diffuseImage = surfaceStage->texture.image;
-				inter.vertexColor = surfaceStage->vertexColor;
-				SetupInteractionStage( surfaceStage, surfaceRegs, diffuseColor.ToFloatPtr( ),
-					inter.diffuseMatrix, inter.diffuseColor.ToFloatPtr( ) );
-				break;
-			}
-
-			case SL_SPECULAR:
-			case SL_RMAO:
-			{
-				// ignore stage that fails the condition
-				if( !surfaceRegs[surfaceStage->conditionRegister] )
-				{
+					// ignore ambient stages while drawing interactions
 					break;
 				}
-				// draw any previous interaction
-				if( inter.specularImage != NULL )
+
+				case SL_BUMP:
 				{
+					// ignore stage that fails the condition
+					if( !surfaceRegs[surfaceStage->conditionRegister] )
+					{
+						break;
+					}
+					// draw any previous interaction
+					if( inter.bumpImage != NULL )
+					{
 #if BLEND_NORMALS
-					if( inter.vertexColor == SVC_IGNORE )
-					{
-						GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-					}
-					else
-					{
-						// RB: this is a bit hacky: use additive blending to blend the normals
-						GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
-					}
+						if( inter.vertexColor == SVC_IGNORE )
+						{
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+						else
+						{
+							// RB: this is a bit hacky: use additive blending to blend the normals
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
 #endif
 
-					DrawSingleInteraction( &inter, false, useIBL, false );
+						DrawSingleInteraction( &inter, false, useIBL, false );
+					}
+					inter.bumpImage = surfaceStage->texture.image;
+					inter.diffuseImage = NULL;
+					inter.specularImage = NULL;
+					SetupInteractionStage( surfaceStage, surfaceRegs, NULL,
+										   inter.bumpMatrix, NULL );
+					break;
 				}
-				inter.specularImage = surfaceStage->texture.image;
-				inter.vertexColor = surfaceStage->vertexColor;
-				SetupInteractionStage( surfaceStage, surfaceRegs, specularColor.ToFloatPtr( ),
-					inter.specularMatrix, inter.specularColor.ToFloatPtr( ) );
-				break;
-			}
+
+				case SL_DIFFUSE:
+				{
+					// ignore stage that fails the condition
+					if( !surfaceRegs[surfaceStage->conditionRegister] )
+					{
+						break;
+					}
+
+					// draw any previous interaction
+					if( inter.diffuseImage != NULL )
+					{
+#if BLEND_NORMALS
+						if( inter.vertexColor == SVC_IGNORE )
+						{
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+						else
+						{
+							// RB: this is a bit hacky: use additive blending to blend the normals
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+#endif
+
+						DrawSingleInteraction( &inter, false, useIBL, false );
+					}
+
+					inter.diffuseImage = surfaceStage->texture.image;
+					inter.vertexColor = surfaceStage->vertexColor;
+					SetupInteractionStage( surfaceStage, surfaceRegs, diffuseColor.ToFloatPtr( ),
+										   inter.diffuseMatrix, inter.diffuseColor.ToFloatPtr( ) );
+					break;
+				}
+
+				case SL_SPECULAR:
+				case SL_RMAO:
+				{
+					// ignore stage that fails the condition
+					if( !surfaceRegs[surfaceStage->conditionRegister] )
+					{
+						break;
+					}
+					// draw any previous interaction
+					if( inter.specularImage != NULL )
+					{
+#if BLEND_NORMALS
+						if( inter.vertexColor == SVC_IGNORE )
+						{
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+						else
+						{
+							// RB: this is a bit hacky: use additive blending to blend the normals
+							GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL );
+						}
+#endif
+
+						DrawSingleInteraction( &inter, false, useIBL, false );
+					}
+					inter.specularImage = surfaceStage->texture.image;
+					inter.vertexColor = surfaceStage->vertexColor;
+					SetupInteractionStage( surfaceStage, surfaceRegs, specularColor.ToFloatPtr( ),
+										   inter.specularMatrix, inter.specularColor.ToFloatPtr( ) );
+					break;
+				}
 			}
 		}
 
@@ -570,37 +597,37 @@ void GBufferFillPass::DrawElementsWithCounters( const drawSurf_t* surf )
 	if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_DEFAULT )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) );
 	}
 	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_GBUFFER )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) );
 	}
 	else if( renderProgManager.BindingLayoutType( ) == BINDING_LAYOUT_LIGHTGRID )
 	{
 		bindingSetDesc
-			.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 7, ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 8, ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 9, ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Texture_SRV( 10, ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 7, ( nvrhi::ISampler* )GetImageAt( 7 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 8, ( nvrhi::ISampler* )GetImageAt( 8 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( ) ) )
-			.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( ) ) );
+		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 7, ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 8, ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 9, ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Texture_SRV( 10, ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 1, ( nvrhi::ISampler* )GetImageAt( 1 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 2, ( nvrhi::ISampler* )GetImageAt( 2 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 3, ( nvrhi::ISampler* )GetImageAt( 3 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 4, ( nvrhi::ISampler* )GetImageAt( 4 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 7, ( nvrhi::ISampler* )GetImageAt( 7 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 8, ( nvrhi::ISampler* )GetImageAt( 8 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 9, ( nvrhi::ISampler* )GetImageAt( 9 )->GetSampler( ) ) )
+		.addItem( nvrhi::BindingSetItem::Sampler( 10, ( nvrhi::ISampler* )GetImageAt( 10 )->GetSampler( ) ) );
 	}
 
 	currentBindingSet = bindingCache.GetOrCreateBindingSet( bindingSetDesc, currentBindingLayout );

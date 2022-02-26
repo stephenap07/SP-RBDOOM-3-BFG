@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -33,7 +34,9 @@ If you have questions concerning this license or the applicable additional terms
 	#include "Vulkan/Allocator_VK.h"
 #endif
 
-#include <nvrhi/nvrhi.h>
+#if defined( USE_NVRHI )
+	#include <nvrhi/nvrhi.h>
+#endif
 
 enum bufferMapType_t
 {
@@ -83,10 +86,15 @@ public:
 	{
 		return apiObject;
 	}
-#else
+#elif defined( USE_NVRHI )
 	nvrhi::IBuffer*		GetAPIObject() const
 	{
 		return bufferHandle;
+	}
+#else
+	GLintptr			GetAPIObject() const
+	{
+		return apiObject;
 	}
 #endif
 	int					GetOffset() const
@@ -117,10 +125,26 @@ protected:
 	int							size;					// size in bytes
 	int							offsetInOtherBuffer;	// offset in bytes
 	bufferUsageType_t			usage;
-	void*						buffer;
 
+#if defined( USE_VULKAN )
+	VkBuffer			bufferHandle;
+
+#if defined( USE_AMD_ALLOCATOR )
+	VmaAllocation		vmaAllocation;
+	VmaAllocationInfo	allocation;
+#else
+	vulkanAllocation_t	allocation;
+#endif
+
+#elif defined( USE_NVRHI )
 	nvrhi::InputLayoutHandle	inputLayout;
 	nvrhi::BufferHandle			bufferHandle;
+	void*						buffer;
+#else
+	// GL
+	GLintptr					bufferHandle;
+	void* 						buffer;
+#endif
 
 	// sizeof() confuses typeinfo...
 	static const int			MAPPED_FLAG			= 1 << ( 4 /* sizeof( int ) */ * 8 - 1 );

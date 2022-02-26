@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013-2018 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -31,8 +32,22 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "RenderCommon.h"
-#include <sys/DeviceManager.h>
-#include <nvrhi/utils.h>
+
+
+#if defined( USE_NVRHI )
+
+	#include <sys/DeviceManager.h>
+	#include <nvrhi/utils.h>
+
+#elif defined(USE_VULKAN)
+
+	extern idUniformBuffer emptyUBO;
+
+	void CreateVertexDescriptions();
+
+	void CreateDescriptorPools( VkDescriptorPool( &pools )[ NUM_FRAME_DATA ] );
+
+#endif
 
 idRenderProgManager renderProgManager;
 
@@ -74,53 +89,54 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 {
 	common->Printf( "----- Initializing Render Shaders -----\n" );
 
-	device = _device;
-
-	uniforms.SetNum( RENDERPARM_TOTAL, vec4_zero );
-
-	constantBuffer = device->createBuffer(
-		nvrhi::utils::CreateVolatileConstantBufferDesc( uniforms.Allocated(),
-			"RenderParams",
-			c_MaxRenderPassConstantBufferVersions ) );
-
 	for( int i = 0; i < MAX_BUILTINS; i++ )
 	{
 		builtinShaders[i] = -1;
 	}
 
+#if defined( USE_NVRHI )
+	device = _device;
+
+	uniforms.SetNum( RENDERPARM_TOTAL, vec4_zero );
+
+	constantBuffer = device->createBuffer(
+						 nvrhi::utils::CreateVolatileConstantBufferDesc( uniforms.Allocated(),
+								 "RenderParams",
+								 c_MaxRenderPassConstantBufferVersions ) );
+
 	// === Main draw vertex layout ===
-	vertexLayoutDescs.SetNum( NUM_VERTEX_LAYOUTS, idList<nvrhi::VertexAttributeDesc>( ) );
+	vertexLayoutDescs.SetNum( NUM_VERTEX_LAYOUTS, idList<nvrhi::VertexAttributeDesc>() );
 
 	vertexLayoutDescs[LAYOUT_DRAW_VERT].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "POSITION" )
 		.setFormat( nvrhi::Format::RGB32_FLOAT )
 		.setOffset( offsetof( idDrawVert, xyz ) )
 		.setElementStride( sizeof( idDrawVert ) ) );
 
 	vertexLayoutDescs[LAYOUT_DRAW_VERT].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "TEXCOORD" )
 		.setFormat( nvrhi::Format::RG16_FLOAT )
 		.setOffset( offsetof( idDrawVert, st ) )
 		.setElementStride( sizeof( idDrawVert ) ) );
-	
+
 	vertexLayoutDescs[LAYOUT_DRAW_VERT].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "NORMAL" )
 		.setFormat( nvrhi::Format::RGBA8_UNORM )
 		.setOffset( offsetof( idDrawVert, normal ) )
 		.setElementStride( sizeof( idDrawVert ) ) );
 
 	vertexLayoutDescs[LAYOUT_DRAW_VERT].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "TANGENT" )
 		.setFormat( nvrhi::Format::RGBA8_UNORM )
 		.setOffset( offsetof( idDrawVert, tangent ) )
 		.setElementStride( sizeof( idDrawVert ) ) );
 
 	vertexLayoutDescs[LAYOUT_DRAW_VERT].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "COLOR" )
 		.setArraySize( 2 )
 		.setFormat( nvrhi::Format::RGBA8_UNORM )
@@ -130,7 +146,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	// === Shadow vertex ===
 
 	vertexLayoutDescs[LAYOUT_DRAW_SHADOW_VERT].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "POSITION" )
 		.setFormat( nvrhi::Format::RGBA32_FLOAT )
 		.setOffset( offsetof( idShadowVert, xyzw ) )
@@ -139,14 +155,14 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	// === Shadow vertex skinned ===
 
 	vertexLayoutDescs[LAYOUT_DRAW_SHADOW_VERT_SKINNED].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "POSITION" )
 		.setFormat( nvrhi::Format::RGBA32_FLOAT )
 		.setOffset( offsetof( idShadowVertSkinned, xyzw ) )
 		.setElementStride( sizeof( idShadowVertSkinned ) ) );
 
 	vertexLayoutDescs[LAYOUT_DRAW_SHADOW_VERT_SKINNED].Append(
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "COLOR" )
 		.setArraySize( 2 )
 		.setFormat( nvrhi::Format::RGBA8_UNORM )
@@ -155,118 +171,120 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	bindingLayouts.SetNum( NUM_BINDING_LAYOUTS );
 
-	auto defaultLayoutDesc = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );
+	auto defaultLayoutDesc = nvrhi::BindingLayoutDesc()
+							 .setVisibility( nvrhi::ShaderType::All )
+							 .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+							 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
+							 .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );
 
 	bindingLayouts[BINDING_LAYOUT_DEFAULT] = device->createBindingLayout( defaultLayoutDesc );
 
-	auto ambientIblLayoutDesc = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // brdf lut
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // ssao
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 7 ) ) // irradiance cube map
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 8 ) ) // radiance cube map 1
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 9 ) ) // radiance cube map 2
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 10 ) ) // radiance cube map 3
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) ) // normal sampler
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) ) // specular sampler
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) ) // base color sampler
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) ) // brdf lut sampler
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 4 ) ) // ssao sampler
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 7 ) ) // irradiance sampler
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 8 ) ) // radiance sampler 1
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 9 ) ) // radiance sampler 2
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 10 ) ); // radiance sampler 3
+	auto ambientIblLayoutDesc = nvrhi::BindingLayoutDesc()
+								.setVisibility( nvrhi::ShaderType::All )
+								.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // brdf lut
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // ssao
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 7 ) ) // irradiance cube map
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 8 ) ) // radiance cube map 1
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 9 ) ) // radiance cube map 2
+								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 10 ) ) // radiance cube map 3
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) ) // normal sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) ) // specular sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) ) // base color sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) ) // brdf lut sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 4 ) ) // ssao sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 7 ) ) // irradiance sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 8 ) ) // radiance sampler 1
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 9 ) ) // radiance sampler 2
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 10 ) ); // radiance sampler 3
 
 	bindingLayouts[BINDING_LAYOUT_AMBIENT_LIGHTING_IBL] = device->createBindingLayout( ambientIblLayoutDesc );
 
-	auto blitLayoutDesc = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) ); // blit constants
+	auto blitLayoutDesc = nvrhi::BindingLayoutDesc()
+						  .setVisibility( nvrhi::ShaderType::All )
+						  .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) ); // blit constants
 
 	bindingLayouts[BINDING_LAYOUT_BLIT] = device->createBindingLayout( blitLayoutDesc );
 
-	auto aoLayoutDesc = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) );
+	auto aoLayoutDesc = nvrhi::BindingLayoutDesc()
+						.setVisibility( nvrhi::ShaderType::All )
+						.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+						.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
+						.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )
+						.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) )
+						.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
+						.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) )
+						.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) );
 
 	bindingLayouts[BINDING_LAYOUT_DRAW_AO] = device->createBindingLayout( aoLayoutDesc );
 
-	auto aoLayoutDesc2 = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );
+	auto aoLayoutDesc2 = nvrhi::BindingLayoutDesc()
+						 .setVisibility( nvrhi::ShaderType::All )
+						 .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+						 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
+						 .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );
 
 	bindingLayouts[BINDING_LAYOUT_DRAW_AO1] = device->createBindingLayout( aoLayoutDesc2 );
 
-	auto interactionBindingLayout = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // light falloff
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // light projection
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 4 ) );
+	auto interactionBindingLayout = nvrhi::BindingLayoutDesc()
+									.setVisibility( nvrhi::ShaderType::All )
+									.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // light falloff
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // light projection
+									.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
+									.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) )
+									.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) )
+									.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) )
+									.addItem( nvrhi::BindingLayoutItem::Sampler( 4 ) );
 
 	bindingLayouts[BINDING_LAYOUT_DRAW_INTERACTION] = device->createBindingLayout( interactionBindingLayout );
 
-	auto interactionSmBindingLayout = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // light falloff
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // light projection
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 5 ) ) // shadow map array
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 6 ) ) // jitter
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) );
+	auto interactionSmBindingLayout = nvrhi::BindingLayoutDesc()
+									  .setVisibility( nvrhi::ShaderType::All )
+									  .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+									  .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
+									  .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
+									  .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
+									  .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // light falloff
+									  .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // light projection
+									  .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 5 ) ) // shadow map array
+									  .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 6 ) ) // jitter
+									  .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
+									  .addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) )
+									  .addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) );
 
 	bindingLayouts[BINDING_LAYOUT_DRAW_INTERACTION_SM] = device->createBindingLayout( interactionSmBindingLayout );
 
-	auto fogBindingLayout = nvrhi::BindingLayoutDesc( )
-		.setVisibility( nvrhi::ShaderType::All )
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) );
+	auto fogBindingLayout = nvrhi::BindingLayoutDesc()
+							.setVisibility( nvrhi::ShaderType::All )
+							.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+							.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )
+							.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )
+							.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
+							.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) );
 
 	bindingLayouts[BINDING_LAYOUT_DRAW_FOG] = device->createBindingLayout( fogBindingLayout );
 
 	auto ppFxBindingLayout = nvrhi::BindingLayoutDesc()
-		.setVisibility( nvrhi::ShaderType::All)
-		.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )	// current render
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )	// normal map
-		.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) )	// mask
-		.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );		// Linear sampler
+							 .setVisibility( nvrhi::ShaderType::All )
+							 .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+							 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )	// current render
+							 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )	// normal map
+							 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) )	// mask
+							 .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );		// Linear sampler
 
 	bindingLayouts[BINDING_LAYOUT_POST_PROCESS_CNM] = device->createBindingLayout( ppFxBindingLayout );
 
 	nvrhi::BindingLayoutDesc tonemapLayout;
 	tonemapLayout.visibility = nvrhi::ShaderType::Pixel;
-	tonemapLayout.bindings = {
+	tonemapLayout.bindings =
+	{
 		nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ),
 		nvrhi::BindingLayoutItem::Texture_SRV( 0 ),
 		nvrhi::BindingLayoutItem::TypedBuffer_SRV( 1 ),
@@ -277,7 +295,8 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	nvrhi::BindingLayoutDesc histogramLayout;
 	histogramLayout.visibility = nvrhi::ShaderType::Compute;
-	histogramLayout.bindings = {
+	histogramLayout.bindings =
+	{
 		nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ),
 		nvrhi::BindingLayoutItem::Texture_SRV( 0 ),
 		nvrhi::BindingLayoutItem::TypedBuffer_UAV( 0 )
@@ -286,7 +305,8 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	nvrhi::BindingLayoutDesc exposureLayout;
 	exposureLayout.visibility = nvrhi::ShaderType::Compute;
-	exposureLayout.bindings = {
+	exposureLayout.bindings =
+	{
 		nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ),
 		nvrhi::BindingLayoutItem::TypedBuffer_SRV( 0 ),
 		nvrhi::BindingLayoutItem::TypedBuffer_UAV( 0 )
@@ -324,8 +344,8 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_PBR, "builtin/lighting/ambient_lightgrid_IBL", "_PBR", { { "USE_GPU_SKINNING", "0" }, { "USE_PBR", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_AMBIENT_LIGHTING_IBL },
 		{ BUILTIN_AMBIENT_LIGHTGRID_IBL_PBR_SKINNED, "builtin/lighting/ambient_lightgrid_IBL", "_PBR_skinned", { { "USE_GPU_SKINNING", "1" }, { "USE_PBR", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_AMBIENT_LIGHTING_IBL },
 
-		{ BUILTIN_SMALL_GEOMETRY_BUFFER, "builtin/gbuffer", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED, "builtin/gbuffer", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		{ BUILTIN_SMALL_GEOMETRY_BUFFER, "builtin/gbuffer", "", { {"USE_GPU_SKINNING", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		{ BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED, "builtin/gbuffer", "_skinned", { {"USE_GPU_SKINNING", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		// RB end
 		{ BUILTIN_TEXTURED, "builtin/texture", "", { }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_TEXTURE_VERTEXCOLOR, "builtin/texture_color", "", { {"USE_GPU_SKINNING", "0" }, {"USE_SRGB", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
@@ -340,14 +360,14 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		{ BUILTIN_INTERACTION_AMBIENT, "builtin/lighting/interactionAmbient", "", { {"USE_GPU_SKINNING", "0" }, { "USE_PBR", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION },
 		{ BUILTIN_INTERACTION_AMBIENT_SKINNED, "builtin/lighting/interactionAmbient", "_skinned", { {"USE_GPU_SKINNING", "1" }, { "USE_PBR", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION },
 
-		{ BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT, "builtin/lighting/interactionSM", "_spot", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
-		{ BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED, "builtin/lighting/interactionSM", "_spot_skinned", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", 0 }, { "USE_PBR", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT, "builtin/lighting/interactionSM", "_spot", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED, "builtin/lighting/interactionSM", "_spot_skinned", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", 0 }, { "USE_PBR", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
 
-		{ BUILTIN_INTERACTION_SHADOW_MAPPING_POINT, "builtin/lighting/interactionSM", "_point", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
-		{ BUILTIN_INTERACTION_SHADOW_MAPPING_POINT_SKINNED, "builtin/lighting/interactionSM", "_point_skinned", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", 0 }, { "USE_PBR", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_INTERACTION_SHADOW_MAPPING_POINT, "builtin/lighting/interactionSM", "_point", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_INTERACTION_SHADOW_MAPPING_POINT_SKINNED, "builtin/lighting/interactionSM", "_point_skinned", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", 0 }, { "USE_PBR", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
 
-		{ BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL, "builtin/lighting/interactionSM", "_parallel", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
-		{ BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED, "builtin/lighting/interactionSM", "_parallel_skinned", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL, "builtin/lighting/interactionSM", "_parallel", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED, "builtin/lighting/interactionSM", "_parallel_skinned", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
 
 		// PBR variants
 		{ BUILTIN_PBR_INTERACTION, "builtin/lighting/interaction", "_PBR", { {"USE_GPU_SKINNING", "0" }, { "USE_PBR", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION },
@@ -356,18 +376,18 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		{ BUILTIN_PBR_INTERACTION_AMBIENT, "builtin/lighting/interactionAmbient", "_PBR", { {"USE_GPU_SKINNING", "0" }, { "USE_PBR", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION },
 		{ BUILTIN_PBR_INTERACTION_AMBIENT_SKINNED, "builtin/lighting/interactionAmbient_skinned", "_PBR", { {"USE_GPU_SKINNING", "1" }, { "USE_PBR", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION },
 
-		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT, "builtin/lighting/interactionSM", "_spot_PBR", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
-		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED, "builtin/lighting/interactionSM", "_spot_skinned_PBR", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT, "builtin/lighting/interactionSM", "_spot_PBR", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED, "builtin/lighting/interactionSM", "_spot_skinned_PBR", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
 
-		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT, "builtin/lighting/interactionSM", "_point_PBR", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
-		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT_SKINNED, "builtin/lighting/interactionSM", "_point_skinned_PBR", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT, "builtin/lighting/interactionSM", "_point_PBR", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT_SKINNED, "builtin/lighting/interactionSM", "_point_skinned_PBR", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "1" }, { "LIGHT_PARALLEL", "0" }, { "USE_PBR", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
 
-		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL, "builtin/lighting/interactionSM", "_parallel_PBR", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
-		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED, "builtin/lighting/interactionSM", "_parallel_skinned_PBR", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL, "builtin/lighting/interactionSM", "_parallel_PBR", { {"USE_GPU_SKINNING", "0" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
+		{ BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED, "builtin/lighting/interactionSM", "_parallel_skinned_PBR", { {"USE_GPU_SKINNING", "1" }, { "LIGHT_POINT", "0" }, { "LIGHT_PARALLEL", "1" }, { "USE_PBR", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SM },
 
 		// debug stuff
 		{ BUILTIN_DEBUG_LIGHTGRID, "builtin/debug/lightgrid", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_DEBUG_LIGHTGRID_SKINNED, "builtin/debug/lightgrid", "_skinned",{ {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		{ BUILTIN_DEBUG_LIGHTGRID_SKINNED, "builtin/debug/lightgrid", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 
 		{ BUILTIN_DEBUG_OCTAHEDRON, "builtin/debug/octahedron", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_DEBUG_OCTAHEDRON_SKINNED, "builtin/debug/octahedron", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
@@ -486,6 +506,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 			LoadComputeProgram( i, cIndex );
 		}
 	}
+#endif
 
 	r_useHalfLambertLighting.ClearModified();
 	r_useHDR.ClearModified();
@@ -531,6 +552,25 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	}
 
 	cmdSystem->AddCommand( "reloadShaders", R_ReloadShaders, CMD_FL_RENDERER, "reloads shaders" );
+
+#if defined(USE_VULKAN)
+	counter = 0;
+
+	// Create Vertex Descriptions
+	CreateVertexDescriptions();
+
+	// Create Descriptor Pools
+	CreateDescriptorPools( descriptorPools );
+
+	for( int i = 0; i < NUM_FRAME_DATA; ++i )
+	{
+		parmBuffers[ i ] = new idUniformBuffer();
+		parmBuffers[ i ]->AllocBufferObject( NULL, MAX_DESC_SETS * MAX_DESC_SET_UNIFORMS * sizeof( idVec4 ), BU_DYNAMIC );
+	}
+
+	// Placeholder: mainly for optionalSkinning
+	emptyUBO.AllocBufferObject( NULL, sizeof( idVec4 ), BU_DYNAMIC );
+#endif
 }
 
 /*
@@ -611,9 +651,10 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout )
 {
 	idStr shaderName( name );
-	shaderName.StripFileExtension( );
+	shaderName.StripFileExtension();
+	//shaderName += nameOutSuffix;
 
-	for( int i = 0; i < shaders.Num( ); i++ )
+	for( int i = 0; i < shaders.Num(); i++ )
 	{
 		shader_t& shader = shaders[i];
 		if( shader.name.Icmp( shaderName ) == 0 && shader.stage == stage && shader.nameOutSuffix.Icmp( nameOutSuffix ) == 0 )
@@ -633,7 +674,7 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 
 	for( int i = 0; i < MAX_SHADER_MACRO_NAMES; i++ )
 	{
-		int feature = (bool)( features & BIT( i ) );
+		int feature = ( bool )( features & BIT( i ) );
 		idStr macroName( GetGLSLMacroName( ( shaderFeature_t )i ) );
 		idStr value( feature );
 		shader.macros.Append( shaderMacro_t( macroName, value ) );
@@ -648,9 +689,9 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout )
 {
 	idStr shaderName( name );
-	shaderName.StripFileExtension( );
+	shaderName.StripFileExtension();
 
-	for( int i = 0; i < shaders.Num( ); i++ )
+	for( int i = 0; i < shaders.Num(); i++ )
 	{
 		shader_t& shader = shaders[i];
 		if( shader.name.Icmp( shaderName ) == 0 && shader.stage == stage && shader.nameOutSuffix.Icmp( nameOutSuffix ) == 0 )
@@ -675,6 +716,7 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 	return index;
 }
 
+#if defined( USE_NVRHI )
 nvrhi::ShaderHandle idRenderProgManager::GetShader( int index )
 {
 	return shaders[ index ].handle;
@@ -685,11 +727,11 @@ programInfo_t idRenderProgManager::GetProgramInfo( int index )
 	programInfo_t info;
 
 	renderProg_t& prog = renderProgs[index];
-	if( prog.vertexShaderIndex > -1 && prog.vertexShaderIndex < shaders.Num( ) )
+	if( prog.vertexShaderIndex > -1 && prog.vertexShaderIndex < shaders.Num() )
 	{
 		info.vs = GetShader( prog.vertexShaderIndex );
 	}
-	if( prog.fragmentShaderIndex > -1 && prog.fragmentShaderIndex < shaders.Num( ) )
+	if( prog.fragmentShaderIndex > -1 && prog.fragmentShaderIndex < shaders.Num() )
 	{
 		info.ps = GetShader( prog.fragmentShaderIndex );
 	}
@@ -702,13 +744,12 @@ programInfo_t idRenderProgManager::GetProgramInfo( int index )
 
 	return info;
 }
+#endif
 
-// RB begin
 bool idRenderProgManager::IsShaderBound() const
 {
 	return ( currentIndex != -1 );
 }
-// RB end
 
 /*
 ================================================================================================

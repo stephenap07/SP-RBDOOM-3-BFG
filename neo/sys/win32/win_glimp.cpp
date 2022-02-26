@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2013-2014 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -48,7 +49,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "rc/doom_resource.h"
 #include "../../renderer/RenderCommon.h"
 
-#include "../DeviceManager.h"
+#if defined( USE_NVRHI )
+	#include <sys/DeviceManager.h>
+	extern DeviceManager* deviceManager;
+#endif
 
 
 
@@ -58,8 +62,6 @@ If you have questions concerning this license or the applicable additional terms
 	idCVar r_useOpenGL45( "r_useOpenGL45", "2", CVAR_INTEGER, "0 = OpenGL 4.0, 1 = OpenGL 4.5 compatibility profile, 2 = OpenGL 4.5 core profile", 0, 2 );
 #endif
 
-
-extern DeviceManager* deviceManager;
 
 
 #if !defined(USE_VULKAN)
@@ -1119,7 +1121,7 @@ bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, c
 		return false;
 	}
 
-	if( !CreateDeviceAndSwapChain( ) )
+	if( !CreateDeviceAndSwapChain() )
 	{
 		return false;
 	}
@@ -1129,12 +1131,12 @@ bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, c
 
 	glConfig.isFullscreen = parms.fullScreen;
 
-	UpdateWindowSize( );
+	UpdateWindowSize();
 
 	return true;
 }
 
-void DeviceManager::UpdateWindowSize( )
+void DeviceManager::UpdateWindowSize()
 {
 	// get the current monitor position and size on the desktop, assuming
 	// any required ChangeDisplaySettings has already been done
@@ -1162,18 +1164,18 @@ void DeviceManager::UpdateWindowSize( )
 
 	if( int( deviceParms.backBufferWidth ) != glConfig.nativeScreenWidth ||
 			int( deviceParms.backBufferHeight ) != glConfig.nativeScreenHeight ||
-			( deviceParms.vsyncEnabled != requestedVSync && GetGraphicsAPI( ) == nvrhi::GraphicsAPI::VULKAN ) )
+			( deviceParms.vsyncEnabled != requestedVSync && GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN ) )
 	{
 		// window is not minimized, and the size has changed
 
-		BackBufferResizing( );
+		BackBufferResizing();
 
 		deviceParms.backBufferWidth = glConfig.nativeScreenWidth;
 		deviceParms.backBufferHeight = glConfig.nativeScreenHeight;
 		deviceParms.vsyncEnabled = requestedVSync;
 
-		ResizeSwapChain( );
-		//BackBufferResized( );
+		ResizeSwapChain();
+		//BackBufferResized();
 	}
 
 	deviceParms.vsyncEnabled = requestedVSync;
@@ -1431,6 +1433,15 @@ bool GLimp_Init( glimpParms_t parms )
 	// create our window classes if we haven't already
 	GLW_CreateWindowClasses();
 
+#if !defined( USE_VULKAN ) && !defined( USE_NVRHI )
+	// this will load the dll and set all our gl* function pointers,
+	// but doesn't create a window
+
+	// getting the wgl extensions involves creating a fake window to get a context,
+	// which is pretty disgusting, and seems to mess with the AGP VAR allocation
+	GLW_GetWGLExtensionsWithFakeWindow();
+#endif
+
 	// Optionally ChangeDisplaySettings to get a different fullscreen resolution.
 	if( !GLW_ChangeDislaySettingsIfNeeded( parms ) )
 	{
@@ -1440,15 +1451,21 @@ bool GLimp_Init( glimpParms_t parms )
 
 	// try to create a window with the correct pixel format
 	// and init the renderer context
+#if defined( USE_NVRHI )
 	if( !deviceManager->CreateWindowDeviceAndSwapChain( parms, GAME_NAME ) )
+#else
+	if( !GLW_CreateWindow( parms ) )
+#endif
 	{
-		//deviceManager->Shutdown( );
+		//deviceManager->Shutdown();
 		GLimp_Shutdown();
 		return false;
 	}
 
 	glConfig.isFullscreen = parms.fullScreen;
 	glConfig.isStereoPixelFormat = parms.stereo;
+	glConfig.nativeScreenWidth = parms.width;
+	glConfig.nativeScreenHeight = parms.height;
 	glConfig.multisamples = parms.multiSamples;
 
 	glConfig.pixelAspect = 1.0f;	// FIXME: some monitor modes may be distorted
@@ -1471,6 +1488,20 @@ bool GLimp_Init( glimpParms_t parms )
 	{
 		glConfig.physicalScreenWidthInCentimeters = 0.1f * mmWide;
 	}
+
+	// RB: we probably have a new OpenGL 3.2 core context so reinitialize GLEW
+#if !defined( USE_VULKAN ) && !defined( USE_NVRHI )
+	GLenum glewResult = glewInit();
+	if( GLEW_OK != glewResult )
+	{
+		// glewInit failed, something is seriously wrong
+		common->Printf( "^3GLimp_Init() - GLEW could not load OpenGL subsystem: %s", glewGetErrorString( glewResult ) );
+	}
+	else
+	{
+		common->Printf( "Using GLEW %s\n", glewGetString( GLEW_VERSION ) );
+	}
+#endif
 
 	return true;
 }
@@ -1525,9 +1556,9 @@ bool GLimp_SetScreenParms( glimpParms_t parms )
 	return true;
 }
 
-void DeviceManager::Shutdown( )
+void DeviceManager::Shutdown()
 {
-	DestroyDeviceAndSwapChain( );
+	DestroyDeviceAndSwapChain();
 
 	const char* success[] = { "failed", "success" };
 	int retVal;
@@ -1559,7 +1590,7 @@ void DeviceManager::Shutdown( )
 	}
 
 	// restore gamma
-	GLimp_RestoreGamma( );
+	GLimp_RestoreGamma();
 }
 
 /*
@@ -1572,10 +1603,64 @@ subsystem.
 */
 void GLimp_Shutdown()
 {
+#if defined( USE_NVRHI )
 	if( deviceManager )
 	{
-		deviceManager->Shutdown( );
+		deviceManager->Shutdown();
 	}
+#else
+	const char* success[] = { "failed", "success" };
+	int retVal;
+
+#if defined(USE_VULKAN)
+	// TODO
+#else
+	common->Printf( "Shutting down OpenGL subsystem\n" );
+
+	// set current context to NULL
+	//if( wglMakeCurrent )
+	{
+		retVal = wglMakeCurrent( NULL, NULL ) != 0;
+		common->Printf( "...wglMakeCurrent( NULL, NULL ): %s\n", success[retVal] );
+	}
+
+	// delete HGLRC
+	if( win32.hGLRC )
+	{
+		retVal = wglDeleteContext( win32.hGLRC ) != 0;
+		common->Printf( "...deleting GL context: %s\n", success[retVal] );
+		win32.hGLRC = NULL;
+	}
+#endif
+
+	// release DC
+	if( win32.hDC )
+	{
+		retVal = ReleaseDC( win32.hWnd, win32.hDC ) != 0;
+		common->Printf( "...releasing DC: %s\n", success[retVal] );
+		win32.hDC   = NULL;
+	}
+
+	// destroy window
+	if( win32.hWnd )
+	{
+		common->Printf( "...destroying window\n" );
+		ShowWindow( win32.hWnd, SW_HIDE );
+		DestroyWindow( win32.hWnd );
+		win32.hWnd = NULL;
+	}
+
+	// reset display settings
+	if( win32.cdsFullscreen )
+	{
+		common->Printf( "...resetting display\n" );
+		ChangeDisplaySettings( 0, 0 );
+		win32.cdsFullscreen = 0;
+	}
+
+	// restore gamma
+	GLimp_RestoreGamma();
+#endif
 }
 
 /*

@@ -5,6 +5,7 @@ Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2016-2017 Dustin Land
 Copyright (C) 2017-2020 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -172,6 +173,7 @@ struct vulkanContext_t
 
 	bool							debugMarkerSupportAvailable;
 	bool							debugUtilsSupportAvailable;
+	bool                            deviceProperties2Available;     // SRS - For getting device properties in support of gfxInfo
 
 	// selected GPU
 	gpuInfo_t* 						gpu;
@@ -226,7 +228,8 @@ struct vulkanContext_t
 
 extern vulkanContext_t vkcontext;
 
-#else //if defined( ID_OPENGL )
+//#elif !defined( USE_NVRHI )
+#else
 
 struct glContext_t
 {
@@ -277,7 +280,7 @@ public:
 	void				Print();
 	void				CheckCVars();
 
-	void				BackBufferResizing( );
+	void				BackBufferResizing();
 
 	static void			ImGui_Init();
 	static void			ImGui_Shutdown();
@@ -492,15 +495,20 @@ private:
 	// RB end
 
 private:
+#if defined( USE_NVRHI )
+
 	idScreenRect					currentViewport;
 	nvrhi::BufferHandle				currentVertexBuffer;
+	int								currentVertexOffset;
 	nvrhi::BufferHandle				currentIndexBuffer;
+	int								currentIndexOffset;
 	nvrhi::BindingSetHandle			currentBindingSet;
 	nvrhi::BindingLayoutHandle		currentBindingLayout;
 	nvrhi::GraphicsPipelineHandle	currentPipeline;
 	nvrhi::RenderState				currentRenderState;
 
 	Framebuffer*					currentFrameBuffer;
+	Framebuffer*					lastFrameBuffer;
 	nvrhi::CommandListHandle		commandList;
 	idList<IRenderPass*>			renderPasses;
 	CommonRenderPasses				commonPasses;
@@ -522,10 +530,34 @@ private:
 public:
 
 	void				BindProgram( nvrhi::ShaderHandle vShader, nvrhi::ShaderHandle fShader, nvrhi::InputLayoutHandle layout, nvrhi::BindingLayoutHandle bindingLayout );
+	void				ResetPipelineCache( );
 
 	void				SetCurrentImage( idImage* image );
-	idImage*			GetCurrentImage( );
+	idImage*			GetCurrentImage();
 	idImage*			GetImageAt( int index );
+	CommonRenderPasses& GetCommonPasses( )
+	{
+		return commonPasses;
+	}
+#elif !defined( USE_VULKAN )
+	int					currenttmu;
+
+	unsigned int		currentVertexBuffer;
+	unsigned int		currentIndexBuffer;
+	Framebuffer*		currentFramebuffer;		// RB: for offscreen rendering
+
+	vertexLayoutType_t	vertexLayout;
+
+	float				polyOfsScale;
+	float				polyOfsBias;
+
+public:
+	int					GetCurrentTextureUnit() const
+	{
+		return currenttmu;
+	}
+
+#endif // !defined( USE_VULKAN )
 };
 
 #endif
