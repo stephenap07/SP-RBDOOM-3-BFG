@@ -765,8 +765,13 @@ void idImageManager::Init()
 	cmdSystem->AddCommand( "listImages", R_ListImages_f, CMD_FL_RENDERER, "lists images" );
 	cmdSystem->AddCommand( "combineCubeImages", R_CombineCubeImages_f, CMD_FL_RENDERER, "combines six images for roq compression" );
 
+	commandList = deviceManager->GetDevice( )->createCommandList();
+
 	// should forceLoadImages be here?
-	LoadDeferredImages();
+	commandList->open();
+	LoadDeferredImages( commandList );
+	commandList->close();
+	deviceManager->GetDevice()->executeCommandList( commandList );
 }
 
 /*
@@ -780,6 +785,7 @@ void idImageManager::Shutdown()
 	imageHash.Clear();
 	deferredImages.DeleteContents( true );
 	deferredImageHash.Clear();
+	commandList.Reset();
 }
 
 /*
@@ -897,10 +903,13 @@ int idImageManager::LoadLevelImages( bool pacifier )
 	{
 		idImage* image = images[ i ];
 
+#if !defined( USE_NVRHI )
 		if( pacifier )
 		{
+			// SP: Cannot update the pacifier because then two command lists would be open at once.
 			common->UpdateLevelLoadPacifier();
 		}
+#endif
 
 		if( image->generatorFunction )
 		{

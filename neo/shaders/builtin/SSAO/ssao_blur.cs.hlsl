@@ -39,10 +39,9 @@ struct SsaoConstants
 	float       powerExponent;
 };
 
-SamplerState s_Point :
-register( s0 );
-Texture2DArray<float> t_DeinterleavedDepth :
-register( t0 );
+// *INDENT-OFF*
+SamplerState s_Point : register(s0);
+Texture2DArray<float> t_DeinterleavedDepth : register(t0);
 #if DIRECTIONAL_OCCLUSION
 Texture2DArray<float4> t_DeinterleavedSSAO :
 register( t1 );
@@ -60,6 +59,7 @@ register( b1 )
 {
 	SsaoConstants g_Ssao;
 };
+// *INDENT-ON*
 
 void divrem( float a, float b, out float div, out float rem )
 {

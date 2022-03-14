@@ -30,13 +30,16 @@ If you have questions concerning this license or the applicable additional terms
 #include "global_inc.hlsl"
 
 
+// User Renderparms start at 128 as per renderprogs.h
+
+//
 // RB: no GPU skinning with ES 2.0
+// *INDENT-OFF*
 #if USE_GPU_SKINNING
 cbuffer CB : register( b1 ) { float4 matrices[408]; };
 #endif
 // RB end
 
-// *INDENT-OFF*
 
 struct VS_IN {
 	float4 position : POSITION;

@@ -39,8 +39,8 @@ struct SsaoConstants
 	float       powerExponent;
 };
 
-Texture2DArray<float> t_DeinterleavedDepth :
-register( t0 );
+// *INDENT-OFF*
+Texture2DArray<float> t_DeinterleavedDepth : register(t0);
 #if OCT_ENCODED_NORMALS
 Texture2D<uint> t_Normals :
 register( t1 );
@@ -61,6 +61,7 @@ register( b1 )
 {
 	SsaoConstants g_Ssao;
 };
+// *INDENT-ON*
 
 // Set of samples with distance from center increasing linearly,
 // and angle also increasing linearly with a step of 4.5678 radians.

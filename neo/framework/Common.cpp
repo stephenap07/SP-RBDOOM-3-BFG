@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2012-2014 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -36,7 +37,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../sound/sound.h"
 
-#include "sys/DeviceManager.h"
+#if defined( USE_NVRHI )
+	#include <sys/DeviceManager.h>
+	extern DeviceManager* deviceManager;
+#endif
 
 // RB begin
 #if defined(USE_DOOMCLASSIC)
@@ -55,8 +59,6 @@ If you have questions concerning this license or the applicable additional terms
 #else
 	#define BUILD_DEBUG ""
 #endif
-
-extern DeviceManager* deviceManager;
 
 struct version_s
 {
@@ -1338,8 +1340,8 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 			splashScreen = declManager->FindMaterial( "guis/assets/splash/legal_english" );
 		}
 
-		// Load in the splash screen images.
-		globalImages->LoadDeferredImages( );
+		// SP: Load in the splash screen images.
+		globalImages->LoadDeferredImages();
 
 		const int legalMinTime = 4000;
 		const bool showVideo = ( !com_skipIntroVideos.GetBool() && fileSystem->UsingResourceFiles() );
@@ -1490,7 +1492,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		com_fullyInitialized = true;
 
-		globalImages->LoadDeferredImages( );
+		globalImages->LoadDeferredImages();
 
 		// No longer need the splash screen
 		if( splashScreen != NULL )

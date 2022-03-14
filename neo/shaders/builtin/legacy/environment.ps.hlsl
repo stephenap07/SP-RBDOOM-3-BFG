@@ -27,7 +27,7 @@ If you have questions concerning this license or the applicable additional terms
 */
 
 #include "global_inc.hlsl"
- 
+
 
 // *INDENT-OFF*
 TextureCube t_CubeMap : register( t0 );

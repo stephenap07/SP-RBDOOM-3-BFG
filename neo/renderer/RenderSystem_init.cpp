@@ -479,7 +479,6 @@ void R_SetNewMode( const bool fullInit )
 			if( GLimp_SetScreenParms( parms ) )
 #endif
 			{
-				Framebuffer::ResizeFramebuffers();
 				ImGuiHook::NotifyDisplaySizeChanged( parms.width, parms.height );
 				break;
 			}

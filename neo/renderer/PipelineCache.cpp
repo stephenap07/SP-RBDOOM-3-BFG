@@ -44,7 +44,10 @@ nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const Pipeline
 	// Set up default state.
 	pipelineDesc.renderState.rasterState.enableScissor( );
 	pipelineDesc.renderState.depthStencilState.enableDepthTest( ).enableDepthWrite( );
-	pipelineDesc.renderState.blendState.targets[0].enableBlend( );
+	for( auto& target : pipelineDesc.renderState.blendState.targets )
+	{
+		target.enableBlend();
+	}
 	//pipelineDesc.renderState.rasterState.enableDepthClip( );
 	pipelineDesc.renderState.rasterState.depthBias = 0;
 	pipelineDesc.renderState.rasterState.slopeScaledDepthBias = 0;
@@ -290,11 +293,11 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		{
 			currentRasterState.depthBias = key.depthBias;
 			currentRasterState.slopeScaledDepthBias = key.slopeBias;
-			currentRasterState.enableQuadFill( );
+			currentRasterState.enableQuadFill();
 		}
 		else
 		{
-			//currentRasterState.disableQuadFill( );
+			//currentRasterState.disableQuadFill();
 		}
 	}
 

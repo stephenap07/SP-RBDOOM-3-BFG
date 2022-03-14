@@ -39,6 +39,9 @@ nvrhi::BindingSetHandle BindingCache::GetCachedBindingSet( const nvrhi::BindingS
 
 nvrhi::BindingSetHandle BindingCache::GetOrCreateBindingSet( const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout )
 {
+	// SP: A hack to disable the binding set caching. This just builds up in the heap and we run into heap overflow.
+	return device->createBindingSet( desc, layout );
+
 	size_t hash = 0;
 	nvrhi::hash_combine( hash, desc );
 	nvrhi::hash_combine( hash, layout );

@@ -179,7 +179,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 	bindingLayouts[BINDING_LAYOUT_DEFAULT] = device->createBindingLayout( defaultLayoutDesc );
 
-	auto ambientIblLayoutDesc = nvrhi::BindingLayoutDesc()
+	auto ambientIblLayoutDesc = nvrhi::BindingLayoutDesc( )
 								.setVisibility( nvrhi::ShaderType::All )
 								.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
 								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
@@ -191,15 +191,10 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 8 ) ) // radiance cube map 1
 								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 9 ) ) // radiance cube map 2
 								.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 10 ) ) // radiance cube map 3
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) ) // normal sampler
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) ) // specular sampler
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) ) // base color sampler
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) ) // brdf lut sampler
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 4 ) ) // ssao sampler
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 7 ) ) // irradiance sampler
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 8 ) ) // radiance sampler 1
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 9 ) ) // radiance sampler 2
-								.addItem( nvrhi::BindingLayoutItem::Sampler( 10 ) ); // radiance sampler 3
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) ) // (Wrap) Anisotropic sampler: normal sampler & specular sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) ) // (Wrap) Point sampler: base color sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) ) // (Clamp) Linear sampler: brdf lut sampler & ssao sampler
+								.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) ); // (Clamp) Anisotropic sampler: irradiance, radiance 1, 2 and 3.
 
 	bindingLayouts[BINDING_LAYOUT_AMBIENT_LIGHTING_IBL] = device->createBindingLayout( ambientIblLayoutDesc );
 
@@ -232,16 +227,13 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	auto interactionBindingLayout = nvrhi::BindingLayoutDesc()
 									.setVisibility( nvrhi::ShaderType::All )
 									.addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
-									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // normal
-									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ) // specular
-									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) ) // base color
-									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) ) // light falloff
-									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) ) // light projection
-									.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )
-									.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) )
-									.addItem( nvrhi::BindingLayoutItem::Sampler( 2 ) )
-									.addItem( nvrhi::BindingLayoutItem::Sampler( 3 ) )
-									.addItem( nvrhi::BindingLayoutItem::Sampler( 4 ) );
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )	// normal
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )	// specular
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) )	// base color
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 3 ) )	// light falloff
+									.addItem( nvrhi::BindingLayoutItem::Texture_SRV( 4 ) )	// light projection
+									.addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) )		// Linear wrap sampler for the normal/specular/color
+									.addItem( nvrhi::BindingLayoutItem::Sampler( 1 ) );		// Sampler for the light falloff/projection
 
 	bindingLayouts[BINDING_LAYOUT_DRAW_INTERACTION] = device->createBindingLayout( interactionBindingLayout );
 
@@ -277,9 +269,18 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 							 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )	// current render
 							 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )	// normal map
 							 .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 2 ) )	// mask
-							 .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );		// Linear sampler
+							 .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );	// Linear sampler
 
 	bindingLayouts[BINDING_LAYOUT_POST_PROCESS_CNM] = device->createBindingLayout( ppFxBindingLayout );
+
+	auto normalCubeBindingLayout = nvrhi::BindingLayoutDesc( )
+								   .setVisibility( nvrhi::ShaderType::All )
+								   .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+								   .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) )	// cube map
+								   .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) )	// normal map
+								   .addItem( nvrhi::BindingLayoutItem::Sampler( 0 ) );	// Linear sampler
+
+	bindingLayouts[BINDING_LAYOUT_NORMAL_CUBE] = device->createBindingLayout( normalCubeBindingLayout );
 
 	nvrhi::BindingLayoutDesc tonemapLayout;
 	tonemapLayout.visibility = nvrhi::ShaderType::Pixel;
@@ -395,8 +396,8 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 
 		{ BUILTIN_ENVIRONMENT, "builtin/legacy/environment", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_ENVIRONMENT_SKINNED, "builtin/legacy/environment", "_skinned",  { {"USE_GPU_SKINNING", "1" } }, true , SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_BUMPY_ENVIRONMENT, "builtin/legacy/bumpyenvironment", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		{ BUILTIN_BUMPY_ENVIRONMENT_SKINNED, "builtin/legacy/bumpyenvironment", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		{ BUILTIN_BUMPY_ENVIRONMENT, "builtin/legacy/bumpyenvironment", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_NORMAL_CUBE },
+		{ BUILTIN_BUMPY_ENVIRONMENT_SKINNED, "builtin/legacy/bumpyenvironment", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_NORMAL_CUBE },
 
 		{ BUILTIN_DEPTH, "builtin/depth", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_DEPTH_SKINNED, "builtin/depth", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
@@ -506,7 +507,6 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 			LoadComputeProgram( i, cIndex );
 		}
 	}
-#endif
 
 	r_useHalfLambertLighting.ClearModified();
 	r_useHDR.ClearModified();
@@ -552,6 +552,8 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	}
 
 	cmdSystem->AddCommand( "reloadShaders", R_ReloadShaders, CMD_FL_RENDERER, "reloads shaders" );
+
+#endif
 
 #if defined(USE_VULKAN)
 	counter = 0;
@@ -614,6 +616,8 @@ void idRenderProgManager::Shutdown()
 idRenderProgManager::FindVertexShader
 ================================================================================================
 */
+
+// TODO REMOVE
 int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 {
 	idStr shaderName( name );
@@ -634,6 +638,7 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 	shader.name = shaderName;
 	shader.stage = stage;
 
+#if 0
 	for( int i = 0; i < MAX_SHADER_MACRO_NAMES; i++ )
 	{
 		int feature = ( bool )( 0 & BIT( i ) );
@@ -641,6 +646,7 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 		idStr value( feature );
 		shader.macros.Append( shaderMacro_t( macroName, value ) );
 	}
+#endif
 
 	int index = shaders.Append( shader );
 	LoadShader( index, stage );
@@ -648,6 +654,8 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 	return index;
 }
 
+
+/*
 int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout )
 {
 	idStr shaderName( name );
@@ -656,15 +664,14 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 
 	for( int i = 0; i < shaders.Num(); i++ )
 	{
-		shader_t& shader = shaders[i];
-		if( shader.name.Icmp( shaderName ) == 0 && shader.stage == stage && shader.nameOutSuffix.Icmp( nameOutSuffix ) == 0 )
+		shader_t& shader = shaders[ i ];
+		if( shader.name.Icmp( shaderName.c_str() ) == 0 && shader.stage == stage && shader.nameOutSuffix.Icmp( nameOutSuffix ) == 0 )
 		{
 			LoadShader( i, stage );
 			return i;
 		}
 	}
 
-	// Load it.
 	shader_t shader;
 	shader.name = shaderName;
 	shader.nameOutSuffix = nameOutSuffix;
@@ -685,6 +692,8 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 
 	return index;
 }
+*/
+
 
 int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout )
 {
@@ -735,7 +744,7 @@ programInfo_t idRenderProgManager::GetProgramInfo( int index )
 	{
 		info.ps = GetShader( prog.fragmentShaderIndex );
 	}
-	if( prog.computeShaderIndex > -1 && prog.computeShaderIndex < shaders.Num( ) )
+	if( prog.computeShaderIndex > -1 && prog.computeShaderIndex < shaders.Num() )
 	{
 		info.cs = GetShader( prog.computeShaderIndex );
 	}

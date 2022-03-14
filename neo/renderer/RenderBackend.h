@@ -290,6 +290,7 @@ private:
 	void				DrawFlickerBox();
 
 	void				DrawElementsWithCounters( const drawSurf_t* surf );
+	void				GetCurrentBindingLayout( nvrhi::BindingSetDesc& bindingSetDesc );
 	void				DrawStencilShadowPass( const drawSurf_t* drawSurf, const bool renderZPass );
 
 	void				SetColorMappings();
@@ -499,9 +500,9 @@ private:
 
 	idScreenRect					currentViewport;
 	nvrhi::BufferHandle				currentVertexBuffer;
-	int								currentVertexOffset;
+	uint							currentVertexOffset;
 	nvrhi::BufferHandle				currentIndexBuffer;
-	int								currentIndexOffset;
+	uint							currentIndexOffset;
 	nvrhi::BindingSetHandle			currentBindingSet;
 	nvrhi::BindingLayoutHandle		currentBindingLayout;
 	nvrhi::GraphicsPipelineHandle	currentPipeline;
@@ -510,6 +511,8 @@ private:
 	Framebuffer*					currentFrameBuffer;
 	Framebuffer*					lastFrameBuffer;
 	nvrhi::CommandListHandle		commandList;
+	nvrhi::CommandListHandle		intCommandList;
+	nvrhi::CommandListHandle		currCmdList;
 	idList<IRenderPass*>			renderPasses;
 	CommonRenderPasses				commonPasses;
 	SsaoPass*						ssaoPass;
@@ -530,12 +533,12 @@ private:
 public:
 
 	void				BindProgram( nvrhi::ShaderHandle vShader, nvrhi::ShaderHandle fShader, nvrhi::InputLayoutHandle layout, nvrhi::BindingLayoutHandle bindingLayout );
-	void				ResetPipelineCache( );
+	void				ResetPipelineCache();
 
 	void				SetCurrentImage( idImage* image );
 	idImage*			GetCurrentImage();
 	idImage*			GetImageAt( int index );
-	CommonRenderPasses& GetCommonPasses( )
+	CommonRenderPasses& GetCommonPasses()
 	{
 		return commonPasses;
 	}

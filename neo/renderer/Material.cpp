@@ -1623,16 +1623,12 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 	textureRepeat_t		trp;
 	textureUsage_t		td;
 	cubeFiles_t			cubeMap;
-	// SP begin
-	int                 cubeMapSize = 0; // The size of the cubemap for subimage uploading to the cubemap targets.
-	// SP end
+	int                 cubeMapSize = 0; // SP: The size of the cubemap for subimage uploading to the cubemap targets.
 	char				imageName[MAX_IMAGE_NAME];
 	int					a, b;
 	int					matrix[2][3];
 	newShaderStage_t	newStage;
-	// SP begin
-	stencilStage_t      stencilStage;
-	// SP end
+	stencilStage_t      stencilStage; // SP
 
 	if( numStages >= MAX_SHADER_STAGES )
 	{
@@ -1729,6 +1725,7 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 			continue;
 		}
 
+#if 0
 		if( !token.Icmp( "renderTargetMap" ) )
 		{
 			// Emit fullscreen view of the gui to this dynamically generated texture
@@ -1740,6 +1737,7 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 			ts->height = src.ParseInt();
 			continue;
 		}
+#endif
 
 		if( !token.Icmp( "screen" ) )
 		{
@@ -2157,7 +2155,8 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 		{
 			if( src.ReadTokenOnLine( &token ) )
 			{
-				newStage.fragmentProgram = renderProgManager.FindShader( token.c_str(), SHADER_STAGE_FRAGMENT );
+				idList<shaderMacro_t> macros = { { "USE_GPU_SKINNING", "0" } };
+				newStage.fragmentProgram = renderProgManager.FindShader( token.c_str(), SHADER_STAGE_FRAGMENT, "", macros, false );
 			}
 			continue;
 		}
@@ -2165,7 +2164,8 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 		{
 			if( src.ReadTokenOnLine( &token ) )
 			{
-				newStage.vertexProgram = renderProgManager.FindShader( token.c_str(), SHADER_STAGE_VERTEX );
+				idList<shaderMacro_t> macros = { { "USE_GPU_SKINNING", "0" } };
+				newStage.vertexProgram = renderProgManager.FindShader( token.c_str(), SHADER_STAGE_VERTEX, "", macros, false );
 			}
 			continue;
 		}

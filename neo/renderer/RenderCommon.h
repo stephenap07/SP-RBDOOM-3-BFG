@@ -51,8 +51,20 @@ If you have questions concerning this license or the applicable additional terms
 	#include <d3d11.h>
 #endif
 
+#if USE_DX11 || USE_DX12
+	#include <DXGI.h>
+#endif
+
+#if USE_DX11
+	#include <d3d11.h>
+#endif
+
 #if USE_DX12
 	#include <d3d12.h>
+#endif
+
+#if USE_VK
+	#include <nvrhi/vulkan.h>
 #endif
 
 #if USE_VK
@@ -853,6 +865,7 @@ enum bindingLayoutType_t
 	BINDING_LAYOUT_DRAW_INTERACTION_SM,
 	BINDING_LAYOUT_DRAW_FOG,
 	BINDING_LAYOUT_POST_PROCESS_CNM,
+	BINDING_LAYOUT_NORMAL_CUBE,
 	BINDING_LAYOUT_TONEMAP,
 	BINDING_LAYOUT_HISTOGRAM,
 	BINDING_LAYOUT_EXPOSURE,
@@ -884,7 +897,7 @@ public:
 	{
 		return bInitialized;
 	}
-	virtual void			ResetGuiModels( );
+	virtual void			ResetGuiModels();
 	virtual void			InitBackend();
 	virtual void			ShutdownOpenGL();
 	virtual bool			IsOpenGLRunning() const;
@@ -949,7 +962,7 @@ public:
 	virtual const emptyCommand_t* 	SwapCommandBuffers( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc );
 
 	virtual void					SwapCommandBuffers_FinishRendering( uint64* frontEndMicroSec, uint64* backEndMicroSec, uint64* shadowMicroSec, uint64* gpuMicroSec, backEndCounters_t* bc, performanceCounters_t* pc );
-	virtual const emptyCommand_t*	SwapCommandBuffers_FinishCommandBuffers( );
+	virtual const emptyCommand_t* 	SwapCommandBuffers_FinishCommandBuffers();
 
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
 	virtual void			TakeScreenshot( int width, int height, const char* fileName, int downSample, renderView_t* ref, int exten );

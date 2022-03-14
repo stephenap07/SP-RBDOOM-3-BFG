@@ -2151,7 +2151,6 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 						break;
 					}
 					case SL_SPECULAR:
-					case SL_RMAO:
 					{
 						// ignore stage that fails the condition
 						if( !surfaceRegs[ surfaceStage->conditionRegister ] || vLight->lightDef->parms.noSpecular ) // SRS - From RB forums
@@ -2277,7 +2276,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		GL_SelectTexture( 0 );
 		globalImages->ambientOcclusionImage[0]->Bind();
 
-		//commonPasses.BlitTexture( commandList, (nvrhi::IFramebuffer*)globalFramebuffers.hdrFBO->GetApiObject( ), globalImages->ambientOcclusionImage[0]->GetTextureHandle( ).Get(), &bindingCache );
+		//commonPasses.BlitTexture( commandList, (nvrhi::IFramebuffer*)globalFramebuffers.hdrFBO->GetApiObject(), globalImages->ambientOcclusionImage[0]->GetTextureHandle().Get(), &bindingCache );
 
 		DrawElementsWithCounters( &unitSquareSurface );
 
@@ -2619,7 +2618,6 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 				}
 
 				case SL_SPECULAR:
-				case SL_RMAO:
 				{
 					// ignore stage that fails the condition
 					if( !surfaceRegs[ surfaceStage->conditionRegister ] )
@@ -3071,7 +3069,7 @@ idRenderBackend::ShadowMapPass
 */
 void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLight_t* vLight, int side )
 {
-	if( r_skipShadows.GetBool() )
+	if( r_skipShadows.GetBool( ) )
 	{
 		return;
 	}
@@ -3090,7 +3088,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 	commandList->beginMarker( "ShadowMap Side" );
 
-	renderProgManager.BindShader_Depth();
+	renderProgManager.BindShader_Depth( );
 
 	GL_SelectTexture( 0 );
 
@@ -3101,27 +3099,34 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 	// like a no-change-required
 	GL_State( glState | GLS_POLYGON_OFFSET );
 
-	switch( r_shadowMapOccluderFacing.GetInteger() )
+	switch( r_shadowMapOccluderFacing.GetInteger( ) )
 	{
 		case 0:
 			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
-			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat(), r_shadowMapPolygonOffset.GetFloat() );
+			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat( ), r_shadowMapPolygonOffset.GetFloat( ) );
 			break;
 
 		case 1:
 			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_BACKSIDED );
-			GL_PolygonOffset( -r_shadowMapPolygonFactor.GetFloat(), -r_shadowMapPolygonOffset.GetFloat() );
+			GL_PolygonOffset( -r_shadowMapPolygonFactor.GetFloat( ), -r_shadowMapPolygonOffset.GetFloat( ) );
 			break;
 
 		default:
 			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_TWOSIDED );
-			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat(), r_shadowMapPolygonOffset.GetFloat() );
+			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat( ), r_shadowMapPolygonOffset.GetFloat( ) );
 			break;
 	}
 
 	idRenderMatrix lightProjectionRenderMatrix;
 	idRenderMatrix lightViewRenderMatrix;
 
+	// Calculate alternate matrix that maps to [0, 1] UV space instead of [-1, 1] clip space
+	ALIGNTYPE16 const idRenderMatrix matClipToUvzw(
+		0.5f, 0.0f, 0.0f, 0.5f,
+		0.0f, -0.5f, 0.0f, 0.5f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	);
 
 	if( vLight->parallel && side >= 0 )
 	{
@@ -3129,12 +3134,12 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 		// original light direction is from surface to light origin
 		idVec3 lightDir = -vLight->lightCenter;
-		if( lightDir.Normalize() == 0.0f )
+		if( lightDir.Normalize( ) == 0.0f )
 		{
 			lightDir[2] = -1.0f;
 		}
 
-		idMat3 rotation = lightDir.ToMat3();
+		idMat3 rotation = lightDir.ToMat3( );
 		//idAngles angles = lightDir.ToAngles();
 		//idMat3 rotation = angles.ToMat3();
 
@@ -3150,7 +3155,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 #endif
 
 		idBounds lightBounds;
-		lightBounds.Clear();
+		lightBounds.Clear( );
 
 		ALIGNTYPE16 frustumCorners_t corners;
 		idRenderMatrix::GetFrustumCorners( corners, vLight->inverseBaseLightProject, bounds_zeroOneCube );
@@ -3168,7 +3173,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 			transf[1] /= transf[3];
 			transf[2] /= transf[3];
 
-			lightBounds.AddPoint( transf.ToVec3() );
+			lightBounds.AddPoint( transf.ToVec3( ) );
 		}
 
 		float lightProjectionMatrix[16];
@@ -3191,17 +3196,17 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 #if 0
 		idBounds splitFrustumBounds;
-		splitFrustumBounds.Clear();
+		splitFrustumBounds.Clear( );
 		for( int j = 0; j < 8; j++ )
 		{
 			point[0] = splitFrustumCorners.x[j];
 			point[1] = splitFrustumCorners.y[j];
 			point[2] = splitFrustumCorners.z[j];
 
-			splitFrustumBounds.AddPoint( point.ToVec3() );
+			splitFrustumBounds.AddPoint( point.ToVec3( ) );
 		}
 
-		idVec3 center = splitFrustumBounds.GetCenter();
+		idVec3 center = splitFrustumBounds.GetCenter( );
 		float radius = splitFrustumBounds.GetRadius( center );
 
 		//ALIGNTYPE16 frustumCorners_t splitFrustumCorners;
@@ -3225,7 +3230,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 		// find the bounding box of the current split in the light's clip space
 		idBounds cropBounds;
-		cropBounds.Clear();
+		cropBounds.Clear( );
 		for( int j = 0; j < 8; j++ )
 		{
 			point[0] = splitFrustumCorners.x[j];
@@ -3238,7 +3243,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 			transf[1] /= transf[3];
 			transf[2] /= transf[3];
 
-			cropBounds.AddPoint( transf.ToVec3() );
+			cropBounds.AddPoint( transf.ToVec3( ) );
 		}
 
 		// don't let the frustum AABB be bigger than the light AABB
@@ -3279,20 +3284,23 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 		shadowV[side] = lightViewRenderMatrix;
 		shadowP[side] = lightProjectionRenderMatrix;
+
+#if 0 //defined( USE_NVRHI )
+		idRenderMatrix shadowToClip;
+		idRenderMatrix::Multiply( renderMatrix_windowSpaceToClipSpace, lightProjectionRenderMatrix, shadowToClip );
+		idRenderMatrix::Multiply( matClipToUvzw, shadowToClip, shadowP[side] );
+#endif
 	}
 	else if( vLight->pointLight && side >= 0 )
 	{
 		assert( side >= 0 && side < 6 );
 
-		// FIXME OPTIMIZE no memset
-
-		float	viewMatrix[16];
+		float	viewMatrix[16] = {0};
 
 		idVec3	vec;
 		idVec3	origin = vLight->globalLightOrigin;
 
 		// side of a point light
-		memset( viewMatrix, 0, sizeof( viewMatrix ) );
 		switch( side )
 		{
 			case 0:
@@ -3359,7 +3367,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 		// set up 90 degree projection matrix
 		const float zNear = 4;
-		const float	fov = r_shadowMapFrustumFOV.GetFloat();
+		const float	fov = r_shadowMapFrustumFOV.GetFloat( );
 
 		float ymax = zNear * tan( fov * idMath::PI / 360.0f );
 		float ymin = -ymax;
@@ -3373,7 +3381,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 		// from OpenGL view space to OpenGL NDC ( -1 : 1 in XYZ )
 		float lightProjectionMatrix[16];
 
-		lightProjectionMatrix[0 * 4 + 0] = 2.0f * zNear / width;
+		lightProjectionMatrix[0 * 4 + 0] = -2.0f * zNear / width;
 		lightProjectionMatrix[1 * 4 + 0] = 0.0f;
 		lightProjectionMatrix[2 * 4 + 0] = ( xmax + xmin ) / width;	// normally 0
 		lightProjectionMatrix[3 * 4 + 0] = 0.0f;
@@ -3389,7 +3397,13 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 		lightProjectionMatrix[0 * 4 + 2] = 0.0f;
 		lightProjectionMatrix[1 * 4 + 2] = 0.0f;
 		lightProjectionMatrix[2 * 4 + 2] = -0.999f; // adjust value to prevent imprecision issues
+
+#if 0 //defined( USE_NVRHI )
+		// the D3D clip space Z is in range [0,1] instead of [-1,1]
+		lightProjectionMatrix[3 * 4 + 2] = -zNear;
+#else
 		lightProjectionMatrix[3 * 4 + 2] = -2.0f * zNear;
+#endif
 
 		lightProjectionMatrix[0 * 4 + 3] = 0.0f;
 		lightProjectionMatrix[1 * 4 + 3] = 0.0f;
@@ -3400,16 +3414,35 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 		shadowV[side] = lightViewRenderMatrix;
 		shadowP[side] = lightProjectionRenderMatrix;
+
+#if defined( USE_NVRHI )
+		ALIGNTYPE16 const idRenderMatrix matClipToUvzw2(
+			1.0f,  0.0f, 0.0f,  0.0f,
+			0.0f, -1.0f, 0.0f,  0.0f,
+			0.0f,  0.0f, 2.0f, -1.0f,
+			0.0f,  0.0f, 0.0f,  1.0f
+		);
+
+		idRenderMatrix::Multiply( matClipToUvzw2, lightProjectionRenderMatrix, shadowP[side] );
+#endif
 	}
 	else
 	{
-		lightViewRenderMatrix.Identity();
+		// spot light
+		lightViewRenderMatrix.Identity( );
 		lightProjectionRenderMatrix = vLight->baseLightProject;
 
 		shadowV[0] = lightViewRenderMatrix;
 		shadowP[0] = lightProjectionRenderMatrix;
+
+#if defined( USE_NVRHI )
+		idRenderMatrix shadowToClip;
+		idRenderMatrix::Multiply( renderMatrix_windowSpaceToClipSpace, lightProjectionRenderMatrix, shadowToClip );
+		idRenderMatrix::Multiply( matClipToUvzw, shadowToClip, shadowP[0] );
+#endif
 	}
 
+#if defined( USE_NVRHI )
 	if( side < 0 )
 	{
 		globalFramebuffers.shadowFBO[vLight->shadowLOD][0]->Bind( );
@@ -3418,6 +3451,14 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 	{
 		globalFramebuffers.shadowFBO[vLight->shadowLOD][side]->Bind( );
 	}
+#elif !defined( USE_VULKAN )
+	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Bind( );
+
+	if( side < 0 )
+	{
+		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], 0 );
+	}
+#endif
 
 	GL_ViewportAndScissor( 0, 0, shadowMapResolutions[vLight->shadowLOD], shadowMapResolutions[vLight->shadowLOD] );
 
@@ -3458,9 +3499,11 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 		if( drawSurf->space != currentSpace )
 		{
+			// model -> world
 			idRenderMatrix modelRenderMatrix;
 			idRenderMatrix::Transpose( *( idRenderMatrix* )drawSurf->space->modelMatrix, modelRenderMatrix );
 
+			// world -> light = light camera view of model in Doom
 			idRenderMatrix modelToLightRenderMatrix;
 			idRenderMatrix::Multiply( lightViewRenderMatrix, modelRenderMatrix, modelToLightRenderMatrix );
 
@@ -3469,6 +3512,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 
 			if( vLight->parallel )
 			{
+				// cascaded sun light shadowmap
 				idRenderMatrix MVP;
 				idRenderMatrix::Multiply( renderMatrix_clipSpaceToWindowSpace, clipMVP, MVP );
 
@@ -3476,7 +3520,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 			}
 			else if( side < 0 )
 			{
-				// from OpenGL view space to OpenGL NDC ( -1 : 1 in XYZ )
+				// spot light
 				idRenderMatrix MVP;
 				idRenderMatrix::Multiply( renderMatrix_windowSpaceToClipSpace, clipMVP, MVP );
 
@@ -3484,6 +3528,7 @@ void idRenderBackend::ShadowMapPass( const drawSurf_t* drawSurfs, const viewLigh
 			}
 			else
 			{
+				// point light
 				RB_SetMVP( clipMVP );
 			}
 
@@ -3634,6 +3679,8 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 		return;
 	}
 
+	//commandList->setEnableAutomaticBarriers( false );
+
 	renderLog.OpenMainBlock( MRB_DRAW_INTERACTIONS, commandList );
 	renderLog.OpenBlock( "Render_Interactions", colorYellow );
 
@@ -3723,6 +3770,14 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 
 			// go back from light view to default camera view
 			ResetViewportAndScissorToDefaultCamera( _viewDef );
+
+			// SP: Very hacky way to clear out the heap with the binding sets. The heap is always overrun otherwise.
+			commandList->close();
+			deviceManager->GetDevice()->executeCommandList( commandList );
+			deviceManager->GetDevice()->runGarbageCollection();
+			commandList->open();
+
+			//commandList->setEnableAutomaticBarriers( false );
 
 			if( vLight->localInteractions != NULL )
 			{
@@ -3848,6 +3903,8 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();
+
+	//commandList->setEnableAutomaticBarriers( true );
 }
 
 /*
@@ -4991,7 +5048,11 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 		int index = ( j + 1 ) % 2;
 		globalFramebuffers.bloomRenderFBO[ index ]->Bind();
 
-		commandList->clearTextureFloat( globalImages->bloomRenderImage[index]->GetTextureHandle( ), nvrhi::AllSubresources, nvrhi::Color( 0.f, 0.f, 0.f, 1.f ) );
+#if defined( USE_NVRHI )
+		commandList->clearTextureFloat( globalImages->bloomRenderImage[index]->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 0.f, 0.f, 0.f, 1.f ) );
+#elif !defined( USE_VULKAN )
+		glClear( GL_COLOR_BUFFER_BIT );
+#endif
 
 		globalImages->bloomRenderImage[j % 2]->Bind();
 
@@ -6111,8 +6172,13 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 #endif
 
+#if 0
+		CalculateAutomaticExposure();
+		Tonemap( _viewDef );
+#else
 		ToneMappingParameters parms;
-		toneMapPass.SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle( ), globalFramebuffers.ldrFBO->GetApiObject( ) );
+		toneMapPass.SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
+#endif
 	}
 
 	if( !r_skipBloom.GetBool() )

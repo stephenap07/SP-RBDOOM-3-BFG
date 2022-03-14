@@ -46,6 +46,7 @@ struct ToneMappingConstants
 	float2 colorLUTTextureSizeInv;
 };
 
+// *INDENT-OFF*
 #if SOURCE_ARRAY
 Texture2DArray t_Source :
 register( t0 );
@@ -66,6 +67,7 @@ register( b0 )
 {
 	ToneMappingConstants g_ToneMapping;
 };
+// *INDENT-ON*
 
 float3 ACESFilm( float3 x )
 {

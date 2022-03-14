@@ -634,8 +634,7 @@ const char* GetSampleFormat( AVSampleFormat sample_fmt )
 idCinematicLocal::InitFromFFMPEGFile
 ==============
 */
-#if defined(USE_FFMPEG)
-bool idCinematicLocal::InitFromFFMPEGFile( const char* qpath, bool amilooping )
+bool idCinematicLocal::InitFromFFMPEGFile( const char* qpath, bool amilooping, nvrhi::ICommandList* commandList )
 {
 	int ret;
 	int ret2;
@@ -801,9 +800,9 @@ bool idCinematicLocal::InitFromFFMPEGFile( const char* qpath, bool amilooping )
 
 	buf = NULL;
 	status = FMV_PLAY;
-
-	startTime = 0;
-	ImageForTime( 0 );
+	hasFrame = false;
+	framePos = -1;
+	ImageForTime( 0, commandList );
 	status = ( looping ) ? FMV_PLAY : FMV_IDLE;
 
 	return true;

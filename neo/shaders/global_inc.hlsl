@@ -177,7 +177,7 @@ float PhotoLuma( float3 c )
 
 float3 sRGBToLinearRGB( float3 c )
 {
-#if ( defined( USE_LINEAR_RGB ) && USE_LINEAR_RGB ) && ( !defined( USE_SRGB ) || !USE_SRGB )
+#if /*( defined( USE_LINEAR_RGB ) && USE_LINEAR_RGB ) &&*/ ( !defined( USE_SRGB ) || !USE_SRGB )
 	c = clamp( c, 0.0, 1.0 );
 
 	return Linear3( c );

@@ -368,8 +368,8 @@ void idBinaryImage::Load2DAtlasMipchainFromMemory( int width, int height, const 
 		// RB: create shrunk image which is a copy of the sub image in the atlas
 		idVec4 rect = R_CalculateMipRect( sourceWidth, level );
 
-		int	scaledWidth = Max( 2, ( int )rect.z );
-		int scaledHeight = Max( 2, ( int )rect.w );
+		int	scaledWidth = rect.z;
+		int scaledHeight = rect.w;
 
 		byte* pic = ( byte* )Mem_Alloc( scaledWidth * scaledHeight * 4, TAG_TEMP );
 
@@ -896,7 +896,7 @@ bool idBinaryImage::LoadFromGeneratedFile( idFile* bFile, ID_TIME_T sourceTimeSt
 		// sizes are still retained, so the stored data size may be larger than
 		// just the multiplication of dimensions
 		assert( img.dataSize >= img.width * img.height * BitsForFormat( ( textureFormat_t )fileData.format ) / 8 );
-#if defined(__APPLE__) && defined(USE_VULKAN)
+#if ( defined( __APPLE__ ) && defined( USE_VULKAN ) ) || defined( USE_NVRHI )
 		int imgfile_dataSize = img.dataSize;
 		// SRS - Allocate 2x memory to prepare for in-place conversion from FMT_RGB565 to FMT_RGBA8
 		if( ( textureFormat_t )fileData.format == FMT_RGB565 )

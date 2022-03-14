@@ -77,16 +77,15 @@ VALUE_TYPE reduce( float4 a )
 }
 #endif
 
-cbuffer c_MipMapgen :
-register( b0 )
+// *INDENT-OFF*
+cbuffer c_MipMapgen : register( b0 )
 {
 	MipmmapGenConstants g_MipMapGen;
 };
 
-RWTexture2D<VALUE_TYPE> u_output[NUM_LODS] :
-register( u0 );
-Texture2D<VALUE_TYPE> t_input :
-register( t0 );
+RWTexture2D<VALUE_TYPE> u_output[NUM_LODS] : register( u0 );
+Texture2D<VALUE_TYPE> t_input : register( t0 );
+// *INDENT-ON*
 
 groupshared VALUE_TYPE s_ReductionData[GROUP_SIZE][GROUP_SIZE];
 

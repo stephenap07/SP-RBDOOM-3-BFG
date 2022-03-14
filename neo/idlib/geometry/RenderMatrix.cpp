@@ -56,7 +56,7 @@ If you have questions concerning this license or the applicable additional terms
 // RB: Vulkan requires the clip space Z is in the range [0, 1]
 // This change is especially important for all kinds of light bounding box -> clip space transformations so
 // the depth bounding tests clipping tests work properly
-#if defined( USE_VULKAN )
+#if defined( USE_VULKAN ) || defined( USE_NVRHI )
 	#define CLIP_SPACE_D3D	1
 #endif
 
@@ -80,15 +80,24 @@ ALIGNTYPE16 const idRenderMatrix renderMatrix_identity(
 ALIGNTYPE16 const idRenderMatrix renderMatrix_flipToOpenGL(
 	0.0f, -1.0f, 0.0f, 0.0f,
 	0.0f,  0.0f, 1.0f, 0.0f,
-	-1.0f,  0.0f, 0.0f, 0.0f,
+#ifdef USE_NVRHI
+	1.0f,  0.0f, 0.0f, 0.0f,
+#else
+	-1.0f, 0.0f, 0.0f, 0.0f,
+#endif
 	0.0f,  0.0f, 0.0f, 1.0f
 );
 
 // OpenGL -1 to 1.
 ALIGNTYPE16 const idRenderMatrix renderMatrix_windowSpaceToClipSpace(
 	2.0f, 0.0f, 0.0f, -1.0f,
+#ifdef false && USE_NVRHI
+	0.0f, -2.0f, 0.0f, 1.0f,
+	0.0f, 0.0f, 1.0f, 0.0f,
+#else
 	0.0f, 2.0f, 0.0f, -1.0f,
 	0.0f, 0.0f, 2.0f, -1.0f,
+#endif
 	0.0f, 0.0f, 0.0f,  1.0f
 );
 
@@ -673,9 +682,15 @@ void idRenderMatrix::CreateViewMatrix( const idVec3& origin, const idMat3& axis,
 	out[1][2] = axis[2][2];
 	out[1][3] = -( origin[0] * axis[2][0] + origin[1] * axis[2][1] + origin[2] * axis[2][2] );
 
+#if defined( CLIP_SPACE_D3D )
+	out[2][0] = axis[0][0];
+	out[2][1] = axis[0][1];
+	out[2][2] = axis[0][2];
+#else
 	out[2][0] = -axis[0][0];
 	out[2][1] = -axis[0][1];
 	out[2][2] = -axis[0][2];
+#endif
 	out[2][3] = origin[0] * axis[0][0] + origin[1] * axis[0][1] + origin[2] * axis[0][2];
 
 	out[3][0] = 0.0f;
@@ -766,7 +781,7 @@ void idRenderMatrix::CreateProjectionMatrixFov( float xFovDegrees, float yFovDeg
 
 void idRenderMatrix::CreateProjD3DStyle( float verticalFov, float aspect, float zNear, float zFar, idRenderMatrix& out )
 {
-	float yScale = 1.0f / tanf( 0.5f * verticalFov );
+	float yScale = 1.0f / idMath::Tan( 0.5f * DEG2RAD( verticalFov ) );
 	float xScale = yScale / aspect;
 	float zScale = 1.0f / ( zFar - zNear );
 	out = idRenderMatrix(

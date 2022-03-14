@@ -47,7 +47,7 @@ struct DeviceCreationParameters
 	uint32_t swapChainSampleCount = 1;
 	uint32_t swapChainSampleQuality = 0;
 	uint32_t maxFramesInFlight = 2;
-	bool enableDebugRuntime = false;
+	bool enableDebugRuntime = true; // TODO(Stephen): Change this to a configurable or define.
 	bool enableNvrhiValidationLayer = false;
 	bool vsyncEnabled = false;
 	bool enableRayTracingExtensions = false; // for vulkan
@@ -121,7 +121,7 @@ public:
 		y = dpiScaleFactorY;
 	}
 
-	void UpdateWindowSize();
+	void UpdateWindowSize( const glimpParms_t& params );
 
 protected:
 	friend class idRenderBackend;
@@ -129,7 +129,6 @@ protected:
 	void* windowHandle;
 	bool windowVisible = false;
 	bool isNvidia = false;
-
 
 	DeviceCreationParameters deviceParms;
 

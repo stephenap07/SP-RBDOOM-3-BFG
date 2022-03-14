@@ -13,25 +13,25 @@ public:
 		: deviceManager( deviceManager )
 	{ }
 
-	virtual ~IRenderPass( ) = default;
+	virtual ~IRenderPass() = default;
 
-	virtual void RenderFrontend( ) { }
+	virtual void RenderFrontend() { }
 	virtual void Render( nvrhi::IFramebuffer* framebuffer ) { }
 	virtual void Animate( float fElapsedTimeSeconds ) { }
-	virtual void BackBufferResizing( ) { }
+	virtual void BackBufferResizing() { }
 	virtual void BackBufferResized( const uint32_t width, const uint32_t height, const uint32_t sampleCount ) { }
 
-	[[nodiscard]] DeviceManager* GetDeviceManager( ) const
+	[[nodiscard]] DeviceManager* GetDeviceManager() const
 	{
 		return deviceManager;
 	}
-	[[nodiscard]] nvrhi::IDevice* GetDevice( ) const
+	[[nodiscard]] nvrhi::IDevice* GetDevice() const
 	{
-		return deviceManager->GetDevice( );
+		return deviceManager->GetDevice();
 	}
-	[[nodiscard]] uint32_t GetFrameIndex( ) const
+	[[nodiscard]] uint32_t GetFrameIndex() const
 	{
-		return deviceManager->GetFrameIndex( );
+		return deviceManager->GetFrameIndex();
 	}
 };
 
@@ -61,10 +61,10 @@ private:
 public:
 	using IRenderPass::IRenderPass;
 
-	bool Init( );
-	void BackBufferResizing( ) override;
+	bool Init();
+	void BackBufferResizing() override;
 	void Animate( float fElapsedTimeSeconds ) override;
-	void RenderFrontend( ) override;
+	void RenderFrontend() override;
 	void Render( nvrhi::IFramebuffer* framebuffer ) override;
 };
 

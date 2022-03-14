@@ -89,8 +89,8 @@ int BitsForFormat( textureFormat_t format )
 			return 16;
 		case FMT_Y16_X16:
 			return 32;
-		// TODO case FMT_F8:
-		//	return 32;
+		case FMT_R8:
+			return 4;
 		default:
 			assert( 0 );
 			return 0;
@@ -246,7 +246,7 @@ ID_INLINE void idImage::DeriveOpts()
 				// RB: TODO check binary format version
 				// D3 BFG assets require RGB565 but it introduces color banding
 				// mods would prefer FMT_RGBA8
-				opts.format = FMT_RGBA8;// FMT_RGB565;
+				opts.format = FMT_RGB565; //FMT_RGBA8;
 				opts.gammaMips = true;
 				break;
 			case TD_LOOKUP_TABLE_MONO:
@@ -269,9 +269,6 @@ ID_INLINE void idImage::DeriveOpts()
 				opts.colorFormat = CFM_DEFAULT; // CFM_YCOCG_DXT5;
 				opts.format = FMT_DXT5;
 				opts.gammaMips = true;
-				break;
-			case TD_LDR:
-				opts.format = FMT_SRGB8;
 				break;
 			default:
 				assert( false );
@@ -466,7 +463,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 
 	if( ( fileSystem->InProductionMode() && binaryFileTime != FILE_NOT_FOUND_TIMESTAMP ) || ( ( binaryFileTime != FILE_NOT_FOUND_TIMESTAMP )
 			&& ( header.colorFormat == opts.colorFormat )
-#if defined(__APPLE__) && defined(USE_VULKAN)
+#if ( defined( __APPLE__ ) && defined( USE_VULKAN ) ) || defined( USE_NVRHI )
 			// SRS - Handle case when image read is cached and RGB565 format conversion is already done
 			&& ( header.format == opts.format || ( header.format == FMT_RGB565 && opts.format == FMT_RGBA8 ) )
 #else
@@ -479,7 +476,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 		opts.height = header.height;
 		opts.numLevels = header.numLevels;
 		opts.colorFormat = ( textureColor_t )header.colorFormat;
-#if defined(__APPLE__) && defined(USE_VULKAN)
+#if ( defined( __APPLE__ ) && defined( USE_VULKAN ) ) || defined( USE_NVRHI )
 		// SRS - Set in-memory format to FMT_RGBA8 for converted FMT_RGB565 image
 		if( header.format == FMT_RGB565 )
 		{
@@ -586,28 +583,37 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 				opts.width = 8;
 				opts.height = 8;
 				opts.numLevels = 1;
-				DeriveOpts( );
+				DeriveOpts();
 
+#if defined( USE_NVRHI )
 				if( !commandList )
 				{
 					return;
 				}
+#endif
 
-				AllocImage( );
-
-				const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
+				AllocImage();
 
 				// clear the data so it's not left uninitialized
 				idTempArray<byte> clear( opts.width * opts.height * 4 );
 				memset( clear.Ptr(), 0, clear.Size() );
+
+#if defined( USE_NVRHI )
+				const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
+
 				commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 				for( int level = 0; level < opts.numLevels; level++ )
 				{
 					commandList->writeTexture( texture, 0, level, clear.Ptr(), GetRowPitch( opts.format, opts.width ) );
 				}
 				commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-				commandList->commitBarriers( );
-
+				commandList->commitBarriers();
+#else
+				for( int level = 0; level < opts.numLevels; level++ )
+				{
+					SubImageUpload( level, 0, 0, 0, opts.width >> level, opts.height >> level, clear.Ptr() );
+				}
+#endif
 				defaulted = true; // RB
 				isLoaded = true;
 				return;
@@ -667,29 +673,33 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 		binaryFileTime = im.WriteGeneratedFile( sourceFileTime );
 	}
 
+#if defined( USE_NVRHI )
 	if( !commandList )
 	{
 		return;
 	}
+#endif
 
-	AllocImage( );
+	AllocImage();
 
-	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
+#if defined( USE_NVRHI )
+	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 	const int bytesPerPixel = info.bytesPerBlock / info.blockSize;
 
 	commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
-	for( int i = 0; i < im.NumImages( ); i++ )
+	for( int i = 0; i < im.NumImages(); i++ )
 	{
 		const bimageImage_t& img = im.GetImageHeader( i );
 		const byte* pic = im.GetImageData( i );
 
+#if 0
 		if( opts.format == FMT_RGB565 )
 		{
 			int bufferW = img.width;
 			int bufferH = img.height;
 
-			if( IsCompressed( ) )
+			if( IsCompressed() )
 			{
 				bufferW = ( img.width + 3 ) & ~3;
 				bufferH = ( img.height + 3 ) & ~3;
@@ -712,12 +722,27 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 			Mem_Free16( data );
 		}
 		else
+#endif
 		{
+			int bufferW = img.width;
+			if( IsCompressed() )
+			{
+				bufferW = ( img.width + 3 ) & ~3;
+			}
+
 			commandList->writeTexture( texture, img.destZ, img.level, pic, GetRowPitch( opts.format, img.width ) );
 		}
 	}
 	commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-	commandList->commitBarriers( );
+	commandList->commitBarriers();
+#else
+	for( int i = 0; i < im.NumImages(); i++ )
+	{
+		const bimageImage_t& img = im.GetImageHeader( i );
+		const byte* data = im.GetImageData( i );
+		SubImageUpload( img.level, 0, 0, img.destZ, img.width, img.height, data );
+	}
+#endif
 
 	isLoaded = true;
 }
@@ -870,13 +895,33 @@ idImage::Reload
 */
 void idImage::Reload( bool force, nvrhi::ICommandList* commandList )
 {
+#if defined( USE_NVRHI )
+
 	// always regenerate functional images
 	if( generatorFunction )
 	{
-		common->DPrintf( "regenerating %s.\n", GetName() );
+		//common->DPrintf( "regenerating %s.\n", GetName() );
 		generatorFunction( this, commandList );
 		return;
 	}
+#else
+	// don't break render targets that have this image attached
+	if( opts.isRenderTarget )
+	{
+		return;
+	}
+
+	// always regenerate functional images
+	if( generatorFunction )
+	{
+		if( force )
+		{
+			common->DPrintf( "regenerating %s.\n", GetName() );
+			generatorFunction( this, commandList );
+		}
+		return;
+	}
+#endif
 
 	// check file times
 	if( !force )
@@ -901,7 +946,7 @@ void idImage::Reload( bool force, nvrhi::ICommandList* commandList )
 
 	PurgeImage();
 
-	DeferredLoadImage( );
+	DeferredLoadImage();
 }
 
 /*
@@ -965,13 +1010,17 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 
 		commonLocal.LoadPacifierBinarizeEnd();
 
-		AllocImage( );
+		AllocImage();
 
+#if defined( USE_NVRHI )
 		if( commandList )
 		{
+			const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
+			const int bytesPerBlock = info.bytesPerBlock;
+
 			commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
-			for( int i = 0; i < im.NumImages( ); i++ )
+			for( int i = 0; i < im.NumImages(); i++ )
 			{
 				const bimageImage_t& img = im.GetImageHeader( i );
 				const byte* data = im.GetImageData( i );
@@ -980,8 +1029,16 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 			}
 
 			commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-			commandList->commitBarriers( );
+			commandList->commitBarriers();
 		}
+#else
+		for( int i = 0; i < im.NumImages(); i++ )
+		{
+			const bimageImage_t& img = im.GetImageHeader( i );
+			const byte* data = im.GetImageData( i );
+			SubImageUpload( img.level, 0, 0, img.destZ, img.width, img.height, data );
+		}
+#endif
 
 		isLoaded = true;
 	}
@@ -1038,6 +1095,7 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 
 	AllocImage();
 
+#if defined( USE_NVRHI )
 	int numChannels = 4;
 	int bytesPerPixel = numChannels;
 	if( opts.format == FMT_ALPHA || opts.format == FMT_DXT1 || opts.format == FMT_INT8 || opts.format == FMT_R8 )
@@ -1045,17 +1103,17 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 		bytesPerPixel = 1;
 	}
 
-	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
+	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 	bytesPerPixel = info.bytesPerBlock;
 
 	commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
-	for( int i = 0; i < im.NumImages( ); i++ )
+	for( int i = 0; i < im.NumImages(); i++ )
 	{
 		const bimageImage_t& img = im.GetImageHeader( i );
 		const byte* data = im.GetImageData( i );
 		int bufferW = img.width;
-		if( IsCompressed( ) )
+		if( IsCompressed() )
 		{
 			bufferW = ( img.width + 3 ) & ~3;
 		}
@@ -1063,7 +1121,16 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 	}
 
 	commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-	commandList->commitBarriers( );
+	commandList->commitBarriers();
+#else
+
+	for( int i = 0; i < im.NumImages(); i++ )
+	{
+		const bimageImage_t& img = im.GetImageHeader( i );
+		const byte* data = im.GetImageData( i );
+		SubImageUpload( img.level, 0, 0, img.destZ, img.width, img.height, data );
+	}
+#endif
 
 	isLoaded = true;
 }
@@ -1085,10 +1152,10 @@ void idImage::GenerateShadowArray( int width, int height, textureFilter_t filter
 	opts.numLevels = 0;
 	opts.isRenderTarget = true;
 
-	DeriveOpts( );
+	DeriveOpts();
 
 	// The image will be uploaded to the gpu on a deferred state.
-	AllocImage( );
+	AllocImage();
 
 	isLoaded = true;
 }
@@ -1129,6 +1196,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 			AllocImage();
 		}
 
+#if defined( USE_NVRHI )
 		int numChannels = 4;
 		int bytesPerPixel = numChannels;
 		if( opts.format == FMT_ALPHA || opts.format == FMT_DXT1 || opts.format == FMT_INT8 || opts.format == FMT_R8 )
@@ -1136,7 +1204,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 			bytesPerPixel = 1;
 		}
 
-		const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
+		const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 		bytesPerPixel = info.bytesPerBlock;
 
 		SetSamplerState( TF_LINEAR, TR_CLAMP );
@@ -1144,7 +1212,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 		commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
 		int bufferW = opts.width;
-		if( IsCompressed( ) )
+		if( IsCompressed() )
 		{
 			bufferW = ( opts.width + 3 ) & ~3;
 		}
@@ -1155,7 +1223,13 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 		}
 
 		commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-		commandList->commitBarriers( );
+		commandList->commitBarriers();
+#else
+		for( int i = 0; i < 6; i++ )
+		{
+			SubImageUpload( 0, 0, 0, i, opts.width, opts.height, pic[i] );
+		}
+#endif
 	}
 	else
 	{
@@ -1173,6 +1247,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 			AllocImage();
 		}
 
+#if defined( USE_NVRHI )
 		int numChannels = 4;
 		int bytesPerPixel = numChannels;
 		if( opts.format == FMT_ALPHA || opts.format == FMT_DXT1 || opts.format == FMT_INT8 || opts.format == FMT_R8 )
@@ -1180,13 +1255,13 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 			bytesPerPixel = 1;
 		}
 
-		const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc( ).format );
+		const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 		bytesPerPixel = info.bytesPerBlock;
 
 		SetSamplerState( TF_LINEAR, TR_REPEAT );
 
 		int bufferW = opts.width;
-		if( IsCompressed( ) )
+		if( IsCompressed() )
 		{
 			bufferW = ( opts.width + 3 ) & ~3;
 		}
@@ -1194,7 +1269,11 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 		commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 		commandList->writeTexture( texture, 0, 0, data, GetRowPitch( opts.format, opts.width ) );
 		commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-		commandList->commitBarriers( );
+		commandList->commitBarriers();
+#else
+		SetSamplerState( TF_LINEAR, TR_REPEAT );
+		SubImageUpload( 0, 0, 0, 0, opts.width, opts.height, data );
+#endif
 	}
 
 	isLoaded = true;

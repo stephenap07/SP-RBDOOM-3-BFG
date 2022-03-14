@@ -179,13 +179,12 @@ LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 	switch( uMsg )
 	{
 		case WM_WINDOWPOSCHANGED:
-			if( renderSystem->IsInitialized() )
+			if( renderSystem->IsInitialized( ) )
 			{
 				RECT rect;
 				if( ::GetClientRect( win32.hWnd, &rect ) )
 				{
-					auto originalWidth = glConfig.nativeScreenWidth;
-					auto originalHeight = glConfig.nativeScreenHeight;
+
 					if( rect.right > rect.left && rect.bottom > rect.top )
 					{
 						glConfig.nativeScreenWidth = rect.right - rect.left;
@@ -198,12 +197,6 @@ LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 							r_windowWidth.SetInteger( glConfig.nativeScreenWidth );
 							r_windowHeight.SetInteger( glConfig.nativeScreenHeight );
 						}
-					}
-
-					if( glConfig.nativeScreenWidth != originalWidth || glConfig.nativeScreenHeight != originalHeight )
-					{
-						deviceManager->UpdateWindowSize();
-						Framebuffer::ResizeFramebuffers();
 					}
 				}
 			}

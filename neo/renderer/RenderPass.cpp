@@ -62,7 +62,7 @@ idDrawVert* BasicTriangle::AllocVerts( int vertCount, triIndex_t* tempIndexes, i
 	return vertexPointer + startVert;
 }
 
-bool BasicTriangle::Init( )
+bool BasicTriangle::Init()
 {
 	int v = renderProgManager.FindShader( "vertbuffershaders.hlsl", SHADER_STAGE_VERTEX );
 	int f = renderProgManager.FindShader( "vertbuffershaders.hlsl", SHADER_STAGE_FRAGMENT );
@@ -75,59 +75,59 @@ bool BasicTriangle::Init( )
 		return false;
 	}
 
-	commandList = GetDevice( )->createCommandList( );
+	commandList = GetDevice()->createCommandList();
 
 	nvrhi::VertexAttributeDesc attributes[] =
 	{
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "POSITION" )
 		.setFormat( nvrhi::Format::RGB32_FLOAT )
 		.setOffset( offsetof( idDrawVert, xyz ) )
 		.setElementStride( sizeof( idDrawVert ) ),
-		//nvrhi::VertexAttributeDesc( )
+		//nvrhi::VertexAttributeDesc()
 		//	.setName( "NORMAL" )
 		//	.setFormat( nvrhi::Format::RGBA8_UINT )
 		//	.setOffset( offsetof( idDrawVert, normal ) )
 		//	.setElementStride( sizeof( idDrawVert ) ),
-		//nvrhi::VertexAttributeDesc( )
+		//nvrhi::VertexAttributeDesc()
 		//	.setName( "COLOR" )
 		//	.setFormat( nvrhi::Format::RGBA8_UINT )
 		//	.setOffset( offsetof( idDrawVert, color ) )
 		//	.setElementStride( sizeof( idDrawVert ) ),
-		//nvrhi::VertexAttributeDesc( )
+		//nvrhi::VertexAttributeDesc()
 		//	.setName( "COLOR2" )
 		//	.setFormat( nvrhi::Format::RGBA8_UINT )
 		//	.setOffset( offsetof( idDrawVert, color2 ) )
 		//	.setElementStride( sizeof( idDrawVert ) ),
-		nvrhi::VertexAttributeDesc( )
+		nvrhi::VertexAttributeDesc()
 		.setName( "UV" )
 		.setFormat( nvrhi::Format::RG16_FLOAT )
 		.setOffset( offsetof( idDrawVert, st ) )
 		.setElementStride( sizeof( idDrawVert ) ),
-		//nvrhi::VertexAttributeDesc( )
+		//nvrhi::VertexAttributeDesc()
 		//	.setName( "TANGENT" )
 		//	.setFormat( nvrhi::Format::RGBA8_UINT )
 		//	.setOffset( offsetof( idDrawVert, tangent ) )
 		//	.setElementStride( sizeof( idDrawVert ) ),
 	};
 
-	inputLayout = GetDevice( )->createInputLayout( attributes, uint32_t( std::size( attributes ) ), vertexShader );
+	inputLayout = GetDevice()->createInputLayout( attributes, uint32_t( std::size( attributes ) ), vertexShader );
 
 	material = declManager->FindMaterial( "guis/rml/shell/textures/invader" );
 
-	commandList->open( );
-	for( int i = 0; i < material->GetNumStages( ); i++ )
+	commandList->open();
+	for( int i = 0; i < material->GetNumStages(); i++ )
 	{
 		material->GetStage( i )->texture.image->FinalizeImage( true, commandList );
 	}
-	commandList->close( );
-	GetDevice( )->executeCommandList( commandList );
-	GetDevice( )->runGarbageCollection( );
+	commandList->close();
+	GetDevice()->executeCommandList( commandList );
+	GetDevice()->runGarbageCollection();
 
-	nvrhi::ITexture* texture = ( nvrhi::ITexture* )material->GetStage( 0 )->texture.image->GetTextureID( );
+	nvrhi::ITexture* texture = ( nvrhi::ITexture* )material->GetStage( 0 )->texture.image->GetTextureID();
 
 	CommonRenderPasses commonPasses;
-	commonPasses.Init( GetDevice( ) );
+	commonPasses.Init( GetDevice() );
 
 	nvrhi::BindingSetDesc bindingSetDesc;
 	bindingSetDesc.bindings =
@@ -137,7 +137,7 @@ bool BasicTriangle::Init( )
 		nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler )
 	};
 
-	if( !nvrhi::utils::CreateBindingSetAndLayout( GetDevice( ), nvrhi::ShaderType::All, 0, bindingSetDesc, bindingLayout, bindingSet ) )
+	if( !nvrhi::utils::CreateBindingSetAndLayout( GetDevice(), nvrhi::ShaderType::All, 0, bindingSetDesc, bindingLayout, bindingSet ) )
 	{
 		common->Error( "Couldn't create the binding set or layout" );
 		return false;
@@ -146,7 +146,7 @@ bool BasicTriangle::Init( )
 	return true;
 }
 
-void BasicTriangle::BackBufferResizing( )
+void BasicTriangle::BackBufferResizing()
 {
 	pipeline = nullptr;
 }
@@ -155,7 +155,7 @@ void BasicTriangle::Animate( float fElapsedTimeSeconds )
 {
 }
 
-void BasicTriangle::RenderFrontend( )
+void BasicTriangle::RenderFrontend()
 {
 	vertexBlock = vertexCache.AllocVertex( NULL, MAX_VERTS, sizeof( idDrawVert ), commandList );
 	indexBlock = vertexCache.AllocIndex( NULL, MAX_INDEXES, sizeof( triIndex_t ), commandList );
@@ -184,37 +184,37 @@ void BasicTriangle::RenderFrontend( )
 
 	ALIGNTYPE16 idDrawVert localVerts[4];
 
-	localVerts[0].Clear( );
+	localVerts[0].Clear();
 	localVerts[0].xyz[0] = x;
 	localVerts[0].xyz[1] = y;
 	localVerts[0].xyz[2] = 0.f;
 	localVerts[0].SetTexCoord( s1, t1 );
 	localVerts[0].SetNativeOrderColor( currentColorNativeBytesOrder );
-	localVerts[0].ClearColor2( );
+	localVerts[0].ClearColor2();
 
-	localVerts[1].Clear( );
+	localVerts[1].Clear();
 	localVerts[1].xyz[0] = x + w;
 	localVerts[1].xyz[1] = y;
 	localVerts[1].xyz[2] = 0.f;
 	localVerts[1].SetTexCoord( s2, t1 );
 	localVerts[1].SetNativeOrderColor( currentColorNativeBytesOrder );
-	localVerts[1].ClearColor2( );
+	localVerts[1].ClearColor2();
 
-	localVerts[2].Clear( );
+	localVerts[2].Clear();
 	localVerts[2].xyz[0] = x + w;
 	localVerts[2].xyz[1] = y + h;
 	localVerts[2].xyz[2] = 0.f;
 	localVerts[2].SetTexCoord( s2, t2 );
 	localVerts[2].SetNativeOrderColor( currentColorNativeBytesOrder );
-	localVerts[2].ClearColor2( );
+	localVerts[2].ClearColor2();
 
-	localVerts[3].Clear( );
+	localVerts[3].Clear();
 	localVerts[3].xyz[0] = x;
 	localVerts[3].xyz[1] = y + h;
 	localVerts[3].xyz[2] = 0.f;
 	localVerts[3].SetTexCoord( s1, t2 );
 	localVerts[3].SetNativeOrderColor( currentColorNativeBytesOrder );
-	localVerts[3].ClearColor2( );
+	localVerts[3].ClearColor2();
 
 	WriteDrawVerts16( verts, localVerts, 4 );
 
@@ -237,18 +237,18 @@ void BasicTriangle::Render( nvrhi::IFramebuffer* framebuffer )
 		psoDesc.renderState.depthStencilState.depthTestEnable = false;
 		//psoDesc.renderState.rasterState.frontCounterClockwise = true;
 
-		pipeline = GetDevice( )->createGraphicsPipeline( psoDesc, framebuffer );
+		pipeline = GetDevice()->createGraphicsPipeline( psoDesc, framebuffer );
 	}
 
-	commandList->open( );
+	commandList->open();
 	commandList->beginMarker( "Basic" );
 
-	RenderFrontend( );
+	RenderFrontend();
 
 	nvrhi::utils::ClearColorAttachment( commandList, framebuffer, 0, nvrhi::Color( 0.f ) );
 
-	float w = framebuffer->getFramebufferInfo( ).width;
-	float h = framebuffer->getFramebufferInfo( ).height;
+	float w = framebuffer->getFramebufferInfo().width;
+	float h = framebuffer->getFramebufferInfo().height;
 
 	idRenderMatrix projectionMatrix;
 	{
@@ -335,7 +335,7 @@ void BasicTriangle::Render( nvrhi::IFramebuffer* framebuffer )
 	state.vertexBuffers = { { vertexBuffer->GetAPIObject(), 0, vertOffset } };
 	state.pipeline = pipeline;
 	state.framebuffer = framebuffer;
-	state.viewport.addViewportAndScissorRect( framebuffer->getFramebufferInfo( ).getViewport( ) );
+	state.viewport.addViewportAndScissorRect( framebuffer->getFramebufferInfo().getViewport() );
 
 	commandList->setGraphicsState( state );
 
@@ -343,8 +343,8 @@ void BasicTriangle::Render( nvrhi::IFramebuffer* framebuffer )
 	args.vertexCount = 6;
 	commandList->drawIndexed( args );
 
-	commandList->endMarker( );
-	commandList->close( );
+	commandList->endMarker();
+	commandList->close();
 
-	GetDevice( )->executeCommandList( commandList );
+	GetDevice()->executeCommandList( commandList );
 }

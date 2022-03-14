@@ -46,16 +46,16 @@ struct ToneMappingConstants
 	float2 colorLUTTextureSizeInv;
 };
 
-Buffer<uint> t_Histogram :
-register( t0 );
-RWBuffer<uint> u_Exposure :
-register( u0 );
+// *INDENT-OFF*
+Buffer<uint> t_Histogram : register(t0);
+RWBuffer<uint> u_Exposure : register(u0);
 
 cbuffer c_ToneMapping :
 register( b0 )
 {
 	ToneMappingConstants g_ToneMapping;
 };
+// *INDENT-ON*
 
 #define FIXED_POINT_FRAC_BITS 6
 #define FIXED_POINT_FRAC_MULTIPLIER (1 << FIXED_POINT_FRAC_BITS)

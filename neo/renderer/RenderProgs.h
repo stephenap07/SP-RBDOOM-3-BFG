@@ -1059,9 +1059,7 @@ private:
 	nvrhi::BindingSetHandle       bindingSet;
 	renderProg_t*			      currentShader;
 
-#else
-
-#if defined(USE_VULKAN)
+#elif defined(USE_VULKAN)
 	struct shader_t
 	{
 		shader_t() :
@@ -1164,7 +1162,6 @@ private:
 		int					vertexShaderIndex;
 		int					fragmentShaderIndex;
 	};
-#endif
 
 	void							LoadShader( shader_t& shader );
 

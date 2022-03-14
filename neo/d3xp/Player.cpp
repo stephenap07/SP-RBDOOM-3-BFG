@@ -3886,7 +3886,7 @@ void idPlayer::FireWeapon()
 		spawnItemTime = gameLocal.time;
 		args.Set( "classname", "func_static" );
 		args.Set( "spawnclass", "idMoveable" );
-		args.Set( "owner", this->name.c_str( ) );
+		args.Set( "owner", this->name.c_str() );
 		args.Set( "name", va( "physx%d", physxNum++ ) );
 		args.Set( "model", "_SPHERE" );
 		args.Set( "shader", "textures/color/white_shadow" );

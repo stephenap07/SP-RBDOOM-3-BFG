@@ -20,23 +20,20 @@
 * DEALINGS IN THE SOFTWARE.
 */
 
+// *INDENT-OFF*
 #if TEXTURE_ARRAY
-Texture2DArray tex :
-register( t0 );
+Texture2DArray tex : register( t0 );
 #else
-Texture2D tex :
-register( t0 );
+Texture2D tex : register( t0 );
 #endif
-SamplerState samp :
-register( s0 );
+SamplerState samp : register( s0 );
 
 struct PS_IN
 {
-float4 posClip	:
-	SV_Position;
-float2 uv		:
-	UV;
+	float4 posClip	: SV_Position;
+	float2 uv		: UV;
 };
+// *INDENT-ON*
 
 void main(
 	PS_IN fragment,
