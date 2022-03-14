@@ -375,8 +375,6 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 
 	nvrhiDevice = nvrhi::d3d12::createDevice( deviceDesc );
 
-	deviceParms.enableNvrhiValidationLayer = true;
-
 	if( deviceParms.enableNvrhiValidationLayer )
 	{
 		nvrhiDevice = nvrhi::validation::createValidationLayer( nvrhiDevice );

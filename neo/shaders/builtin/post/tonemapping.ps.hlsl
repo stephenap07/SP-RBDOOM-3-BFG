@@ -143,10 +143,4 @@ void main(
 	{
 		o_rgba.rgb = ApplyColorLUT( o_rgba.rgb );
 	}
-	else
-	{
-		// Tonemapping curve is applied after exposure.
-		// Gamma correction is done by rendering to an sRGB render target.
-		o_rgba.rgb = ACESFilm( o_rgba.rgb );
-	}
 }

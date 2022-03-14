@@ -43,11 +43,11 @@ struct DeviceCreationParameters
 	uint32_t backBufferHeight = 720;
 	uint32_t refreshRate = 0;
 	uint32_t swapChainBufferCount = 3;
-	nvrhi::Format swapChainFormat = nvrhi::Format::SRGBA8_UNORM;
+	nvrhi::Format swapChainFormat = nvrhi::Format::RGBA8_UNORM; // RB: don't do the sRGB gamma ramp with the swapchain
 	uint32_t swapChainSampleCount = 1;
 	uint32_t swapChainSampleQuality = 0;
 	uint32_t maxFramesInFlight = 2;
-	bool enableDebugRuntime = true; // TODO(Stephen): Change this to a configurable or define.
+	bool enableDebugRuntime = false;
 	bool enableNvrhiValidationLayer = false;
 	bool vsyncEnabled = false;
 	bool enableRayTracingExtensions = false; // for vulkan
