@@ -42,9 +42,9 @@ void DeviceManager::BackBufferResizing()
 
 void DeviceManager::BackBufferResized()
 {
-	if( tr.IsInitialized( ) )
+	if( tr.IsInitialized() )
 	{
-		Framebuffer::ResizeFramebuffers( );
+		Framebuffer::ResizeFramebuffers();
 	}
 }
 

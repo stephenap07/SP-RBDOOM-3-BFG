@@ -345,7 +345,7 @@ void idCommonLocal::LoadLoadingGui( const char* mapName, bool& hellMap )
 			else
 			{
 				const idStrList& modes = common->GetModeDisplayList();
-				subTitle = modes[idMath::ClampInt( 0, modes.Num() - 1, matchParameters.gameMode )];
+				subTitle = modes[ idMath::ClampInt( 0, modes.Num() - 1, matchParameters.gameMode ) ];
 
 				const char* modeDescs[] = { "#str_swf_deathmatch_desc", "#str_swf_tourney_desc", "#str_swf_team_deathmatch_desc", "#str_swf_lastman_desc", "#str_swf_ctf_desc" };
 				desc = idLocalization::GetString( modeDescs[matchParameters.gameMode] );
@@ -707,7 +707,7 @@ idCommonLocal::UpdateLevelLoadPacifier
 Pumps the session and if multiplayer, displays dialogs during the loading process.
 ===============
 */
-void idCommonLocal::UpdateLevelLoadPacifier( )
+void idCommonLocal::UpdateLevelLoadPacifier()
 {
 	autoRenderIconType_t icon = AUTORENDER_DEFAULTICON;
 	bool autoswapsRunning = renderSystem->AreAutomaticBackgroundSwapsRunning( &icon );

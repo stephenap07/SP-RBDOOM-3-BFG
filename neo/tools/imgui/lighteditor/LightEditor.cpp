@@ -739,11 +739,8 @@ void LightEditor::DrawWindow()
 		{
 			TempApplyChanges();
 		}
-
-		ImGui::End();
 	}
-
-	// ImGui::End();
+	ImGui::End();
 
 	if( showIt && !showWindow )
 	{

@@ -489,8 +489,6 @@ idFileHandle idFileSystemLocal::OpenOSFile( const char* fileName, fsMode_t mode 
 	fp = CreateFile( fileName, dwAccess, dwShare, NULL, dwCreate, dwFlags, NULL );
 	if( fp == INVALID_HANDLE_VALUE )
 	{
-		DWORD fpError = GetLastError();
-		//common->Warning("Failed to open file %s, err %d", fileName, fpError);
 		return NULL;
 	}
 #else
@@ -2883,8 +2881,6 @@ int idFileSystemLocal::AddResourceFile( const char* resourceFileName )
 		common->Printf( "Loaded resource file %s\n", resourceFile.c_str() );
 		return resourceFiles.Num() - 1;
 	}
-
-	delete rc;
 	return -1;
 }
 
@@ -3541,7 +3537,7 @@ idFile* idFileSystemLocal::OpenFileReadFlags( const char* relativePath, int sear
 		}
 	}
 
-	if( fs_debug.GetInteger( ) )
+	if( fs_debug.GetInteger() )
 	{
 		common->Printf( "Can't find %s\n", relativePath );
 	}
@@ -3824,8 +3820,8 @@ void idFileSystemLocal::FindDLL( const char* name, char _dllPath[ MAX_OSPATH ] )
 	sys->DLL_GetFileName( name, dllName, MAX_OSPATH );
 
 	// from executable directory first - this is handy for developement
-	idStr dllPath = Sys_EXEPath( );
-	dllPath.StripFilename( );
+	idStr dllPath = Sys_EXEPath();
+	dllPath.StripFilename();
 	dllPath.AppendPath( dllName );
 	idFile* dllFile = OpenExplicitFileRead( dllPath );
 

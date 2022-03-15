@@ -29,8 +29,6 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __PRECOMPILED_H__
 #define __PRECOMPILED_H__
 
-#pragma once
-
 #include "sys/sys_defines.h"
 #include "sys/sys_builddefines.h"
 #include "sys/sys_includes.h"
@@ -96,15 +94,17 @@ const int MAX_EXPRESSION_REGISTERS = 4096;
 	const uint32 NUM_FRAME_DATA = 2;
 #endif
 
-#if defined(USE_VULKAN)
+#if defined( USE_NVRHI )
+	#include "nvrhi/nvrhi.h"
+#elif defined(USE_VULKAN)
 	#include "../renderer/Vulkan/qvk.h"
 #else
-	// RB: replaced QGL with GLEW
-	#include <GL/glew.h>
-	// RB end
+
 #endif
 
-#include "nvrhi/nvrhi.h"
+// FIMXE remove GL with NVRHI
+#include <GL/glew.h>
+
 
 #include "../renderer/Cinematic.h"
 #include "../renderer/Material.h"
