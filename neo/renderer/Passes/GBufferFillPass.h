@@ -30,13 +30,15 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "GeometryPasses.h"
 
+#if 0
+
 // "Light" G-Buffer that renders the normals of the geometry
 class GBufferFillPass : IGeometryPass
 {
 public:
 
-	GBufferFillPass( ) = default;
-	virtual ~GBufferFillPass( ) = default;
+	GBufferFillPass() = default;
+	virtual ~GBufferFillPass() = default;
 
 	void Init( nvrhi::DeviceHandle deviceHandle );
 	void RenderView( nvrhi::ICommandList* commandList, const drawSurf_t* const* drawSurfs, int numDrawSurfs, bool fillGbuffer );
@@ -60,5 +62,7 @@ public:
 	void SetPushConstants( nvrhi::ICommandList* commandList, nvrhi::GraphicsState& state, nvrhi::DrawArguments& args ) override;
 
 };
+
+#endif
 
 #endif

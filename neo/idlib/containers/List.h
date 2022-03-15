@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -203,7 +204,7 @@ public:
 	};
 
 	// Begin/End methods for range-based for loops.
-	_type_* begin( )
+	_type_* begin()
 	{
 		if( num > 0 )
 		{
@@ -214,7 +215,7 @@ public:
 			return nullptr;
 		}
 	}
-	_type_* end( )
+	_type_* end()
 	{
 		if( num > 0 )
 		{
@@ -267,7 +268,7 @@ ID_INLINE idList<_type_, _tag_>::idList( std::initializer_list<_type_> initializ
 	: idList( 16 )
 {
 	SetNum( std::size( initializerList ) );
-	std::copy( initializerList.begin( ), initializerList.end( ), list );
+	std::copy( initializerList.begin(), initializerList.end(), list );
 }
 
 /*

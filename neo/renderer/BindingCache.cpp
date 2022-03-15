@@ -39,9 +39,7 @@ nvrhi::BindingSetHandle BindingCache::GetCachedBindingSet( const nvrhi::BindingS
 
 nvrhi::BindingSetHandle BindingCache::GetOrCreateBindingSet( const nvrhi::BindingSetDesc& desc, nvrhi::IBindingLayout* layout )
 {
-	// SP: A hack to disable the binding set caching. This just builds up in the heap and we run into heap overflow.
-	return device->createBindingSet( desc, layout );
-
+#if 1
 	size_t hash = 0;
 	nvrhi::hash_combine( hash, desc );
 	nvrhi::hash_combine( hash, layout );
@@ -65,20 +63,10 @@ nvrhi::BindingSetHandle BindingCache::GetOrCreateBindingSet( const nvrhi::Bindin
 	{
 		mutex.Lock();
 
+		result = device->createBindingSet( desc, layout );
+
 		int entryIndex = bindingSets.Append( result );
 		bindingHash.Add( hash, entryIndex );
-
-		nvrhi::BindingSetHandle& entry = bindingSets[entryIndex];
-
-		if( !entry )
-		{
-			result = device->createBindingSet( desc, layout );
-			entry = result;
-		}
-		else
-		{
-			result = entry;
-		}
 
 		mutex.Unlock();
 	}
@@ -89,6 +77,9 @@ nvrhi::BindingSetHandle BindingCache::GetOrCreateBindingSet( const nvrhi::Bindin
 	}
 
 	return result;
+#else
+	return device->createBindingSet( desc, layout );
+#endif
 }
 
 void BindingCache::Clear()
@@ -114,6 +105,7 @@ void SamplerCache::Clear()
 
 nvrhi::SamplerHandle SamplerCache::GetOrCreateSampler( nvrhi::SamplerDesc desc )
 {
+#if 1
 	size_t hash = std::hash<nvrhi::SamplerDesc> {}( desc );
 
 	mutex.Lock();
@@ -135,20 +127,10 @@ nvrhi::SamplerHandle SamplerCache::GetOrCreateSampler( nvrhi::SamplerDesc desc )
 	{
 		mutex.Lock();
 
+		result = device->createSampler( desc );
+
 		int entryIndex = samplers.Append( result );
 		samplerHash.Add( hash, entryIndex );
-
-		nvrhi::SamplerHandle& entry = samplers[entryIndex];
-
-		if( !entry )
-		{
-			result = device->createSampler( desc );
-			entry = result;
-		}
-		else
-		{
-			result = entry;
-		}
 
 		mutex.Unlock();
 	}
@@ -159,4 +141,7 @@ nvrhi::SamplerHandle SamplerCache::GetOrCreateSampler( nvrhi::SamplerDesc desc )
 	}
 
 	return result;
+#else
+	return device->createSampler( desc );
+#endif
 }

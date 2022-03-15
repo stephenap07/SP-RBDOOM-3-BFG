@@ -1113,14 +1113,9 @@ void idMaterial::ParseBlend( idLexer& src, shaderStage_t* stage )
 		stage->lighting = SL_DIFFUSE;
 		return;
 	}
-	if( !token.Icmp( "specularmap" ) )
+	if( !token.Icmp( "specularmap" ) ||  !token.Icmp( "rmaomap" ) )
 	{
 		stage->lighting = SL_SPECULAR;
-		return;
-	}
-	if( !token.Icmp( "rmaomap" ) )
-	{
-		stage->lighting = SL_RMAO;
 		return;
 	}
 
@@ -2241,9 +2236,6 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 					td = TD_SPECULAR;
 				}
 				break;
-			case SL_RMAO:
-				td = TD_SPECULAR_PBR_RMAO;
-				break;
 			default:
 				break;
 		}
@@ -2432,8 +2424,7 @@ void idMaterial::AddImplicitStages( const textureRepeat_t trpDefault /* = TR_REP
 		{
 			hasDiffuse = true;
 		}
-		if( pd->parseStages[i].lighting == SL_SPECULAR ||
-				pd->parseStages[i].lighting == SL_RMAO )
+		if( pd->parseStages[i].lighting == SL_SPECULAR )
 		{
 			hasSpecular = true;
 		}
@@ -3853,7 +3844,6 @@ void idMaterial::SetFastPathImages()
 				break;
 			}
 			case SL_SPECULAR:
-			case SL_RMAO:
 			{
 				if( fastPathSpecularImage )
 				{

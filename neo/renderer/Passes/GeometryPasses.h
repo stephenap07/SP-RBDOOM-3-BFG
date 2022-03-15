@@ -31,10 +31,12 @@ If you have questions concerning this license or the applicable additional terms
 
 constexpr std::size_t MAX_IMAGE_PARMS = 16;
 
+#if 0
+
 class IGeometryPass
 {
 public:
-	virtual         ~IGeometryPass( ) = default;
+	virtual         ~IGeometryPass() = default;
 
 	virtual void    SetupView( nvrhi::ICommandList* commandList, viewDef_t* viewDef ) = 0;
 	virtual bool    SetupMaterial( const idMaterial* material, nvrhi::RasterCullMode cullMode, nvrhi::GraphicsState& state ) = 0;
@@ -81,7 +83,7 @@ protected:
 	void GL_ClearColor( nvrhi::ICommandList* commandList, int attachmentIndex = 0 );
 	void GL_ClearDepthStencil( nvrhi::ICommandList* commandList );
 
-	ID_INLINE uint64 GL_GetCurrentState( ) const
+	ID_INLINE uint64 GL_GetCurrentState() const
 	{
 		return glStateBits;
 	}
@@ -92,5 +94,6 @@ protected:
 		GL_Scissor( x, y, w, h );
 	}
 };
+#endif
 
 #endif

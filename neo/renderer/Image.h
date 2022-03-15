@@ -239,7 +239,7 @@ typedef enum
 	// RB end
 	TD_R8F,					// Stephen: Added for ambient occlusion render target.
 	TD_LDR,					// Stephen: Added for SRGB render target when tonemapping.
-	TD_DEPTH_STENCIL,
+	TD_DEPTH_STENCIL,       // depth buffer and stencil buffer
 } textureUsage_t;
 
 typedef enum
@@ -250,9 +250,7 @@ typedef enum
 	CF_PANORAMA,	// TODO latlong encoded HDRI panorama typically used by Substance or Blender
 	CF_2D_ARRAY,	// not a cube map but not a single 2d texture either
 	CF_2D_PACKED_MIPCHAIN, // usually 2d but can be an octahedron, packed mipmaps into single 2d texture atlas and limited to dim^2
-	// SP begin
-	CF_SINGLE,      // A single texture cubemap. All six sides in one image.
-	// SP end
+	CF_SINGLE,      // SP: A single texture cubemap. All six sides in one image.
 } cubeFiles_t;
 
 enum imageFileType_t

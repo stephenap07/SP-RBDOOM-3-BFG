@@ -119,7 +119,7 @@ groupshared VALUE_TYPE s_ReductionData[GROUP_SIZE][GROUP_SIZE];
 			s_ReductionData[threadIdx.y][threadIdx.x] = value;
 		}
 
-		GroupMemoryBarrierWithGroupSync( );
+		GroupMemoryBarrierWithGroupSync();
 
 		if( all( threadIdx.xy < outGroupSize ) )
 		{
@@ -136,6 +136,6 @@ groupshared VALUE_TYPE s_ReductionData[GROUP_SIZE][GROUP_SIZE];
 			u_output[level - 1][groupIdx.xy * outGroupSize + threadIdx.xy] = value;
 		}
 
-		GroupMemoryBarrierWithGroupSync( );
+		GroupMemoryBarrierWithGroupSync();
 	}
 }

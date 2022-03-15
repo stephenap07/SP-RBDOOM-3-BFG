@@ -946,7 +946,7 @@ static VkPresentModeKHR ChoosePresentMode( idList< VkPresentModeKHR >& modes )
 			{
 				return VK_PRESENT_MODE_MAILBOX_KHR;
 			}
-			if( modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR )
+			if( ( modes[i] != VK_PRESENT_MODE_MAILBOX_KHR ) && ( modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR ) )
 			{
 				return VK_PRESENT_MODE_IMMEDIATE_KHR;
 			}

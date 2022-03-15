@@ -24,6 +24,7 @@
 
 #pragma pack_matrix(row_major)
 
+// *INDENT-OFF*
 struct VS_INPUT
 {
 float3 pos		:
@@ -43,6 +44,7 @@ float4 color	:
 float2 uv		:
 	TEXCOORD0;
 };
+// *INDENT-ON*
 
 PS_INPUT main_vs( VS_INPUT input )
 {

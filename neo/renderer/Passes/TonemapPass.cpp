@@ -28,8 +28,8 @@ void TonemapPass::Init( nvrhi::DeviceHandle _device, CommonRenderPasses* _common
 	exposureShader = exposureShaderInfo.cs;
 	tonemapShader = tonemapShaderInfo.ps;
 
-	renderBindingLayoutHandle = tonemapShaderInfo.bindingLayout;
-	histogramBindingLayoutHandle = histogramShaderInfo.bindingLayout;
+	renderBindingLayoutHandle = ( *tonemapShaderInfo.bindingLayouts )[0];
+	histogramBindingLayoutHandle = ( *histogramShaderInfo.bindingLayouts )[0];
 
 	nvrhi::BufferDesc constantBufferDesc;
 	constantBufferDesc.byteSize = sizeof( ToneMappingConstants );
@@ -84,7 +84,7 @@ void TonemapPass::Init( nvrhi::DeviceHandle _device, CommonRenderPasses* _common
 	{
 		nvrhi::ComputePipelineDesc computePipelineDesc;
 		computePipelineDesc.CS = histogramShader;
-		computePipelineDesc.bindingLayouts = { histogramShaderInfo.bindingLayout };
+		computePipelineDesc.bindingLayouts = { histogramBindingLayoutHandle };
 		histogramPipeline = device->createComputePipeline( computePipelineDesc );
 	}
 
@@ -96,11 +96,11 @@ void TonemapPass::Init( nvrhi::DeviceHandle _device, CommonRenderPasses* _common
 			nvrhi::BindingSetItem::TypedBuffer_SRV( 0, histogramBuffer ),
 			nvrhi::BindingSetItem::TypedBuffer_UAV( 0, exposureBuffer )
 		};
-		exposureBindingSet = device->createBindingSet( bindingSetDesc, exposureShaderInfo.bindingLayout );
+		exposureBindingSet = device->createBindingSet( bindingSetDesc, ( *exposureShaderInfo.bindingLayouts )[0] );
 
 		nvrhi::ComputePipelineDesc computePipelineDesc;
 		computePipelineDesc.CS = exposureShader;
-		computePipelineDesc.bindingLayouts = { exposureShaderInfo.bindingLayout };
+		computePipelineDesc.bindingLayouts = { ( *exposureShaderInfo.bindingLayouts )[0] };
 		exposurePipeline = device->createComputePipeline( computePipelineDesc );
 	}
 
@@ -109,7 +109,7 @@ void TonemapPass::Init( nvrhi::DeviceHandle _device, CommonRenderPasses* _common
 		pipelineDesc.primType = nvrhi::PrimitiveType::TriangleStrip;
 		pipelineDesc.VS = tonemapShaderInfo.vs;
 		pipelineDesc.PS = tonemapShaderInfo.ps;
-		pipelineDesc.bindingLayouts = { tonemapShaderInfo.bindingLayout };
+		pipelineDesc.bindingLayouts = { renderBindingLayoutHandle };
 
 		pipelineDesc.renderState.rasterState.setCullNone( );
 		pipelineDesc.renderState.depthStencilState.depthTestEnable = false;

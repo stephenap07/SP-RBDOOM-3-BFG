@@ -290,7 +290,7 @@ private:
 	void				DrawFlickerBox();
 
 	void				DrawElementsWithCounters( const drawSurf_t* surf );
-	void				GetCurrentBindingLayout( nvrhi::BindingSetDesc& bindingSetDesc );
+	void				GetCurrentBindingLayout( );
 	void				DrawStencilShadowPass( const drawSurf_t* drawSurf, const bool renderZPass );
 
 	void				SetColorMappings();
@@ -327,7 +327,11 @@ private:
 
 	// RB
 	void				AmbientPass( const drawSurf_t* const* drawSurfs, int numDrawSurfs, bool fillGbuffer );
-	void				ShadowMapPass( const drawSurf_t* drawSurfs, const viewLight_t* vLight, int side );
+
+	void				SetupShadowMapMatrices( const viewLight_t* vLight, int side, idRenderMatrix& lightProjectionRenderMatrix, idRenderMatrix& lightViewRenderMatrix );
+	void				ShadowMapPassFast( const drawSurf_t* drawSurfs, const viewLight_t* vLight, int side );
+	void				ShadowMapPassPerforated( const drawSurf_t** drawSurfs, int numDrawSurfs, const viewLight_t* vLight, int side, const idRenderMatrix& lightProjectionRenderMatrix, const idRenderMatrix& lightViewRenderMatrix );
+	void				ShadowMapPassOld( const drawSurf_t* drawSurfs, const viewLight_t* vLight, int side );
 
 	void				StencilShadowPass( const drawSurf_t* drawSurfs, const viewLight_t* vLight );
 	void				StencilSelectLight( const viewLight_t* vLight );
@@ -350,6 +354,8 @@ private:
 private:
 	void				GL_StartFrame();
 	void				GL_EndFrame();
+
+	void				GL_EndRenderPass();
 
 public:
 	uint64				GL_GetCurrentState() const;
@@ -503,7 +509,8 @@ private:
 	uint							currentVertexOffset;
 	nvrhi::BufferHandle				currentIndexBuffer;
 	uint							currentIndexOffset;
-	nvrhi::BindingSetHandle			currentBindingSet;
+	idStaticList<nvrhi::BindingSetHandle, nvrhi::c_MaxBindingLayouts> currentBindingSets;
+	idStaticList<nvrhi::BindingSetDesc, nvrhi::c_MaxBindingLayouts> pendingBindingSetDescs;
 	nvrhi::BindingLayoutHandle		currentBindingLayout;
 	nvrhi::GraphicsPipelineHandle	currentPipeline;
 	nvrhi::RenderState				currentRenderState;
@@ -519,7 +526,7 @@ private:
 	MipMapGenPass*					hiZGenPass;
 	TonemapPass						toneMapPass;
 
-	ForwardShadingPass				fowardShadingPass;
+	//ForwardShadingPass				fowardShadingPass;
 
 	BindingCache					bindingCache;
 	SamplerCache					samplerCache;
@@ -532,7 +539,6 @@ private:
 
 public:
 
-	void				BindProgram( nvrhi::ShaderHandle vShader, nvrhi::ShaderHandle fShader, nvrhi::InputLayoutHandle layout, nvrhi::BindingLayoutHandle bindingLayout );
 	void				ResetPipelineCache();
 
 	void				SetCurrentImage( idImage* image );

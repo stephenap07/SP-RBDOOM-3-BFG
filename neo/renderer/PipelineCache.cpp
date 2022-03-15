@@ -7,7 +7,7 @@
 
 void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& renderState );
 
-PipelineCache::PipelineCache( )
+PipelineCache::PipelineCache()
 {
 }
 
@@ -16,10 +16,10 @@ void PipelineCache::Init( nvrhi::DeviceHandle deviceHandle )
 	device = deviceHandle;
 }
 
-void PipelineCache::Clear( )
+void PipelineCache::Clear()
 {
-	pipelines.Clear( );
-	pipelineHash.Clear( );
+	pipelines.Clear();
+	pipelineHash.Clear();
 }
 
 nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const PipelineKey& key )
@@ -38,24 +38,27 @@ nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const Pipeline
 	programInfo_t progInfo = renderProgManager.GetProgramInfo( key.program );
 	pipelineDesc.setVertexShader( progInfo.vs ).setFragmentShader( progInfo.ps );
 	pipelineDesc.inputLayout = progInfo.inputLayout;
-	pipelineDesc.bindingLayouts = { progInfo.bindingLayout };
+	for( int i = 0; i < progInfo.bindingLayouts->Num(); i++ )
+	{
+		pipelineDesc.bindingLayouts.push_back( ( *progInfo.bindingLayouts )[i] );
+	}
 	pipelineDesc.primType = nvrhi::PrimitiveType::TriangleList;
 
 	// Set up default state.
-	pipelineDesc.renderState.rasterState.enableScissor( );
-	pipelineDesc.renderState.depthStencilState.enableDepthTest( ).enableDepthWrite( );
+	pipelineDesc.renderState.rasterState.enableScissor();
+	pipelineDesc.renderState.depthStencilState.enableDepthTest().enableDepthWrite();
 	for( auto& target : pipelineDesc.renderState.blendState.targets )
 	{
 		target.enableBlend();
 	}
-	//pipelineDesc.renderState.rasterState.enableDepthClip( );
+	//pipelineDesc.renderState.rasterState.enableDepthClip();
 	pipelineDesc.renderState.rasterState.depthBias = 0;
 	pipelineDesc.renderState.rasterState.slopeScaledDepthBias = 0;
 
 	// Specialize the state with the state key.
 	GetRenderState( key.state, key, pipelineDesc.renderState );
 
-	auto pipeline = device->createGraphicsPipeline( pipelineDesc, key.framebuffer->GetApiObject( ) );
+	auto pipeline = device->createGraphicsPipeline( pipelineDesc, key.framebuffer->GetApiObject() );
 
 	pipelineHash.Add( h, pipelines.Append( { key, pipeline } ) );
 
@@ -84,18 +87,18 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		switch( stateBits & GLS_CULL_BITS )
 		{
 			case GLS_CULL_TWOSIDED:
-				currentRasterState.setCullNone( );
+				currentRasterState.setCullNone();
 				break;
 
 			case GLS_CULL_BACKSIDED:
 				if( key.mirrored )
 				{
 					stateBits |= GLS_MIRROR_VIEW;
-					currentRasterState.setCullFront( );
+					currentRasterState.setCullFront();
 				}
 				else
 				{
-					currentRasterState.setCullBack( );
+					currentRasterState.setCullBack();
 				}
 				break;
 
@@ -104,11 +107,11 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 				if( key.mirrored )
 				{
 					stateBits |= GLS_MIRROR_VIEW;
-					currentRasterState.setCullBack( );
+					currentRasterState.setCullBack();
 				}
 				else
 				{
-					currentRasterState.setCullFront( );
+					currentRasterState.setCullFront();
 				}
 				break;
 		}
@@ -211,12 +214,12 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		// Only actually update GL's blend func if blending is enabled.
 		if( srcFactor == nvrhi::BlendFactor::One && dstFactor == nvrhi::BlendFactor::Zero )
 		{
-			renderTarget.disableBlend( );
+			renderTarget.disableBlend();
 		}
 		else
 		{
 			currentBlendState.setAlphaToCoverageEnable( true );
-			renderTarget.enableBlend( );
+			renderTarget.enableBlend();
 			renderTarget.setSrcBlend( srcFactor );
 			renderTarget.setDestBlend( dstFactor );
 		}
@@ -229,10 +232,10 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 	{
 		if( stateBits & GLS_DEPTHMASK )
 		{
-			currentDepthStencilState.disableDepthWrite( );
+			currentDepthStencilState.disableDepthWrite();
 			if( ( stateBits & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_ALWAYS )
 			{
-				currentDepthStencilState.disableDepthTest( );
+				currentDepthStencilState.disableDepthTest();
 			}
 		}
 	}
@@ -261,7 +264,7 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 			mask = mask & ~nvrhi::ColorMask::Alpha;
 		}
 
-		renderTarget.enableBlend( );
+		renderTarget.enableBlend();
 		renderTarget.setColorWriteMask( mask );
 	}
 
@@ -275,11 +278,11 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 		if( stateBits & GLS_POLYMODE_LINE )
 		{
 			currentRasterState.setFillMode( nvrhi::RasterFillMode::Wireframe );
-			//currentRasterState.setCullNone( );
+			//currentRasterState.setCullNone();
 		}
 		else
 		{
-			//currentRasterState.setCullNone( );
+			//currentRasterState.setCullNone();
 			currentRasterState.setFillMode( nvrhi::RasterFillMode::Solid );
 		}
 	}
@@ -310,13 +313,13 @@ void GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::RenderState& rend
 	{
 		if( ( stateBits & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_OP_BITS ) ) != 0 )
 		{
-			currentDepthStencilState.enableStencil( );
-			//currentDepthStencilState.enableDepthWrite( );
+			currentDepthStencilState.enableStencil();
+			//currentDepthStencilState.enableDepthWrite();
 		}
 		else
 		{
-			currentDepthStencilState.disableStencil( );
-			//currentDepthStencilState.disableDepthWrite( );
+			currentDepthStencilState.disableStencil();
+			//currentDepthStencilState.disableDepthWrite();
 		}
 	}
 	if( diff & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_FUNC_REF_BITS | GLS_STENCIL_FUNC_MASK_BITS ) )

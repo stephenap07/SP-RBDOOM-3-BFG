@@ -264,11 +264,12 @@ struct shaderMacro_t
 #if defined( USE_NVRHI )
 struct programInfo_t
 {
+	int bindingLayoutType;
 	nvrhi::ShaderHandle vs;
 	nvrhi::ShaderHandle ps;
 	nvrhi::ShaderHandle cs;
 	nvrhi::InputLayoutHandle inputLayout;
-	nvrhi::BindingLayoutHandle bindingLayout;
+	idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>* bindingLayouts;
 };
 #endif
 
@@ -279,8 +280,6 @@ enum
 	// RB begin
 	BUILTIN_COLOR_SKINNED,
 	BUILTIN_VERTEX_COLOR,
-	BUILTIN_AMBIENT_LIGHTING,
-	BUILTIN_AMBIENT_LIGHTING_SKINNED,
 
 	BUILTIN_AMBIENT_LIGHTING_IBL,
 	BUILTIN_AMBIENT_LIGHTING_IBL_SKINNED,
@@ -452,16 +451,6 @@ public:
 	void	BindShader_VertexColor()
 	{
 		BindShader_Builtin( BUILTIN_VERTEX_COLOR );
-	}
-
-	void	BindShader_AmbientLighting()
-	{
-		BindShader_Builtin( BUILTIN_AMBIENT_LIGHTING );
-	}
-
-	void	BindShader_AmbientLightingSkinned()
-	{
-		BindShader_Builtin( BUILTIN_AMBIENT_LIGHTING_SKINNED );
 	}
 
 	void	BindShader_ImageBasedLighting()
@@ -935,10 +924,6 @@ public:
 	{
 		return renderProgs[currentIndex].inputLayout;
 	}
-	ID_INLINE nvrhi::BindingLayoutHandle	BindingLayout()
-	{
-		return renderProgs[currentIndex].bindingLayout;
-	}
 	ID_INLINE int							BindingLayoutType()
 	{
 		return renderProgs[currentIndex].bindingLayoutType;
@@ -1022,7 +1007,7 @@ private:
 			vertexLayout( LAYOUT_UNKNOWN ),
 			bindingLayoutType( BINDING_LAYOUT_DEFAULT ),
 			inputLayout( nullptr ),
-			bindingLayout( nullptr )
+			bindingLayouts()
 		{
 		}
 
@@ -1035,7 +1020,7 @@ private:
 		vertexLayoutType_t			vertexLayout;
 		bindingLayoutType_t			bindingLayoutType;
 		nvrhi::InputLayoutHandle	inputLayout;
-		nvrhi::BindingLayoutHandle  bindingLayout;
+		idStaticList< nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts > bindingLayouts;
 	};
 
 	void	LoadShader( shader_t& shader );
@@ -1049,7 +1034,7 @@ private:
 	using VertexAttribDescList = idList< nvrhi::VertexAttributeDesc >;
 	idStaticList< VertexAttribDescList, NUM_VERTEX_LAYOUTS > vertexLayoutDescs;
 
-	idStaticList< nvrhi::BindingLayoutHandle, NUM_BINDING_LAYOUTS > bindingLayouts;
+	idStaticList< idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>, NUM_BINDING_LAYOUTS > bindingLayouts;
 
 	nvrhi::BufferHandle	constantBuffer;
 
