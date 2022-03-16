@@ -290,7 +290,7 @@ private:
 	void				DrawFlickerBox();
 
 	void				DrawElementsWithCounters( const drawSurf_t* surf );
-	void				GetCurrentBindingLayout( );
+	void				GetCurrentBindingLayout();
 	void				DrawStencilShadowPass( const drawSurf_t* drawSurf, const bool renderZPass );
 
 	void				SetColorMappings();

@@ -1,9 +1,6 @@
 [submodule "neo/extern/glslang"]
 	path = neo/extern/glslang
 	url = https://github.com/KhronosGroup/glslang.git
-[submodule "neo/libs/nvrhi"]
-	path = neo/libs/nvrhi
-	url = https://github.com/stephenap07/nvrhi.git
 [submodule "neo/extern/nvrhi"]
 	path = neo/extern/nvrhi
 	url = https://github.com/stephenap07/nvrhi.git

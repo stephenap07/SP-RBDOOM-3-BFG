@@ -655,7 +655,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		changeState = true;
 	}
 
-	GetCurrentBindingLayout( );
+	GetCurrentBindingLayout();
 
 	// RB: for debugging
 	int program = renderProgManager.CurrentProgram();
@@ -724,13 +724,33 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	pc.c_drawIndexes += surf->numIndexes;
 }
 
-void idRenderBackend::GetCurrentBindingLayout( )
+void idRenderBackend::GetCurrentBindingLayout()
 {
 	auto& info = renderProgManager.GetProgramInfo( renderProgManager.CurrentProgram() );
 
 	int type = info.bindingLayoutType;
 
 	if( type == BINDING_LAYOUT_DEFAULT )
+	{
+		pendingBindingSetDescs[0].bindings =
+		{
+			nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+			nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() )
+		};
+
+		pendingBindingSetDescs[1].bindings =
+		{
+			nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler )
+		};
+	}
+	else if( type == BINDING_LAYOUT_CONSTANT_BUFFER_ONLY )
+	{
+		pendingBindingSetDescs[0].bindings =
+		{
+			nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() )
+		};
+	}
+	else if( type == BINDING_LAYOUT_2D )
 	{
 		pendingBindingSetDescs[0].bindings =
 		{
@@ -787,15 +807,6 @@ void idRenderBackend::GetCurrentBindingLayout( )
 			nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_PointWrapSampler )  // blue noise
 		};
 	}
-	/*
-	else if( renderProgManager.BindingLayoutType() == BINDING_LAYOUT_DRAW_AO1 )
-	{
-		bindingSetDesc
-		.addItem( nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer( ) ) )
-		.addItem( nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID( ) ) )
-		.addItem( nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) ) );
-	}
-	*/
 	else if( type == BINDING_LAYOUT_DRAW_INTERACTION )
 	{
 		pendingBindingSetDescs[0].bindings =

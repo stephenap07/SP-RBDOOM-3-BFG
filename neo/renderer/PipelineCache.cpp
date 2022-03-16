@@ -51,7 +51,7 @@ nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const Pipeline
 	{
 		target.enableBlend();
 	}
-	//pipelineDesc.renderState.rasterState.enableDepthClip();
+	pipelineDesc.renderState.rasterState.disableDepthClip();
 	pipelineDesc.renderState.rasterState.depthBias = 0;
 	pipelineDesc.renderState.rasterState.slopeScaledDepthBias = 0;
 

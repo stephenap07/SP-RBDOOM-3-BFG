@@ -87,11 +87,11 @@ class idRenderLog
 private:
 	renderLogMainBlock_t mainBlock;
 
+public:
 #if defined( USE_NVRHI )
 	nvrhi::CommandListHandle		commandList;
 #endif
 
-public:
 	idRenderLog();
 
 	void		StartFrame() {}
