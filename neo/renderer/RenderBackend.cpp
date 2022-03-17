@@ -5,7 +5,7 @@ Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2014 Carl Kenner
 Copyright (C) 2016-2017 Dustin Land
-Copyright (C) 2013-2021 Robert Beckebans
+Copyright (C) 2013-2022 Robert Beckebans
 Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -91,305 +91,6 @@ static ID_INLINE void SetFragmentParm( renderParm_t rp, const float* value )
 {
 	renderProgManager.SetUniformValue( rp, value );
 }
-
-/*
-====================
-PrintState
-====================
-*/
-#if 0
-void PrintState( uint64 stateBits, uint64* stencilBits )
-{
-	if( renderLog.Active() == 0 )
-	{
-		return;
-	}
-
-	renderLog.OpenBlock( "GL_State" );
-
-	// culling
-	renderLog.Printf( "Culling: " );
-	switch( stateBits & GLS_CULL_BITS )
-	{
-		case GLS_CULL_FRONTSIDED:
-			renderLog.Printf_NoIndent( "FRONTSIDED -> BACK" );
-			break;
-		case GLS_CULL_BACKSIDED:
-			renderLog.Printf_NoIndent( "BACKSIDED -> FRONT" );
-			break;
-		case GLS_CULL_TWOSIDED:
-			renderLog.Printf_NoIndent( "TWOSIDED" );
-			break;
-		default:
-			renderLog.Printf_NoIndent( "NA" );
-			break;
-	}
-	renderLog.Printf_NoIndent( "\n" );
-
-	// polygon mode
-	renderLog.Printf( "PolygonMode: %s\n", ( stateBits & GLS_POLYMODE_LINE ) ? "LINE" : "FILL" );
-
-	// color mask
-	renderLog.Printf( "ColorMask: " );
-	renderLog.Printf_NoIndent( ( stateBits & GLS_REDMASK ) ? "_" : "R" );
-	renderLog.Printf_NoIndent( ( stateBits & GLS_GREENMASK ) ? "_" : "G" );
-	renderLog.Printf_NoIndent( ( stateBits & GLS_BLUEMASK ) ? "_" : "B" );
-	renderLog.Printf_NoIndent( ( stateBits & GLS_ALPHAMASK ) ? "_" : "A" );
-	renderLog.Printf_NoIndent( "\n" );
-
-	// blend
-	renderLog.Printf( "Blend: src=" );
-	switch( stateBits & GLS_SRCBLEND_BITS )
-	{
-		case GLS_SRCBLEND_ZERO:
-			renderLog.Printf_NoIndent( "ZERO" );
-			break;
-		case GLS_SRCBLEND_ONE:
-			renderLog.Printf_NoIndent( "ONE" );
-			break;
-		case GLS_SRCBLEND_DST_COLOR:
-			renderLog.Printf_NoIndent( "DST_COLOR" );
-			break;
-		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
-			renderLog.Printf_NoIndent( "ONE_MINUS_DST_COLOR" );
-			break;
-		case GLS_SRCBLEND_SRC_ALPHA:
-			renderLog.Printf_NoIndent( "SRC_ALPHA" );
-			break;
-		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
-			renderLog.Printf_NoIndent( "ONE_MINUS_SRC_ALPHA" );
-			break;
-		case GLS_SRCBLEND_DST_ALPHA:
-			renderLog.Printf_NoIndent( "DST_ALPHA" );
-			break;
-		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
-			renderLog.Printf_NoIndent( "ONE_MINUS_DST_ALPHA" );
-			break;
-		default:
-			renderLog.Printf_NoIndent( "NA" );
-			break;
-	}
-	renderLog.Printf_NoIndent( ", dst=" );
-	switch( stateBits & GLS_DSTBLEND_BITS )
-	{
-		case GLS_DSTBLEND_ZERO:
-			renderLog.Printf_NoIndent( "ZERO" );
-			break;
-		case GLS_DSTBLEND_ONE:
-			renderLog.Printf_NoIndent( "ONE" );
-			break;
-		case GLS_DSTBLEND_SRC_COLOR:
-			renderLog.Printf_NoIndent( "SRC_COLOR" );
-			break;
-		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
-			renderLog.Printf_NoIndent( "ONE_MINUS_SRC_COLOR" );
-			break;
-		case GLS_DSTBLEND_SRC_ALPHA:
-			renderLog.Printf_NoIndent( "SRC_ALPHA" );
-			break;
-		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
-			renderLog.Printf_NoIndent( "ONE_MINUS_SRC_ALPHA" );
-			break;
-		case GLS_DSTBLEND_DST_ALPHA:
-			renderLog.Printf_NoIndent( "DST_ALPHA" );
-			break;
-		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
-			renderLog.Printf_NoIndent( "ONE_MINUS_DST_ALPHA" );
-			break;
-		default:
-			renderLog.Printf_NoIndent( "NA" );
-	}
-	renderLog.Printf_NoIndent( "\n" );
-
-	// depth func
-	renderLog.Printf( "DepthFunc: " );
-	switch( stateBits & GLS_DEPTHFUNC_BITS )
-	{
-		case GLS_DEPTHFUNC_EQUAL:
-			renderLog.Printf_NoIndent( "EQUAL" );
-			break;
-		case GLS_DEPTHFUNC_ALWAYS:
-			renderLog.Printf_NoIndent( "ALWAYS" );
-			break;
-		case GLS_DEPTHFUNC_LESS:
-			renderLog.Printf_NoIndent( "LEQUAL" );
-			break;
-		case GLS_DEPTHFUNC_GREATER:
-			renderLog.Printf_NoIndent( "GEQUAL" );
-			break;
-		default:
-			renderLog.Printf_NoIndent( "NA" );
-			break;
-	}
-	renderLog.Printf_NoIndent( "\n" );
-
-	// depth mask
-	renderLog.Printf( "DepthWrite: %s\n", ( stateBits & GLS_DEPTHMASK ) ? "FALSE" : "TRUE" );
-
-	renderLog.Printf( "DepthBounds: %s\n", ( stateBits & GLS_DEPTH_TEST_MASK ) ? "TRUE" : "FALSE" );
-
-	// depth bias
-	renderLog.Printf( "DepthBias: %s\n", ( stateBits & GLS_POLYGON_OFFSET ) ? "TRUE" : "FALSE" );
-
-	// stencil
-	auto printStencil = [&]( stencilFace_t face, uint64 bits, uint64 mask, uint64 ref )
-	{
-		renderLog.Printf( "Stencil: %s, ", ( bits & ( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_OP_BITS ) ) ? "ON" : "OFF" );
-		renderLog.Printf_NoIndent( "Face=" );
-		switch( face )
-		{
-			case STENCIL_FACE_FRONT:
-				renderLog.Printf_NoIndent( "FRONT" );
-				break;
-			case STENCIL_FACE_BACK:
-				renderLog.Printf_NoIndent( "BACK" );
-				break;
-			default:
-				renderLog.Printf_NoIndent( "BOTH" );
-				break;
-		}
-		renderLog.Printf_NoIndent( ", Func=" );
-		switch( bits & GLS_STENCIL_FUNC_BITS )
-		{
-			case GLS_STENCIL_FUNC_NEVER:
-				renderLog.Printf_NoIndent( "NEVER" );
-				break;
-			case GLS_STENCIL_FUNC_LESS:
-				renderLog.Printf_NoIndent( "LESS" );
-				break;
-			case GLS_STENCIL_FUNC_EQUAL:
-				renderLog.Printf_NoIndent( "EQUAL" );
-				break;
-			case GLS_STENCIL_FUNC_LEQUAL:
-				renderLog.Printf_NoIndent( "LEQUAL" );
-				break;
-			case GLS_STENCIL_FUNC_GREATER:
-				renderLog.Printf_NoIndent( "GREATER" );
-				break;
-			case GLS_STENCIL_FUNC_NOTEQUAL:
-				renderLog.Printf_NoIndent( "NOTEQUAL" );
-				break;
-			case GLS_STENCIL_FUNC_GEQUAL:
-				renderLog.Printf_NoIndent( "GEQUAL" );
-				break;
-			case GLS_STENCIL_FUNC_ALWAYS:
-				renderLog.Printf_NoIndent( "ALWAYS" );
-				break;
-			default:
-				renderLog.Printf_NoIndent( "NA" );
-				break;
-		}
-		renderLog.Printf_NoIndent( ", OpFail=" );
-		switch( bits & GLS_STENCIL_OP_FAIL_BITS )
-		{
-			case GLS_STENCIL_OP_FAIL_KEEP:
-				renderLog.Printf_NoIndent( "KEEP" );
-				break;
-			case GLS_STENCIL_OP_FAIL_ZERO:
-				renderLog.Printf_NoIndent( "ZERO" );
-				break;
-			case GLS_STENCIL_OP_FAIL_REPLACE:
-				renderLog.Printf_NoIndent( "REPLACE" );
-				break;
-			case GLS_STENCIL_OP_FAIL_INCR:
-				renderLog.Printf_NoIndent( "INCR" );
-				break;
-			case GLS_STENCIL_OP_FAIL_DECR:
-				renderLog.Printf_NoIndent( "DECR" );
-				break;
-			case GLS_STENCIL_OP_FAIL_INVERT:
-				renderLog.Printf_NoIndent( "INVERT" );
-				break;
-			case GLS_STENCIL_OP_FAIL_INCR_WRAP:
-				renderLog.Printf_NoIndent( "INCR_WRAP" );
-				break;
-			case GLS_STENCIL_OP_FAIL_DECR_WRAP:
-				renderLog.Printf_NoIndent( "DECR_WRAP" );
-				break;
-			default:
-				renderLog.Printf_NoIndent( "NA" );
-				break;
-		}
-		renderLog.Printf_NoIndent( ", ZFail=" );
-		switch( bits & GLS_STENCIL_OP_ZFAIL_BITS )
-		{
-			case GLS_STENCIL_OP_ZFAIL_KEEP:
-				renderLog.Printf_NoIndent( "KEEP" );
-				break;
-			case GLS_STENCIL_OP_ZFAIL_ZERO:
-				renderLog.Printf_NoIndent( "ZERO" );
-				break;
-			case GLS_STENCIL_OP_ZFAIL_REPLACE:
-				renderLog.Printf_NoIndent( "REPLACE" );
-				break;
-			case GLS_STENCIL_OP_ZFAIL_INCR:
-				renderLog.Printf_NoIndent( "INCR" );
-				break;
-			case GLS_STENCIL_OP_ZFAIL_DECR:
-				renderLog.Printf_NoIndent( "DECR" );
-				break;
-			case GLS_STENCIL_OP_ZFAIL_INVERT:
-				renderLog.Printf_NoIndent( "INVERT" );
-				break;
-			case GLS_STENCIL_OP_ZFAIL_INCR_WRAP:
-				renderLog.Printf_NoIndent( "INCR_WRAP" );
-				break;
-			case GLS_STENCIL_OP_ZFAIL_DECR_WRAP:
-				renderLog.Printf_NoIndent( "DECR_WRAP" );
-				break;
-			default:
-				renderLog.Printf_NoIndent( "NA" );
-				break;
-		}
-		renderLog.Printf_NoIndent( ", OpPass=" );
-		switch( bits & GLS_STENCIL_OP_PASS_BITS )
-		{
-			case GLS_STENCIL_OP_PASS_KEEP:
-				renderLog.Printf_NoIndent( "KEEP" );
-				break;
-			case GLS_STENCIL_OP_PASS_ZERO:
-				renderLog.Printf_NoIndent( "ZERO" );
-				break;
-			case GLS_STENCIL_OP_PASS_REPLACE:
-				renderLog.Printf_NoIndent( "REPLACE" );
-				break;
-			case GLS_STENCIL_OP_PASS_INCR:
-				renderLog.Printf_NoIndent( "INCR" );
-				break;
-			case GLS_STENCIL_OP_PASS_DECR:
-				renderLog.Printf_NoIndent( "DECR" );
-				break;
-			case GLS_STENCIL_OP_PASS_INVERT:
-				renderLog.Printf_NoIndent( "INVERT" );
-				break;
-			case GLS_STENCIL_OP_PASS_INCR_WRAP:
-				renderLog.Printf_NoIndent( "INCR_WRAP" );
-				break;
-			case GLS_STENCIL_OP_PASS_DECR_WRAP:
-				renderLog.Printf_NoIndent( "DECR_WRAP" );
-				break;
-			default:
-				renderLog.Printf_NoIndent( "NA" );
-				break;
-		}
-		renderLog.Printf_NoIndent( ", mask=%llu, ref=%llu\n", mask, ref );
-	};
-
-	uint32 mask = uint32( ( stateBits & GLS_STENCIL_FUNC_MASK_BITS ) >> GLS_STENCIL_FUNC_MASK_SHIFT );
-	uint32 ref = uint32( ( stateBits & GLS_STENCIL_FUNC_REF_BITS ) >> GLS_STENCIL_FUNC_REF_SHIFT );
-	if( stateBits & GLS_SEPARATE_STENCIL )
-	{
-		printStencil( STENCIL_FACE_FRONT, stencilBits[ 0 ], mask, ref );
-		printStencil( STENCIL_FACE_BACK, stencilBits[ 1 ], mask, ref );
-	}
-	else
-	{
-		printStencil( STENCIL_FACE_NUM, stateBits, mask, ref );
-	}
-
-	renderLog.CloseBlock();
-}
-#endif
 
 /*
 ================
@@ -2234,13 +1935,8 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 #endif
 
 
-	/*
-	if( !fillGbuffer )
-	{
-		// clear gbuffer
-		GL_Clear( true, false, false, 0, 0.0f, 0.0f, 0.0f, 1.0f, false );
-	}
-	*/
+	renderLog.OpenMainBlock( fillGbuffer ? MRB_FILL_GEOMETRY_BUFFER : MRB_AMBIENT_PASS, commandList );
+	renderLog.OpenBlock( fillGbuffer ? "Fill_GeometryBuffer" : "Render_AmbientPass", colorBlue );
 
 	if( fillGbuffer )
 	{
@@ -2285,11 +1981,10 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 		SetFragmentParm( RENDERPARM_ALPHA_TEST, vec4_zero.ToFloatPtr() );
 
+		renderLog.CloseBlock();
+		renderLog.CloseMainBlock();
 		return;
 	}
-
-	renderLog.OpenMainBlock( fillGbuffer ? MRB_FILL_GEOMETRY_BUFFER : MRB_AMBIENT_PASS, commandList );
-	renderLog.OpenBlock( fillGbuffer ? "Fill_GeometryBuffer" : "Render_AmbientPass", colorBlue );
 
 	if( fillGbuffer )
 	{
@@ -5562,7 +5257,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	if( r_useHierarchicalDepthBuffer.GetBool() )
 	{
 #if defined( USE_NVRHI )
-		commandList->beginMarker( "Render_HiZ" );
+		renderLog.OpenBlock( "Render_HiZ" );
 
 		commonPasses.BlitTexture(
 			commandList,
@@ -5572,7 +5267,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 
 		hiZGenPass->Dispatch( commandList, MAX_HIERARCHICAL_ZBUFFERS );
 
-		commandList->endMarker();
 		renderLog.CloseBlock();
 
 #else
@@ -5657,7 +5351,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 			globalFramebuffers.ambientOcclusionFBO[0]->Bind();
 
 #if defined( USE_NVRHI )
-			GL_Clear( true, false, false, 0, 0, 0, 0, 0 );
+			GL_Clear( true, false, false, 0, 0, 0, 0, 0, false );
 #else
 			glClearColor( 0, 0, 0, 0 );
 			glClear( GL_COLOR_BUFFER_BIT );
@@ -5867,7 +5561,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 
 	GL_State( GLS_DEFAULT );
 
-	commandList->endMarker();
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();
 }
@@ -6378,14 +6071,10 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// ensures that depth writes are enabled for the depth clear
 	GL_State( GLS_DEFAULT | GLS_CULL_FRONTSIDED, true );
 
-	//GL_CheckErrors();
-
-	// RB begin
-	bool useHDR = r_useHDR.GetBool() && !_viewDef->is2Dgui;
-
 	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
-	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, useHDR );
+	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
 
+	bool useHDR = r_useHDR.GetBool() && !_viewDef->is2Dgui;
 	if( useHDR )
 	{
 		if( _viewDef->renderView.rdflags & RDF_IRRADIANCE )

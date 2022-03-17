@@ -38,45 +38,30 @@ If you have questions concerning this license or the applicable additional terms
 #include "ScreenRect.h"
 #include "Image.h"
 #include "Font.h"
-#include "Framebuffer.h"
-
 #include "FontManager.h"
+#include "Framebuffer.h"
 #include "TextBufferManager.h"
 
-#if USE_DX11 || USE_DX12
-	#include <DXGI.h>
+#if defined( USE_NVRHI )
+
+	#if USE_DX11 || USE_DX12
+		#include <DXGI.h>
+	#endif
+
+	#if USE_DX11
+		#include <d3d11.h>
+	#endif
+
+	#if USE_DX12
+		#include <d3d12.h>
+	#endif
+
+	#if USE_VK
+		#include <nvrhi/vulkan.h>
+	#endif
+
+	#include <nvrhi/nvrhi.h>
 #endif
-
-#if USE_DX11
-	#include <d3d11.h>
-#endif
-
-#if USE_DX11 || USE_DX12
-	#include <DXGI.h>
-#endif
-
-#if USE_DX11
-	#include <d3d11.h>
-#endif
-
-#if USE_DX12
-	#include <d3d12.h>
-#endif
-
-#if USE_VK
-	#include <nvrhi/vulkan.h>
-#endif
-
-#if USE_VK
-	#include <nvrhi/vulkan.h>
-#endif
-
-#include <nvrhi/nvrhi.h>
-
-
-// RB: define this to use the id Tech 4.5 UI interface for ImGui instead of OpenGL or Vulkan
-// this allows to have the com_showFPS stats in screenshots
-#define IMGUI_BFGUI 1
 
 // maximum texture units
 const int MAX_PROG_TEXTURE_PARMS	= 16;
@@ -857,12 +842,12 @@ enum bindingLayoutType_t
 {
 	BINDING_LAYOUT_DEFAULT,
 	BINDING_LAYOUT_CONSTANT_BUFFER_ONLY,
-	BINDING_LAYOUT_2D,
 	BINDING_LAYOUT_GBUFFER,
 	BINDING_LAYOUT_AMBIENT_LIGHTING_IBL,
 	BINDING_LAYOUT_BLIT,
 	BINDING_LAYOUT_DRAW_AO,
 	BINDING_LAYOUT_DRAW_AO1,
+	BINDING_LAYOUT_DRAW_SHADOW,
 	BINDING_LAYOUT_DRAW_INTERACTION,
 	BINDING_LAYOUT_DRAW_INTERACTION_SM,
 	BINDING_LAYOUT_DRAW_FOG,
@@ -1557,7 +1542,7 @@ idRenderModel* R_EntityDefDynamicModel( idRenderEntityLocal* def );
 void R_ClearEntityDefDynamicModel( idRenderEntityLocal* def );
 
 void R_SetupDrawSurfShader( drawSurf_t* drawSurf, const idMaterial* shader, const renderEntity_t* renderEntity );
-void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, const idMaterial* shader, nvrhi::ICommandList* commandList );
+void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, const idMaterial* shader, nvrhi::ICommandList* commandList = nullptr );
 void R_LinkDrawSurfToView( drawSurf_t* drawSurf, viewDef_t* viewDef );
 
 void R_AddModels();

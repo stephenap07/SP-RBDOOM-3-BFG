@@ -314,7 +314,7 @@ idCVar r_ssgiFiltering( "r_ssgiFiltering", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 #if defined( USE_VULKAN )
 	idCVar r_useSSAO( "r_useSSAO", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
 #else
-	idCVar r_useSSAO( "r_useSSAO", "2", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "use screen space ambient occlusion to darken corners" );
+	idCVar r_useSSAO( "r_useSSAO", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
 #endif
 idCVar r_ssaoDebug( "r_ssaoDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
 idCVar r_ssaoFiltering( "r_ssaoFiltering", "0", CVAR_RENDERER | CVAR_BOOL, "" );
@@ -328,7 +328,7 @@ idCVar r_showLightGrid( "r_showLightGrid", "0", CVAR_RENDERER | CVAR_INTEGER, "s
 
 idCVar r_useLightGrid( "r_useLightGrid", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 
-idCVar r_exposure( "r_exposure", "-0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [-1.0 .. 0.0]", -1.0f, 0.0f );
+idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [-4.0 .. 4.0]", -4.0f, 4.0f );
 // RB end
 
 const char* fileExten[4] = { "tga", "png", "jpg", "exr" };
@@ -479,6 +479,7 @@ void R_SetNewMode( const bool fullInit )
 			if( GLimp_SetScreenParms( parms ) )
 #endif
 			{
+				Framebuffer::ResizeFramebuffers();
 				ImGuiHook::NotifyDisplaySizeChanged( parms.width, parms.height );
 				break;
 			}

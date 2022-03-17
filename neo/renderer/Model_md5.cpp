@@ -1088,7 +1088,7 @@ void idRenderModelMD5::LoadModel()
 
 void idRenderModelMD5::CreateBuffers( nvrhi::ICommandList* commandList )
 {
-	for( int i = 0; i < meshes.Num( ); i++ )
+	for( int i = 0; i < meshes.Num(); i++ )
 	{
 		auto& deform = *meshes[i].deformInfo;
 		R_CreateDeformStaticVertices( meshes[i].deformInfo, commandList );
