@@ -34,13 +34,16 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderLog.h"
 
-#include "Passes/CommonPasses.h"
-#include "Passes/MipMapGenPass.h"
-#include "Passes/FowardShadingPass.h"
-#include "Passes/SsaoPass.h"
-#include "Passes/TonemapPass.h"
+#if defined(USE_NVRHI)
+	#include "Passes/CommonPasses.h"
+	#include "Passes/MipMapGenPass.h"
+	#include "Passes/FowardShadingPass.h"
+	#include "Passes/SsaoPass.h"
+	#include "Passes/TonemapPass.h"
 
-#include "PipelineCache.h"
+	#include "PipelineCache.h"
+
+#endif
 
 bool			GL_CheckErrors_( const char* filename, int line );
 #if 1 // !defined(RETAIL)
@@ -290,7 +293,7 @@ private:
 	void				DrawFlickerBox();
 
 	void				DrawElementsWithCounters( const drawSurf_t* surf );
-	void				GetCurrentBindingLayout();
+	void				GetCurrentBindingLayout( int bindingLayoutType );
 	void				DrawStencilShadowPass( const drawSurf_t* drawSurf, const bool renderZPass );
 
 	void				SetColorMappings();
@@ -509,11 +512,11 @@ private:
 	uint							currentVertexOffset;
 	nvrhi::BufferHandle				currentIndexBuffer;
 	uint							currentIndexOffset;
-	idStaticList<nvrhi::BindingSetHandle, nvrhi::c_MaxBindingLayouts> currentBindingSets;
-	idStaticList<nvrhi::BindingSetDesc, nvrhi::c_MaxBindingLayouts> pendingBindingSetDescs;
 	nvrhi::BindingLayoutHandle		currentBindingLayout;
 	nvrhi::GraphicsPipelineHandle	currentPipeline;
-	//nvrhi::RenderState				currentRenderState;
+
+	idStaticList<nvrhi::BindingSetHandle, nvrhi::c_MaxBindingLayouts> currentBindingSets;
+	idStaticList<idStaticList<nvrhi::BindingSetDesc, nvrhi::c_MaxBindingLayouts>, NUM_BINDING_LAYOUTS> pendingBindingSetDescs;
 
 	Framebuffer*					currentFrameBuffer;
 	Framebuffer*					lastFrameBuffer;
@@ -525,8 +528,6 @@ private:
 	SsaoPass*						ssaoPass;
 	MipMapGenPass*					hiZGenPass;
 	TonemapPass						toneMapPass;
-
-	//ForwardShadingPass				fowardShadingPass;
 
 	BindingCache					bindingCache;
 	SamplerCache					samplerCache;

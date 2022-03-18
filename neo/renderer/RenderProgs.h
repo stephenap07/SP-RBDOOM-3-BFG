@@ -928,6 +928,10 @@ public:
 	{
 		return renderProgs[currentIndex].bindingLayoutType;
 	}
+	ID_INLINE idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>* GetBindingLayout( int layoutType )
+	{
+		return &bindingLayouts[layoutType];
+	}
 #elif defined(USE_VULKAN)
 	void		PrintPipelines();
 	void		ClearPipelines();
