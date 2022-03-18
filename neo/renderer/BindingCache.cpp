@@ -3,6 +3,14 @@
 
 #include "BindingCache.h"
 
+BindingCache::BindingCache()
+	: device( nullptr )
+	, bindingSets()
+	, bindingHash()
+	, mutex()
+{
+}
+
 void BindingCache::Init( nvrhi::IDevice* _device )
 {
 	device = _device;

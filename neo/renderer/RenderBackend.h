@@ -283,7 +283,7 @@ public:
 	void				Print();
 	void				CheckCVars();
 
-	void				BackBufferResizing();
+	void				ClearCaches();
 
 	static void			ImGui_Init();
 	static void			ImGui_Shutdown();
@@ -521,13 +521,10 @@ private:
 	Framebuffer*					currentFrameBuffer;
 	Framebuffer*					lastFrameBuffer;
 	nvrhi::CommandListHandle		commandList;
-	nvrhi::CommandListHandle		intCommandList;
-	nvrhi::CommandListHandle		currCmdList;
-	idList<IRenderPass*>			renderPasses;
 	CommonRenderPasses				commonPasses;
 	SsaoPass*						ssaoPass;
 	MipMapGenPass*					hiZGenPass;
-	TonemapPass						toneMapPass;
+	TonemapPass*					toneMapPass;
 
 	BindingCache					bindingCache;
 	SamplerCache					samplerCache;

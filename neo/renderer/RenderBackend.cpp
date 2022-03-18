@@ -5917,11 +5917,10 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	renderLog.StartFrame();
 	GL_StartFrame();
 
-	void* textureId = globalImages->hierarchicalZbufferImage->GetTextureID();
 	globalImages->LoadDeferredImages( commandList );
 
 #if defined( USE_NVRHI )
-	if( globalImages->hierarchicalZbufferImage->GetTextureID() != textureId || !hiZGenPass )
+	if( !hiZGenPass )
 	{
 		if( hiZGenPass )
 		{
@@ -5939,10 +5938,11 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 			globalImages->ambientOcclusionImage[0]->GetTextureHandle() );
 	}
 
-	if( !toneMapPass.IsLoaded() )
+	if( !toneMapPass )
 	{
+		toneMapPass = new TonemapPass();
 		TonemapPass::CreateParameters tonemapParms;
-		toneMapPass.Init( deviceManager->GetDevice(), &commonPasses, tonemapParms, globalFramebuffers.ldrFBO->GetApiObject() );
+		toneMapPass->Init( deviceManager->GetDevice(), &commonPasses, tonemapParms, globalFramebuffers.ldrFBO->GetApiObject() );
 	}
 #endif
 
@@ -6307,7 +6307,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		Tonemap( _viewDef );
 #else
 		ToneMappingParameters parms;
-		toneMapPass.SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
+		toneMapPass->SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
 #endif
 	}
 

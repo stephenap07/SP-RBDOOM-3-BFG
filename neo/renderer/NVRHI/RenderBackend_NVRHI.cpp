@@ -1414,9 +1414,36 @@ void idRenderBackend::CheckCVars()
 	// RB end
 }
 
-void idRenderBackend::BackBufferResizing()
+/*
+=============
+idRenderBackend::ClearCaches
+
+Clear cached pipeline data when framebuffers get updated or images are reloaded.
+=============
+*/
+void idRenderBackend::ClearCaches()
 {
-	currentPipeline = nullptr;
+	pipelineCache.Clear();
+	bindingCache.Clear();
+	samplerCache.Clear();
+
+	if( hiZGenPass )
+	{
+		delete hiZGenPass;
+		hiZGenPass = nullptr;
+	}
+
+	if( ssaoPass )
+	{
+		delete ssaoPass;
+		ssaoPass = nullptr;
+	}
+
+	if( toneMapPass )
+	{
+		delete toneMapPass;
+		toneMapPass = nullptr;
+	}
 }
 
 /*
@@ -1690,6 +1717,7 @@ idRenderBackend::idRenderBackend()
 	glcontext.frameParity = 0;
 	hiZGenPass = nullptr;
 	ssaoPass = nullptr;
+	toneMapPass = nullptr;
 
 	memset( glcontext.tmu, 0, sizeof( glcontext.tmu ) );
 	memset( glcontext.stencilOperations, 0, sizeof( glcontext.stencilOperations ) );

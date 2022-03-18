@@ -36,7 +36,6 @@ void DeviceManager::GetWindowDimensions( int& width, int& height )
 
 void DeviceManager::BackBufferResizing()
 {
-	tr.backend.BackBufferResizing();
 	Framebuffer::Shutdown();
 }
 
