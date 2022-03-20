@@ -84,11 +84,6 @@ DeviceManager* DeviceManager::CreateD3D11()
 	return nullptr;
 }
 
-DeviceManager* DeviceManager::CreateVK()
-{
-	return nullptr;
-}
-
 DefaultMessageCallback& DefaultMessageCallback::GetInstance()
 {
 	static DefaultMessageCallback instance;

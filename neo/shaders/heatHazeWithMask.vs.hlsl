@@ -37,7 +37,6 @@ If you have questions concerning this license or the applicable additional terms
 #if USE_GPU_SKINNING
 cbuffer CB : register( b1 ) { float4 matrices[408]; };
 #endif
-// RB end
 
 struct VS_IN
 {
@@ -60,9 +59,7 @@ struct VS_OUT
 
 void main( VS_IN vertex, out VS_OUT result )
 {
-
 #include "skinning.inc.hlsl"
-
 
 	// texture 0 takes the texture coordinates unmodified
 	result.texcoord0 = float4( vertex.texcoord.xy, 0, 0 );

@@ -912,6 +912,7 @@ public:
 	void		CachePipeline( uint64 stateBits );
 	int			FindProgram( const char* name, int vIndex, int fIndex, bindingLayoutType_t bindingType = BINDING_LAYOUT_DEFAULT );
 	void		ZeroUniforms();
+	int			UniformSize();
 
 #if defined( USE_NVRHI )
 	void						CommitConstantBuffer( nvrhi::ICommandList* commandList );
@@ -1041,12 +1042,6 @@ private:
 	idStaticList< idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>, NUM_BINDING_LAYOUTS > bindingLayouts;
 
 	nvrhi::BufferHandle	constantBuffer;
-
-	// Temp
-	nvrhi::InputLayoutHandle      inputLayout;
-	nvrhi::BindingLayoutHandle    bindingLayout;
-	nvrhi::BindingSetHandle       bindingSet;
-	renderProg_t*			      currentShader;
 
 #elif defined(USE_VULKAN)
 	struct shader_t

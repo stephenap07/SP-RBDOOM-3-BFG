@@ -45,18 +45,18 @@ struct VS_IN {
 };
 
 struct VS_OUT {
-	half4 position		: SV_Position;
-	half4 texcoord0	: TEXCOORD0_centroid;
-	half4 texcoord1	: TEXCOORD1_centroid;
-	half4 texcoord2	: TEXCOORD2_centroid;
-	half4 texcoord3	: TEXCOORD3_centroid;
-	half4 texcoord4	: TEXCOORD4_centroid;
-	half4 texcoord5	: TEXCOORD5_centroid;
-	half4 texcoord6	: TEXCOORD6_centroid;
-	half4 texcoord7	: TEXCOORD7_centroid;
-	half4 texcoord8	: TEXCOORD8_centroid;
-	half4 texcoord9	: TEXCOORD9_centroid;
-	half4 color		: COLOR0;
+	float4 position		: SV_Position;
+	float4 texcoord0	: TEXCOORD0_centroid;
+	float4 texcoord1	: TEXCOORD1_centroid;
+	float4 texcoord2	: TEXCOORD2_centroid;
+	float4 texcoord3	: TEXCOORD3_centroid;
+	float4 texcoord4	: TEXCOORD4_centroid;
+	float4 texcoord5	: TEXCOORD5_centroid;
+	float4 texcoord6	: TEXCOORD6_centroid;
+	float4 texcoord7	: TEXCOORD7_centroid;
+	float4 texcoord8	: TEXCOORD8_centroid;
+	float4 texcoord9	: TEXCOORD9_centroid;
+	float4 color		: COLOR0;
 };
 // *INDENT-ON*
 
@@ -173,7 +173,7 @@ void main( VS_IN vertex, out VS_OUT result )
 	result.texcoord5.x = dot4( vertex.texcoord.xy, rpSpecularMatrixS );
 	result.texcoord5.y = dot4( vertex.texcoord.xy, rpSpecularMatrixT );
 
-	//# texture 6's texcoords will be the halfangle in texture space
+	//# texture 6's texcoords will be the floatangle in texture space
 
 	//# calculate normalized vector to light in R0
 	toLightLocal = normalize( toLightLocal );

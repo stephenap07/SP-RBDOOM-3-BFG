@@ -2625,7 +2625,7 @@ void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 	idRenderMatrix::Multiply( viewDef->worldSpace.mvp, vLight->inverseBaseLightProject, invProjectMVPMatrix );
 	RB_SetMVP( invProjectMVPMatrix );
 
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
 	// two-sided stencil test
 	glStencilOpSeparate( GL_FRONT, GL_KEEP, GL_REPLACE, GL_ZERO );
 	glStencilOpSeparate( GL_BACK, GL_KEEP, GL_ZERO, GL_REPLACE );
@@ -4873,7 +4873,7 @@ void idRenderBackend::CalculateAutomaticExposure()
 		globalFramebuffers.hdr64FBO->Bind();
 
 		// FIXME
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
 		// read back the contents
 		glReadPixels( 0, 0, 64, 64, GL_RGBA, GL_FLOAT, image );
 #endif
@@ -5085,7 +5085,7 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 	//globalFramebuffers.hdrQuarterFBO->Bind();
 
 	// FIXME
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
 	glClearColor( 0, 0, 0, 1 );
 //	glClear( GL_COLOR_BUFFER_BIT );
 #endif
@@ -5599,7 +5599,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion2( const viewDef_t* _viewDe
 
 void idRenderBackend::DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewDef )
 {
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
 	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
 	{
 		// 3D views only
@@ -5917,18 +5917,10 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	renderLog.StartFrame();
 	GL_StartFrame();
 
+	void* textureId = globalImages->hierarchicalZbufferImage->GetTextureID();
 	globalImages->LoadDeferredImages( commandList );
 
 #if defined( USE_NVRHI )
-	if( !hiZGenPass )
-	{
-		if( hiZGenPass )
-		{
-			delete hiZGenPass;
-		}
-		hiZGenPass = new MipMapGenPass( deviceManager->GetDevice(), globalImages->hierarchicalZbufferImage->GetTextureHandle() );
-	}
-
 	if( !ssaoPass && r_useNewSsaoPass.GetBool() )
 	{
 		ssaoPass = new SsaoPass(
@@ -5938,10 +5930,20 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 			globalImages->ambientOcclusionImage[0]->GetTextureHandle() );
 	}
 
+	if( globalImages->hierarchicalZbufferImage->GetTextureID() != textureId || !hiZGenPass )
+	{
+		if( hiZGenPass )
+		{
+			delete hiZGenPass;
+		}
+		hiZGenPass = new MipMapGenPass( deviceManager->GetDevice(), globalImages->hierarchicalZbufferImage->GetTextureHandle() );
+	}
+
+
 	if( !toneMapPass )
 	{
-		toneMapPass = new TonemapPass();
 		TonemapPass::CreateParameters tonemapParms;
+		toneMapPass = new TonemapPass();
 		toneMapPass->Init( deviceManager->GetDevice(), &commonPasses, tonemapParms, globalFramebuffers.ldrFBO->GetApiObject() );
 	}
 #endif
@@ -6370,10 +6372,9 @@ void idRenderBackend::MotionBlur()
 	GL_State( GLS_COLORMASK | GLS_DEPTHMASK );
 
 // FIXME
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
 	glClearColor( 0, 0, 0, 1 );
 	glClear( GL_COLOR_BUFFER_BIT );
-
 #endif
 
 	GL_Color( 0, 0, 0, 0 );
@@ -6590,7 +6591,7 @@ void idRenderBackend::PostProcess( const void* data )
 	renderLog.OpenBlock( "Render_PostProcessing", colorBlue );
 
 // FIXME
-#if !defined(USE_VULKAN)
+#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
 
 	// resolve the scaled rendering to a temporary texture
 	postProcessCommand_t* cmd = ( postProcessCommand_t* )data;

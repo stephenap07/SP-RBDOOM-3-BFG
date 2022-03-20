@@ -231,8 +231,7 @@ struct vulkanContext_t
 
 extern vulkanContext_t vkcontext;
 
-//#elif !defined( USE_NVRHI )
-#else
+#elif !defined( USE_NVRHI )
 
 struct glContext_t
 {

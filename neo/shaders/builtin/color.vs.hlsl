@@ -51,6 +51,7 @@ struct VS_IN {
 struct VS_OUT {
 	float4 position : SV_Position;
 };
+
 // *INDENT-ON*
 
 void main( VS_IN vertex, out VS_OUT result )
