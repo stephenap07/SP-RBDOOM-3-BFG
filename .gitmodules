@@ -4,3 +4,6 @@
 [submodule "neo/extern/nvrhi"]
 	path = neo/extern/nvrhi
 	url = https://github.com/stephenap07/nvrhi.git
+[submodule "neo/extern/RmlUi"]
+	path = neo/extern/RmlUi
+	url = git@github.com:mikke89/RmlUi.git

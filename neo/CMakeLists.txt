@@ -83,6 +83,9 @@ option(USE_DX12
 option(USE_NVRHI_VULKAN
 						"Use Vulkan" ON)
 
+option(USE_PHYSX
+                "Use PhysX" OFF)
+
 set(CPU_TYPE "" CACHE STRING "When set, passes this string as CPU-ID which will be embedded into the binary.")
 
 # SRS - Turn on optimization when cross-compiling from Apple arm64 to x86_64
@@ -157,13 +160,13 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 
 	# Compiler check (needs -std=c++11 flag)
 	include(CheckCXXCompilerFlag)
-	CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-	if(COMPILER_SUPPORTS_CXX11)
-		set(CMAKE_CXX_STANDARD 11)
+	CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
+	if(COMPILER_SUPPORTS_CXX17)
+		set(CMAKE_CXX_STANDARD 17)
 		set(CMAKE_CXX_STANDARD_REQUIRED ON)
 		set(CMAKE_CXX_EXTENSIONS OFF)
 	else()
-		message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+		message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++17 support. Please use a different C++ compiler.")
 	endif()
 
 	if(CPU_TYPE)
@@ -553,6 +556,9 @@ if(USE_NVRHI)
     include_directories(${NVRHI_DIR}/include)
 endif(USE_NVRHI)
 
+set(RMLUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/RmlUi)
+include_directories(${RMLUI_DIR}/Include)
+
 if(USE_SYSTEM_RAPIDJSON)
 find_package(rapidjson REQUIRED)
 endif(USE_SYSTEM_RAPIDJSON)
@@ -766,15 +772,17 @@ set(FREETYPE_SOURCES
 	libs/freetype/src/type42/type42.c
 	libs/freetype/src/winfonts/winfnt.c)
 
+if(USE_PHYSX)
 find_package(PhysX REQUIRED)
+add_definitions("-DUSE_PHYSX")
+endif()
 
 add_definitions("-DRMLUI_STATIC_LIB")
+
+add_subdirectory("extern/RmlUi")
+
 set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
 
-set(RMLUI_LIBRARIES
-    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlCore.lib optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlCore.lib
-    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlDebugger.lib optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlDebugger.lib)	
-	
 set(SOUND_INCLUDES
 	sound/snd_local.h
 	sound/sound.h
@@ -1827,6 +1835,8 @@ if(MSVC)
 		add_dependencies(RBDoom3BFG nvrhi_vk)
 	endif()
 
+    add_dependencies(RBDoom3BFG RmlUi)
+
 	# call typeinfogen to generate neo/d3xp/gamesys/GameTypeInfo.h
 	add_custom_command(
 			TARGET RBDoom3BFG
@@ -1838,8 +1848,12 @@ if(MSVC)
 			)
 
 	target_include_directories(RBDoom3BFG PRIVATE
-		${RMLUI_INCLUDE}
-		${PhysX_INCLUDE_DIR})
+		${RMLUI_INCLUDE})
+
+    if(USE_PHYSX)
+        target_include_directories(RBDoom3BFG PRIVATE
+            ${PhysX_INCLUDE_DIR})
+    endif()
 
 	target_link_libraries(RBDoom3BFG
 		idlib
@@ -1858,12 +1872,18 @@ if(MSVC)
         ${PNG_LIBRARY}
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
-        ${RMLUI_LIBRARIES}
-        PhysX::PhysXExtensions
-    	PhysX::PhysXCommon
-    	PhysX::PhysXCooking
 		${CMAKE_DL_LIBS}
+        RmlCore
+        RmlDebugger
+        RmlUi
 		)
+
+    if(USE_PHYSX)
+        target_link_libraries(RBDoom3BFG
+            PhysX::PhysXExtensions
+            PhysX::PhysXCommon
+            PhysX::PhysXCooking)
+    endif()
 		
 	# set MSVC default debug directory on executable	
 	if(CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER_EQUAL 8)

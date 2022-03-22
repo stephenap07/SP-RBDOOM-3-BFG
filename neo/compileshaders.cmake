@@ -70,7 +70,6 @@ function(compile_shaders)
         add_custom_command(TARGET ${params_TARGET} PRE_BUILD
                           COMMAND shaderCompiler
                                    --infile ${params_CONFIG}
-                                   --parallel
                                    --out ${params_DXIL}
                                    --platform dxil
                                    --cflags "${CFLAGS}"

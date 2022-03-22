@@ -37,12 +37,14 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "CollisionModel.h"
 
+#ifdef USE_PHYSX
 #include "PxPhysicsApi.h"
 #include "extensions/PxDefaultAllocator.h"
 #include "PxFoundation.h"
 #include "PxPhysics.h"
 #include "PxMaterial.h"
 #include "PxScene.h"
+#endif
 
 #define MIN_NODE_SIZE						64.0f
 #define MAX_NODE_POLYGONS					128
@@ -395,8 +397,10 @@ public:
 	void			Simulate( float simTime ) override;
 	void			FetchResults( bool wait ) override;
 
+#ifdef USE_PHYSX
 	physx::PxPhysics*	Physics( ) override;
 	physx::PxScene*		PhysicsScene( ) override;
+#endif
 
 private:			// CollisionMap_translate.cpp
 	int				TranslateEdgeThroughEdge( idVec3& cross, idPluecker& l1, idPluecker& l2, float* fraction );
@@ -582,6 +586,7 @@ private:			// collision map data
 	int				maxContacts;
 	int				numContacts;
 
+#ifdef USE_PHYSX
 	// Begin PhysX
 	idParallelJobList* physxJobList;
 	idParallelJobList* physxSubJobList;
@@ -606,6 +611,7 @@ private:			// collision map data
 	void InitScene( );
 	void FreePhysXScene( );
 	// End PhysX
+#endif
 };
 
 // for debugging

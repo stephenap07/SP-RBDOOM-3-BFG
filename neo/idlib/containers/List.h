@@ -267,7 +267,7 @@ template< typename _type_, memTag_t _tag_ >
 ID_INLINE idList<_type_, _tag_>::idList( std::initializer_list<_type_> initializerList )
 	: idList( 16 )
 {
-	SetNum( std::size( initializerList ) );
+	SetNum( initializerList.size() );
 	std::copy( initializerList.begin(), initializerList.end(), list );
 }
 

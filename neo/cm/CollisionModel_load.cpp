@@ -51,12 +51,14 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "CollisionModel_local.h"
 
+#ifdef USE_PHYSX
 #include "cooking/PxCooking.h"
 #include "cooking/PxConvexMeshDesc.h"
-
 #include "GamePxCpuDispatcher.h"
 
 using namespace physx;
+#endif
+
 
 #define CMODEL_BINARYFILE_EXT	"bcmodel"
 
@@ -4362,10 +4364,9 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 							winding.AddPoint( model->vertices[vertNum].p );
 						}
 
+#ifdef USE_PHYSX
 						if( indexes.Num( ) > 0 && indexes.Num() % 3 == 0 )
 						{
-							bool isValid = winding.Check( );
-
 							PxTriangleMeshDesc meshDesc;
 							meshDesc.flags = PxMeshFlag::eFLIPNORMALS;
 
@@ -4398,6 +4399,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 
 							gScene->addActor( *actor );
 						}
+#endif
 					}
 
 					if( node->planeType == -1 )
@@ -4913,6 +4915,7 @@ bool idCollisionModelManagerLocal::TrmFromModel( const char* modelName, idTraceM
 }
 
 
+#ifdef USE_PHYSX
 constexpr const char* PVD_HOST = "localhost";
 
 void idCollisionModelManagerLocal::InitPhysX( )
@@ -5025,3 +5028,4 @@ physx::PxScene* idCollisionModelManagerLocal::PhysicsScene( )
 {
 	return gScene;
 }
+#endif
