@@ -45,6 +45,7 @@ enum renderLogMainBlock_t
 	MRB_FILL_GEOMETRY_BUFFER,
 	MRB_SSAO_PASS,
 	MRB_AMBIENT_PASS,
+	MRB_SHADOW_ATLAS_PASS,
 	MRB_DRAW_INTERACTIONS,
 	MRB_DRAW_SHADER_PASSES,
 	MRB_FOG_ALL_LIGHTS,
@@ -58,18 +59,6 @@ enum renderLogMainBlock_t
 
 	MRB_TOTAL_QUERIES = MRB_TOTAL * 2,
 };
-
-// these are used to make sure each Indent() is properly paired with an Outdent()
-enum renderLogIndentLabel_t
-{
-	RENDER_LOG_INDENT_DEFAULT,
-	RENDER_LOG_INDENT_MAIN_BLOCK,
-	RENDER_LOG_INDENT_BLOCK,
-	RENDER_LOG_INDENT_TEST
-};
-
-// using this macro avoids printf parameter overhead if the renderlog isn't active
-#define RENDERLOG_PRINTF( ... ) if ( renderLog.activeLevel ) renderLog.Printf( __VA_ARGS__ );
 
 
 
@@ -87,15 +76,31 @@ class idRenderLog
 private:
 	renderLogMainBlock_t mainBlock;
 
-public:
 #if defined( USE_NVRHI )
 	nvrhi::CommandListHandle		commandList;
+
+	uint64							frameCounter;
+	uint32							frameParity;
+
+	idStaticList<nvrhi::TimerQueryHandle, MRB_TOTAL_QUERIES> timerQueries;
+	idStaticList<bool, MRB_TOTAL_QUERIES> timerUsed;
+
+	//idArray< idArray< nvrhi::TimerQueryHandle, MRB_TOTAL_QUERIES >, NUM_FRAME_DATA >		timerQueries;
+
+	// GPU timestamp queries
+	//idArray< uint32, NUM_FRAME_DATA >									queryIndex;
+
+	//idArray< idArray< uint64, NUM_TIMESTAMP_QUERIES >, NUM_FRAME_DATA >	queryResults;
+	//idArray< VkQueryPool, NUM_FRAME_DATA >		queryPools;
 #endif
 
+public:
 	idRenderLog();
 
-	void		StartFrame() {}
-	void		EndFrame() {}
+	void		Init();
+
+	void		StartFrame( nvrhi::ICommandList* _commandList );
+	void		EndFrame();
 	void		Close() {}
 	int			Active()
 	{
@@ -104,14 +109,12 @@ public:
 
 	void		OpenBlock( const char* label, const idVec4& color = colorBlack );
 	void		CloseBlock();
-	void		OpenMainBlock( renderLogMainBlock_t block, nvrhi::ICommandList* commandList );
-	void		CloseMainBlock();// {}
-	void		Indent( renderLogIndentLabel_t label = RENDER_LOG_INDENT_DEFAULT ) {}
-	void		Outdent( renderLogIndentLabel_t label = RENDER_LOG_INDENT_DEFAULT ) {}
+	void		OpenMainBlock( renderLogMainBlock_t block );
+	void		CloseMainBlock( int block = -1 );
 
 	void		Printf( VERIFY_FORMAT_STRING const char* fmt, ... ) {}
 
-	int			activeLevel;
+	void		FetchGPUTimers( backEndCounters_t& pc );
 };
 
 extern idRenderLog renderLog;

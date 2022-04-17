@@ -48,18 +48,18 @@ struct ToneMappingConstants
 
 // *INDENT-OFF*
 #if SOURCE_ARRAY
-Texture2DArray t_Source : register( t0 );
+Texture2DArray t_Source : register(t0);
 #else
-Texture2D t_Source : register( t0 );
+Texture2D t_Source : register(t0);
 #endif
-Buffer<uint> t_Exposure : register( t1 );
+Buffer<uint> t_Exposure : register(t1);
 
-Texture2D t_ColorLUT : register( t2 );
-SamplerState s_ColorLUTSampler : register( s0 );
+Texture2D t_ColorLUT : register(t2);
+SamplerState s_ColorLUTSampler : register(s0);
 
-cbuffer c_ToneMapping : register( b0 )
+cbuffer c_ToneMapping : register(b0)
 {
-	ToneMappingConstants g_ToneMapping;
+    ToneMappingConstants g_ToneMapping;
 };
 // *INDENT-ON*
 

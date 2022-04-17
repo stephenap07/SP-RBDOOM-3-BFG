@@ -38,11 +38,7 @@ extern DeviceManager* deviceManager;
 
 static void R_ListFramebuffers_f( const idCmdArgs& args )
 {
-	if( !glConfig.framebufferObjectAvailable )
-	{
-		common->Printf( "GL_EXT_framebuffer_object is not available.\n" );
-		return;
-	}
+	// TODO
 }
 
 Framebuffer::Framebuffer( const char* name, int w, int h )
@@ -111,7 +107,7 @@ void Framebuffer::ResizeFramebuffers()
 	int screenHeight = renderSystem->GetHeight();
 
 	tr.backend.commandList->open();
-	globalImages->currentRenderLDR->Reload( false, tr.backend.commandList );
+	globalImages->ldrImage->Reload( false, tr.backend.commandList );
 	globalImages->currentRenderImage->Reload( false, tr.backend.commandList );
 	globalImages->currentDepthImage->Reload( false, tr.backend.commandList );
 	globalImages->currentRenderHDRImage->Reload( false, tr.backend.commandList );
@@ -121,9 +117,14 @@ void Framebuffer::ResizeFramebuffers()
 		globalImages->ambientOcclusionImage[i]->Reload( false, tr.backend.commandList );
 	}
 	globalImages->hierarchicalZbufferImage->Reload( false, tr.backend.commandList );
-	globalImages->currentNormalsImage->Reload( false, tr.backend.commandList );
+	globalImages->gbufferNormalsRoughnessImage->Reload( false, tr.backend.commandList );
+	globalImages->taaMotionVectorsImage->Reload( false, tr.backend.commandList );
+	globalImages->taaResolvedImage->Reload( false, tr.backend.commandList );
+	globalImages->taaFeedback1Image->Reload( false, tr.backend.commandList );
+	globalImages->taaFeedback2Image->Reload( false, tr.backend.commandList );
 	globalImages->smaaEdgesImage->Reload( false, tr.backend.commandList );
 	globalImages->smaaBlendImage->Reload( false, tr.backend.commandList );
+	globalImages->shadowAtlasImage->Reload( false, tr.backend.commandList );
 	for( int i = 0; i < MAX_SHADOWMAP_RESOLUTIONS; i++ )
 	{
 		globalImages->shadowImage[i]->Reload( false, tr.backend.commandList );
@@ -155,10 +156,14 @@ void Framebuffer::ResizeFramebuffers()
 		}
 	}
 
+	globalFramebuffers.shadowAtlasFBO = new Framebuffer( "_shadowAtlas",
+			nvrhi::FramebufferDesc()
+			.setDepthAttachment( globalImages->shadowAtlasImage->texture ) );
+
 	globalFramebuffers.ldrFBO = new Framebuffer( "_ldr",
 			nvrhi::FramebufferDesc()
-			.addColorAttachment( globalImages->currentRenderLDR->texture )
-			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+			.addColorAttachment( globalImages->ldrImage->texture ) );
+	//.setDepthAttachment( globalImages->currentDepthImage->texture ) );
 
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",
 			nvrhi::FramebufferDesc()
@@ -168,6 +173,14 @@ void Framebuffer::ResizeFramebuffers()
 	globalFramebuffers.postProcFBO = new Framebuffer( "_postProc",
 			nvrhi::FramebufferDesc()
 			.addColorAttachment( globalImages->currentRenderImage->texture ) );
+
+	globalFramebuffers.taaMotionVectorsFBO = new Framebuffer( "_taaMotionVectors",
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->taaMotionVectorsImage->texture ) );
+
+	globalFramebuffers.taaResolvedFBO = new Framebuffer( "_taaResolved",
+			nvrhi::FramebufferDesc()
+			.addColorAttachment( globalImages->taaResolvedImage->texture ) );
 
 	globalFramebuffers.envprobeFBO = new Framebuffer( "_envprobeRender",
 			nvrhi::FramebufferDesc()
@@ -197,7 +210,7 @@ void Framebuffer::ResizeFramebuffers()
 
 	globalFramebuffers.geometryBufferFBO = new Framebuffer( "_gbuffer",
 			nvrhi::FramebufferDesc()
-			.addColorAttachment( globalImages->currentNormalsImage->texture )
+			.addColorAttachment( globalImages->gbufferNormalsRoughnessImage->texture )
 			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
 
 	globalFramebuffers.smaaEdgesFBO = new Framebuffer( "_smaaEdges",
@@ -220,8 +233,6 @@ void Framebuffer::ResizeFramebuffers()
 
 void Framebuffer::Bind()
 {
-	RENDERLOG_PRINTF( "Framebuffer::Bind( %s )\n", fboName.c_str() );
-
 	if( tr.backend.currentFrameBuffer != this )
 	{
 		tr.backend.currentPipeline = nullptr;
@@ -238,7 +249,6 @@ bool Framebuffer::IsBound()
 
 void Framebuffer::Unbind()
 {
-	RENDERLOG_PRINTF( "Framebuffer::Unbind()\n" );
 	globalFramebuffers.swapFramebuffers[deviceManager->GetCurrentBackBufferIndex()]->Bind();
 }
 
@@ -264,15 +274,15 @@ void Framebuffer::AddStencilBuffer( int format, int multiSamples )
 {
 }
 
-void Framebuffer::AttachImage2D( int target, const idImage* image, int index, int mipmapLod )
+void Framebuffer::AttachImage2D( int target, idImage* image, int index, int mipmapLod )
 {
 }
 
-void Framebuffer::AttachImageDepth( int target, const idImage* image )
+void Framebuffer::AttachImageDepth( int target, idImage* image )
 {
 }
 
-void Framebuffer::AttachImageDepthLayer( const idImage* image, int layer )
+void Framebuffer::AttachImageDepthLayer( idImage* image, int layer )
 {
 }
 

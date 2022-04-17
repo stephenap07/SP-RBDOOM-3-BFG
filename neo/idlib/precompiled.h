@@ -95,7 +95,7 @@ const int MAX_EXPRESSION_REGISTERS = 4096;
 #endif
 
 #if defined( USE_NVRHI )
-	#include "nvrhi/nvrhi.h"
+#include "nvrhi/nvrhi.h"
 #elif defined(USE_VULKAN)
 	#include "../renderer/Vulkan/qvk.h"
 #else

@@ -527,7 +527,7 @@ void Framebuffer::AddStencilBuffer( int format, int multiSamples )
 	GL_CheckErrors();
 }
 
-void Framebuffer::AttachImage2D( int target, const idImage* image, int index, int mipmapLod )
+void Framebuffer::AttachImage2D( int target, idImage* image, int index, int mipmapLod )
 {
 	if( ( target != GL_TEXTURE_2D ) && ( target != GL_TEXTURE_2D_MULTISAMPLE ) && ( target < GL_TEXTURE_CUBE_MAP_POSITIVE_X || target > GL_TEXTURE_CUBE_MAP_NEGATIVE_Z ) )
 	{
@@ -542,9 +542,11 @@ void Framebuffer::AttachImage2D( int target, const idImage* image, int index, in
 	}
 
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, target, image->texnum, mipmapLod );
+
+	image->opts.isRenderTarget = true;
 }
 
-void Framebuffer::AttachImageDepth( int target, const idImage* image )
+void Framebuffer::AttachImageDepth( int target, idImage* image )
 {
 	if( ( target != GL_TEXTURE_2D ) && ( target != GL_TEXTURE_2D_MULTISAMPLE ) )
 	{
@@ -553,11 +555,15 @@ void Framebuffer::AttachImageDepth( int target, const idImage* image )
 	}
 
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, target, image->texnum, 0 );
+
+	image->opts.isRenderTarget = true;
 }
 
-void Framebuffer::AttachImageDepthLayer( const idImage* image, int layer )
+void Framebuffer::AttachImageDepthLayer( idImage* image, int layer )
 {
 	glFramebufferTextureLayer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, image->texnum, 0, layer );
+
+	image->opts.isRenderTarget = true;
 }
 
 void Framebuffer::Check()

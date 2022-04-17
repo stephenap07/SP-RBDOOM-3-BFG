@@ -765,13 +765,8 @@ void idImageManager::Init()
 	cmdSystem->AddCommand( "listImages", R_ListImages_f, CMD_FL_RENDERER, "lists images" );
 	cmdSystem->AddCommand( "combineCubeImages", R_CombineCubeImages_f, CMD_FL_RENDERER, "combines six images for roq compression" );
 
-	commandList = deviceManager->GetDevice( )->createCommandList();
-
 	// should forceLoadImages be here?
-	commandList->open();
-	LoadDeferredImages( commandList );
-	commandList->close();
-	deviceManager->GetDevice()->executeCommandList( commandList );
+	LoadDeferredImages();
 }
 
 /*
@@ -785,7 +780,6 @@ void idImageManager::Shutdown()
 	imageHash.Clear();
 	deferredImages.DeleteContents( true );
 	deferredImageHash.Clear();
-	commandList.Reset();
 }
 
 /*

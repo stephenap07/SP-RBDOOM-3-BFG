@@ -3068,10 +3068,9 @@ idRenderBackend::DBG_TestGamma
 #define	G_HEIGHT	512
 #define	BAR_HEIGHT	64
 
-static byte* gammaImage = nullptr;
-
 void idRenderBackend::DBG_TestGamma()
 {
+	byte	image[G_HEIGHT][G_WIDTH][4];
 	int		i, j;
 	int		c, comp;
 	int		v, dither;
@@ -3087,13 +3086,6 @@ void idRenderBackend::DBG_TestGamma()
 	{
 		v = 128;
 	}
-
-	if( !gammaImage )
-	{
-		gammaImage = new byte[G_HEIGHT * G_WIDTH * 4];
-	}
-
-	byte* image = gammaImage;
 
 	memset( image, 0, sizeof( image ) );
 
@@ -3112,9 +3104,7 @@ void idRenderBackend::DBG_TestGamma()
 					{
 						if( mask & ( 1 << comp ) )
 						{
-							int height = y + 1;
-							int width = c * G_WIDTH / 4 + j;
-							image[width + height * G_WIDTH + comp] = v;
+							image[y + i][c * G_WIDTH / 4 + j][comp] = v;
 						}
 					}
 				}
@@ -3133,9 +3123,7 @@ void idRenderBackend::DBG_TestGamma()
 					{
 						if( mask & ( 1 << comp ) )
 						{
-							int height = y + BAR_HEIGHT / 2 + i;
-							int width = c * G_WIDTH / 4 + j;
-							image[width + height * G_WIDTH + comp] = dither;
+							image[y + BAR_HEIGHT / 2 + i][c * G_WIDTH / 4 + j][comp] = dither;
 						}
 					}
 				}
@@ -3162,11 +3150,9 @@ void idRenderBackend::DBG_TestGamma()
 		{
 			for( j = 0; j < G_WIDTH / 4; j++ )
 			{
-				int height = y + i;
-				int width = c * G_WIDTH / 4 + j;
-				image[width + height * G_WIDTH + 0] = v;
-				image[width + height * G_WIDTH + 1] = v;
-				image[width + height * G_WIDTH + 2] = v;
+				image[y + i][c * G_WIDTH / 4 + j][0] = v;
+				image[y + i][c * G_WIDTH / 4 + j][1] = v;
+				image[y + i][c * G_WIDTH / 4 + j][2] = v;
 			}
 		}
 	}
@@ -3270,12 +3256,19 @@ void idRenderBackend::DBG_TestImage()
 	{
 		cinData_t	cin;
 
-		cin = tr.testVideo->ImageForTime( viewDef->renderView.time[1] - tr.testVideoStartTime );
+		// SRS - Don't need calibrated time for testing cinematics, so just call ImageForTime( 0 ) for current system time
+		// This simplification allows cinematic test playback to work over both 2D and 3D background scenes
+		cin = tr.testVideo->ImageForTime( 0 /*viewDef->renderView.time[1] - tr.testVideoStartTime*/ );
 		if( cin.imageY != NULL )
 		{
 			image = cin.imageY;
 			imageCr = cin.imageCr;
 			imageCb = cin.imageCb;
+		}
+		// SRS - Also handle ffmpeg and original RoQ decoders for test videos (using cin.image)
+		else if( cin.image != NULL )
+		{
+			image = cin.image;
 		}
 		else
 		{
@@ -3316,9 +3309,9 @@ void idRenderBackend::DBG_TestImage()
 
 	float scale[16] = { 0 };
 	scale[0] = w; // scale
-	scale[5] = -h; // scale
+	scale[5] = h; // scale			(SRS - changed h from -ve to +ve so video plays right side up)
 	scale[12] = halfScreenWidth - ( halfScreenWidth * w ); // translate
-	scale[13] = halfScreenHeight - ( halfScreenHeight * h ); // translate
+	scale[13] = halfScreenHeight - ( halfScreenHeight * h ) - h; // translate (SRS - moved up by h)
 	scale[10] = 1.0f;
 	scale[15] = 1.0f;
 
@@ -3354,7 +3347,9 @@ void idRenderBackend::DBG_TestImage()
 		imageCr->Bind();
 		GL_SelectTexture( 2 );
 		imageCb->Bind();
-		renderProgManager.BindShader_Bink();
+		// SRS - Use Bink shader without sRGB to linear conversion, otherwise cinematic colours may be wrong
+		// BindShader_BinkGUI() does not seem to work here - perhaps due to vertex shader input dependencies?
+		renderProgManager.BindShader_Bink_sRGB();
 	}
 	else
 	{

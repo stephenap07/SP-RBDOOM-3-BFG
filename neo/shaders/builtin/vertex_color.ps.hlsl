@@ -31,7 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 
 
 // *INDENT-OFF*
-SamplerState samp0 : register( s0 );
+SamplerState samp0 : register( s0 VK_DESCRIPTOR_SET( 2 ) );
 
 struct PS_IN
 {

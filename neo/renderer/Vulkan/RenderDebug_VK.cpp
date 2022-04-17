@@ -29,8 +29,8 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
 
 #include "../RenderCommon.h"
 
@@ -70,7 +70,6 @@ stenciling will matter.
 */
 void idRenderBackend::DBG_PolygonClear()
 {
-
 }
 
 /*
@@ -92,7 +91,6 @@ Debugging tool to see what values are in the stencil buffer
 */
 void idRenderBackend::DBG_ScanStencilBuffer()
 {
-
 }
 
 
@@ -105,7 +103,6 @@ Print an overdraw count based on stencil index values
 */
 void idRenderBackend::DBG_CountStencilBuffer()
 {
-
 }
 
 /*
@@ -119,7 +116,6 @@ stencil buffer.  Stencil of 0 = black, 1 = red, 2 = green,
 */
 void idRenderBackend::DBG_ColorByStencilBuffer()
 {
-
 }
 
 /*
@@ -255,7 +251,6 @@ green if they have a negative texture area, or blue if degenerate area
 */
 void idRenderBackend::DBG_ShowTexturePolarity( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -267,7 +262,6 @@ Shade materials that are using unsmoothed tangents
 */
 void idRenderBackend::DBG_ShowUnsmoothedTangents( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -282,7 +276,6 @@ Shade a triangle by the RGB colors of its tangent space
 */
 void idRenderBackend::DBG_ShowTangentSpace( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -294,7 +287,6 @@ Draw each triangle with the solid vertex colors
 */
 void idRenderBackend::DBG_ShowVertexColor( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -306,7 +298,6 @@ Debugging tool
 */
 void idRenderBackend::DBG_ShowNormals( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -318,7 +309,6 @@ Draw texture vectors in the center of each triangle
 */
 void idRenderBackend::DBG_ShowTextureVectors( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -330,7 +320,6 @@ Draw lines from each vertex to the dominant triangle center
 */
 void idRenderBackend::DBG_ShowDominantTris( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -342,7 +331,6 @@ Debugging tool
 */
 void idRenderBackend::DBG_ShowEdges( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -376,7 +364,6 @@ Debugging tool, won't work correctly with SMP or when mirrors are present
 */
 void idRenderBackend::DBG_ShowPortals()
 {
-
 }
 
 /*
@@ -501,7 +488,6 @@ idRenderBackend::DBG_ShowCenterOfProjection
 */
 void idRenderBackend::DBG_ShowCenterOfProjection()
 {
-
 }
 
 /*
@@ -513,7 +499,6 @@ Draw exact pixel lines to check pixel center sampling
 */
 void idRenderBackend::DBG_ShowLines()
 {
-
 }
 
 
@@ -524,7 +509,6 @@ idRenderBackend::DBG_TestGamma
 */
 void idRenderBackend::DBG_TestGamma()
 {
-
 }
 
 
@@ -535,7 +519,6 @@ idRenderBackend::DBG_TestGammaBias
 */
 void idRenderBackend::DBG_TestGammaBias()
 {
-
 }
 
 /*
@@ -563,12 +546,19 @@ void idRenderBackend::DBG_TestImage()
 	{
 		cinData_t	cin;
 
-		cin = tr.testVideo->ImageForTime( viewDef->renderView.time[1] - tr.testVideoStartTime );
+		// SRS - Don't need calibrated time for testing cinematics, so just call ImageForTime( 0 ) for current system time
+		// This simplification allows cinematic test playback to work over both 2D and 3D background scenes
+		cin = tr.testVideo->ImageForTime( 0 /*viewDef->renderView.time[1] - tr.testVideoStartTime*/ );
 		if( cin.imageY != NULL )
 		{
 			image = cin.imageY;
 			imageCr = cin.imageCr;
 			imageCb = cin.imageCb;
+		}
+		// SRS - Also handle ffmpeg and original RoQ decoders for test videos (using cin.image)
+		else if( cin.image != NULL )
+		{
+			image = cin.image;
 		}
 		else
 		{
@@ -610,7 +600,7 @@ void idRenderBackend::DBG_TestImage()
 	scale[0] = w; // scale
 	scale[5] = h; // scale
 	scale[12] = halfScreenWidth - ( halfScreenWidth * w ); // translate
-	scale[13] = halfScreenHeight - ( halfScreenHeight * h ); // translate
+	scale[13] = halfScreenHeight - ( halfScreenHeight * h ) - h; // translate (SRS - moved up by h)
 	scale[10] = 1.0f;
 	scale[15] = 1.0f;
 
@@ -646,7 +636,9 @@ void idRenderBackend::DBG_TestImage()
 		GL_SelectTexture( 2 );
 		imageCb->Bind();
 
-		renderProgManager.BindShader_Bink();
+		// SRS - Use Bink shader with no sRGB to linear conversion, otherwise cinematic colours may be wrong
+		// BindShader_BinkGUI() does not seem to work here - perhaps due to vertex shader input dependencies?
+		renderProgManager.BindShader_Bink_sRGB();
 	}
 	else
 	{
@@ -674,7 +666,6 @@ RB_DrawExpandedTriangles
 */
 static void RB_DrawExpandedTriangles( const srfTriangles_t* tri, const float radius, const idVec3& vieworg )
 {
-
 }
 
 /*
@@ -688,7 +679,6 @@ FIXME: not thread safe!
 */
 void idRenderBackend::DBG_ShowTrace( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-
 }
 
 /*
@@ -698,6 +688,11 @@ idRenderBackend::DBG_RenderDebugTools
 */
 void idRenderBackend::DBG_RenderDebugTools( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
+	if( viewDef->renderView.rdflags & RDF_IRRADIANCE )
+	{
+		return;
+	}
+
 	// don't do much if this was a 2D rendering
 	if( !viewDef->viewEntitys )
 	{

@@ -42,13 +42,12 @@ struct SsaoConstants
 // *INDENT-OFF*
 cbuffer c_Ssao : register( b1 )
 {
-	SsaoConstants g_Ssao;
+    SsaoConstants g_Ssao;
 };
 
 Texture2D<float> t_InputDepth : register(t0);
 RWTexture2DArray<float> u_DeinterleavedDepth : register(u0);
 // *INDENT-ON*
-
 
 [numthreads( 8, 8, 1 )]
 void main( uint3 globalId : SV_DispatchThreadID )

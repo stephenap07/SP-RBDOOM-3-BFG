@@ -183,6 +183,13 @@ enum renderParm_t
 	RENDERPARM_SHADOW_MATRIX_5_Z,
 	RENDERPARM_SHADOW_MATRIX_5_W,
 
+	RENDERPARM_SHADOW_ATLAS_OFFSET_0,	// rpShadowAtlasOffsets[6]
+	RENDERPARM_SHADOW_ATLAS_OFFSET_1,
+	RENDERPARM_SHADOW_ATLAS_OFFSET_2,
+	RENDERPARM_SHADOW_ATLAS_OFFSET_3,
+	RENDERPARM_SHADOW_ATLAS_OFFSET_4,
+	RENDERPARM_SHADOW_ATLAS_OFFSET_5,
+
 	RENDERPARM_USER0,
 	RENDERPARM_USER1,
 	RENDERPARM_USER2,
@@ -299,11 +306,18 @@ enum
 	BUILTIN_TEXTURE_VERTEXCOLOR_SRGB,
 	BUILTIN_TEXTURE_VERTEXCOLOR_SKINNED,
 	BUILTIN_TEXTURE_TEXGEN_VERTEXCOLOR,
+
 	BUILTIN_INTERACTION,
 	BUILTIN_INTERACTION_SKINNED,
 	BUILTIN_INTERACTION_AMBIENT,
 	BUILTIN_INTERACTION_AMBIENT_SKINNED,
+
 	// RB begin
+	BUILTIN_PBR_INTERACTION,
+	BUILTIN_PBR_INTERACTION_SKINNED,
+	BUILTIN_PBR_INTERACTION_AMBIENT,
+	BUILTIN_PBR_INTERACTION_AMBIENT_SKINNED,
+
 	BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT,
 	BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED,
 	BUILTIN_INTERACTION_SHADOW_MAPPING_POINT,
@@ -311,17 +325,26 @@ enum
 	BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL,
 	BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED,
 
-	BUILTIN_PBR_INTERACTION,
-	BUILTIN_PBR_INTERACTION_SKINNED,
-	BUILTIN_PBR_INTERACTION_AMBIENT,
-	BUILTIN_PBR_INTERACTION_AMBIENT_SKINNED,
-
 	BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT,
 	BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT_SKINNED,
 	BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT,
 	BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_POINT_SKINNED,
 	BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL,
 	BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED,
+
+	BUILTIN_INTERACTION_SHADOW_ATLAS_SPOT,
+	BUILTIN_INTERACTION_SHADOW_ATLAS_SPOT_SKINNED,
+	BUILTIN_INTERACTION_SHADOW_ATLAS_POINT,
+	BUILTIN_INTERACTION_SHADOW_ATLAS_POINT_SKINNED,
+	BUILTIN_INTERACTION_SHADOW_ATLAS_PARALLEL,
+	BUILTIN_INTERACTION_SHADOW_ATLAS_PARALLEL_SKINNED,
+
+	BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_SPOT,
+	BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_SPOT_SKINNED,
+	BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_POINT,
+	BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_POINT_SKINNED,
+	BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_PARALLEL,
+	BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_PARALLEL_SKINNED,
 
 	BUILTIN_DEBUG_LIGHTGRID,
 	BUILTIN_DEBUG_LIGHTGRID_SKINNED,
@@ -358,6 +381,12 @@ enum
 	BUILTIN_SMAA_BLENDING_WEIGHT_CALCULATION,
 	BUILTIN_SMAA_NEIGHBORHOOD_BLENDING,
 
+	BUILTIN_TAA_MOTION_VECTORS,
+	BUILTIN_TAA_RESOLVE,
+	BUILTIN_TAA_RESOLVE_MSAA_2X,
+	BUILTIN_TAA_RESOLVE_MSAA_4X,
+	BUILTIN_TAA_RESOLVE_MSAA_8X,
+
 	BUILTIN_AMBIENT_OCCLUSION,
 	BUILTIN_AMBIENT_OCCLUSION_AND_OUTPUT,
 	BUILTIN_AMBIENT_OCCLUSION_BLUR,
@@ -372,6 +401,7 @@ enum
 	BUILTIN_STEREO_DEGHOST,
 	BUILTIN_STEREO_WARP,
 	BUILTIN_BINK,
+	BUILTIN_BINK_SRGB,	// SRS - Added Bink shader without sRGB to linear conversion for testVideo cmd
 	BUILTIN_BINK_GUI,
 	BUILTIN_STEREO_INTERLACE,
 	BUILTIN_MOTION_BLUR,
@@ -551,7 +581,32 @@ public:
 		BindShader_Builtin( BUILTIN_INTERACTION_AMBIENT_SKINNED );
 	}
 
-	// RB begin
+	// PBR variantes
+
+	void	BindShader_PBR_Interaction()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION );
+	}
+
+	void	BindShader_PBR_InteractionSkinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SKINNED );
+	}
+
+	void	BindShader_PBR_InteractionAmbient()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_AMBIENT );
+	}
+
+	void	BindShader_PBR_InteractionAmbientSkinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_AMBIENT_SKINNED );
+	}
+
+	//
+	// regular shadow mapping
+	//
+
 	void	BindShader_Interaction_ShadowMapping_Spot()
 	{
 		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_MAPPING_SPOT );
@@ -582,29 +637,6 @@ public:
 		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED );
 	}
 
-	// PBR variantes
-
-	void	BindShader_PBR_Interaction()
-	{
-		BindShader_Builtin( BUILTIN_PBR_INTERACTION );
-	}
-
-	void	BindShader_PBR_InteractionSkinned()
-	{
-		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SKINNED );
-	}
-
-	void	BindShader_PBR_InteractionAmbient()
-	{
-		BindShader_Builtin( BUILTIN_PBR_INTERACTION_AMBIENT );
-	}
-
-	void	BindShader_PBR_InteractionAmbientSkinned()
-	{
-		BindShader_Builtin( BUILTIN_PBR_INTERACTION_AMBIENT_SKINNED );
-	}
-
-	// RB begin
 	void	BindShader_PBR_Interaction_ShadowMapping_Spot()
 	{
 		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_SPOT );
@@ -634,6 +666,74 @@ public:
 	{
 		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_MAPPING_PARALLEL_SKINNED );
 	}
+
+	//
+	// shadow mapping using a big atlas
+	//
+
+	void	BindShader_Interaction_ShadowAtlas_Spot()
+	{
+		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_ATLAS_SPOT );
+	}
+
+	void	BindShader_Interaction_ShadowAtlas_Spot_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_ATLAS_SPOT_SKINNED );
+	}
+
+	void	BindShader_Interaction_ShadowAtlas_Point()
+	{
+		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_ATLAS_POINT );
+	}
+
+	void	BindShader_Interaction_ShadowAtlas_Point_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_ATLAS_POINT_SKINNED );
+	}
+
+	void	BindShader_Interaction_ShadowAtlas_Parallel()
+	{
+		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_ATLAS_PARALLEL );
+	}
+
+	void	BindShader_Interaction_ShadowAtlas_Parallel_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_INTERACTION_SHADOW_ATLAS_PARALLEL_SKINNED );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowAtlas_Spot()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_SPOT );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowAtlas_Spot_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_SPOT_SKINNED );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowAtlas_Point()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_POINT );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowAtlas_Point_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_POINT_SKINNED );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowAtlas_Parallel()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_PARALLEL );
+	}
+
+	void	BindShader_PBR_Interaction_ShadowAtlas_Parallel_Skinned()
+	{
+		BindShader_Builtin( BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_PARALLEL_SKINNED );
+	}
+
+	//
+	// debug tools
+	//
 
 	void	BindShader_DebugLightGrid()
 	{
@@ -856,6 +956,11 @@ public:
 		BindShader_Builtin( BUILTIN_BINK );
 	}
 
+	void	BindShader_Bink_sRGB()
+	{
+		BindShader_Builtin( BUILTIN_BINK_SRGB );
+	}
+
 	void	BindShader_BinkGUI()
 	{
 		BindShader_Builtin( BUILTIN_BINK_GUI );
@@ -864,6 +969,11 @@ public:
 	void	BindShader_MotionBlur()
 	{
 		BindShader_Builtin( BUILTIN_MOTION_BLUR );
+	}
+
+	void	BindShader_MotionVectors()
+	{
+		BindShader_Builtin( BUILTIN_TAA_MOTION_VECTORS );
 	}
 
 	void	BindShader_DebugShadowMap()
@@ -1034,6 +1144,7 @@ private:
 	idList<renderProg_t, TAG_RENDER>			renderProgs;
 	idList<shader_t, TAG_RENDER>				shaders;
 	idStaticList< idVec4, RENDERPARM_TOTAL >	uniforms;
+	bool										uniformsChanged;
 	nvrhi::IDevice*								device;
 
 	using VertexAttribDescList = idList< nvrhi::VertexAttributeDesc >;

@@ -43,21 +43,16 @@ struct SsaoConstants
 SamplerState s_Point : register(s0);
 Texture2DArray<float> t_DeinterleavedDepth : register(t0);
 #if DIRECTIONAL_OCCLUSION
-Texture2DArray<float4> t_DeinterleavedSSAO :
-register( t1 );
-RWTexture2D<float4> u_RenderTarget :
-register( u0 );
+Texture2DArray<float4> t_DeinterleavedSSAO : register(t1);
+RWTexture2D<float4> u_RenderTarget : register(u0);
 #else
-Texture2DArray<float> t_DeinterleavedSSAO :
-register( t1 );
-RWTexture2D<float> u_RenderTarget :
-register( u0 );
+Texture2DArray<float> t_DeinterleavedSSAO : register(t1);
+RWTexture2D<float> u_RenderTarget : register(u0);
 #endif
 
-cbuffer c_Ssao :
-register( b1 )
+cbuffer c_Ssao : register(b1)
 {
-	SsaoConstants g_Ssao;
+    SsaoConstants g_Ssao;
 };
 // *INDENT-ON*
 

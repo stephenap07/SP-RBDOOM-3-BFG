@@ -40,6 +40,7 @@ If you have questions concerning this license or the applicable additional terms
 	#include "Passes/FowardShadingPass.h"
 	#include "Passes/SsaoPass.h"
 	#include "Passes/TonemapPass.h"
+	#include "Passes/TemporalAntiAliasingPass.h"
 
 	#include "PipelineCache.h"
 
@@ -330,13 +331,18 @@ private:
 	// RB
 	void				AmbientPass( const drawSurf_t* const* drawSurfs, int numDrawSurfs, bool fillGbuffer );
 
-	void				SetupShadowMapMatrices( const viewLight_t* vLight, int side, idRenderMatrix& lightProjectionRenderMatrix, idRenderMatrix& lightViewRenderMatrix );
-	void				ShadowMapPassFast( const drawSurf_t* drawSurfs, const viewLight_t* vLight, int side );
-	void				ShadowMapPassPerforated( const drawSurf_t** drawSurfs, int numDrawSurfs, const viewLight_t* vLight, int side, const idRenderMatrix& lightProjectionRenderMatrix, const idRenderMatrix& lightViewRenderMatrix );
-	void				ShadowMapPassOld( const drawSurf_t* drawSurfs, const viewLight_t* vLight, int side );
+	void				SetupShadowMapMatrices( viewLight_t* vLight, int side, idRenderMatrix& lightProjectionRenderMatrix, idRenderMatrix& lightViewRenderMatrix );
+	void				ShadowMapPassFast( const drawSurf_t* drawSurfs, viewLight_t* vLight, int side, bool atlas );
+	void				ShadowMapPassPerforated( const drawSurf_t** drawSurfs, int numDrawSurfs, viewLight_t* vLight, int side, const idRenderMatrix& lightProjectionRenderMatrix, const idRenderMatrix& lightViewRenderMatrix );
+	void				ShadowMapPassOld( const drawSurf_t* drawSurfs, viewLight_t* vLight, int side );
+
+	void				ShadowAtlasPass( const viewDef_t* _viewDef );
 
 	void				StencilShadowPass( const drawSurf_t* drawSurfs, const viewLight_t* vLight );
 	void				StencilSelectLight( const viewLight_t* vLight );
+
+	void				DrawMotionVectors();
+	void				TemporalAAPass( const viewDef_t* _viewDef );
 
 	// RB: HDR stuff
 
@@ -361,6 +367,8 @@ private:
 
 public:
 	uint64				GL_GetCurrentState() const;
+	idVec2				GetCurrentPixelOffset() const;
+
 private:
 	uint64				GL_GetCurrentStateMinusStencil() const;
 	void				GL_SetDefaultState();
@@ -492,19 +500,23 @@ private:
 	bool				currentRenderCopied;	// true if any material has already referenced _currentRender
 
 	idRenderMatrix		prevMVP[2];				// world MVP from previous frame for motion blur
+	bool				prevViewsValid;
 
 	// RB begin
-	idRenderMatrix		shadowV[6];				// shadow depth view matrix
-	idRenderMatrix		shadowP[6];				// shadow depth projection matrix
-
+	// TODO remove
 	float				hdrAverageLuminance;
 	float				hdrMaxLuminance;
 	float				hdrTime;
 	float				hdrKey;
-	// RB end
+
+	// quad-tree for managing tiles within tiled shadow map
+	TileMap				tileMap;
 
 private:
 #if defined( USE_NVRHI )
+
+	idScreenRect					stateViewport;
+	idScreenRect					stateScissor;
 
 	idScreenRect					currentViewport;
 	nvrhi::BufferHandle				currentVertexBuffer;
@@ -524,6 +536,7 @@ private:
 	SsaoPass*						ssaoPass;
 	MipMapGenPass*					hiZGenPass;
 	TonemapPass*					toneMapPass;
+	TemporalAntiAliasingPass*		taaPass;
 
 	BindingCache					bindingCache;
 	SamplerCache					samplerCache;

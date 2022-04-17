@@ -338,5 +338,6 @@ public:
 #include "HandleManager.h"
 
 #include "SoftwareCache.h"
+#include "TileMap.h" // RB
 
 #endif	/* !__LIB_H__ */

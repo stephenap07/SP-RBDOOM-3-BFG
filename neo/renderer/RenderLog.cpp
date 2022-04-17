@@ -29,6 +29,11 @@ If you have questions concerning this license or the applicable additional terms
 #include "RenderCommon.h"
 #pragma hdrstop
 
+#if defined( USE_NVRHI )
+	#include <sys/DeviceManager.h>
+	extern DeviceManager* deviceManager;
+#endif
+
 /*
 ================================================================================================
 Contains the RenderLog implementation.
@@ -37,7 +42,7 @@ TODO:	Emit statistics to the logfile at the end of views and frames.
 ================================================================================================
 */
 
-idCVar r_logLevel( "r_logLevel", "0", CVAR_INTEGER, "1 = blocks only, 2 = everything", 1, 2 );
+idCVar r_logLevel( "r_logLevel", "0", CVAR_INTEGER, "1 = blocks only, 2 = everything", 0, 2 );
 
 static const int LOG_LEVEL_BLOCKS_ONLY	= 1;
 static const int LOG_LEVEL_EVERYTHING	= 2;
@@ -50,16 +55,17 @@ const char* renderLogMainBlockLabels[] =
 	ASSERT_ENUM_STRING( MRB_FILL_GEOMETRY_BUFFER,			3 ), // RB
 	ASSERT_ENUM_STRING( MRB_SSAO_PASS,						4 ), // RB
 	ASSERT_ENUM_STRING( MRB_AMBIENT_PASS,					5 ), // RB
-	ASSERT_ENUM_STRING( MRB_DRAW_INTERACTIONS,				6 ),
-	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES,				7 ),
-	ASSERT_ENUM_STRING( MRB_FOG_ALL_LIGHTS,					8 ),
-	ASSERT_ENUM_STRING( MRB_BLOOM,							9 ),
-	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES_POST,		10 ),
-	ASSERT_ENUM_STRING( MRB_DRAW_DEBUG_TOOLS,				11 ),
-	ASSERT_ENUM_STRING( MRB_CAPTURE_COLORBUFFER,			12 ),
-	ASSERT_ENUM_STRING( MRB_POSTPROCESS,					13 ),
-	ASSERT_ENUM_STRING( MRB_DRAW_GUI,                       14 ),
-	ASSERT_ENUM_STRING( MRB_TOTAL,							15 )
+	ASSERT_ENUM_STRING( MRB_SHADOW_ATLAS_PASS,				6 ), // RB
+	ASSERT_ENUM_STRING( MRB_DRAW_INTERACTIONS,				7 ),
+	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES,				8 ),
+	ASSERT_ENUM_STRING( MRB_FOG_ALL_LIGHTS,					9 ),
+	ASSERT_ENUM_STRING( MRB_BLOOM,							10 ),
+	ASSERT_ENUM_STRING( MRB_DRAW_SHADER_PASSES_POST,		11 ),
+	ASSERT_ENUM_STRING( MRB_DRAW_DEBUG_TOOLS,				12 ),
+	ASSERT_ENUM_STRING( MRB_CAPTURE_COLORBUFFER,			13 ),
+	ASSERT_ENUM_STRING( MRB_POSTPROCESS,					14 ),
+	ASSERT_ENUM_STRING( MRB_DRAW_GUI,                       15 ),
+	ASSERT_ENUM_STRING( MRB_TOTAL,							16 )
 };
 
 #if defined( USE_VULKAN )
@@ -106,14 +112,20 @@ PC_BeginNamedEvent
 FIXME: this is not thread safe on the PC
 ========================
 */
-void PC_BeginNamedEvent( const char* szName, const idVec4& color )
+void PC_BeginNamedEvent( const char* szName, const idVec4& color, nvrhi::ICommandList* commandList )
 {
 	if( r_logLevel.GetInteger() <= 0 )
 	{
 		return;
 	}
 
-#if defined( USE_VULKAN )
+#if defined( USE_NVRHI )
+	if( commandList )
+	{
+		commandList->beginMarker( szName );
+	}
+
+#elif defined( USE_VULKAN )
 
 	// start an annotated group of calls under the this name
 	// SRS - Prefer VK_EXT_debug_utils over VK_EXT_debug_marker/VK_EXT_debug_report (deprecated by VK_EXT_debug_utils)
@@ -141,8 +153,6 @@ void PC_BeginNamedEvent( const char* szName, const idVec4& color )
 
 		qvkCmdDebugMarkerBeginEXT( vkcontext.commandBuffer[ vkcontext.frameParity ], &label );
 	}
-#elif defined(USE_NVRHI)
-	// SP: TODO
 #else
 	// RB: colors are not supported in OpenGL
 
@@ -196,14 +206,20 @@ void PC_BeginNamedEvent( const char* szName, const idVec4& color )
 PC_EndNamedEvent
 ========================
 */
-void PC_EndNamedEvent()
+void PC_EndNamedEvent( nvrhi::ICommandList* commandList )
 {
 	if( r_logLevel.GetInteger() <= 0 )
 	{
 		return;
 	}
 
-#if defined( USE_VULKAN )
+#if defined( USE_NVRHI )
+	if( commandList )
+	{
+		commandList->endMarker();
+	}
+
+#elif defined( USE_VULKAN )
 	// SRS - Prefer VK_EXT_debug_utils over VK_EXT_debug_marker/VK_EXT_debug_report (deprecated by VK_EXT_debug_utils)
 	if( vkcontext.debugUtilsSupportAvailable )
 	{
@@ -300,36 +316,56 @@ idRenderLog
 idRenderLog	renderLog;
 
 
-
-// RB begin
-/*
-========================
-idRenderLog::idRenderLog
-========================
-*/
 idRenderLog::idRenderLog()
+{
+	frameCounter = 0;
+	frameParity = 0;
+}
+
+void idRenderLog::Init()
+{
+#if defined( USE_NVRHI )
+	for( int i = 0; i < MRB_TOTAL_QUERIES; i++ )
+	{
+		timerQueries.Append( deviceManager->GetDevice()->createTimerQuery() );
+		timerUsed.Append( false );
+	}
+#endif
+}
+
+void idRenderLog::StartFrame( nvrhi::ICommandList* _commandList )
+{
+#if defined( USE_NVRHI )
+	commandList = _commandList;
+#endif
+}
+
+void idRenderLog::EndFrame()
 {
 }
 
-#if 1
+
 
 /*
 ========================
 idRenderLog::OpenMainBlock
 ========================
 */
-void idRenderLog::OpenMainBlock( renderLogMainBlock_t block, nvrhi::ICommandList* _commandList )
+void idRenderLog::OpenMainBlock( renderLogMainBlock_t block )
 {
-#if defined( USE_NVRHI )
-	commandList = _commandList;
-#endif
-
 	// SRS - Use glConfig.timerQueryAvailable flag to control timestamp capture for all platforms
 	if( glConfig.timerQueryAvailable )
 	{
 		mainBlock = block;
 
-#if defined( USE_VULKAN )
+#if defined( USE_NVRHI )
+
+		int timerIndex = mainBlock + frameParity * MRB_TOTAL;
+
+		commandList->beginTimerQuery( timerQueries[ timerIndex ] );
+		timerUsed[ timerIndex ] = true;
+
+#elif defined( USE_VULKAN )
 		if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
 		{
 			return;
@@ -340,10 +376,6 @@ void idRenderLog::OpenMainBlock( renderLogMainBlock_t block, nvrhi::ICommandList
 
 		uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 0 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
 		vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, queryIndex );
-
-#elif defined(USE_NVRHI)
-
-		// SP: use nvrhi timer queries
 
 #elif defined(__APPLE__)
 		// SRS - For OSX use elapsed time query for Apple OpenGL 4.1 using GL_TIME_ELAPSED vs GL_TIMESTAMP (which is not implemented on OSX)
@@ -375,13 +407,25 @@ void idRenderLog::OpenMainBlock( renderLogMainBlock_t block, nvrhi::ICommandList
 idRenderLog::CloseMainBlock
 ========================
 */
-void idRenderLog::CloseMainBlock()
+void idRenderLog::CloseMainBlock( int _block )
 {
 	// SRS - Use glConfig.timerQueryAvailable flag to control timestamp capture for all platforms
 	if( glConfig.timerQueryAvailable )
 	{
+		renderLogMainBlock_t block = mainBlock;
 
-#if defined( USE_VULKAN )
+		if( _block != -1 )
+		{
+			block = renderLogMainBlock_t( _block );
+		}
+
+#if defined( USE_NVRHI )
+
+		int timerIndex = block + frameParity * MRB_TOTAL;
+
+		commandList->endTimerQuery( timerQueries[ timerIndex ] );
+
+#elif defined( USE_VULKAN )
 		if( vkcontext.queryIndex[ vkcontext.frameParity ] >= ( NUM_TIMESTAMP_QUERIES - 1 ) )
 		{
 			return;
@@ -392,10 +436,6 @@ void idRenderLog::CloseMainBlock()
 
 		uint32 queryIndex = vkcontext.queryAssignedIndex[ vkcontext.frameParity ][ mainBlock * 2 + 1 ] = vkcontext.queryIndex[ vkcontext.frameParity ]++;
 		vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, queryIndex );
-
-#elif defined(USE_NVRHI)
-
-		// SP: Close nvrhi timer queries
 
 #elif defined(__APPLE__)
 		// SRS - For OSX use elapsed time query for Apple OpenGL 4.1 using GL_TIME_ELAPSED vs GL_TIMESTAMP (which is not implemented on OSX)
@@ -413,7 +453,67 @@ void idRenderLog::CloseMainBlock()
 	}
 }
 
+/*
+========================
+idRenderLog::FetchGPUTimers
+========================
+*/
+void idRenderLog::FetchGPUTimers( backEndCounters_t& pc )
+{
+	frameCounter++;
+	frameParity ^= 1;
+
+#if defined( USE_NVRHI )
+
+	for( int i = 0; i < MRB_TOTAL; i++ )
+	{
+		int timerIndex = i + frameParity * MRB_TOTAL;
+
+		if( timerUsed[timerIndex] )
+		{
+			double time = deviceManager->GetDevice()->getTimerQueryTime( timerQueries[ timerIndex ] );
+			time *= 1000000.0; // seconds -> microseconds
+
+			if( i == MRB_GPU_TIME )
+			{
+				pc.gpuMicroSec = time;
+			}
+			else if( i == MRB_FILL_DEPTH_BUFFER )
+			{
+				pc.gpuDepthMicroSec = time;
+			}
+			else if( i == MRB_SSAO_PASS )
+			{
+				pc.gpuScreenSpaceAmbientOcclusionMicroSec = time;
+			}
+			else if( i == MRB_AMBIENT_PASS )
+			{
+				pc.gpuAmbientPassMicroSec = time;
+			}
+			else if( i == MRB_SHADOW_ATLAS_PASS )
+			{
+				pc.gpuShadowAtlasPassMicroSec = time;
+			}
+			else if( i == MRB_DRAW_INTERACTIONS )
+			{
+				pc.gpuInteractionsMicroSec = time;
+			}
+			else if( i == MRB_DRAW_SHADER_PASSES )
+			{
+				pc.gpuShaderPassMicroSec = time;
+			}
+			else if( i == MRB_POSTPROCESS )
+			{
+				pc.gpuPostProcessingMicroSec = time;
+			}
+		}
+
+		// reset timer
+		timerUsed[timerIndex] = false;
+	}
 #endif
+}
+
 
 /*
 ========================
@@ -422,14 +522,7 @@ idRenderLog::OpenBlock
 */
 void idRenderLog::OpenBlock( const char* label, const idVec4& color )
 {
-#if defined( USE_NVRHI )
-	if( commandList && r_logLevel.GetInteger() > 0 )
-	{
-		commandList->beginMarker( label );
-	}
-#else
-	PC_BeginNamedEvent( label, color );
-#endif
+	PC_BeginNamedEvent( label, color, commandList );
 }
 
 /*
@@ -439,13 +532,6 @@ idRenderLog::CloseBlock
 */
 void idRenderLog::CloseBlock()
 {
-#if defined( USE_NVRHI )
-	if( commandList && r_logLevel.GetInteger() > 0 )
-	{
-		commandList->endMarker();
-	}
-#else
-	PC_EndNamedEvent();
-#endif
+	PC_EndNamedEvent( commandList );
 }
 // RB end

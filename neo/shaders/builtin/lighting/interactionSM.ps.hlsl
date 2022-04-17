@@ -38,7 +38,11 @@ Texture2D				t_Specular			: register( t1 VK_DESCRIPTOR_SET( 0 ) );
 Texture2D				t_BaseColor			: register( t2 VK_DESCRIPTOR_SET( 0 ) );
 Texture2D				t_LightFalloff		: register( t3 VK_DESCRIPTOR_SET( 0 ) );
 Texture2D				t_LightProjection	: register( t4 VK_DESCRIPTOR_SET( 0 ) );
+#if USE_SHADOW_ATLAS
+Texture2D				t_ShadowAtlas		: register( t5 VK_DESCRIPTOR_SET( 0 ) );
+#else
 Texture2DArray<float>	t_ShadowMapArray	: register( t5 VK_DESCRIPTOR_SET( 0 ) );
+#endif
 Texture2D				t_Jitter			: register( t6 VK_DESCRIPTOR_SET( 0 ) );
 
 SamplerState			s_Material : register( s0 VK_DESCRIPTOR_SET( 1 ) ); // for the normal/specular/basecolor
@@ -97,12 +101,12 @@ float2 VogelDiskSample( float sampleIndex, float samplesCount, float phi )
 
 void main( PS_IN fragment, out PS_OUT result )
 {
-	float4 bumpMap =			t_Normal.Sample( s_Material, fragment.texcoord1.xy );
+	float4 bumpMap =		t_Normal.Sample( s_Material, fragment.texcoord1.xy );
 	float4 lightFalloff =	idtex2Dproj( s_Lighting, t_LightFalloff, fragment.texcoord2 );
 	float4 lightProj =		idtex2Dproj( s_Lighting, t_LightProjection, fragment.texcoord3 );
 	float4 YCoCG =			t_BaseColor.Sample( s_Material, fragment.texcoord4.xy );
-	float4 specMapSRGB =		t_Specular.Sample( s_Material, fragment.texcoord5.xy );
-	float4 specMap =			sRGBAToLinearRGBA( specMapSRGB );
+	float4 specMapSRGB =	t_Specular.Sample( s_Material, fragment.texcoord5.xy );
+	float4 specMap =		sRGBAToLinearRGBA( specMapSRGB );
 
 	float3 lightVector = normalize( fragment.texcoord0.xyz );
 	float3 viewVector = normalize( fragment.texcoord6.xyz );
@@ -122,13 +126,13 @@ void main( PS_IN fragment, out PS_OUT result )
 	// traditional very dark Lambert light model used in Doom 3
 	float ldotN = saturate( dot3( localNormal, lightVector ) );
 
-#if defined(USE_float_LAMBERT)
-	// RB: http://developer.valvesoftware.com/wiki/float_Lambert
-	float floatLdotN = dot3( localNormal, lightVector ) * 0.5 + 0.5;
-	floatLdotN *= floatLdotN;
+#if defined(USE_HALF_LAMBERT)
+	// RB: http://developer.valvesoftware.com/wiki/Half_Lambert
+	float halfLdotN = dot3( localNormal, lightVector ) * 0.5 + 0.5;
+	halfLdotN *= halfLdotN;
 
 	// tweak to not loose so many details
-	float lambert = lerp( ldotN, floatLdotN, 0.5 );
+	float lambert = lerp( ldotN, halfLdotN, 0.5 );
 #else
 	float lambert = ldotN;
 #endif
@@ -225,16 +229,11 @@ void main( PS_IN fragment, out PS_OUT result )
 
 	shadowTexcoord.xyz /= shadowTexcoord.w;
 
-	shadowTexcoord.z = shadowTexcoord.z * rpScreenCorrectionFactor.w;
+	// receiver / occluder terminology like in ESM
+	float receiver = shadowTexcoord.z * rpScreenCorrectionFactor.w;
 	//shadowTexcoord.z = shadowTexcoord.z * 0.999991;
 	//shadowTexcoord.z = shadowTexcoord.z - bias;
 	shadowTexcoord.w = float( shadowIndex );
-
-#if 0
-	result.color.xyz = float3( shadowTexcoord.z, shadowTexcoord.z, shadowTexcoord.z );
-	result.color.w = 1.0;
-	return;
-#endif
 
 	// multiple taps
 
@@ -336,7 +335,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	float shadow = 0.0;
 
 	// RB: casting a float to int and using it as index can really kill the performance ...
-	float numSamples = 6.0;
+	float numSamples = 12.0;
 	float stepSize = 1.0 / numSamples;
 
 	float random = BlueNoise( fragment.position.xy, 1.0 );
@@ -349,16 +348,19 @@ void main( PS_IN fragment, out PS_OUT result )
 	rot.y = sin( random );
 
 	float shadowTexelSize = rpScreenCorrectionFactor.z * rpJitterTexScale.x;
-	for( int i = 0; i < 6; i++ )
+	for( int si = 0; si < 12; si++ )
 	{
-		float2 jitter = poissonDisk[i];
+		float2 jitter = poissonDisk[si];
 		float2 jitterRotated;
 		jitterRotated.x = jitter.x * rot.x - jitter.y * rot.y;
 		jitterRotated.y = jitter.x * rot.y + jitter.y * rot.x;
 
-		float4 shadowTexcoordJittered = float4( shadowTexcoord.xy + jitterRotated * shadowTexelSize, shadowTexcoord.z, shadowTexcoord.w );
+		// [0 .. 1] -> rectangle in atlas transform
+		float2 shadowTexcoordAtlas = shadowTexcoord.xy * rpJitterTexScale.y + rpShadowAtlasOffsets[ shadowIndex ].xy;
 
-		shadow += idtex2Dproj( s_Shadow, t_ShadowMapArray, shadowTexcoordJittered.xywz );
+		float2 shadowTexcoordJittered = shadowTexcoordAtlas.xy + jitterRotated * shadowTexelSize;
+
+		shadow += t_ShadowAtlas.SampleCmpLevelZero( s_Shadow, shadowTexcoordJittered.xy, receiver );
 	}
 
 	shadow *= stepSize;
@@ -384,20 +386,41 @@ void main( PS_IN fragment, out PS_OUT result )
 	{
 		float2 jitter = VogelDiskSample( si, numSamples, vogelPhi );
 
-		float4 shadowTexcoordJittered = float4( shadowTexcoord.xy + jitter * shadowTexelSize, shadowTexcoord.z, shadowTexcoord.w );
+#if USE_SHADOW_ATLAS
+		// [0 .. 1] -> rectangle in atlas transform
+		float2 shadowTexcoordAtlas = shadowTexcoord.xy * rpJitterTexScale.y + rpShadowAtlasOffsets[ shadowIndex ].xy;
 
-		shadow += t_ShadowMapArray.SampleCmpLevelZero( s_Shadow, shadowTexcoordJittered.xyw, shadowTexcoordJittered.z );
+		float2 shadowTexcoordJittered = shadowTexcoordAtlas + jitter * shadowTexelSize;
+
+		shadow += t_ShadowAtlas.SampleCmpLevelZero( s_Shadow, shadowTexcoordJittered.xy, receiver );
+#else
+		float3 shadowTexcoordJittered = float3( shadowTexcoord.xy + jitter * shadowTexelSize, shadowTexcoord.w );
+
+		shadow += t_ShadowMapArray.SampleCmpLevelZero( s_Shadow, shadowTexcoordJittered, receiver );
+#endif
 	}
 
 	shadow *= stepSize;
 #endif
 
 #else
+
+#if USE_SHADOW_ATLAS
+	float2 uvShadow;
+	uvShadow.x = shadowTexcoord.x;
+	uvShadow.y = shadowTexcoord.y;
+
+	// [0 .. 1] -> rectangle in atlas transform
+	uvShadow = uvShadow * rpJitterTexScale.y + rpShadowAtlasOffsets[ shadowIndex ].xy;
+
+	float shadow = t_ShadowAtlas.SampleCmpLevelZero( s_Shadow, uvShadow.xy, receiver );
+#else
 	float3 uvzShadow;
 	uvzShadow.x = shadowTexcoord.x;
 	uvzShadow.y = shadowTexcoord.y;
 	uvzShadow.z = shadowTexcoord.w;
-	float shadow = t_ShadowMapArray.SampleCmpLevelZero( samp2, uvzShadow, shadowTexcoord.z );
+	float shadow = t_ShadowMapArray.SampleCmpLevelZero( samp2, uvzShadow, receiver );
+#endif
 
 #if 0
 	if( shadowIndex == 0 )
@@ -431,8 +454,8 @@ void main( PS_IN fragment, out PS_OUT result )
 
 #endif
 
-	float3 floatAngleVector = normalize( lightVector + viewVector );
-	float hdotN = clamp( dot3( floatAngleVector, localNormal ), 0.0, 1.0 );
+	float3 halfAngleVector = normalize( lightVector + viewVector );
+	float hdotN = clamp( dot3( halfAngleVector, localNormal ), 0.0, 1.0 );
 
 #if USE_PBR
 	const float metallic = specMapSRGB.g;
@@ -465,8 +488,8 @@ void main( PS_IN fragment, out PS_OUT result )
 	float3 lightColor = sRGBToLinearRGB( lightProj.xyz * lightFalloff.xyz );
 
 	float vdotN = clamp( dot3( viewVector, localNormal ), 0.0, 1.0 );
-	float vdotH = clamp( dot3( viewVector, floatAngleVector ), 0.0, 1.0 );
-	float ldotH = clamp( dot3( lightVector, floatAngleVector ), 0.0, 1.0 );
+	float vdotH = clamp( dot3( viewVector, halfAngleVector ), 0.0, 1.0 );
+	float ldotH = clamp( dot3( lightVector, halfAngleVector ), 0.0, 1.0 );
 
 	// compensate r_lightScale 3 * 2
 	float3 reflectColor = specularColor * rpSpecularModifier.rgb * 1.0;// * 0.5;

@@ -837,68 +837,6 @@ Debugging tool
 */
 void idRenderBackend::DBG_ShowNormals( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-	int			i, j;
-	drawSurf_t*	drawSurf;
-	idVec3		end;
-	const srfTriangles_t*	tri;
-	float		size;
-	bool		showNumbers;
-	idVec3		pos;
-
-	if( r_showNormals.GetFloat() == 0.0f )
-	{
-		return;
-	}
-
-	if( !r_debugLineDepthTest.GetBool() )
-	{
-		GL_State( GLS_POLYMODE_LINE | GLS_DEPTHFUNC_ALWAYS );
-	}
-	else
-	{
-		GL_State( GLS_POLYMODE_LINE );
-	}
-
-	size = r_showNormals.GetFloat();
-	if( size < 0.0f )
-	{
-		size = -size;
-		showNumbers = true;
-	}
-	else
-	{
-		showNumbers = false;
-	}
-
-	if( showNumbers )
-	{
-		DBG_SimpleWorldSetup();
-
-		for( i = 0; i < numDrawSurfs; i++ )
-		{
-			drawSurf = drawSurfs[i];
-			tri = drawSurf->frontEndGeo;
-			if( tri == NULL || tri->verts == NULL )
-			{
-				continue;
-			}
-
-			for( j = 0; j < tri->numVerts; j++ )
-			{
-				const idVec3 normal = tri->verts[j].GetNormal();
-				const idVec3 tangent = tri->verts[j].GetTangent();
-				R_LocalPointToGlobal( drawSurf->space->modelMatrix, tri->verts[j].xyz + tangent + normal * 0.2f, pos );
-				RB_DrawText( va( "%d", j ), pos, 0.01f, colorWhite, viewDef->renderView.viewaxis, 1 );
-			}
-
-			for( j = 0; j < tri->numIndexes; j += 3 )
-			{
-				const idVec3 normal = tri->verts[ tri->indexes[ j + 0 ] ].GetNormal();
-				R_LocalPointToGlobal( drawSurf->space->modelMatrix, ( tri->verts[ tri->indexes[ j + 0 ] ].xyz + tri->verts[ tri->indexes[ j + 1 ] ].xyz + tri->verts[ tri->indexes[ j + 2 ] ].xyz ) * ( 1.0f / 3.0f ) + normal * 0.2f, pos );
-				RB_DrawText( va( "%d", j / 3 ), pos, 0.01f, colorCyan, viewDef->renderView.viewaxis, 1 );
-			}
-		}
-	}
 }
 
 /*
@@ -910,26 +848,6 @@ Draw texture vectors in the center of each triangle
 */
 void idRenderBackend::DBG_ShowTextureVectors( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
-	if( r_showTextureVectors.GetFloat() == 0.0f )
-	{
-		return;
-	}
-
-	GL_State( GLS_DEPTHFUNC_LESS );
-
-	for( int i = 0; i < numDrawSurfs; i++ )
-	{
-		drawSurf_t* drawSurf = drawSurfs[i];
-
-		const srfTriangles_t* tri = drawSurf->frontEndGeo;
-
-		if( tri == NULL || tri->verts == NULL )
-		{
-			continue;
-		}
-
-		DBG_SimpleSurfaceSetup( drawSurf );
-	}
 }
 
 /*
@@ -1998,12 +1916,6 @@ void idRenderBackend::DBG_ShowLines()
 idRenderBackend::DBG_TestGamma
 ================
 */
-#define	G_WIDTH		512
-#define	G_HEIGHT	512
-#define	BAR_HEIGHT	64
-
-static byte* gammaImage = nullptr;
-
 void idRenderBackend::DBG_TestGamma()
 {
 }
@@ -2089,7 +2001,7 @@ void idRenderBackend::DBG_TestImage()
 
 	float scale[16] = { 0 };
 	scale[0] = w; // scale
-	scale[5] = -h; // scale
+	scale[5] = h; // scale
 	scale[12] = halfScreenWidth - ( halfScreenWidth * w ); // translate
 	scale[13] = halfScreenHeight - ( halfScreenHeight * h ); // translate
 	scale[10] = 1.0f;
@@ -2123,116 +2035,31 @@ void idRenderBackend::DBG_TestImage()
 	{
 		GL_SelectTexture( 0 );
 		image->Bind();
+
 		GL_SelectTexture( 1 );
 		imageCr->Bind();
+
 		GL_SelectTexture( 2 );
 		imageCb->Bind();
+
 		renderProgManager.BindShader_Bink();
 	}
 	else
 	{
 		GL_SelectTexture( 0 );
 		image->Bind();
-		// Set Shader
+
 		renderProgManager.BindShader_Texture();
 	}
 
 	// Draw!
 	DrawElementsWithCounters( &testImageSurface );
-	//DrawElementsWithCounters( &unitSquareSurface );
 }
 
 // RB begin
 void idRenderBackend::DBG_ShowShadowMaps()
 {
-	idImage*	image = NULL;
-	int		max;
-	float	w, h;
 
-	if( !r_showShadowMaps.GetBool() )
-	{
-		return;
-	}
-
-	image = globalImages->shadowImage[0];
-	if( !image )
-	{
-		return;
-	}
-
-	// Set State
-	GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO );
-
-	// Set Parms
-	float texS[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
-	float texT[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
-	renderProgManager.SetRenderParm( RENDERPARM_TEXTUREMATRIX_S, texS );
-	renderProgManager.SetRenderParm( RENDERPARM_TEXTUREMATRIX_T, texT );
-
-	float texGenEnabled[4] = { 0, 0, 0, 0 };
-	renderProgManager.SetRenderParm( RENDERPARM_TEXGEN_0_ENABLED, texGenEnabled );
-
-	for( int i = 0; i < ( r_shadowMapSplits.GetInteger() + 1 ); i++ )
-	{
-		max = image->GetUploadWidth() > image->GetUploadHeight() ? image->GetUploadWidth() : image->GetUploadHeight();
-
-		w = 0.25 * image->GetUploadWidth() / max;
-		h = 0.25 * image->GetUploadHeight() / max;
-
-		w *= ( float )renderSystem->GetHeight() / renderSystem->GetWidth();
-
-		// not really necessary but just for clarity
-		const float screenWidth = 1.0f;
-		const float screenHeight = 1.0f;
-		const float halfScreenWidth = screenWidth * 0.5f;
-		const float halfScreenHeight = screenHeight * 0.5f;
-
-		float scale[16] = { 0 };
-		scale[0] = w; // scale
-		scale[5] = h; // scale
-		scale[12] = ( halfScreenWidth * w * 2.1f * i ); // translate
-		scale[13] = halfScreenHeight + ( halfScreenHeight * h ); // translate
-		scale[10] = 1.0f;
-		scale[15] = 1.0f;
-
-		float ortho[16] = { 0 };
-		ortho[0] = 2.0f / screenWidth;
-		ortho[5] = -2.0f / screenHeight;
-		ortho[10] = -2.0f;
-		ortho[12] = -1.0f;
-		ortho[13] = 1.0f;
-		ortho[14] = -1.0f;
-		ortho[15] = 1.0f;
-
-		float finalOrtho[16];
-		R_MatrixMultiply( scale, ortho, finalOrtho );
-
-		float projMatrixTranspose[16];
-		R_MatrixTranspose( finalOrtho, projMatrixTranspose );
-		renderProgManager.SetRenderParms( RENDERPARM_MVPMATRIX_X, projMatrixTranspose, 4 );
-
-		float screenCorrectionParm[4];
-		screenCorrectionParm[0] = i;
-		screenCorrectionParm[1] = 0.0f;
-		screenCorrectionParm[2] = 0.0f;
-		screenCorrectionParm[3] = 1.0f;
-		renderProgManager.SetRenderParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-
-		//	glMatrixMode( GL_PROJECTION );
-		//	glLoadMatrixf( finalOrtho );
-		//	glMatrixMode( GL_MODELVIEW );
-		//	glLoadIdentity();
-
-		// Set Color
-		GL_Color( 1, 1, 1, 1 );
-
-		GL_SelectTexture( 0 );
-		image->Bind();
-
-		renderProgManager.BindShader_DebugShadowMap();
-
-		DrawElementsWithCounters( &testImageSurface );
-	}
 }
 // RB end
 
@@ -2278,9 +2105,8 @@ void idRenderBackend::DBG_RenderDebugTools( drawSurf_t** drawSurfs, int numDrawS
 		return;
 	}
 
-	renderLog.OpenMainBlock( MRB_DRAW_DEBUG_TOOLS, commandList );
+	renderLog.OpenMainBlock( MRB_DRAW_DEBUG_TOOLS );
 	renderLog.OpenBlock( "Render_DebugTools", colorGreen );
-	RENDERLOG_PRINTF( "---------- RB_RenderDebugTools ----------\n" );
 
 	GL_State( GLS_DEFAULT );
 

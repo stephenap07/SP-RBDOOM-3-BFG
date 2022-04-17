@@ -168,8 +168,6 @@ Automatically enables 2D mapping or cube mapping if needed
 */
 void idImage::Bind()
 {
-	RENDERLOG_PRINTF( "idImage::Bind( %s )\n", GetName() );
-
 	tr.backend.SetCurrentImage( this );
 }
 
@@ -302,6 +300,10 @@ void idImage::AllocImage()
 			format = nvrhi::Format::RGBA16_FLOAT;
 			break;
 
+		case FMT_RGBA16S:
+			format = nvrhi::Format::RGBA16_SNORM;
+			break;
+
 		case FMT_RGBA32F:
 			format = nvrhi::Format::RGBA32_FLOAT;
 			break;
@@ -357,6 +359,7 @@ void idImage::AllocImage()
 	uint scaledWidth = originalWidth;
 	uint scaledHeight = originalHeight;
 
+#if 0
 	uint maxTextureSize = 0;
 
 	if( maxTextureSize > 0 &&
@@ -375,6 +378,7 @@ void idImage::AllocImage()
 			scaledHeight = maxTextureSize;
 		}
 	}
+#endif
 
 	auto textureDesc = nvrhi::TextureDesc()
 					   .setDebugName( GetName() )
@@ -382,6 +386,7 @@ void idImage::AllocImage()
 					   .setWidth( scaledWidth )
 					   .setHeight( scaledHeight )
 					   .setFormat( format )
+					   .setIsUAV( opts.isUAV )
 					   .setSampleCount( opts.samples )
 					   .setMipLevels( opts.numLevels );
 
@@ -404,7 +409,7 @@ void idImage::AllocImage()
 		textureDesc.componentMapping.r = nvrhi::ComponentSwizzle::Red;
 		textureDesc.componentMapping.g = nvrhi::ComponentSwizzle::Red;
 		textureDesc.componentMapping.b = nvrhi::ComponentSwizzle::Red;
-		textureDesc.componentMapping.a = nvrhi::ComponentSwizzle::One;
+		textureDesc.componentMapping.a = nvrhi::ComponentSwizzle::Green;
 	}
 	else if( opts.format == FMT_ALPHA )
 	{
@@ -423,8 +428,8 @@ void idImage::AllocImage()
 	else if( opts.format == FMT_R11G11B10F )
 	{
 		textureDesc.componentMapping.r = nvrhi::ComponentSwizzle::Red;
-		textureDesc.componentMapping.g = nvrhi::ComponentSwizzle::Red;
-		textureDesc.componentMapping.b = nvrhi::ComponentSwizzle::Red;
+		textureDesc.componentMapping.g = nvrhi::ComponentSwizzle::Green;
+		textureDesc.componentMapping.b = nvrhi::ComponentSwizzle::Blue;
 		textureDesc.componentMapping.a = nvrhi::ComponentSwizzle::One;
 	}
 

@@ -418,6 +418,10 @@ struct viewLight_t
 	bool					parallel;					// lightCenter gives the direction to the light at infinity
 	idVec3					lightCenter;				// offset the lighting direction for shading and
 	int						shadowLOD;					// level of detail for shadowmap selection
+	idRenderMatrix			shadowV[6];					// shadow depth view matrix for lighting pass
+	idRenderMatrix			shadowP[6];					// shadow depth projection matrix for lighting pass
+	idVec2i					imageSize;
+	idVec2i					imageAtlasOffset[6];
 	// RB end
 	idRenderMatrix			inverseBaseLightProject;	// the matrix for deforming the 'zeroOneCubeModel' to exactly cover the light volume in world space
 	const idMaterial* 		lightShader;				// light shader used by backend
@@ -432,6 +436,11 @@ struct viewLight_t
 
 	// R_AddSingleLight will build a chain of parameters here to setup shadow volumes
 	preLightShadowVolumeParms_t* 	preLightShadowVolumes;
+
+	bool					ImageAtlasPlaced() const
+	{
+		return ( imageSize.x != -1 ) && ( imageSize.y != -1 );
+	}
 };
 
 // a viewEntity is created whenever a idRenderEntityLocal is considered for inclusion
@@ -847,15 +856,21 @@ enum bindingLayoutType_t
 	BINDING_LAYOUT_BLIT,
 	BINDING_LAYOUT_DRAW_AO,
 	BINDING_LAYOUT_DRAW_AO1,
-	BINDING_LAYOUT_DRAW_SHADOW,
+	BINDING_LAYOUT_DRAW_SHADOWVOLUME,
 	BINDING_LAYOUT_DRAW_INTERACTION,
 	BINDING_LAYOUT_DRAW_INTERACTION_SM,
 	BINDING_LAYOUT_DRAW_FOG,
 	BINDING_LAYOUT_POST_PROCESS_CNM,
 	BINDING_LAYOUT_NORMAL_CUBE,
+
+	// NVRHI render passes specific
+	BINDING_LAYOUT_TAA_MOTION_VECTORS,
+	BINDING_LAYOUT_TAA_RESOLVE,
+
 	BINDING_LAYOUT_TONEMAP,
 	BINDING_LAYOUT_HISTOGRAM,
 	BINDING_LAYOUT_EXPOSURE,
+
 	NUM_BINDING_LAYOUTS
 };
 
@@ -952,7 +967,7 @@ public:
 	virtual const emptyCommand_t* 	SwapCommandBuffers_FinishCommandBuffers();
 
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
-	virtual void			TakeScreenshot( int width, int height, const char* fileName, int downSample, renderView_t* ref, int exten );
+	virtual void			TakeScreenshot( int width, int height, const char* fileName, renderView_t* ref );
 	virtual byte*			CaptureRenderToBuffer( int width, int height, renderView_t* ref );
 	virtual void			CropRenderSize( int width, int height );
 	virtual void            CropRenderSize( int x, int y, int width, int height );
@@ -1097,9 +1112,10 @@ extern idCVar r_windowHeight;
 
 extern idCVar r_debugContext;				// enable various levels of context debug
 extern idCVar r_glDriver;					// "opengl32", etc
-// SRS - Added cvar to control workarounds for AMD OSX driver bugs when shadow mapping enabled
+#if defined(USE_NVRHI)
+	extern idCVar r_useValidationLayers;
+#endif
 extern idCVar r_skipAMDWorkarounds;         // skip work arounds for AMD driver bugs
-// SRS end
 extern idCVar r_skipIntelWorkarounds;		// skip work arounds for Intel driver bugs
 extern idCVar r_vidMode;					// video mode number
 extern idCVar r_displayRefresh;				// optional display refresh rate option for vid mode
@@ -1112,7 +1128,6 @@ extern idCVar r_swapInterval;				// changes wglSwapIntarval
 extern idCVar r_offsetFactor;				// polygon offset parameter
 extern idCVar r_offsetUnits;				// polygon offset parameter
 extern idCVar r_singleTriangle;				// only draw a single triangle per primitive
-extern idCVar r_logFile;					// number of frames to emit GL logs
 extern idCVar r_clear;						// force screen clear every frame
 extern idCVar r_subviewOnly;				// 1 = don't render main view, allowing subviews to be debugged
 extern idCVar r_lightScale;					// all light intensities are multiplied by this, which is normally 3
@@ -1146,6 +1161,7 @@ extern idCVar r_useLightDepthBounds;		// use depth bounds test on lights to redu
 extern idCVar r_useShadowDepthBounds;		// use depth bounds test on individual shadows to reduce shadow fill
 // RB begin
 extern idCVar r_useShadowMapping;			// use shadow mapping instead of stencil shadows
+extern idCVar r_useShadowAtlas;				// temporary for perf testing: pack shadow maps into big atlas
 extern idCVar r_useHalfLambertLighting;		// use Half-Lambert lighting instead of classic Lambert
 extern idCVar r_useHDR;
 extern idCVar r_useSeamlessCubeMap;
@@ -1231,7 +1247,6 @@ extern idCVar r_singleSurface;				// suppress all but one surface on each entity
 extern idCVar r_shadowPolygonOffset;		// bias value added to depth test for stencil shadow drawing
 extern idCVar r_shadowPolygonFactor;		// scale value for stencil shadow drawing
 
-extern idCVar r_jitter;						// randomly subpixel jitter the projection matrix
 extern idCVar r_orderIndexes;				// perform index reorganization to optimize vertex use
 
 extern idCVar r_debugLineDepthTest;			// perform depth test on debug lines
@@ -1249,6 +1264,7 @@ extern idCVar stereoRender_deGhost;			// subtract from opposite eye to reduce gh
 extern idCVar r_useGPUSkinning;
 
 // RB begin
+extern idCVar r_shadowMapAtlasSize;
 extern idCVar r_shadowMapFrustumFOV;
 extern idCVar r_shadowMapSingleSide;
 extern idCVar r_shadowMapImageSize;
@@ -1300,6 +1316,13 @@ extern idCVar r_showLightGrid;				// show Quake 3 style light grid points
 extern idCVar r_useLightGrid;
 
 extern idCVar r_exposure;
+
+extern idCVar r_useTemporalAA;
+extern idCVar r_taaJitter;
+extern idCVar r_taaEnableHistoryClamping;
+extern idCVar r_taaClampingFactor;
+extern idCVar r_taaNewFrameWeight;
+extern idCVar r_taaMaxRadiance;
 // RB end
 
 /*

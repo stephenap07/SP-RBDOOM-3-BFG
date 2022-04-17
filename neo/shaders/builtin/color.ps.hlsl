@@ -34,8 +34,6 @@ sampler samp0 : register(s0);
 struct PS_OUT {
 	float4 color : SV_Target0;
 };
-
-cbuffer CB : register( b1 ) { float4 matrices[408]; };
 // *INDENT-ON*
 
 void main( out PS_OUT result )

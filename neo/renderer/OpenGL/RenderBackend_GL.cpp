@@ -2477,7 +2477,7 @@ void idRenderBackend::ImGui_RenderDrawLists( ImDrawData* draw_data )
 	}
 
 	// Restore modified state
-	glPolygonMode( polygon_mode[0], polygon_mode[1] );
+	//glPolygonMode( polygon_mode[0], polygon_mode[1] );
 	glBindVertexArray( glConfig.global_vao );
 
 	glBindBuffer( GL_ARRAY_BUFFER, 0 );

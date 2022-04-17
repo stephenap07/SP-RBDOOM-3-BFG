@@ -62,7 +62,6 @@ void idRenderProgManager::BindProgram( int index )
 	}
 
 	currentIndex = index;
-	RENDERLOG_PRINTF( "Binding HLSL Program %s\n", renderProgs[index].name.c_str() );
 }
 
 /*
@@ -195,7 +194,7 @@ void idRenderProgManager::LoadProgram( const int programIndex, const int vertexS
 	renderProg_t& prog = renderProgs[programIndex];
 	prog.fragmentShaderIndex = fragmentShaderIndex;
 	prog.vertexShaderIndex = vertexShaderIndex;
-	if( prog.vertexLayout > 0 )
+	if( prog.vertexLayout != LAYOUT_UNKNOWN )
 	{
 		prog.inputLayout = device->createInputLayout(
 							   &vertexLayoutDescs[prog.vertexLayout][0],
@@ -294,6 +293,8 @@ void idRenderProgManager::SetUniformValue( const renderParm_t rp, const float* v
 	{
 		uniforms[rp][i] = value[i];
 	}
+
+	uniformsChanged = true;
 }
 
 /*
@@ -304,14 +305,17 @@ idRenderProgManager::ZeroUniforms
 void idRenderProgManager::ZeroUniforms()
 {
 	memset( uniforms.Ptr(), 0, uniforms.Allocated() );
+
+	uniformsChanged = true;
 }
 
-/*
-================================================================================================
-idRenderProgManager::CommitConstantBuffer
-================================================================================================
-*/
+// Only updates the constant buffer if it was updated at all
 void idRenderProgManager::CommitConstantBuffer( nvrhi::ICommandList* commandList )
 {
-	commandList->writeBuffer( constantBuffer, uniforms.Ptr(), uniforms.Allocated() );
+	if( uniformsChanged )
+	{
+		commandList->writeBuffer( constantBuffer, uniforms.Ptr(), uniforms.Allocated() );
+
+		uniformsChanged = false;
+	}
 }

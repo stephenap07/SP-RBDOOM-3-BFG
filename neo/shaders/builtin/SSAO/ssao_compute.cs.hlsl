@@ -42,24 +42,19 @@ struct SsaoConstants
 // *INDENT-OFF*
 Texture2DArray<float> t_DeinterleavedDepth : register(t0);
 #if OCT_ENCODED_NORMALS
-Texture2D<uint> t_Normals :
-register( t1 );
+Texture2D<uint> t_Normals : register(t1);
 #else
-Texture2D<float4> t_Normals :
-register( t1 );
+Texture2D<float4> t_Normals : register(t1);
 #endif
 #if DIRECTIONAL_OCCLUSION
-RWTexture2DArray<float4> u_RenderTarget :
-register( u0 );
+RWTexture2DArray<float4> u_RenderTarget : register(u0);
 #else
-RWTexture2DArray<float> u_RenderTarget :
-register( u0 );
+RWTexture2DArray<float> u_RenderTarget : register(u0);
 #endif
 
-cbuffer c_Ssao :
-register( b1 )
+cbuffer c_Ssao : register(b1)
 {
-	SsaoConstants g_Ssao;
+    SsaoConstants g_Ssao;
 };
 // *INDENT-ON*
 

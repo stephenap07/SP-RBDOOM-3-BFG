@@ -53,7 +53,7 @@ public:
 		idImage* colorLUT = nullptr;
 	};
 
-	TonemapPass( );
+	TonemapPass();
 
 	void Init( nvrhi::DeviceHandle deviceHandle, CommonRenderPasses* commonPasses, const CreateParameters& params, nvrhi::IFramebuffer* _sampleFramebuffer );
 
@@ -61,7 +61,7 @@ public:
 
 	void SimpleRender( nvrhi::ICommandList* commandList, const ToneMappingParameters& params, const viewDef_t* viewDef, nvrhi::ITexture* sourceTexture, nvrhi::FramebufferHandle _targetFb );
 
-	bool IsLoaded( ) const
+	bool IsLoaded() const
 	{
 		return isLoaded;
 	}

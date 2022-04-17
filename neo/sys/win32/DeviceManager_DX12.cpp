@@ -39,9 +39,6 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
-// TODO extend this so 1 will be just NVRHI and 2 will turn on the additional VK validation layer
-idCVar r_useValidationLayers( "r_useValidationLayers", "0", CVAR_BOOL | CVAR_INIT, "" );
-
 using nvrhi::RefCountPtr;
 
 #define HR_RETURN(hr) if(FAILED(hr)) return false
@@ -101,8 +98,6 @@ protected:
 private:
 	bool CreateRenderTargets();
 	void ReleaseRenderTargets();
-
-	glconfig_t config;
 };
 
 static bool IsNvDeviceID( UINT id )
@@ -400,7 +395,8 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 
 	nvrhiDevice = nvrhi::d3d12::createDevice( deviceDesc );
 
-	deviceParms.enableNvrhiValidationLayer = r_useValidationLayers.GetBool();
+	deviceParms.enableNvrhiValidationLayer = r_useValidationLayers.GetInteger() > 0;
+	deviceParms.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
 
 	if( deviceParms.enableNvrhiValidationLayer )
 	{
@@ -604,7 +600,17 @@ void DeviceManager_DX12::Present()
 	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
 	UINT presentFlags = 0;
-	if( !deviceParms.vsyncEnabled && !glConfig.isFullscreen && glConfig.swapControlTearAvailable )
+
+	if( r_swapInterval.GetInteger() == 1 )
+	{
+		SetVsyncEnabled( false );
+	}
+	else if( r_swapInterval.GetInteger() == 2 )
+	{
+		SetVsyncEnabled( true );
+	}
+
+	if( !deviceParms.vsyncEnabled && !glConfig.isFullscreen && m_TearingSupported && r_swapInterval.GetInteger() == 0 )
 	{
 		presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
 	}

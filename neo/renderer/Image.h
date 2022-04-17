@@ -97,7 +97,7 @@ enum textureFormat_t
 	FMT_Y16_X16,		// 32 bpp
 	FMT_RGB565,			// 16 bpp
 
-	// RB: don't change above for legacy .bimage compatibility
+	// RB: don't change above for .bimage compatibility up until RBDOOM-3-BFG 1.1
 	FMT_ETC1_RGB8_OES,	// 4 bpp
 	FMT_SHADOW_ARRAY,	// 32 bpp * 6
 	FMT_RG16F,			// 32 bpp
@@ -105,22 +105,15 @@ enum textureFormat_t
 	FMT_RGBA32F,		// 128 bpp
 	FMT_R32F,			// 32 bpp
 	FMT_R11G11B10F,		// 32 bpp
+
+	// ^-- used up until RBDOOM-3-BFG 1.3
 	FMT_R8,
 	FMT_DEPTH_STENCIL,  // 32 bpp
-	// RB end
+	FMT_RGBA16S,		// 64 bpp
 	FMT_SRGB8,
 };
 
 int BitsForFormat( textureFormat_t format );
-
-enum textureSamples_t
-{
-	SAMPLE_1	= BIT( 0 ),
-	SAMPLE_2	= BIT( 1 ),
-	SAMPLE_4	= BIT( 2 ),
-	SAMPLE_8	= BIT( 3 ),
-	SAMPLE_16	= BIT( 4 )
-};
 
 /*
 ================================================
@@ -158,13 +151,14 @@ public:
 	textureType_t		textureType;
 	textureFormat_t		format;
 	textureColor_t		colorFormat;
-	textureSamples_t	samples;
+	uint				samples;
 	int					width;
 	int					height;			// not needed for cube maps
 	int					numLevels;		// if 0, will be 1 for NEAREST / LINEAR filters, otherwise based on size
 	bool				gammaMips;		// if true, mips will be generated with gamma correction
 	bool				readback;		// 360 specific - cpu reads back from this texture, so allocate with cached memory
 	bool				isRenderTarget;
+	bool				isUAV;
 };
 
 /*
@@ -176,7 +170,7 @@ ID_INLINE idImageOpts::idImageOpts()
 {
 	format			= FMT_NONE;
 	colorFormat		= CFM_DEFAULT;
-	samples			= SAMPLE_1;
+	samples			= 1;
 	width			= 0;
 	height			= 0;
 	numLevels		= 0;
@@ -184,6 +178,7 @@ ID_INLINE idImageOpts::idImageOpts()
 	gammaMips		= false;
 	readback		= false;
 	isRenderTarget	= false;
+	isUAV			= false;
 }
 
 /*
@@ -233,6 +228,7 @@ typedef enum
 	TD_SHADOW_ARRAY,		// 2D depth buffer array for shadow mapping
 	TD_RG16F,
 	TD_RGBA16F,
+	TD_RGBA16S,
 	TD_RGBA32F,
 	TD_R32F,
 	TD_R11G11B10F,			// memory efficient HDR RGB format with only 32bpp
@@ -252,14 +248,6 @@ typedef enum
 	CF_2D_PACKED_MIPCHAIN, // usually 2d but can be an octahedron, packed mipmaps into single 2d texture atlas and limited to dim^2
 	CF_SINGLE,      // SP: A single texture cubemap. All six sides in one image.
 } cubeFiles_t;
-
-enum imageFileType_t
-{
-	TGA,
-	PNG,
-	JPG,
-	EXR,
-};
 
 class idDeferredImage
 {
@@ -456,7 +444,8 @@ public:
 							   textureUsage_t usage,
 							   nvrhi::ICommandList* commandList,
 							   bool isRenderTarget = false,
-							   textureSamples_t samples = SAMPLE_1,
+							   bool isUAV = false,
+							   uint sampleCount = 1,
 							   cubeFiles_t cubeFiles = CF_2D );
 
 	void		GenerateCubeImage( const byte* pic[6], int size,
@@ -661,11 +650,13 @@ public:
 	idImage* 			alphaNotchImage;			// 2x1 texture with just 1110 and 1111 with point sampling
 	idImage* 			whiteImage;					// full of 0xff
 	idImage* 			blackImage;					// full of 0x00
+	idImage* 			blackDiffuseImage;			// full of 0x00
 	idImage* 			cyanImage;					// cyan
 	idImage* 			noFalloffImage;				// all 255, but zero clamped
 	idImage* 			fogImage;					// increasing alpha is denser fog
 	idImage* 			fogEnterImage;				// adjust fogImage alpha based on terminator plane
 	// RB begin
+	idImage*			shadowAtlasImage;			// 8192 * 8192 for clustered forward shading
 	idImage*			shadowImage[5];
 	idImage*			jitterImage1;				// shadow jitter
 	idImage*			jitterImage4;
@@ -674,12 +665,12 @@ public:
 	idImage*			randomImage256;
 	idImage*			blueNoiseImage256;
 	idImage*			currentRenderHDRImage;
-#if defined(USE_HDR_MSAA)
-	idImage*			currentRenderHDRImageNoMSAA;
-#endif
-	idImage*			currentRenderHDRImageQuarter;
 	idImage*			currentRenderHDRImage64;
-	idImage*			currentRenderLDR;
+	idImage*			ldrImage;						// tonemapped result which can be used for further post processing
+	idImage*			taaMotionVectorsImage;			// motion vectors for TAA projection
+	idImage*			taaResolvedImage;
+	idImage*			taaFeedback1Image;
+	idImage*			taaFeedback2Image;
 	idImage*			bloomRenderImage[2];
 	idImage*			glowImage[2];					// contains any glowable surface information.
 	idImage*			glowDepthImage[2];
@@ -694,7 +685,7 @@ public:
 	idImage*			smaaSearchImage;
 	idImage*			smaaEdgesImage;
 	idImage*			smaaBlendImage;
-	idImage*			currentNormalsImage;			// cheap G-Buffer replacement, holds normals and surface roughness
+	idImage*			gbufferNormalsRoughnessImage;	// cheap G-Buffer replacement, holds normals and surface roughness
 	idImage*			ambientOcclusionImage[2];		// contain AO and bilateral filtering keys
 	idImage*			hierarchicalZbufferImage;		// zbuffer with mip maps to accelerate screen space ray tracing
 	idImage*			imguiFontImage;
@@ -708,8 +699,8 @@ public:
 	idImage* 			scratchImage;
 	idImage* 			scratchImage2;
 	idImage* 			accumImage;
-	idImage* 			currentRenderImage;				// for SS_POST_PROCESS shaders
-	idImage* 			currentDepthImage;				// for motion blur
+	idImage* 			currentRenderImage;				// for SS_POST_PROCESS shaders, Doom 3 legacy but in HDR now
+	idImage* 			currentDepthImage;				// for motion blur, SSAO and everything that requires depth to world pos reconstruction
 	idImage* 			originalCurrentRenderImage;		// currentRenderImage before any changes for stereo rendering
 	idImage* 			loadingIconImage;				// loading icon must exist always
 	idImage* 			hellLoadingIconImage;			// loading icon must exist always

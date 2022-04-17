@@ -30,11 +30,15 @@ If you have questions concerning this license or the applicable additional terms
 #include "global_inc.hlsl"
 
 
-// *INDENT-OFF*
 #if USE_GPU_SKINNING
-cbuffer CB : register( b1 ) { float4 matrices[408]; };
+cbuffer CB :
+register( b1 )
+{
+	float4 matrices[408];
+};
 #endif
 
+// *INDENT-OFF*
 struct VS_IN {
 	float4 position : POSITION;
 	float2 texcoord : TEXCOORD0;
@@ -173,7 +177,7 @@ void main( VS_IN vertex, out VS_OUT result )
 	result.texcoord5.x = dot4( vertex.texcoord.xy, rpSpecularMatrixS );
 	result.texcoord5.y = dot4( vertex.texcoord.xy, rpSpecularMatrixT );
 
-	//# texture 6's texcoords will be the floatangle in texture space
+	//# texture 6's texcoords will be the halfangle in texture space
 
 	//# calculate normalized vector to light in R0
 	toLightLocal = normalize( toLightLocal );

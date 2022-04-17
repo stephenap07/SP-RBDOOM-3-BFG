@@ -48,19 +48,15 @@ struct ToneMappingConstants
 
 // *INDENT-OFF*
 #if SOURCE_ARRAY
-Texture2DArray t_Source :
-register( t0 );
+Texture2DArray t_Source : register(t0);
 #else
-Texture2D t_Source :
-register( t0 );
+Texture2D t_Source : register(t0);
 #endif
-RWBuffer<uint> u_Histogram :
-register( u0 );
+RWBuffer<uint> u_Histogram : register(u0);
 
-cbuffer c_ToneMapping :
-register( b0 )
+cbuffer c_ToneMapping : register(b0)
 {
-	ToneMappingConstants g_ToneMapping;
+    ToneMappingConstants g_ToneMapping;
 };
 // *INDENT-ON*
 
