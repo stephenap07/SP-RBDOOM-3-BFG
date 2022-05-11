@@ -312,8 +312,8 @@ void idRenderBackend::BindVariableStageImage( const textureStage_t* texture, con
 			GL_SelectTexture( 0 );
 			cin.image->Bind();
 
-			/*
-			if( backEnd.viewDef->is2Dgui )
+			// SRS - Reenable shaders so ffmpeg and RoQ decoder cinematics are rendered with correct colour
+			if( viewDef->is2Dgui )
 			{
 				renderProgManager.BindShader_TextureVertexColor_sRGB();
 			}
@@ -321,7 +321,6 @@ void idRenderBackend::BindVariableStageImage( const textureStage_t* texture, con
 			{
 				renderProgManager.BindShader_TextureVertexColor();
 			}
-			*/
 		}
 		else
 		{
@@ -5071,7 +5070,12 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 		return;
 	}
 
+#ifdef USE_NVRHI
 	renderLog.OpenMainBlock( MRB_BLOOM, commandList );
+#else
+	renderLog.OpenMainBlock( MRB_BLOOM );
+#endif
+
 	renderLog.OpenBlock( "Render_Bloom", colorBlue );
 
 	RENDERLOG_PRINTF( "---------- RB_Bloom( avg = %f, max = %f, key = %f ) ----------\n", hdrAverageLuminance, hdrMaxLuminance, hdrKey );

@@ -242,11 +242,11 @@ typedef struct
 	// (if either Pass, Fail or ZFail is set to replace).
 	byte ref;
 
-	// An 8 bit mask as an 0–255 integer, used when comparing the reference value with the contents of the buffer
+	// An 8 bit mask as an 0ï¿½255 integer, used when comparing the reference value with the contents of the buffer
 	// (referenceValue & readMask) comparisonFunction (stencilBufferValue & readMask).
 	byte readMask;
 
-	// An 8 bit mask as an 0–255 integer, used when writing to the buffer.Note that, like other write masks,
+	// An 8 bit mask as an 0ï¿½255 integer, used when writing to the buffer.Note that, like other write masks,
 	// it specifies which bits of stencil buffer will be affected by write
 	// (i.e.WriteMask 0 means that no bits are affected and not that 0 will be written).
 	byte writeMask;

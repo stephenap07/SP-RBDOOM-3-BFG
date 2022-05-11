@@ -448,6 +448,9 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 		{ BUILTIN_STEREO_DEGHOST, "builtin/VR/stereoDeGhost", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_STEREO_WARP, "builtin/VR/stereoWarp", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_BINK, "builtin/video/bink", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		// SRS - Added Bink shader without sRGB to linear conversion for testVideo cmd
+		{ BUILTIN_BINK_SRGB, "builtin/video/bink", "_sRGB", { { "USE_SRGB", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
+		// SRS end
 		{ BUILTIN_BINK_GUI, "builtin/video/bink_gui", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_STEREO_INTERLACE, "builtin/VR/stereoInterlace", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_MOTION_BLUR, "builtin/post/motionBlur", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },

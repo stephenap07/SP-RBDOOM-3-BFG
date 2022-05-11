@@ -1856,9 +1856,8 @@ if(MSVC)
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
 		${CMAKE_DL_LIBS}
-        RmlCore
-        RmlDebugger
-        RmlUi
+		RmlCore
+		RmlDebugger
 		)
 
     if(USE_PHYSX)
@@ -2100,7 +2099,6 @@ else()
 	    	${CMAKE_DL_LIBS}
             RmlCore
             RmlDebugger
-            RmlUi
 			)
 	endif()
 endif()

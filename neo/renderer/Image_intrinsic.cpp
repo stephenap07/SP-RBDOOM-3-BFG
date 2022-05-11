@@ -319,6 +319,11 @@ static void R_R8Image_ResNative_Linear( idImage* image, nvrhi::ICommandList* com
 {
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_LOOKUP_TABLE_MONO, nullptr, true );
 }
+
+static void R_R8Image_ResNative_Linear( idImage* image )
+{
+	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_LOOKUP_TABLE_MONO, nullptr, true );
+}
 // RB end
 
 static void R_HDR_RGBA8Image_ResNative( idImage* image, nvrhi::ICommandList* commandList )

@@ -134,8 +134,6 @@ public:																									\
 	static	idTypeInfo						Type;														\
 	static	idClass							*CreateInstance();											\
 	virtual	idTypeInfo						*GetType() const override;									\
-	virtual intptr_t						Invoke(const char* functionName, void* param1) override;	\
-	virtual bool							HasNativeFunction(const char* functionName) override;		\
 	static	idEventFunc<nameofclass>		eventCallbacks[]
 
 /*

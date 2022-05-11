@@ -917,7 +917,7 @@ void idImage::Reload( bool force, nvrhi::ICommandList* commandList )
 		if( force )
 		{
 			common->DPrintf( "regenerating %s.\n", GetName() );
-			generatorFunction( this, commandList );
+			generatorFunction( this );
 		}
 		return;
 	}
@@ -1150,6 +1150,15 @@ void idImage::GenerateShadowArray( int width, int height, textureFilter_t filter
 	opts.isRenderTarget = true;
 
 	DeriveOpts();
+
+	// if we don't have a rendering context, just return after we
+	// have filled in the parms.  We must have the values set, or
+	// an image match from a shader before the render starts would miss
+	// the generated texture
+	if( !tr.IsInitialized() )
+	{
+		return;
+	}
 
 	// The image will be uploaded to the gpu on a deferred state.
 	AllocImage();
