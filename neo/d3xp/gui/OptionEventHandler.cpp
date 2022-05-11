@@ -1,8 +1,6 @@
 #include "precompiled.h"
 #pragma hdrstop
 
-#pragma once
-
 #include "EventHandlers.h"
 
 #include "../Game_local.h"

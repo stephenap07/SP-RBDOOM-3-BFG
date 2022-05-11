@@ -336,9 +336,11 @@ class idCollisionModelManagerLocal : public idCollisionModelManager
 {
 public:
 
+#ifdef USE_PHYSX
 	void			InitPhysX( ) override;
 
 	void			ShutdownPhysX( ) override;
+#endif
 
 	// load collision models from a map file
 	void			LoadMap( const idMapFile* mapFile );
@@ -394,10 +396,10 @@ public:
 	// write a collision model file for the map entity
 	bool			WriteCollisionModelForMapEntity( const idMapEntity* mapEnt, const char* filename, const bool testTraceModel = true );
 
+#ifdef USE_PHYSX
 	void			Simulate( float simTime ) override;
 	void			FetchResults( bool wait ) override;
 
-#ifdef USE_PHYSX
 	physx::PxPhysics*	Physics( ) override;
 	physx::PxScene*		PhysicsScene( ) override;
 #endif

@@ -32,7 +32,7 @@ struct PipelineKey
 {
 	uint64 state;
 	int program;
-	int depthBias;
+	float depthBias;
 	float slopeBias;
 
 	Framebuffer* framebuffer;

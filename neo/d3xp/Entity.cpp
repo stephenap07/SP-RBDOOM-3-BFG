@@ -37,8 +37,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include <lua.hpp>
 
+#ifdef USE_PHYSX
 #include "PxActor.h"
 #include <PxPhysicsAPI.h>
+#endif
 
 /*
 ===============================================================================
@@ -488,8 +490,10 @@ idEntity::idEntity():
 	originDelta( vec3_zero ),
 	axisDelta( mat3_identity ),
 	interpolationBehavior( USE_NO_INTERPOLATION ),
-	stateScript( this ),
-	physicsActor( nullptr )
+	stateScript( this )
+#ifdef USE_PHYSX
+	,physicsActor( nullptr )
+#endif
 {
 
 	entityNumber	= ENTITYNUM_NONE;
@@ -1441,6 +1445,7 @@ void idEntity::UpdateModelTransform()
 	idVec3 origin;
 	idMat3 axis;
 
+#ifdef USE_PHYSX
 	if( physicsActor )
 	{
 		physx::PxTransform physicsTransform = physicsActor->getGlobalPose( );
@@ -1450,6 +1455,7 @@ void idEntity::UpdateModelTransform()
 		renderEntity.origin = pos;
 		return;
 	}
+#endif
 
 	if( GetPhysicsToVisualTransform( origin, axis ) )
 	{
@@ -1762,7 +1768,12 @@ void idEntity::Present()
 	}
 
 	// don't present to the renderer if the entity hasn't changed
-	if( !( thinkFlags & TH_UPDATEVISUALS ) && !physicsActor )
+	if( !( thinkFlags & TH_UPDATEVISUALS )
+#ifdef USE_PHYSX
+	&& !physicsActor )
+#else
+	)
+#endif
 	{
 		return;
 	}
@@ -2965,6 +2976,7 @@ void idEntity::InitDefaultPhysics( const idVec3& origin, const idMat3& axis )
 
 	int sphereRadius = spawnArgs.GetInt( "physxSphere", 0 );
 
+#ifdef USE_PHYSX
 	if( sphereRadius > 0 )
 	{
 		using namespace physx;
@@ -2981,6 +2993,7 @@ void idEntity::InitDefaultPhysics( const idVec3& origin, const idMat3& axis )
 
 		physicsActor = dynamic;
 	}
+#endif
 
 	if( !spawnArgs.GetBool( "noclipmodel", "0" ) )
 	{
@@ -3304,6 +3317,7 @@ bool idEntity::RunPhysics()
 		}
 	}
 
+#ifdef USE_PHYSX
 	if( physicsActor )
 	{
 		bool shouldUpdate = false;
@@ -3317,6 +3331,7 @@ bool idEntity::RunPhysics()
 			UpdateFromPhysics( false );
 		}
 	}
+#endif
 
 	return true;
 }
@@ -3566,10 +3581,12 @@ void idEntity::SetOrigin( const idVec3& org )
 
 	GetPhysics()->SetOrigin( org );
 
+#ifdef USE_PHYSX
 	if( physicsActor )
 	{
 		physicsActor->setGlobalPose( physx::PxTransform( physx::PxVec3( org.x, org.y, org.z ) ) );
 	}
+#endif
 
 	UpdateVisuals();
 }
@@ -3754,6 +3771,8 @@ void idEntity::RemoveContactEntity( idEntity* ent )
 		GetPhysics()->RemoveContactEntity( ent );
 	}
 }
+
+#ifdef USE_PHYSX
 /*
 ================
 idEntity::GetRigidActor
@@ -3763,7 +3782,7 @@ physx::PxRigidActor* idEntity::GetRigidActor( ) const
 {
 	return physicsActor;
 }
-
+#endif
 
 
 /***********************************************************************
@@ -6926,15 +6945,15 @@ void idStateScript::Load( )
 {
 	lua_State* L = gameLocal.scriptManager.LuaState( );
 
-	if( lua_getglobal( L, scriptName ) != LUA_TTABLE )
+	if( lua_getglobal( L, scriptName.c_str() ) != LUA_TTABLE )
 	{
-		gameLocal.Error( "Failed to find script %s", scriptName );
+		gameLocal.Error( "Failed to find script %s", scriptName.c_str() );
 		return;
 	}
 
 	if( lua_getfield( L, -1, "init" ) != LUA_TFUNCTION )
 	{
-		gameLocal.Error( "Failed to find constructor for %s", scriptName );
+		gameLocal.Error( "Failed to find constructor for %s", scriptName.c_str() );
 	}
 
 	gameLocal.scriptManager.ReturnEntity( owner );
@@ -6956,7 +6975,7 @@ void idStateScript::Load( )
 			gameLocal.Warning( "This should be a table!\n" );
 		}
 
-		gameLocal.Error( "Something went wrong in the constructor for %s: %s", scriptName, lua_tostring( L, -1 ) );
+		gameLocal.Error( "Something went wrong in the constructor for %s: %s", scriptName.c_str(), lua_tostring( L, -1 ) );
 		lua_pop( L, -1 );
 	}
 }

@@ -48,11 +48,13 @@ If you have questions concerning this license or the applicable additional terms
 ===============================================================================
 */
 
+#ifdef USE_PHYSX
 namespace physx
 {
 class PxPhysics;
 class PxScene;
 }
+#endif
 
 // contact type
 typedef enum

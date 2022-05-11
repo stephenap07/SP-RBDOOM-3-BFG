@@ -126,7 +126,7 @@ void RB_SetVertexColorParms( stageVertexColor_t svc );
 #if defined( USE_VULKAN )
 
 // SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL)
+#if defined(VULKAN_USE_PLATFORM_SDL) || defined(USE_NVRHI_SDL)
 	#include <SDL.h>
 	#include <SDL_vulkan.h>
 #endif
@@ -147,7 +147,7 @@ struct vulkanContext_t
 {
 	// Eric: If on linux, use this to pass SDL_Window pointer to the SDL_Vulkan_* methods not in sdl_vkimp.cpp file.
 // SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL)
+#if defined(VULKAN_USE_PLATFORM_SDL) || defined(USE_NVRHI_SDL)
 	SDL_Window*						sdlWindow = nullptr;
 #endif
 	uint64							frameCounter;

@@ -7,7 +7,6 @@
 
 #include "CubeAtlas.h"
 #include "GuiModel.h"
-#include <renderer\GLMatrix.h>
 
 
 #define MAX_BUFFERED_CHARACTERS (8192 - 5)

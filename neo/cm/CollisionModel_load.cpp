@@ -490,7 +490,9 @@ void idCollisionModelManagerLocal::FreeMap()
 
 	ShutdownHash();
 
+#ifdef USE_PHYSX
 	FreePhysXScene( );
+#endif
 }
 
 /*
@@ -4499,8 +4501,10 @@ void idCollisionModelManagerLocal::LoadMap( const idMapFile* mapFile )
 		FreeMap();
 	}
 
+#ifdef USE_PHYSX
 	FreePhysXScene( );
 	InitScene( );
+#endif
 
 	// clear the collision map
 	Clear();

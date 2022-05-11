@@ -32,7 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 
 // *INDENT-OFF*
 #if USE_GPU_SKINNING
-cbuffer CB : register( b1 ) { float4 matrices[408]; };
+cbuffer CB : register( b1 VK_DESCRIPTOR_SET( 0 ) ) { float4 matrices[408]; };
 #endif
 
 struct VS_IN {

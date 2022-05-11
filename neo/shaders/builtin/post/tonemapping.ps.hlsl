@@ -22,6 +22,8 @@
 
 #pragma pack_matrix(row_major)
 
+#include "vulkan.hlsli"
+
 struct ToneMappingConstants
 {
 	uint2 viewOrigin;
@@ -48,16 +50,16 @@ struct ToneMappingConstants
 
 // *INDENT-OFF*
 #if SOURCE_ARRAY
-Texture2DArray t_Source : register( t0 );
+Texture2DArray t_Source : register( t0 VK_DESCRIPTOR_SET( 0 ));
 #else
-Texture2D t_Source : register( t0 );
+Texture2D t_Source : register( t0 VK_DESCRIPTOR_SET( 0 ));
 #endif
-Buffer<uint> t_Exposure : register( t1 );
+Buffer<uint> t_Exposure : register( t1 VK_DESCRIPTOR_SET( 0 ));
 
-Texture2D t_ColorLUT : register( t2 );
-SamplerState s_ColorLUTSampler : register( s0 );
+Texture2D t_ColorLUT : register( t2 VK_DESCRIPTOR_SET( 0 ));
+SamplerState s_ColorLUTSampler : register( s0 VK_DESCRIPTOR_SET( 1 ));
 
-cbuffer c_ToneMapping : register( b0 )
+cbuffer c_ToneMapping : register( b0 VK_DESCRIPTOR_SET( 1 ))
 {
 	ToneMappingConstants g_ToneMapping;
 };

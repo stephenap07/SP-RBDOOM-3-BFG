@@ -43,20 +43,20 @@ SamplerState 			s_Lighting : register( s1 VK_DESCRIPTOR_SET( 1 ) ); // for sampl
 
 struct PS_IN
 {
-	half4 position		: SV_Position;
-	half4 texcoord0		: TEXCOORD0_centroid;
-	half4 texcoord1		: TEXCOORD1_centroid;
-	half4 texcoord2		: TEXCOORD2_centroid;
-	half4 texcoord3		: TEXCOORD3_centroid;
-	half4 texcoord4		: TEXCOORD4_centroid;
-	half4 texcoord5		: TEXCOORD5_centroid;
-	half4 texcoord6		: TEXCOORD6_centroid;
-	half4 color			: COLOR0;
+	float4 position		: SV_Position;
+    float4 texcoord0		: TEXCOORD0_centroid;
+    float4 texcoord1		: TEXCOORD1_centroid;
+    float4 texcoord2		: TEXCOORD2_centroid;
+    float4 texcoord3		: TEXCOORD3_centroid;
+    float4 texcoord4		: TEXCOORD4_centroid;
+    float4 texcoord5		: TEXCOORD5_centroid;
+    float4 texcoord6		: TEXCOORD6_centroid;
+    float4 color			: COLOR0;
 };
 
 struct PS_OUT
 {
-	half4 color : SV_Target0;
+    float4 color : SV_Target0;
 };
 // *INDENT-ON*
 
