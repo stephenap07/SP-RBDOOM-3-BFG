@@ -3881,6 +3881,7 @@ void idPlayer::FireWeapon()
 
 	static int physxNum = 0;
 
+	/*
 	if( ( gameLocal.time - spawnItemTime ) > 120 )
 	{
 		spawnItemTime = gameLocal.time;
@@ -3897,7 +3898,7 @@ void idPlayer::FireWeapon()
 		args.SetVector( "physxSpeed", idVec3( 512.0f, 0.0f, 0.0f ) * axis );
 		gameLocal.SpawnEntityDef( args );
 	}
-
+	*/
 
 	if( !hiddenWeapon && weapon.GetEntity()->IsReady() )
 	{

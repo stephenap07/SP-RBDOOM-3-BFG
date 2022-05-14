@@ -1142,6 +1142,9 @@ static int l_CallEvent( lua_State* L )
 
 	int numVectors = 0;
 
+	// It's possible that the passed in lua state is a coroutine. Update the lua state just for this call.
+	// On return, the lua state will be reverted to the original state before the call
+	// to this function.
 	ScopedLuaState stateScope( L );
 
 	// Get the EventDef from the upvalue data.
@@ -1150,7 +1153,7 @@ static int l_CallEvent( lua_State* L )
 	// Get the idClass from the top of the stack.
 	lua_getfield( L, 1, "classPtr" );
 
-	idClass* luaThread = ( idClass* )lua_topointer( L, -1 );
+	idClass* classPtr = ( idClass* )lua_topointer( L, -1 );
 
 	intptr_t data[D_EVENT_MAXARGS];
 
@@ -1162,7 +1165,18 @@ static int l_CallEvent( lua_State* L )
 		{
 			case D_EVENT_INTEGER:
 			{
-				*( int* )&data[i] = luaL_checkinteger( L, j );
+				if( lua_isnumber( L, j ) )
+				{
+					*( int* )&data[i] = luaL_checkinteger( L, j );
+				}
+				else if( lua_isboolean( L, j ) )
+				{
+					*( int* )&data[i] = lua_toboolean( L, j );
+				}
+				else
+				{
+					common->Warning( "Failed to parse event argument %s", evdef->GetName() );
+				}
 				break;
 			}
 			case D_EVENT_FLOAT:
@@ -1182,9 +1196,7 @@ static int l_CallEvent( lua_State* L )
 				lua_getfield( L, j, "z" );
 				vectors[numVectors].z = ( luaL_checknumber( L, -1 ) );
 				lua_pop( L, 1 );
-				*( idVec3** )&data[i] = &vectors[numVectors];
-
-				numVectors++;
+				*( idVec3** )&data[i] = &vectors[numVectors++];
 				break;
 			}
 			case D_EVENT_STRING:
@@ -1194,12 +1206,6 @@ static int l_CallEvent( lua_State* L )
 				break;
 			}
 			case D_EVENT_ENTITY:
-			{
-				lua_getfield( L, j, "classPtr" );
-				data[i] = ( intptr_t )lua_topointer( L, -1 );
-				lua_pop( L, 1 );
-				break;
-			}
 			case D_EVENT_ENTITY_NULL:
 			{
 				lua_getfield( L, j, "classPtr" );
@@ -1208,19 +1214,22 @@ static int l_CallEvent( lua_State* L )
 				break;
 			}
 			case D_EVENT_TRACE:
-			{
-				common->Error( "TODO: Implement Trace" );
-				break;
-			}
 			default:
 			{
-				common->Error( "Invalid arg format string for '%s' event.", evdef->GetName( ) );
+				common->Error( "<unsupported parameter type '%c'>", format[i] );
 				break;
 			}
 		}
 	}
 
-	luaThread->ProcessEventArgPtr( evdef, data );
+	if( classPtr )
+	{
+		classPtr->ProcessEventArgPtr( evdef, data );
+	}
+	else
+	{
+		common->FatalError( "Invalid lua thread passed in" );
+	}
 
 	return 1;
 }
@@ -1229,32 +1238,30 @@ static void SetEventUpValues( lua_State* L, const idList<const idEventDef*>& eve
 {
 	for( int i = 0; i < events.Num(); i++ )
 	{
-		if( lua_getfield( L, -1, events[i]->GetName() ) == LUA_TFUNCTION )
-		{
-			lua_pushlightuserdata( L, ( void* )events[i] );
-			lua_setupvalue( L, -2, 1 );
-		}
+		lua_getfield( L, -1, events[i]->GetName() );
+		lua_pushlightuserdata( L, ( void* )events[i] );
+		lua_setupvalue( L, -2, 1 );
+
 		// pop the function
 		lua_pop( L, 1 );
 	}
 }
 
-int OpenLuaEventLib( lua_State* luaState, const idList<luaL_Reg>& classLib, const idList<const idEventDef*>& events )
+static int RegisterLuaClass( lua_State* L, const idList<luaL_Reg>& classLib, const idList<const idEventDef*>& events )
 {
 	// Can't use luaL_newlib, so use the expanded version to add the upvalues.
-	luaL_checkversion( luaState );
 
 	// Create the empty table, pre-allocated to the right size
-	lua_createtable( luaState, 0, classLib.Num( ) );
+	lua_createtable( L, 0, classLib.Num( ) );
 
 	// Push a nil upvalue for now
-	lua_pushnil( luaState );
+	lua_pushnil( L );
 
 	// Register event functions with 1 upvalue
-	luaL_setfuncs( luaState, &classLib[0], 1 );
+	luaL_setfuncs( L, &classLib[0], 1 );
 
 	// Set up the upvalues
-	SetEventUpValues( luaState, events );
+	SetEventUpValues( L, events );
 
 	return 1;
 }
@@ -1315,17 +1322,9 @@ void idClass::ExportLuaFunctions( lua_State* luaState )
 		memset( set, 0, sizeof( bool ) * numEventDefs );
 		classLib.Append( { NULL, NULL } );
 
-		// Create the metatable to use in the registry
-		luaL_newmetatable( luaState, c->classname );
-
-		// Key
-		lua_pushstring( luaState, "__index" );
-
 		// Create a new table with all the event methods for this class
-		OpenLuaEventLib( luaState, classLib, eventDefs );
-
-		// Set the __index to the newly created table
-		lua_settable( luaState, -3 );
+		RegisterLuaClass( luaState, classLib, eventDefs );
+		lua_setglobal( luaState, c->classname );
 	}
 
 	delete[] set;
@@ -1622,6 +1621,202 @@ void idClass::ExportScriptEvents_f( const idCmdArgs& args )
 
 		fileSystem->CloseFile( file );
 	}
+
+	delete[] set;
+}
+
+void idClass::ExportTypeScriptEvents_f( const idCmdArgs& args )
+{
+	// allocate temporary memory for flags so that the subclass's event callbacks
+	// override the superclass's event callback
+	int numEventDefs = idEventDef::NumEventCommands();
+	bool* set = new bool[numEventDefs];
+
+	bool firstEntityClassFound = false;
+
+	memset( set, 0, sizeof( bool ) * numEventDefs );
+
+	idFile* file = fileSystem->OpenFileWrite( "script/tech4-api.d.ts", "fs_basepath" );
+
+	file->Printf( "/** Generated by RBDOOM-3-BFG */\n\n\n" );
+
+	// Declare the types here.
+	file->Printf( "interface Vector {\n" );
+	file->Printf( "\tx: number;\n" );
+	file->Printf( "\ty: number;\n" );
+	file->Printf( "\tz: number;\n}\n\n" );
+
+	// TODO(Stephen): Have this declared in a utility script instead.
+	//file->Printf( "enum AnimChannel {\n" );
+	//file->Printf( "\tAll: 0,\n" );
+	//file->Printf( "\tTorso: 1,\n" );
+	//file->Printf( "\tLegs: 2,\n" );
+	//file->Printf( "\tHead: 3,\n" );
+	//file->Printf( "\tEyelids: 4,\n" );
+	//file->Printf( "};\n\n" );
+
+	// Declare all the events here.
+	for( const idTypeInfo* c = classHierarchy.GetNext(); c != NULL; c = c->node.GetNext() )
+	{
+		idEventFunc<idClass>* def = c->eventCallbacks;
+		if( !def || !def[0].event )
+		{
+			file->Printf( "declare interface %s extends %s {}\n\n", c->classname, c->superclass );
+			// no new events or overrides
+			continue;
+		}
+
+		const bool isEntityAbstractClass = c->IsType( idEntity::Type ) && !firstEntityClassFound;
+
+		file->Printf( "\n/**\n" );
+		file->Printf( "* @type %-24s\n", c->classname );
+		file->Printf( "*/\n" );
+
+		file->Printf( "declare" );
+
+		const bool isIdClass = !c->superclass || ( c->superclass && idStr::Cmp( c->superclass, "NULL" ) == 0 );
+
+		file->Printf( " interface %s", c->classname );
+
+		if( !isIdClass && !( c->IsType( idThread::Type ) || c->IsType( idLuaThread::Type ) ) )
+		{
+			file->Printf( " extends %s", c->superclass );
+		}
+
+		file->Printf( " {\n\n" );
+
+		if( isEntityAbstractClass )
+		{
+			file->Printf( "\nremove(): void;\n\n" );
+			firstEntityClassFound = true;
+		}
+
+		// go through each entry until we hit the NULL terminator
+		for( int j = 0; def[j].event != NULL; j++ )
+		{
+			const idEventDef* ev = def[j].event;
+			int evNum = ev->GetEventNum();
+
+			if( set[evNum] )
+			{
+				//continue;
+			}
+
+			if( ev->GetName()[0] == '_' || ev->GetName()[0] == '<' )
+			{
+				// internal event
+				continue;
+			}
+
+			if( ( c->super && c->super->RespondsTo( *ev ) ) &&
+					!( c->IsType( idThread::Type ) || c->IsType( idLuaThread::Type ) ) )
+			{
+				file->Printf( "\t/** @override */\n" );
+			}
+
+			set[evNum] = true;
+
+			file->Printf( "\t%s(", ev->GetName() );
+
+			if( ev->GetNumArgs() )
+			{
+				file->Printf( " " );
+			}
+
+			// params
+			const char* formatspec = ev->GetArgFormat();
+			for( int arg = 0; arg < ev->GetNumArgs(); arg++ )
+			{
+				if( arg != 0 )
+				{
+					file->Printf( ", " );
+				}
+
+				switch( formatspec[arg] )
+				{
+					case D_EVENT_FLOAT:
+						file->Printf( "parm%d: number", arg );
+						break;
+
+					case D_EVENT_INTEGER:
+						file->Printf( "parm%d: number", arg );
+						break;
+
+					case D_EVENT_VECTOR:
+						file->Printf( "parm%d: Vector", arg );
+						break;
+
+					case D_EVENT_STRING:
+						file->Printf( "parm%d: string", arg );
+						break;
+
+					case D_EVENT_ENTITY:
+					case D_EVENT_ENTITY_NULL:
+						file->Printf( "parm%d: idEntity", arg );
+						break;
+
+					case 0:
+						// void
+						break;
+
+					default:
+					case D_EVENT_TRACE:
+						file->Printf( "parm%d: <unsupported>", arg );
+						break;
+				}
+			}
+
+			if( ev->GetNumArgs() )
+			{
+				file->Printf( " " );
+			}
+
+			file->Printf( "): " );
+
+			// Return type.
+			switch( ev->GetReturnType() )
+			{
+				case D_EVENT_FLOAT:
+					file->Printf( "number" );
+					break;
+
+				case D_EVENT_INTEGER:
+					file->Printf( "number" );
+					break;
+
+				case D_EVENT_VECTOR:
+					file->Printf( "Vector" );
+					break;
+
+				case D_EVENT_STRING:
+					file->Printf( "string" );
+					break;
+
+				case D_EVENT_ENTITY:
+				case D_EVENT_ENTITY_NULL:
+					file->Printf( "idEntity" );
+					break;
+
+				case 0:
+					file->Printf( "void" );
+					break;
+
+				default:
+				case D_EVENT_TRACE:
+					file->Printf( "<unsupported> " );
+					break;
+			}
+
+			file->Printf( ";\n\n" );
+		}
+
+		file->Printf( "}\n\n" );
+	}
+
+	// Declare the global variables here.
+	file->Printf( "declare const sys: idLuaThread;" );
+
+	fileSystem->CloseFile( file );
 
 	delete[] set;
 }

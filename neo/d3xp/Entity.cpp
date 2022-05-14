@@ -56,6 +56,7 @@ const idEventDef EV_PostSpawn( "<postspawn>", NULL );
 const idEventDef EV_FindTargets( "<findTargets>", NULL );
 const idEventDef EV_Touch( "<touch>", "et" );
 const idEventDef EV_GetName( "getName", NULL, 's' );
+const idEventDef EV_GetEntityNum( "getEntityNum", NULL, 'd' );
 const idEventDef EV_SetName( "setName", "s" );
 const idEventDef EV_Activate( "activate", "e" );
 const idEventDef EV_ActivateTargets( "activateTargets", "e" );
@@ -128,6 +129,7 @@ const idEventDef EV_GuiNamedEvent( "guiNamedEvent", "ds" );
 ABSTRACT_DECLARATION( idClass, idEntity )
 EVENT( EV_GetName,				idEntity::Event_GetName )
 EVENT( EV_SetName,				idEntity::Event_SetName )
+EVENT( EV_GetEntityNum,			idEntity::Event_GetEntityNum )
 EVENT( EV_FindTargets,			idEntity::Event_FindTargets )
 EVENT( EV_ActivateTargets,		idEntity::Event_ActivateTargets )
 EVENT( EV_NumTargets,			idEntity::Event_NumTargets )
@@ -572,8 +574,7 @@ void idEntity::Spawn()
 	const idKeyValue*	networkSync;
 	const char*			classname;
 	const char*			scriptObjectName;
-	const char*			stateScriptName;
-	const char*			loadScriptName;
+	const char*			luaObject;
 
 	gameLocal.RegisterEntity( this, -1, gameLocal.GetSpawnArgs() );
 
@@ -713,12 +714,11 @@ void idEntity::Spawn()
 		ConstructScriptObject();
 	}
 
-	if( spawnArgs.GetString( "loadScript", nullptr, &loadScriptName ) &&
-			spawnArgs.GetString( "stateScript", nullptr, &stateScriptName ) )
+	if( spawnArgs.GetString( "luaObject", nullptr, &luaObject ) )
 	{
-		gameLocal.Printf( "Found state script %s\n", loadScriptName );
-		stateScript.SetName( stateScriptName );
-		ConstructStateScript( loadScriptName );
+		gameLocal.Printf( "Found state script %s\n", luaObject );
+		stateScript.SetName( luaObject );
+		stateScript.Construct();
 	}
 
 	// determine time group
@@ -742,6 +742,8 @@ idEntity::~idEntity()
 	activeNode.Remove();
 
 	Signal( SIG_REMOVED );
+
+	stateScript.Destroy();
 
 	// we have to set back the default physics object before unbinding because the entity
 	// specific physics object might be an entity variable and as such could already be destroyed.
@@ -1017,6 +1019,7 @@ idEntity::Think
 */
 void idEntity::Think()
 {
+	stateScript.Think();
 	RunPhysics();
 	Present();
 }
@@ -4283,12 +4286,8 @@ void idEntity::SignalEvent( idThread* thread, signalNum_t signalnum )
 
 void idEntity::ConstructStateScript( const char* loadScript )
 {
-	if( loadScript )
-	{
-		gameLocal.scriptManager.LoadScript( va( "script/%s", loadScript ) );
-	}
-
-	stateScript.Load( );
+	stateScript.SetName( loadScript );
+	stateScript.Construct( );
 }
 
 /***********************************************************************
@@ -4776,7 +4775,6 @@ idEntity::Event_GetName
 void idEntity::Event_GetName()
 {
 	idThread::ReturnString( name.c_str() );
-	gameLocal.scriptManager.ReturnString( name.c_str( ) );
 }
 
 /*
@@ -4787,6 +4785,16 @@ idEntity::Event_SetName
 void idEntity::Event_SetName( const char* newname )
 {
 	SetName( newname );
+}
+
+/*
+================
+idEntity::Event_GetEntityNum
+================
+*/
+void idEntity::Event_GetEntityNum()
+{
+	idThread::ReturnInt( entityNumber );
 }
 
 /*
@@ -5265,7 +5273,6 @@ void idEntity::Event_GetOrigin()
 {
 	auto origin = GetLocalCoordinates( GetPhysics( )->GetOrigin( ) );
 	idThread::ReturnVector( origin );
-	gameLocal.scriptManager.ReturnVector( origin );
 }
 
 /*
@@ -5846,7 +5853,6 @@ void idEntity::Event_GuiNamedEvent( int guiNum, const char* event )
 		renderEntity.gui[guiNum - 1]->HandleNamedEvent( event );
 	}
 }
-
 
 /***********************************************************************
 
@@ -6825,7 +6831,6 @@ void idAnimatedEntity::Event_GetJointHandle( const char* jointname )
 
 	joint = animator.GetJointHandle( jointname );
 	idThread::ReturnInt( joint );
-	gameLocal.scriptManager.ReturnInt( joint );
 }
 
 /*
@@ -6897,7 +6902,6 @@ void idAnimatedEntity::Event_GetJointPos( jointHandle_t jointnum )
 	}
 
 	idThread::ReturnVector( offset );
-	gameLocal.scriptManager.ReturnVector( offset );
 }
 
 /*
@@ -6922,41 +6926,267 @@ void idAnimatedEntity::Event_GetJointAngle( jointHandle_t jointnum )
 	idThread::ReturnVector( vec );
 }
 
-void idStateScript::Load( )
-{
-	lua_State* L = gameLocal.scriptManager.LuaState( );
 
-	if( lua_getglobal( L, scriptName ) != LUA_TTABLE )
+/*
+
+TypeScript callbacks.
+
+*/
+
+static void TS_New( lua_State* L, idEntity* ent )
+{
+	constexpr const char* ModuleName = "Weapon";
+	constexpr const char* FunctionName = "Register";
+
+	// Get the register table
+	lua_getglobal( L, ModuleName );
+	if( !lua_istable( L, -1 ) )
 	{
-		gameLocal.Error( "Failed to find script %s", scriptName );
+		gameLocal.Warning( "Failed to find the %s table", ModuleName );
 		return;
 	}
 
-	if( lua_getfield( L, -1, "init" ) != LUA_TFUNCTION )
+	lua_getfield( L, -1, FunctionName );
+	if( !lua_isfunction( L, -1 ) )
 	{
-		gameLocal.Error( "Failed to find constructor for %s", scriptName );
+		gameLocal.Warning( "Failed to find function %s", FunctionName );
 	}
 
-	gameLocal.scriptManager.ReturnEntity( owner );
-
-	if( !lua_istable( L, -1 ) )
-	{
-		gameLocal.Warning( "This should be a table!\n" );
-	}
-
-	if( !lua_isfunction( L, -2 ) )
-	{
-		gameLocal.Warning( "This should be a function!\n" );
-	}
+	gameLocal.scriptManager.ReturnEntity( ent );
 
 	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
 	{
-		if( !lua_istable( L, -1 ) )
-		{
-			gameLocal.Warning( "This should be a table!\n" );
-		}
+		gameLocal.Warning( "Something went wrong in the %s.%s: %s", ModuleName, FunctionName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+}
 
-		gameLocal.Error( "Something went wrong in the constructor for %s: %s", scriptName, lua_tostring( L, -1 ) );
-		lua_pop( L, -1 );
+static void TS_SendEvent( lua_State* L, idEntity* ent, const char* eventName )
+{
+	constexpr const char* ModuleName = "Weapon";
+	constexpr const char* FunctionName = "SendEvent";
+
+	// Get the register table
+	lua_getglobal( L, ModuleName );
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find the %s table", ModuleName );
+		return;
+	}
+
+	lua_getfield( L, -1, FunctionName );
+	gameLocal.scriptManager.ReturnEntity( ent );
+
+	lua_createtable( L, 0, 1 );
+	lua_pushstring( L, eventName );
+	lua_setfield( L, -2, "name" );
+
+	if( lua_pcall( L, 2, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the %s.%s: %s", ModuleName, FunctionName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+}
+
+static void TS_Think( lua_State* L, idEntity* ent )
+{
+	constexpr const char* ModuleName = "Weapon";
+	constexpr const char* FunctionName = "Think";
+
+	// Get the register table
+	lua_getglobal( L, ModuleName );
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find the %s table", ModuleName );
+		return;
+	}
+
+	lua_getfield( L, -1, FunctionName );
+	gameLocal.scriptManager.ReturnEntity( ent );
+
+	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the %s.%s: %s", ModuleName, FunctionName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+}
+
+idStateScript::idStateScript( idEntity* _owner )
+	: owner( _owner ), scriptName()
+{
+}
+
+void idStateScript::Construct( )
+{
+	if( scriptName.IsEmpty() )
+	{
+		return;
+	}
+
+	gameLocal.scriptManager.AddReloadable( this );
+
+	lua_State* L = gameLocal.scriptManager.LuaState( );
+
+	TS_New( L, owner );
+
+	return;
+
+	lua_getglobal( L, "EntitySystem" );
+
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find EntitySystem" );
+		return;
+	}
+
+	lua_getfield( L, -1, "RegisterEntity" );
+
+	if( !lua_isfunction( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find function RegisterEntity" );
+		return;
+	}
+
+	gameLocal.scriptManager.ReturnEntity( owner );
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "This should be a table!" );
+		return;
+	}
+
+	lua_getglobal( L, scriptName.c_str() );
+
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find script %s", scriptName.c_str() );
+		return;
+	}
+
+	if( lua_pcall( L, 2, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the RegisterEntity function for %s: %s", scriptName.c_str(), lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+}
+
+void idStateScript::Destroy()
+{
+	if( scriptName.IsEmpty() )
+	{
+		return;
+	}
+
+	gameLocal.scriptManager.DestroyReloadable( this );
+
+	lua_State* L = gameLocal.scriptManager.LuaState();
+
+	lua_getglobal( L, owner->GetName() );
+	if( lua_istable( L, -1 ) )
+	{
+		lua_pushnil( L );
+		lua_setglobal( L, owner->GetName() );
+	}
+	lua_pop( L, 1 );
+
+	return;
+
+	const char* entitySystemTbl = "EntitySystem";
+
+	lua_getglobal( L, entitySystemTbl );
+
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find %s", entitySystemTbl );
+		lua_pop( L, 1 );
+		return;
+	}
+
+	const char* destroyFunc = "DestroyEntity";
+
+	lua_getfield( L, -1, destroyFunc );
+
+	if( !lua_isfunction( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find function %s", destroyFunc );
+	}
+
+	lua_pushinteger( L, owner->entityNumber );
+
+	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the destroy function for %s: %s", scriptName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+}
+
+void idStateScript::Think()
+{
+	if( scriptName.IsEmpty() )
+	{
+		return;
+	}
+
+	lua_State* L = gameLocal.scriptManager.LuaState();
+
+	TS_Think( L, owner );
+
+	return;
+
+	lua_getglobal( L, "EntitySystem" );
+
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find EntitySystem" );
+		return;
+	}
+
+	lua_getfield( L, -1, "Think" );
+	lua_pushinteger( L, owner->entityNumber );
+
+	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the Think function for %s: %s", scriptName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+}
+
+void idStateScript::Reload()
+{
+	if( scriptName.IsEmpty() )
+	{
+		return;
+	}
+
+	Construct();
+}
+
+void idStateScript::SendEvent( int entityNumber, const char* eventName )
+{
+	if( scriptName.IsEmpty() )
+	{
+		return;
+	}
+
+	lua_State* L = gameLocal.scriptManager.LuaState();
+
+	TS_SendEvent( L, owner, eventName );
+	return;
+
+	lua_getglobal( L, "EntitySystem" );
+
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find EntitySystem" );
+		return;
+	}
+
+	lua_getfield( L, -1, "ReceiveEvent" );
+	lua_pushinteger( L, entityNumber );
+	lua_pushstring( L, eventName );
+
+	if( lua_pcall( L, 2, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the Think function for %s: %s", scriptName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
 	}
 }

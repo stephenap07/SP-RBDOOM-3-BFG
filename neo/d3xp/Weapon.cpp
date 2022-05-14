@@ -27,14 +27,78 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#pragma hdrstop
 #include "precompiled.h"
+#pragma hdrstop
+
 #include "../framework/DeclSkin.h"
 #include "../renderer/RenderWorld.h"
 #include "../ui/ListGUI.h"
 #include "../ui/UserInterface.h"
 #include "Game_local.h"
 #include "PredictedValue_impl.h"
+
+#include <lua.hpp>
+
+/***********************************************************************
+
+  luaWeaponObject
+
+***********************************************************************/
+
+CLASS_DECLARATION( idClass, LuaWeaponObject )
+END_CLASS
+
+/*
+==================
+rvmWeaponObject::Init
+==================
+*/
+void LuaWeaponObject::Init( idWeapon* weapon, const char* luaObjStr )
+{
+	owner = weapon;
+
+	lua_State* L = gameLocal.scriptManager.LuaState();
+
+	lua_getglobal( L, luaObjStr );
+
+	// Get the Construct function in the lua table.
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Lua %s table does not exist", luaObjStr );
+		return;
+	}
+
+	lua_getfield( L, -1, "Construct" );
+
+	if( !lua_isfunction( L, -1 ) )
+	{
+		gameLocal.Warning( "Construct field does not exist in table %s", luaObjStr );
+		return;
+	}
+
+	// Begin class table
+	lua_createtable( L, 0, 2 );
+	lua_pushlightuserdata( L, ( void* )owner );
+	lua_setfield( L, -2, "classPtr" );
+
+	luaL_getmetatable( L, owner->GetClassname() );
+	if( !lua_istable( L, -1 ) )
+	{
+		lua_setmetatable( L, -2 );
+	}
+	else
+	{
+		gameLocal.Warning( "Failed to initialize metatable for %s\n", owner->GetClassname() );
+	}
+	// End class table.
+
+	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the destroy function for %s: %s", luaObjStr, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+	// End function
+}
 
 /***********************************************************************
 
@@ -118,13 +182,102 @@ const idSoundShader* rvmWeaponObject::FindSound( const char* name )
 
 ***********************************************************************/
 
+//
+// event defs
+//
+const idEventDef EV_Weapon_Clear( "<clear>" );
+const idEventDef EV_Weapon_GetOwner( "getOwner", NULL, 'e' );
+const idEventDef EV_Weapon_Next( "nextWeapon" );
+const idEventDef EV_Weapon_State( "weaponState", "sd" );
+const idEventDef EV_Weapon_UseAmmo( "useAmmo", "d" );
+const idEventDef EV_Weapon_AddToClip( "addToClip", "d" );
+const idEventDef EV_Weapon_AmmoInClip( "ammoInClip", NULL, 'f' );
+const idEventDef EV_Weapon_AmmoAvailable( "ammoAvailable", NULL, 'f' );
+const idEventDef EV_Weapon_TotalAmmoCount( "totalAmmoCount", NULL, 'f' );
+const idEventDef EV_Weapon_ClipSize( "clipSize", NULL, 'f' );
+const idEventDef EV_Weapon_WeaponOutOfAmmo( "weaponOutOfAmmo" );
+const idEventDef EV_Weapon_WeaponReady( "weaponReady" );
+const idEventDef EV_Weapon_WeaponReloading( "weaponReloading" );
+const idEventDef EV_Weapon_WeaponHolstered( "weaponHolstered" );
+const idEventDef EV_Weapon_WeaponRising( "weaponRising" );
+const idEventDef EV_Weapon_WeaponLowering( "weaponLowering" );
+const idEventDef EV_Weapon_Flashlight( "flashlight", "d" );
+const idEventDef EV_Weapon_LaunchProjectiles( "launchProjectiles", "dffff" );
+const idEventDef EV_Weapon_CreateProjectile( "createProjectile", NULL, 'e' );
 const idEventDef EV_Weapon_EjectBrass( "ejectBrass" );
+const idEventDef EV_Weapon_Melee( "melee", NULL, 'd' );
+const idEventDef EV_Weapon_GetWorldModel( "getWorldModel", NULL, 'e' );
+const idEventDef EV_Weapon_AllowDrop( "allowDrop", "d" );
+const idEventDef EV_Weapon_AutoReload( "autoReload", NULL, 'f' );
+const idEventDef EV_Weapon_NetReload( "netReload" );
+const idEventDef EV_Weapon_IsInvisible( "isInvisible", NULL, 'f' );
+const idEventDef EV_Weapon_NetEndReload( "netEndReload" );
+const idEventDef EV_Weapon_GrabberHasTarget( "grabberHasTarget", NULL, 'd' );
+const idEventDef EV_Weapon_Grabber( "grabber", "d" );
+const idEventDef EV_Weapon_LaunchProjectilesEllipse( "launchProjectilesEllipse", "dffff" );
+const idEventDef EV_Weapon_LaunchPowerup( "launchPowerup", "sfd" );
+const idEventDef EV_Weapon_StartWeaponSmoke( "startWeaponSmoke" );
+const idEventDef EV_Weapon_StopWeaponSmoke( "stopWeaponSmoke" );
+const idEventDef EV_Weapon_StartWeaponParticle( "startWeaponParticle", "s" );
+const idEventDef EV_Weapon_StopWeaponParticle( "stopWeaponParticle", "s" );
+const idEventDef EV_Weapon_StartWeaponLight( "startWeaponLight", "s" );
+const idEventDef EV_Weapon_StopWeaponLight( "stopWeaponLight", "s" );
+const idEventDef EV_Weapon_GetState( "getWeaponState", "", 's' );
+const idEventDef EV_Weapon_SetState( "setWeaponState", "s" );
 
 //
 // class def
 //
 CLASS_DECLARATION( idAnimatedEntity, idWeapon )
+EVENT( EV_Weapon_Clear, idWeapon::Event_Clear )
+EVENT( EV_Weapon_GetOwner, idWeapon::Event_GetOwner )
+EVENT( EV_Weapon_State, idWeapon::Event_WeaponState )
+EVENT( EV_Weapon_WeaponReady, idWeapon::Event_WeaponReady )
+EVENT( EV_Weapon_WeaponOutOfAmmo, idWeapon::Event_WeaponOutOfAmmo )
+EVENT( EV_Weapon_WeaponReloading, idWeapon::Event_WeaponReloading )
+EVENT( EV_Weapon_WeaponHolstered, idWeapon::Event_WeaponHolstered )
+EVENT( EV_Weapon_WeaponRising, idWeapon::Event_WeaponRising )
+EVENT( EV_Weapon_WeaponLowering, idWeapon::Event_WeaponLowering )
+EVENT( EV_Weapon_UseAmmo, idWeapon::Event_UseAmmo )
+EVENT( EV_Weapon_AddToClip, idWeapon::Event_AddToClip )
+EVENT( EV_Weapon_AmmoInClip, idWeapon::Event_AmmoInClip )
+EVENT( EV_Weapon_AmmoAvailable, idWeapon::Event_AmmoAvailable )
+EVENT( EV_Weapon_TotalAmmoCount, idWeapon::Event_TotalAmmoCount )
+EVENT( EV_Weapon_ClipSize, idWeapon::Event_ClipSize )
+EVENT( AI_PlayAnim, idWeapon::Event_PlayAnim )
+EVENT( AI_PlayCycle, idWeapon::Event_PlayCycle )
+EVENT( AI_SetBlendFrames, idWeapon::Event_SetBlendFrames )
+EVENT( AI_GetBlendFrames, idWeapon::Event_GetBlendFrames )
+EVENT( AI_AnimDone, idWeapon::Event_AnimDone )
+EVENT( EV_Weapon_Next, idWeapon::Event_Next )
+EVENT( EV_SetSkin, idWeapon::Event_SetSkin )
+EVENT( EV_Weapon_Flashlight, idWeapon::Event_Flashlight )
+EVENT( EV_Light_GetLightParm, idWeapon::Event_GetLightParm )
+EVENT( EV_Light_SetLightParm, idWeapon::Event_SetLightParm )
+EVENT( EV_Light_SetLightParms, idWeapon::Event_SetLightParms )
+EVENT( EV_Weapon_LaunchProjectiles, idWeapon::Event_LaunchProjectiles )
+EVENT( EV_Weapon_CreateProjectile, idWeapon::Event_CreateProjectile )
 EVENT( EV_Weapon_EjectBrass, idWeapon::Event_EjectBrass )
+EVENT( EV_Weapon_Melee, idWeapon::Event_Melee )
+EVENT( EV_Weapon_GetWorldModel, idWeapon::Event_GetWorldModel )
+EVENT( EV_Weapon_AllowDrop, idWeapon::Event_AllowDrop )
+EVENT( EV_Weapon_AutoReload, idWeapon::Event_AutoReload )
+EVENT( EV_Weapon_NetReload, idWeapon::Event_NetReload )
+EVENT( EV_Weapon_IsInvisible, idWeapon::Event_IsInvisible )
+EVENT( EV_Weapon_NetEndReload, idWeapon::Event_NetEndReload )
+EVENT( EV_Weapon_Grabber, idWeapon::Event_Grabber )
+EVENT( EV_Weapon_GrabberHasTarget, idWeapon::Event_GrabberHasTarget )
+EVENT( EV_Weapon_Grabber_SetGrabDistance, idWeapon::Event_GrabberSetGrabDistance )
+EVENT( EV_Weapon_LaunchProjectilesEllipse, idWeapon::Event_LaunchProjectilesEllipse )
+EVENT( EV_Weapon_LaunchPowerup, idWeapon::Event_LaunchPowerup )
+EVENT( EV_Weapon_StartWeaponSmoke, idWeapon::Event_StartWeaponSmoke )
+EVENT( EV_Weapon_StopWeaponSmoke, idWeapon::Event_StopWeaponSmoke )
+EVENT( EV_Weapon_StartWeaponParticle, idWeapon::Event_StartWeaponParticle )
+EVENT( EV_Weapon_StopWeaponParticle, idWeapon::Event_StopWeaponParticle )
+EVENT( EV_Weapon_StartWeaponLight, idWeapon::Event_StartWeaponLight )
+EVENT( EV_Weapon_StopWeaponLight, idWeapon::Event_StopWeaponLight )
+EVENT( EV_Weapon_GetState, idWeapon::Event_GetState )
+EVENT( EV_Weapon_SetState, idWeapon::Event_SetState )
 END_CLASS
 
 
@@ -335,7 +488,7 @@ void idWeapon::Save( idSaveGame* savefile ) const
 
 	savefile->WriteInt( animBlendFrames );
 	savefile->WriteInt( animDoneTime );
-	//savefile->WriteBool( isLinked );
+	savefile->WriteBool( isLinked );
 
 	savefile->WriteObject( owner );
 	worldModel.Save( savefile );
@@ -499,7 +652,7 @@ void idWeapon::Restore( idRestoreGame* savefile )
 
 	savefile->ReadInt( animBlendFrames );
 	savefile->ReadInt( animDoneTime );
-	//savefile->ReadBool( isLinked );
+	savefile->ReadBool( isLinked );
 
 	savefile->ReadObject( reinterpret_cast<idClass*&>( owner ) );
 	worldModel.Restore( savefile );
@@ -830,6 +983,9 @@ void idWeapon::Clear()
 	muzzleOrigin.Zero();
 	pushVelocity.Zero();
 
+	status = WP_HOLSTERED;
+	state = "";
+	idealState = "";
 	animBlendFrames = 0;
 	animDoneTime = 0;
 
@@ -844,6 +1000,8 @@ void idWeapon::Clear()
 		delete currentWeaponObject;
 		currentWeaponObject = nullptr;
 	}
+
+	stateScript.Destroy();
 
 	flashTime = 250;
 	lightOn = false;
@@ -927,7 +1085,7 @@ void idWeapon::Clear()
 
 	sndHum = NULL;
 
-	//isLinked			= false;
+	isLinked = false;
 	projectileEnt = NULL;
 
 	isFiring = false;
@@ -999,6 +1157,7 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 {
 	const char* shader;
 	const char* objectType;
+	const char* luaObject;
 	const char* vmodel;
 	const char* guiName;
 	const char* projectileName;
@@ -1283,6 +1442,8 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 		currentWeaponObject->CallSpawn( );
 	}
 
+	weaponDef->dict.GetString( "luaWeapon", nullptr, &luaObject );
+
 	spawnArgs = weaponDef->dict;
 
 	shader = spawnArgs.GetString( "snd_hum" );
@@ -1294,7 +1455,11 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 
 	isLinked = true;
 
-	//isLinked = true;
+	if( luaObject )
+	{
+		stateScript.SetName( luaObject );
+		stateScript.Construct();
+	}
 
 	// call script object's constructor
 	//ConstructScriptObject();
@@ -1453,10 +1618,10 @@ void idWeapon::UpdateGUI()
 		return;
 	}
 
-	//if( status == WP_HOLSTERED )
-	//{
-	//	return;
-	//}
+	if( status == WP_HOLSTERED )
+	{
+		return;
+	}
 
 	if( owner->weaponGone )
 	{
@@ -1769,15 +1934,7 @@ idWeapon::Think
 */
 void idWeapon::Think()
 {
-	if( isFlashLight )
-	{
-		return;
-	}
-
-	if( currentWeaponObject )
-	{
-		currentWeaponObject->Execute();
-	}
+	stateScript.Think();
 }
 
 /*
@@ -1787,8 +1944,10 @@ idWeapon::Raise
 */
 void idWeapon::Raise()
 {
-	currentWeaponObject->SetState( "Raise" );
-	currentWeaponObject->AppendState( "Idle" );
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "RaiseWeapon" );
+	}
 }
 
 /*
@@ -1799,7 +1958,10 @@ idWeapon::PutAway
 void idWeapon::PutAway()
 {
 	hasBloodSplat = false;
-	currentWeaponObject->SetState( "Lower" );
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "LowerWeapon" );
+	}
 }
 
 /*
@@ -1810,11 +1972,10 @@ NOTE: this is only for impulse-triggered reload, auto reload is scripted
 */
 void idWeapon::Reload()
 {
-	OutOfAmmo = false;
-
-	// Reload and go back to idle.
-	currentWeaponObject->SetState( "Reload" );
-	currentWeaponObject->AppendState( "Idle" );
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "Reload" );
+	}
 }
 
 /*
@@ -1931,13 +2092,28 @@ idWeapon::OwnerDied
 */
 void idWeapon::OwnerDied()
 {
-	currentWeaponObject->OwnerDied();
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "OwnerDied" );
+
+		stateScript.Think();
+
+		// Update the grabber effects
+		if( /*!common->IsMultiplayer() &&*/ grabberState != -1 )
+		{
+			grabber.Update( owner, hide );
+		}
+	}
 
 	Hide();
 	if( worldModel.GetEntity() )
 	{
 		worldModel.GetEntity()->Hide();
 	}
+
+	// don't clear the weapon immediately since the owner might have killed himself by firing the weapon
+	// within the current stack frame
+	PostEventMS( &EV_Weapon_Clear, 0 );
 }
 
 /*
@@ -1947,25 +2123,23 @@ idWeapon::BeginAttack
 */
 void idWeapon::BeginAttack()
 {
-	if( !OutOfAmmo )
+	if( status != WP_OUTOFAMMO )
 	{
 		lastAttack = gameLocal.time;
 	}
 
-	if( currentWeaponObject->IsFiring() )
+	if( !isLinked )
 	{
 		return;
 	}
 
-	if( currentWeaponObject->IsReloading() )
+	if( sndHum && grabberState == -1 )
 	{
-		return;
+		// _D3XP :: don't stop grabber hum
+		StopSound( SND_CHANNEL_BODY, false );
 	}
 
-	currentWeaponObject->SetState( "Fire" );
-	currentWeaponObject->AppendState( "Idle" );
-
-	isFiring = true;
+	stateScript.SendEvent( entityNumber, "BeginAttack" );
 }
 
 /*
@@ -1975,7 +2149,10 @@ idWeapon::EndAttack
 */
 void idWeapon::EndAttack()
 {
-	isFiring = false;
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "EndAttack" );
+	}
 }
 
 /*
@@ -1985,7 +2162,7 @@ idWeapon::isReady
 */
 bool idWeapon::IsReady() const
 {
-	return !hide && !IsHidden() && !currentWeaponObject->IsRunning() && !IsHolstered() && !currentWeaponObject->IsStateRunning( "Lower" );
+	return !hide && !IsHidden() && ( ( status == WP_RELOAD ) || ( status == WP_READY ) || ( status == WP_OUTOFAMMO ) );
 }
 
 /*
@@ -1995,11 +2172,7 @@ idWeapon::IsReloading
 */
 bool idWeapon::IsReloading() const
 {
-	if( !currentWeaponObject )
-	{
-		return false;
-	}
-	return currentWeaponObject->IsStateRunning( "Reload" );
+	return ( status == WP_RELOAD );
 }
 
 /*
@@ -2009,11 +2182,7 @@ idWeapon::IsHolstered
 */
 bool idWeapon::IsHolstered() const
 {
-	if( !currentWeaponObject )
-	{
-		return false;
-	}
-	return currentWeaponObject->IsStateRunning( "Holstered" );
+	return ( status == WP_HOLSTERED );
 }
 
 /*
@@ -2023,6 +2192,11 @@ idWeapon::ShowCrosshair
 */
 bool idWeapon::ShowCrosshair() const
 {
+	if( !currentWeaponObject )
+	{
+		return false;
+	}
+
 	// JDC: this code would never function as written, I'm assuming they wanted the following behavior
 	//	return !( state == idStr( WP_RISING ) || state == idStr( WP_LOWERING ) || state == idStr( WP_HOLSTERED ) );
 	return !currentWeaponObject->IsRunning() || currentWeaponObject->IsStateRunning( "Fire" );
@@ -2057,11 +2231,16 @@ void idWeapon::WeaponStolen()
 	assert( !common->IsClient() );
 	if( projectileEnt )
 	{
+		if( isLinked )
+		{
+			stateScript.SendEvent( entityNumber, "WeaponStolen" );
+			stateScript.Think();
+		}
 		projectileEnt = NULL;
 	}
 
 	// set to holstered so we can switch weapons right away
-	//idealState = WP_HOLSTERED;
+	status = WP_HOLSTERED;
 
 	HideWeapon();
 }
@@ -3015,6 +3194,18 @@ int idWeapon::GetGrabberState() const
 
 /*
 ================
+idWeapon::GetState
+
+Returns the current state
+================
+*/
+const char* idWeapon::GetState() const
+{
+	return state.c_str();
+}
+
+/*
+================
 idWeapon::AmmoCount
 
 Returns the total number of rounds regardless of the required ammo
@@ -3109,6 +3300,11 @@ bool idWeapon::ClientReceiveEvent( int event, int time, const idBitMsg& msg )
 	{
 		case EVENT_RELOAD:
 		{
+			if( isLinked )
+			{
+				stateScript.SendEvent( entityNumber, "Reload" );
+			}
+
 			// Local clients predict reloads, only process this event for remote clients.
 			//if ( owner != NULL && !owner->IsLocallyControlled() && ( gameLocal.time - time < 1000 ) ) {
 			//	if ( WEAPON_NETRELOAD.IsLinked() ) {
@@ -3120,6 +3316,10 @@ bool idWeapon::ClientReceiveEvent( int event, int time, const idBitMsg& msg )
 		}
 		case EVENT_ENDRELOAD:
 		{
+			if( isLinked )
+			{
+				stateScript.SendEvent( entityNumber, "EndReload" );
+			}
 			// Local clients predict reloads, only process this event for remote clients.
 			//if ( owner != NULL && !owner->IsLocallyControlled() && WEAPON_NETENDRELOAD.IsLinked() ) {
 			//	WEAPON_NETENDRELOAD = true;
@@ -3172,18 +3372,49 @@ void idWeapon::Event_GetOwner()
 
 /*
 ===============
+idWeapon::Event_WeaponState
+===============
+*/
+void idWeapon::Event_WeaponState( const char* statename, int blendFrames )
+{
+	state = statename;
+
+	// HACK, Fixes reload animation on player not playing on second reload ( on non local client players, and only with host viewing. )
+	if( common->IsMultiplayer() && strcmp( weaponDef->GetName(), "weapon_shotgun_double_mp" ) == 0 )
+	{
+		if( strcmp( statename, "Reload" ) != 0 )
+		{
+			if( status == WP_RELOAD )
+			{
+				status = WP_READY;
+			}
+		}
+	}
+
+	if( !state.Icmp( "Fire" ) )
+	{
+		isFiring = true;
+	}
+	else
+	{
+		isFiring = false;
+	}
+
+	animBlendFrames = blendFrames;
+}
+
+/*
+===============
 idWeapon::Event_WeaponReady
 ===============
 */
 void idWeapon::Event_WeaponReady()
 {
-	//status = WP_READY;
-	currentWeaponObject->SetState( "Rising" );
-	currentWeaponObject->AppendState( "Idle" );
-	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_READY \n" );
-	//if ( isLinked ) {
-	//	WEAPON_RAISEWEAPON = false;
-	//}
+	status = WP_READY;
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "RaiseWeapon" );
+	}
 	if( sndHum )
 	{
 		StartSoundShader( sndHum, SND_CHANNEL_BODY, 0, false, NULL );
@@ -3198,7 +3429,7 @@ idWeapon::Event_WeaponOutOfAmmo
 */
 void idWeapon::Event_WeaponOutOfAmmo()
 {
-	//status = WP_OUTOFAMMO;
+	status = WP_OUTOFAMMO;
 	OutOfAmmo = true;
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_OUTOFAMMO \n" );
 }
@@ -3210,7 +3441,7 @@ idWeapon::Event_WeaponReloading
 */
 void idWeapon::Event_WeaponReloading()
 {
-	Reload();
+	status = WP_RELOAD;
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_RELOAD \n" );
 }
 
@@ -3221,7 +3452,7 @@ idWeapon::Event_WeaponHolstered
 */
 void idWeapon::Event_WeaponHolstered()
 {
-	//status = WP_HOLSTERED;
+	status = WP_HOLSTERED;
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_HOLSTERED \n" );
 }
 
@@ -3232,8 +3463,12 @@ idWeapon::Event_WeaponRising
 */
 void idWeapon::Event_WeaponRising()
 {
-	Raise();
+	status = WP_RISING;
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_RISING \n" );
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "RaiseWeapon" );
+	}
 	owner->WeaponRisingCallback();
 }
 
@@ -3244,8 +3479,12 @@ idWeapon::Event_WeaponLowering
 */
 void idWeapon::Event_WeaponLowering()
 {
-	LowerWeapon();
+	status = WP_LOWERING;
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_LOWERING \n" );
+	if( isLinked )
+	{
+		stateScript.SendEvent( entityNumber, "LowerWeapon" );
+	}
 	owner->WeaponLoweringCallback();
 }
 
@@ -3489,8 +3728,10 @@ bool idWeapon::Event_AnimDone( int channel, int blendFrames )
 {
 	if( animDoneTime - FRAME2MS( blendFrames ) <= gameLocal.time )
 	{
+		idThread::ReturnInt( 1 );
 		return true;
 	}
+	idThread::ReturnInt( 0 );
 	return false;
 }
 
@@ -4267,6 +4508,27 @@ void idWeapon::Event_StopWeaponLight( const char* name )
 		}
 	}
 }
+
+/*
+=====================
+idWeapon::Event_GetState
+=====================
+*/
+void idWeapon::Event_GetState() const
+{
+	idThread::ReturnString( state );
+}
+
+/*
+=====================
+idWeapon::Event_SetState
+=====================
+*/
+void idWeapon::Event_SetState( const char* nextState )
+{
+	state = nextState;
+}
+
 /*
 =====================
 idWeapon::Event_Melee

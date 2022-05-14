@@ -100,12 +100,10 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	uniforms.SetNum( RENDERPARM_TOTAL, vec4_zero );
 	uniformsChanged = false;
 
-	// FIXME(Stephen): The max version gets exceeded the more geometry is on the screen.
-	// Separate this out into a separate binding set like the samplers?
 	constantBuffer = device->createBuffer(
 						 nvrhi::utils::CreateVolatileConstantBufferDesc( uniforms.Allocated(),
 								 "RenderParams",
-								 uniforms.Num() * 64 ) );
+								 c_MaxRenderPassConstantBufferVersions ) );
 
 	// === Main draw vertex layout ===
 	vertexLayoutDescs.SetNum( NUM_VERTEX_LAYOUTS, idList<nvrhi::VertexAttributeDesc>() );

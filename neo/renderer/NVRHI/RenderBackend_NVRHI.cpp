@@ -933,10 +933,12 @@ idRenderBackend::GL_Clear
 */
 void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stencilValue, float r, float g, float b, float a, bool clearHDR )
 {
+	nvrhi::IFramebuffer* framebuffer = Framebuffer::GetActiveFramebuffer()->GetApiObject();
+
 	// TODO: Do something if there is no depth-stencil attachment.
 	if( color )
 	{
-		nvrhi::utils::ClearColorAttachment( commandList, Framebuffer::GetActiveFramebuffer()->GetApiObject(), 0, nvrhi::Color( 0.f ) );
+		nvrhi::utils::ClearColorAttachment( commandList, framebuffer, 0, nvrhi::Color( 0.f ) );
 	}
 
 	if( clearHDR )
@@ -946,9 +948,11 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 
 	if( depth || stencil )
 	{
-		nvrhi::ITexture* depthTexture = ( nvrhi::ITexture* )( globalImages->currentDepthImage->GetTextureID() );
-		const nvrhi::FormatInfo& depthFormatInfo = nvrhi::getFormatInfo( depthTexture->getDesc().format );
-		commandList->clearDepthStencilTexture( depthTexture, nvrhi::AllSubresources, depth, 1.f, depthFormatInfo.hasStencil, stencilValue );
+		nvrhi::utils::ClearDepthStencilAttachment( commandList, framebuffer, 1.0f, stencilValue );
+
+		//nvrhi::ITexture* depthTexture = ( nvrhi::ITexture* )( globalImages->currentDepthImage->GetTextureID() );
+		//const nvrhi::FormatInfo& depthFormatInfo = nvrhi::getFormatInfo( depthTexture->getDesc().format );
+		//commandList->clearDepthStencilTexture( depthTexture, nvrhi::AllSubresources, depth, 1.f, depthFormatInfo.hasStencil, stencilValue );
 	}
 }
 
@@ -1030,13 +1034,13 @@ void idRenderBackend::CheckCVars()
 #endif
 	// SRS end
 
+#if 0
 	if( r_antiAliasing.IsModified() )
 	{
 		switch( r_antiAliasing.GetInteger() )
 		{
 			case ANTI_ALIASING_MSAA_2X:
 			case ANTI_ALIASING_MSAA_4X:
-			case ANTI_ALIASING_MSAA_8X:
 				if( r_antiAliasing.GetInteger() > 0 )
 				{
 					//glEnable( GL_MULTISAMPLE );
@@ -1053,8 +1057,15 @@ void idRenderBackend::CheckCVars()
 			Framebuffer::ResizeFramebuffers();
 		}
 
+		if( taaPass )
+		{
+			delete taaPass;
+			taaPass = NULL;
+		}
+
 		r_antiAliasing.ClearModified();
 	}
+#endif
 
 	/*
 	if( r_usePBR.IsModified() ||

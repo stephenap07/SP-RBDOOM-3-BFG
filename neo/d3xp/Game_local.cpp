@@ -33,6 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Game_local.h"
 
+#include "../imgui/BFGimgui.h"
 #include "rmlui/RmlUserInterface.h"
 
 #include "PxPhysicsApi.h"
@@ -832,7 +833,11 @@ void idGameLocal::Warning( const char* fmt, ... ) const
 	va_end( argptr );
 
 	thread = idThread::CurrentThread();
-	if( thread )
+	if( gameLocal.scriptManager.LuaState() )
+	{
+		gameLocal.scriptManager.Warning( "%s", text );
+	}
+	else if( thread )
 	{
 		thread->Warning( "%s", text );
 	}
@@ -863,7 +868,11 @@ void idGameLocal::DWarning( const char* fmt, ... ) const
 	va_end( argptr );
 
 	thread = idThread::CurrentThread();
-	if( thread )
+	if( gameLocal.scriptManager.LuaState() )
+	{
+		common->Warning( "%s", text );
+	}
+	else if( thread )
 	{
 		thread->Warning( "%s", text );
 	}
@@ -889,7 +898,11 @@ void idGameLocal::Error( const char* fmt, ... ) const
 	va_end( argptr );
 
 	thread = idThread::CurrentThread();
-	if( thread )
+	if( gameLocal.scriptManager.LuaState() )
+	{
+		common->Error( "%s", text );
+	}
+	else if( thread )
 	{
 		thread->Error( "%s", text );
 	}
@@ -1406,7 +1419,7 @@ void idGameLocal::InitFromNewMap( const char* mapName, idRenderWorld* renderWorl
 
 	Printf( "--------------------------------------\n" );
 
-	scriptManager.SendEvent( "OnMapLoad" );
+	//scriptManager.SendEvent( "OnMapLoad" );
 }
 
 /*
@@ -2818,9 +2831,6 @@ void idGameLocal::RunFrame( idUserCmdMgr& cmdMgr, gameReturn_t& ret )
 				}
 			}
 
-			// now run state scripts
-			scriptManager.Think( time );
-
 			RunTimeGroup2( cmdMgr );
 // jmarshall
 			RunSharedThink();
@@ -3580,6 +3590,30 @@ void idGameLocal::RunDebugInfo()
 
 	// collision map debug output
 	collisionModelManager->DebugOutput( player->GetEyePosition() );
+
+	if( g_showWeaponDebug.GetBool() )
+	{
+		if( ImGuiHook::IsReadyToRender() )
+		{
+			static ImVec4 col = ImVec4( 1.00f, 1.00f, 1.00f, 1.00f );
+
+			idWeapon* currWeapon = player->weapon.GetEntity();
+
+			if( currWeapon )
+			{
+				ImGui::Begin( "Weapon State" );
+				ImGui::SetNextWindowSize( ImVec2( 300, 200 ) );
+				ImGui::Text( "Class %s", currWeapon->GetClassname() );
+				ImGui::Text( "Name %s", currWeapon->GetName() );
+				ImGui::Text( "Script Name %s", currWeapon->stateScript.GetName() );
+				ImGui::Text( "Ammo Available %d", currWeapon->AmmoAvailable() );
+				ImGui::Text( "Ammo Count %d", currWeapon->AmmoCount() );
+				ImGui::Text( "Ammo In Clip %d", currWeapon->AmmoInClip() );
+				ImGui::TextColored( col, "Weapon State %s", currWeapon->GetState() );
+				ImGui::End();
+			}
+		}
+	}
 }
 
 /*

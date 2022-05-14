@@ -83,7 +83,7 @@ public:
 		refdef.time[0] = time;
 		refdef.time[1] = time;
 
-		tr.CropRenderSize( drawRect.x, drawRect.y, drawRect.z, drawRect.w );
+		tr.CropRenderSize( drawRect.x, drawRect.y, drawRect.z, drawRect.w, true );
 		world->RenderScene( &refdef );
 		tr.UnCrop( );
 	}

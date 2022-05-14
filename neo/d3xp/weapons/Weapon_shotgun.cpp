@@ -48,6 +48,8 @@ idWeaponShotgun::Raise
 */
 stateResult_t idWeaponShotgun::Raise( stateParms_t* parms )
 {
+	return SRESULT_WAIT; // TODO: Remove.
+
 	enum RisingState
 	{
 		RISING_NOTSET = 0,
@@ -80,6 +82,7 @@ idWeaponShotgun::Lower
 */
 stateResult_t idWeaponShotgun::Lower( stateParms_t* parms )
 {
+	return SRESULT_WAIT;
 	enum LoweringState
 	{
 		LOWERING_NOTSET = 0,

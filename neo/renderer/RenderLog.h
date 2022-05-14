@@ -53,6 +53,7 @@ enum renderLogMainBlock_t
 	MRB_DRAW_SHADER_PASSES_POST,
 	MRB_DRAW_DEBUG_TOOLS,
 	MRB_CAPTURE_COLORBUFFER,
+	MRB_TAA,
 	MRB_POSTPROCESS,
 	MRB_DRAW_GUI,
 	MRB_TOTAL,
@@ -64,8 +65,7 @@ enum renderLogMainBlock_t
 
 /*
 ================================================
-idRenderLog stubbed version for the SPUs and high
-performance rendering in retail builds.
+idRenderLog
 
 // Performance Events abstraction layer for OpenGL, Vulkan, DX12
 // see https://devblogs.nvidia.com/best-practices-gpu-performance-events/
@@ -84,14 +84,6 @@ private:
 
 	idStaticList<nvrhi::TimerQueryHandle, MRB_TOTAL_QUERIES> timerQueries;
 	idStaticList<bool, MRB_TOTAL_QUERIES> timerUsed;
-
-	//idArray< idArray< nvrhi::TimerQueryHandle, MRB_TOTAL_QUERIES >, NUM_FRAME_DATA >		timerQueries;
-
-	// GPU timestamp queries
-	//idArray< uint32, NUM_FRAME_DATA >									queryIndex;
-
-	//idArray< idArray< uint64, NUM_TIMESTAMP_QUERIES >, NUM_FRAME_DATA >	queryResults;
-	//idArray< VkQueryPool, NUM_FRAME_DATA >		queryPools;
 #endif
 
 public:

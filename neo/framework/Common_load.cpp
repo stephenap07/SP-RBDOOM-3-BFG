@@ -33,7 +33,6 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Common_local.h"
 #include "../sys/sys_lobby_backend.h"
-#include <sys/DeviceManager.h>
 
 
 #define LAUNCH_TITLE_DOOM_EXECUTABLE		"doom1.exe"
@@ -51,7 +50,7 @@ extern idCVar g_demoMode;
 // This is for the dirty hack to get a dialog to show up before we capture the screen for autorender.
 const int NumScreenUpdatesToShowDialog = 25;
 
-extern DeviceManager* deviceManager;
+
 
 /*
 ================

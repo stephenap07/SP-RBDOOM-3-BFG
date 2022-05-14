@@ -41,8 +41,8 @@ struct VS_IN {
 
 struct VS_OUT {
 	float4 position : SV_Position;
-	float4 texcoord0 : TEXCOORD0_centroid;
-	float2 texcoord1 : TEXCOORD1_centroid;
+	float4 texcoord0 : TEXCOORD0;
+	float2 texcoord1 : TEXCOORD1;
 };
 // *INDENT-ON*
 

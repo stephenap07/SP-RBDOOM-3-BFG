@@ -4,6 +4,31 @@
 
 #include "../sys/sys_public.h"
 
+#include <stdio.h>
+#include <stdint.h>
+#if defined _WIN32 || defined __CYGWIN__
+	#ifdef CIMGUI_NO_EXPORT
+		#define IMGUIAPI
+	#else
+		#define IMGUIAPI __declspec(dllexport)
+	#endif
+	#ifndef __GNUC__
+		#define snprintf sprintf_s
+	#endif
+#else
+	#define API
+#endif
+
+#if defined __cplusplus
+	#define EXTERN extern "C"
+#else
+	#include <stdarg.h>
+	#include <stdbool.h>
+	#define EXTERN extern
+#endif
+
+#define CIMGUI_API EXTERN IMGUIAPI
+#define CONST const
 
 namespace ImGuiHook
 {
@@ -35,6 +60,9 @@ void	Render();
 void	Destroy();
 
 } //namespace ImGuiHook
+
+CIMGUI_API void igHookNewFrame();
+CIMGUI_API bool	igIsReadyToRender();
 
 
 #endif /* NEO_IMGUI_IMGUI_HOOKS_H_ */

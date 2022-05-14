@@ -80,7 +80,7 @@ idCVar r_glDriver( "r_glDriver", "", CVAR_RENDERER, "\"opengl32\", etc." );
 #endif
 // SRS end
 // RB: disabled 16x MSAA
-idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = SMAA 1x\n 2 = MSAA 2x\n 3 = MSAA 4x\n 4 = MSAA 8x\n", 0, ANTI_ALIASING_MSAA_8X );
+idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = TAA 1x\n 2 = TAA + SMAA 1x\n 3 = MSAA 2x\n 4 = MSAA 4x\n", 0, ANTI_ALIASING_MSAA_4X );
 // RB end
 idCVar r_vidMode( "r_vidMode", "0", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_INTEGER, "fullscreen video mode number" );
 idCVar r_displayRefresh( "r_displayRefresh", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_NOCHEAT, "optional display refresh rate option for vid mode", 0.0f, 240.0f );
@@ -334,11 +334,12 @@ idCVar r_useLightGrid( "r_useLightGrid", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "HDR exposure or LDR brightness [-4.0 .. 4.0]", -4.0f, 4.0f );
 
 idCVar r_useTemporalAA( "r_useTemporalAA", "1", CVAR_RENDERER | CVAR_BOOL, "only disable for debugging" );
-idCVar r_taaJitter( "r_taaJitter", "2", CVAR_RENDERER | CVAR_INTEGER, "0: None, 1: MSAA, 2: Halton, 3: R2 Sequence, 4: White Noise" );
+idCVar r_taaJitter( "r_taaJitter", "3", CVAR_RENDERER | CVAR_INTEGER, "0: None, 1: MSAA, 2: Halton, 3: R2 Sequence, 4: White Noise" );
 idCVar r_taaEnableHistoryClamping( "r_taaEnableHistoryClamping", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_taaClampingFactor( "r_taaClampingFactor", "1.0", CVAR_RENDERER | CVAR_FLOAT, "" );
 idCVar r_taaNewFrameWeight( "r_taaNewFrameWeight", "0.1", CVAR_RENDERER | CVAR_FLOAT, "" );
 idCVar r_taaMaxRadiance( "r_taaMaxRadiance", "10000", CVAR_RENDERER | CVAR_FLOAT, "" );
+idCVar r_taaMotionVectors( "r_taaMotionVectors", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 // RB end
 
 const char* fileExten[4] = { "tga", "png", "jpg", "exr" };
@@ -348,6 +349,42 @@ const char* skyDirection[6] = { "_forward", "_back", "_left", "_right", "_up", "
 #if defined( USE_NVRHI )
 	DeviceManager* deviceManager;
 #endif
+
+
+bool R_UseTemporalAA()
+{
+	if( !r_useTemporalAA.GetBool() )
+	{
+		return false;
+	}
+
+	switch( r_antiAliasing.GetInteger() )
+	{
+		case ANTI_ALIASING_TAA:
+			return true;
+
+		case ANTI_ALIASING_TAA_SMAA_1X:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
+uint R_GetMSAASamples()
+{
+	switch( r_antiAliasing.GetInteger() )
+	{
+		case ANTI_ALIASING_MSAA_2X:
+			return 2;
+
+		case ANTI_ALIASING_MSAA_4X:
+			return 4;
+
+		default:
+			return 1;
+	}
+}
 
 /*
 =============================
@@ -442,9 +479,6 @@ void R_SetNewMode( const bool fullInit )
 				break;
 			case ANTI_ALIASING_MSAA_4X:
 				parms.multiSamples = 4;
-				break;
-			case ANTI_ALIASING_MSAA_8X:
-				parms.multiSamples = 8;
 				break;
 
 			default:
@@ -858,6 +892,98 @@ bool R_ReadPixelsRGB8( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrh
 	return true;
 }
 
+bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, void* pic, int picWidth, int picHeight )
+{
+	nvrhi::TextureDesc desc = texture->getDesc();
+	nvrhi::TextureHandle tempTexture;
+	nvrhi::FramebufferHandle tempFramebuffer;
+
+	if( desc.width != picWidth || desc.height != picHeight )
+	{
+		return false;
+	}
+
+	nvrhi::CommandListHandle commandList = device->createCommandList();
+	commandList->open();
+
+	if( textureState != nvrhi::ResourceStates::Unknown )
+	{
+		commandList->beginTrackingTextureState( texture, nvrhi::TextureSubresourceSet( 0, 1, 0, 1 ), textureState );
+	}
+
+	switch( desc.format )
+	{
+		case nvrhi::Format::RGBA16_FLOAT:
+			tempTexture = texture;
+			break;
+		default:
+			desc.format = nvrhi::Format::RGBA16_FLOAT;
+			desc.isRenderTarget = true;
+			desc.initialState = nvrhi::ResourceStates::RenderTarget;
+			desc.keepInitialState = true;
+
+			tempTexture = device->createTexture( desc );
+			tempFramebuffer = device->createFramebuffer( nvrhi::FramebufferDesc().addColorAttachment( tempTexture ) );
+
+			pPasses->BlitTexture( commandList, tempFramebuffer, texture );
+	}
+
+	nvrhi::StagingTextureHandle stagingTexture = device->createStagingTexture( desc, nvrhi::CpuAccessMode::Read );
+	commandList->copyTexture( stagingTexture, nvrhi::TextureSlice(), tempTexture, nvrhi::TextureSlice() );
+
+	if( textureState != nvrhi::ResourceStates::Unknown )
+	{
+		commandList->setTextureState( texture, nvrhi::TextureSubresourceSet( 0, 1, 0, 1 ), textureState );
+		commandList->commitBarriers();
+	}
+
+	commandList->close();
+	device->executeCommandList( commandList );
+
+	size_t rowPitch = 0;
+	void* pData = device->mapStagingTexture( stagingTexture, nvrhi::TextureSlice(), nvrhi::CpuAccessMode::Read, &rowPitch );
+
+	if( !pData )
+	{
+		return false;
+	}
+
+	uint16_t* newData = nullptr;
+
+	if( rowPitch != desc.width * 8 )
+	{
+		newData = new uint16_t[desc.width * desc.height * 2];
+
+		for( uint32_t row = 0; row < desc.height; row++ )
+		{
+			memcpy( newData + row * desc.width, static_cast<char*>( pData ) + row * rowPitch, desc.width * sizeof( uint16_t ) * 4 );
+		}
+
+		pData = newData;
+	}
+
+	// copy from RGBA16F to RGB16F
+	uint16_t* data = static_cast<uint16_t*>( pData );
+	uint16_t* outData = static_cast<uint16_t*>( pic );
+
+	for( int i = 0; i < ( desc.width * desc.height ); i++ )
+	{
+		outData[ i * 3 + 0 ] = data[ i * 4 + 0 ];
+		outData[ i * 3 + 1 ] = data[ i * 4 + 1 ];
+		outData[ i * 3 + 2 ] = data[ i * 4 + 2 ];
+	}
+
+	if( newData )
+	{
+		delete[] newData;
+		newData = nullptr;
+	}
+
+	device->unmapStagingTexture( stagingTexture );
+
+	return true;
+}
+
 /*
 ==================
 TakeScreenshot
@@ -873,9 +999,6 @@ void idRenderSystemLocal::TakeScreenshot( int widthIgnored, int heightIgnored, c
 
 	// make sure the game / draw thread has completed
 	commonLocal.WaitGameThread();
-
-	// discard anything currently on the list
-	//tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
 	// discard anything currently on the list
 	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );

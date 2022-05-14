@@ -81,11 +81,26 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 				r_fullscreen.SetInteger( 2 );
 			}
 
-			int vidModeOption = _event.GetParameter<int>( "vid_mode", 0 );
+			int windowIndex = _event.GetParameter<int>( "window_size", 0 );
+			int displayIndex = _event.GetParameter<int>( "display_hz", 0 );
 
-			r_vidMode.SetInteger( vidModeOption );
+			int vidMode = shell->FindVidModeIndex( windowIndex, displayIndex );
 
-			cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "vid_restart\n" );
+			idList<vidMode_t> modeList;
+			R_GetModeListForDisplay( 0, modeList );
+
+			if( vidMode > -1 )
+			{
+				if( modeList.Num() > vidMode )
+				{
+					r_windowWidth.SetInteger( modeList[vidMode].width );
+					r_windowHeight.SetInteger( modeList[vidMode].height );
+					r_displayRefresh.SetInteger( modeList[vidMode].displayHz );
+				}
+
+				r_vidMode.SetInteger( vidMode );
+				cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "vid_restart\n" );
+			}
 		}
 
 		if( subParm == "cancel" || subParm == "accept" )

@@ -13,6 +13,8 @@ public:
 
 	void Spawn( );
 
+	virtual void			Think();
+
 	// Script Events
 	void					Event_PlayAnim( int channel, const char* animname, bool loop );
 

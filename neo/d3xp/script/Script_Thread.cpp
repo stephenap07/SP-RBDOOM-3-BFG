@@ -922,7 +922,14 @@ idThread::ReturnString
 */
 void idThread::ReturnString( const char* text )
 {
-	gameLocal.program.ReturnString( text );
+	if( gameLocal.program.LuaState() )
+	{
+		gameLocal.scriptManager.ReturnString( text );
+	}
+	else
+	{
+		gameLocal.program.ReturnString( text );
+	}
 }
 
 /*
@@ -932,7 +939,14 @@ idThread::ReturnFloat
 */
 void idThread::ReturnFloat( float value )
 {
-	gameLocal.program.ReturnFloat( value );
+	if( gameLocal.program.LuaState() )
+	{
+		gameLocal.scriptManager.ReturnFloat( value );
+	}
+	else
+	{
+		gameLocal.program.ReturnFloat( value );
+	}
 }
 
 /*
@@ -942,9 +956,16 @@ idThread::ReturnInt
 */
 void idThread::ReturnInt( int value )
 {
-	// true integers aren't supported in the compiler,
-	// so int values are stored as floats
-	gameLocal.program.ReturnFloat( value );
+	if( gameLocal.program.LuaState() )
+	{
+		gameLocal.scriptManager.ReturnInt( value );
+	}
+	else
+	{
+		// true integers aren't supported in the compiler,
+		// so int values are stored as floats
+		gameLocal.program.ReturnFloat( value );
+	}
 }
 
 /*
@@ -954,7 +975,14 @@ idThread::ReturnVector
 */
 void idThread::ReturnVector( idVec3 const& vec )
 {
-	gameLocal.program.ReturnVector( vec );
+	if( gameLocal.program.LuaState() )
+	{
+		gameLocal.scriptManager.ReturnVector( vec );
+	}
+	else
+	{
+		gameLocal.program.ReturnVector( vec );
+	}
 }
 
 /*
@@ -964,7 +992,14 @@ idThread::ReturnEntity
 */
 void idThread::ReturnEntity( idEntity* ent )
 {
-	gameLocal.program.ReturnEntity( ent );
+	if( gameLocal.program.LuaState() )
+	{
+		gameLocal.scriptManager.ReturnEntity( ent );
+	}
+	else
+	{
+		gameLocal.program.ReturnEntity( ent );
+	}
 }
 
 /*

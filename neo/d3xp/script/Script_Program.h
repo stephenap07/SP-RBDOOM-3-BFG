@@ -508,6 +508,8 @@ private:
 	int											top_defs;
 	int											top_files;
 
+	lua_State*									luaState;
+
 	void										CompileStats();
 
 public:
@@ -543,6 +545,9 @@ public:
 	idTypeDef*									AllocType( etype_t etype, idVarDef* edef, const char* ename, int esize, idTypeDef* aux );
 	idTypeDef*									GetType( idTypeDef& type, bool allocate );
 	idTypeDef*									FindType( const char* name );
+
+	void										SetLuaState( lua_State* L );
+	lua_State*									LuaState();
 
 	// RB begin
 private:

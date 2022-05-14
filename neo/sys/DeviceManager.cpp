@@ -6,6 +6,13 @@
 // Either move RenderPass to sys or move window resizing logic
 #include "renderer/RenderPass.h"
 
+static const char* apiNames[] =
+{
+	"d3d11",
+	"d3d12",
+	"vulkan"
+};
+
 DeviceManager* DeviceManager::Create( nvrhi::GraphicsAPI api )
 {
 	switch( api )
@@ -23,7 +30,14 @@ DeviceManager* DeviceManager::Create( nvrhi::GraphicsAPI api )
 			return CreateVK();
 #endif
 		default:
-			common->Error( "DeviceManager::Create: Unsupported Graphics API (%d)", api );
+			if( api >= nvrhi::GraphicsAPI::D3D11 && api <= nvrhi::GraphicsAPI::VULKAN )
+			{
+				common->FatalError( "DeviceManager::Create: Unsupported Graphics API (%s)", apiNames[( int )api - 1] );
+			}
+			else
+			{
+				common->FatalError( "DeviceManager::Create: Unsupported Graphics API (%d)", api );
+			}
 			return nullptr;
 	}
 }

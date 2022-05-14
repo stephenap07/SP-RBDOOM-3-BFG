@@ -173,16 +173,6 @@ int idGameThread::Run()
 
 /*
 ===============
-idGameThread::Shutdown
-
-===============
-*/
-void idGameThread::Shutdown()
-{
-}
-
-/*
-===============
 idGameThread::RunGameAndDraw
 
 ===============

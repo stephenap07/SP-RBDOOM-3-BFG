@@ -121,6 +121,8 @@ class idList
 {
 public:
 
+	using value_type = _type_;
+
 	typedef int		cmp_t( const _type_*, const _type_* );
 	typedef _type_	new_t();
 
@@ -227,9 +229,15 @@ public:
 		}
 	}
 
+	// standard size method.
+	size_t size() const
+	{
+		return num;
+	}
+
 private:
 	int				num;
-	int				size;
+	int				_size;
 	int				granularity;
 	_type_* 		list;
 	byte			memTag;
@@ -263,6 +271,11 @@ ID_INLINE idList<_type_, _tag_>::idList( const idList& other )
 	*this = other;
 }
 
+/*
+================
+idList<_type_,_tag_>::idList( std::initializer_list< _type_ > initializerList )
+================
+*/
 template< typename _type_, memTag_t _tag_ >
 ID_INLINE idList<_type_, _tag_>::idList( std::initializer_list<_type_> initializerList )
 	: idList( 16 )
@@ -294,12 +307,12 @@ ID_INLINE void idList<_type_, _tag_>::Clear()
 {
 	if( list )
 	{
-		idListArrayDelete< _type_ >( list, size );
+		idListArrayDelete< _type_ >( list, _size );
 	}
 
 	list	= NULL;
 	num		= 0;
-	size	= 0;
+	_size	= 0;
 }
 
 /*
@@ -334,7 +347,7 @@ ID_INLINE void idList<_type_, _tag_>::DeleteContents( bool clear )
 	}
 	else
 	{
-		memset( list, 0, size * sizeof( _type_ ) );
+		memset( list, 0, _size * sizeof( _type_ ) );
 	}
 }
 
@@ -348,7 +361,7 @@ return total memory allocated for the list in bytes, but doesn't take into accou
 template< typename _type_, memTag_t _tag_ >
 ID_INLINE size_t idList<_type_, _tag_>::Allocated() const
 {
-	return size * sizeof( _type_ );
+	return _size * sizeof( _type_ );
 }
 
 /*
@@ -399,7 +412,7 @@ Returns the number of elements currently allocated for.
 template< typename _type_, memTag_t _tag_ >
 ID_INLINE int idList<_type_, _tag_>::NumAllocated() const
 {
-	return size;
+	return _size;
 }
 
 /*
@@ -411,7 +424,7 @@ template< typename _type_, memTag_t _tag_ >
 ID_INLINE void idList<_type_, _tag_>::SetNum( int newnum )
 {
 	assert( newnum >= 0 );
-	if( newnum > size )
+	if( newnum > _size )
 	{
 		Resize( newnum );
 	}
@@ -438,7 +451,7 @@ ID_INLINE void idList<_type_, _tag_>::SetGranularity( int newgranularity )
 		// resize it to the closest level of granularity
 		newsize = num + granularity - 1;
 		newsize -= newsize % granularity;
-		if( newsize != size )
+		if( newsize != _size )
 		{
 			Resize( newsize );
 		}
@@ -501,17 +514,17 @@ ID_INLINE void idList<_type_, _tag_>::Resize( int newsize )
 		return;
 	}
 
-	if( newsize == size )
+	if( newsize == _size )
 	{
 		// not changing the size, so just exit
 		return;
 	}
 
-	list = ( _type_* )idListArrayResize< _type_, _tag_ >( list, size, newsize, false );
-	size = newsize;
-	if( size < num )
+	list = ( _type_* )idListArrayResize< _type_, _tag_ >( list, _size, newsize, false );
+	_size = newsize;
+	if( _size < num )
 	{
-		num = size;
+		num = _size;
 	}
 }
 
@@ -538,11 +551,11 @@ ID_INLINE void idList<_type_, _tag_>::Resize( int newsize, int newgranularity )
 		return;
 	}
 
-	list = ( _type_* )idListArrayResize< _type_, _tag_ >( list, size, newsize, false );
-	size = newsize;
-	if( size < num )
+	list = ( _type_* )idListArrayResize< _type_, _tag_ >( list, _size, newsize, false );
+	_size = newsize;
+	if( _size < num )
 	{
-		num = size;
+		num = _size;
 	}
 }
 
@@ -558,7 +571,7 @@ ID_INLINE void idList<_type_, _tag_>::AssureSize( int newSize )
 {
 	int newNum = newSize;
 
-	if( newSize > size )
+	if( newSize > _size )
 	{
 		if( granularity == 0 )  	// this is a hack to fix our memset classes
 		{
@@ -585,7 +598,7 @@ ID_INLINE void idList<_type_, _tag_>::AssureSize( int newSize, const _type_ &ini
 {
 	int newNum = newSize;
 
-	if( newSize > size )
+	if( newSize > _size )
 	{
 
 		if( granularity == 0 )  	// this is a hack to fix our memset classes
@@ -595,7 +608,7 @@ ID_INLINE void idList<_type_, _tag_>::AssureSize( int newSize, const _type_ &ini
 
 		newSize += granularity - 1;
 		newSize -= newSize % granularity;
-		num = size;
+		num = _size;
 		Resize( newSize );
 
 		for( int i = num; i < newSize; i++ )
@@ -622,7 +635,7 @@ ID_INLINE void idList<_type_, _tag_>::AssureSizeAlloc( int newSize, new_t* alloc
 {
 	int newNum = newSize;
 
-	if( newSize > size )
+	if( newSize > _size )
 	{
 
 		if( granularity == 0 )  	// this is a hack to fix our memset classes
@@ -632,7 +645,7 @@ ID_INLINE void idList<_type_, _tag_>::AssureSizeAlloc( int newSize, new_t* alloc
 
 		newSize += granularity - 1;
 		newSize -= newSize % granularity;
-		num = size;
+		num = _size;
 		Resize( newSize );
 
 		for( int i = num; i < newSize; i++ )
@@ -659,13 +672,13 @@ ID_INLINE idList<_type_, _tag_>& idList<_type_, _tag_>::operator=( const idList<
 	Clear();
 
 	num			= other.num;
-	size		= other.size;
+	_size		= other._size;
 	granularity	= other.granularity;
 	memTag		= other.memTag;
 
-	if( size )
+	if( _size )
 	{
-		list = ( _type_* )idListArrayNew< _type_, _tag_ >( size, false );
+		list = ( _type_* )idListArrayNew< _type_, _tag_ >( _size, false );
 		for( i = 0; i < num; i++ )
 		{
 			list[ i ] = other.list[ i ];
@@ -758,9 +771,9 @@ ID_INLINE _type_& idList<_type_, _tag_>::Alloc()
 		Resize( granularity );
 	}
 
-	if( num == size )
+	if( num == _size )
 	{
-		Resize( size + granularity );
+		Resize( _size + granularity );
 	}
 
 	return list[ num++ ];
@@ -783,7 +796,7 @@ ID_INLINE int idList<_type_, _tag_>::Append( _type_ const& obj )
 		Resize( granularity );
 	}
 
-	if( num == size )
+	if( num == _size )
 	{
 		int newsize;
 
@@ -791,7 +804,7 @@ ID_INLINE int idList<_type_, _tag_>::Append( _type_ const& obj )
 		{
 			granularity = 16;
 		}
-		newsize = size + granularity;
+		newsize = _size + granularity;
 		Resize( newsize - newsize % granularity );
 	}
 
@@ -820,7 +833,7 @@ ID_INLINE int idList<_type_, _tag_>::Insert( _type_ const& obj, int index )
 		Resize( granularity );
 	}
 
-	if( num == size )
+	if( num == _size )
 	{
 		int newsize;
 
@@ -828,7 +841,7 @@ ID_INLINE int idList<_type_, _tag_>::Insert( _type_ const& obj, int index )
 		{
 			granularity = 16;
 		}
-		newsize = size + granularity;
+		newsize = _size + granularity;
 		Resize( newsize - newsize % granularity );
 	}
 

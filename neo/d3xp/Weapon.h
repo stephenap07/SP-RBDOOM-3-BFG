@@ -73,6 +73,27 @@ typedef struct
 	renderLight_t	light;
 } WeaponLight_t;
 
+typedef enum
+{
+	WP_READY,
+	WP_OUTOFAMMO,
+	WP_RELOAD,
+	WP_HOLSTERED,
+	WP_RISING,
+	WP_LOWERING
+} weaponStatus_t;
+
+class LuaWeaponObject : public idClass
+{
+public:
+	CLASS_PROTOTYPE( LuaWeaponObject );
+
+	virtual void	Init( idWeapon* weapon, const char* luaObjStr );
+
+protected:
+	idWeapon* owner;
+};
+
 class rvmWeaponObject : public idClass
 {
 public:
@@ -223,6 +244,7 @@ public:
 	int						AmmoRequired() const;
 	int						AmmoCount() const;
 	int						GetGrabberState() const;
+	const char*				GetState() const;
 
 	// Flashlight
 	idAnimatedEntity* GetWorldModel()
@@ -269,7 +291,7 @@ public:
 	// script events
 	void					Event_Clear();
 	void					Event_GetOwner();
-	void					Event_SetWeaponStatus( float newStatus );
+	void					Event_WeaponState( const char* statename, int blendFrames );
 	void					Event_WeaponReady();
 	void					Event_WeaponOutOfAmmo();
 	void					Event_WeaponReloading();
@@ -293,7 +315,7 @@ public:
 	void					Event_Flashlight( int enable );
 	void					Event_GetLightParm( int parmnum );
 	void					Event_LaunchProjectiles( int num_projectiles, float spread, float fuseOffset, float launchPower, float dmgPower );
-	idEntity* CreateProjectile();
+	idEntity*				CreateProjectile();
 	void					Event_CreateProjectile();
 	void					Event_EjectBrass();
 	void					Event_Melee();
@@ -310,13 +332,17 @@ public:
 
 	bool					IsLinked()
 	{
-		return currentWeaponObject != NULL;
+		return isLinked;
 	}
 private:
 	int						animBlendFrames;
 	int						animDoneTime;
 	bool					isPlayerFlashlight;
 	bool					isLinked;
+
+	weaponStatus_t			status;
+	idStr					state;
+	idStr					idealState;
 
 	// precreated projectile
 	idEntity* projectileEnt;
@@ -487,8 +513,11 @@ public:
 
 	void					Event_StartWeaponLight( const char* name );
 	void					Event_StopWeaponLight( const char* name );
+
+	void					Event_GetState() const;
+	void					Event_SetState( const char* nextState );
 private:
-	rvmWeaponObject* currentWeaponObject;
+	rvmWeaponObject*		currentWeaponObject;
 	bool					OutOfAmmo;
 };
 

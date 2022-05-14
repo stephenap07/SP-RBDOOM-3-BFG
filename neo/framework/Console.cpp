@@ -40,18 +40,12 @@ If you have questions concerning this license or the applicable additional terms
 
 #define	COMMAND_HISTORY			64
 
-#include <algorithm>
-
-
 struct overlayText_t
 {
 	idStr			text;
 	justify_t		justify;
 	int				time;
 };
-
-class ConsoleRenderer;
-
 
 // the console will query the cvar and command systems for
 // command completion information
@@ -67,9 +61,7 @@ public:
 	virtual void		Open();
 	virtual	void		Close();
 	virtual	void		Print( const char* text );
-	virtual void        InitView();
 	virtual	void		Draw( bool forceFullScreen );
-	virtual void        ShutdownView();
 
 	virtual void		PrintOverlay( idOverlayHandle& handle, justify_t justify, const char* text, ... );
 
@@ -80,9 +72,6 @@ public:
 	void				Clear();
 
 private:
-
-	friend class ConsoleRenderer;
-
 	void				Resize();
 
 	void				KeyDownEvent( int key );
@@ -156,49 +145,9 @@ private:
 	int					lastVirtualScreenWidth;
 	int					lastVirtualScreenHeight;
 
-	ConsoleRenderer*    consoleRenderer;
-
-	FontHandle          smallFontHandle;
-	FontHandle          bigFontHandle;
-
 	static idCVar		con_speed;
 	static idCVar		con_notifyTime;
 	static idCVar		con_noPrint;
-};
-
-class ConsoleRenderer
-{
-public:
-	virtual void Init() = 0;
-	virtual void Shutdown() = 0;
-	virtual void DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor ) = 0;
-};
-
-class DefaultConsoleRenderer : public ConsoleRenderer
-{
-public:
-
-	DefaultConsoleRenderer();
-
-	virtual void Init();
-	virtual void Shutdown();
-	virtual void DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
-};
-
-class OptimizedConsoleRenderer : public ConsoleRenderer
-{
-public:
-
-	OptimizedConsoleRenderer();
-
-	virtual void Init();
-	virtual void Shutdown();
-	virtual void DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
-
-private:
-
-	FontHandle smallFontHandle;
-	FontHandle bigFontHandle;
 };
 
 static idConsoleLocal localConsole;
@@ -232,7 +181,7 @@ void idConsoleLocal::DrawTextLeftAlign( float x, float& y, const char* text, ...
 	va_start( argptr, text );
 	idStr::vsnPrintf( string, sizeof( string ), text, argptr );
 	va_end( argptr );
-	consoleRenderer->DrawSmallStringExt( x, y + 2, string, colorWhite, true );
+	renderSystem->DrawSmallStringExt( x, y + 2, string, colorWhite, true );
 	y += SMALLCHAR_HEIGHT + 4;
 }
 
@@ -248,7 +197,7 @@ void idConsoleLocal::DrawTextRightAlign( float x, float& y, const char* text, ..
 	va_start( argptr, text );
 	int i = idStr::vsnPrintf( string, sizeof( string ), text, argptr );
 	va_end( argptr );
-	consoleRenderer->DrawSmallStringExt( x - i * SMALLCHAR_WIDTH, y + 2, string, colorWhite, true );
+	renderSystem->DrawSmallStringExt( x - i * SMALLCHAR_WIDTH, y + 2, string, colorWhite, true );
 	y += SMALLCHAR_HEIGHT + 4;
 }
 
@@ -260,6 +209,8 @@ void idConsoleLocal::DrawTextRightAlign( float x, float& y, const char* text, ..
 idConsoleLocal::DrawFPS
 ==================
 */
+extern bool R_UseTemporalAA();
+
 #define	FPS_FRAMES	6
 #define FPS_FRAMES_HISTORY 90
 float idConsoleLocal::DrawFPS( float y )
@@ -308,8 +259,7 @@ float idConsoleLocal::DrawFPS( float y )
 
 		if( com_showFPS.GetInteger() == 1 )
 		{
-			renderSystem->DrawBigStringExt2( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
-			//renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
+			renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, s, colorWhite, true );
 		}
 	}
 
@@ -340,8 +290,10 @@ float idConsoleLocal::DrawFPS( float y )
 	const uint64 rendererGPU_SSAOTime = commonLocal.GetRendererGpuSSAOMicroseconds();
 	const uint64 rendererGPU_SSRTime = commonLocal.GetRendererGpuSSRMicroseconds();
 	const uint64 rendererGPUAmbientPassTime = commonLocal.GetRendererGpuAmbientPassMicroseconds();
+	const uint64 rendererGPUShadowAtlasTime = commonLocal.GetRendererGpuShadowAtlasPassMicroseconds();
 	const uint64 rendererGPUInteractionsTime = commonLocal.GetRendererGpuInteractionsMicroseconds();
 	const uint64 rendererGPUShaderPassesTime = commonLocal.GetRendererGpuShaderPassMicroseconds();
+	const uint64 rendererGPU_TAATime = commonLocal.GetRendererGpuTAAMicroseconds();
 	const uint64 rendererGPUPostProcessingTime = commonLocal.GetRendererGpuPostProcessingMicroseconds();
 	const int maxTime = int( 1000 / com_engineHz_latched ) * 1000;
 
@@ -360,12 +312,12 @@ float idConsoleLocal::DrawFPS( float y )
 	{
 		// start smaller
 		int32 statsWindowWidth = 320;
-		int32 statsWindowHeight = 260;
+		int32 statsWindowHeight = 295;
 
 		if( com_showFPS.GetInteger() > 2 )
 		{
-			statsWindowWidth = 550;
-			statsWindowHeight = 370;
+			statsWindowWidth += 230;
+			statsWindowHeight += 110;
 		}
 
 		ImVec2 pos;
@@ -393,7 +345,9 @@ float idConsoleLocal::DrawFPS( float y )
 
 		ImGui::Begin( "Performance Stats" );
 
-#if defined( USE_VULKAN )
+#if defined( USE_NVRHI )
+		const char* API = "DX12";
+#elif defined( USE_VULKAN )
 		const char* API = "Vulkan";
 #else
 		const char* API = "OpenGL";
@@ -401,18 +355,36 @@ float idConsoleLocal::DrawFPS( float y )
 
 		extern idCVar r_antiAliasing;
 		static const int aaNumValues = 5;
+
 		static const char* aaValues[aaNumValues] =
 		{
+			"None",
 			"None",
 			"SMAA 1X",
 			"MSAA 2X",
 			"MSAA 4X",
-			"MSAA 8X"
 		};
 
-		compile_time_assert( aaNumValues == ( ANTI_ALIASING_MSAA_8X + 1 ) );
+		static const char* taaValues[aaNumValues] =
+		{
+			"None",
+			"TAA",
+			"TAA + SMAA 1X",
+			"MSAA 2X",
+			"MSAA 4X",
+		};
 
-		const char* aaMode = aaValues[ r_antiAliasing.GetInteger() ];
+		compile_time_assert( aaNumValues == ( ANTI_ALIASING_MSAA_4X + 1 ) );
+
+		const char* aaMode = NULL;
+		if( R_UseTemporalAA() )
+		{
+			aaMode = taaValues[ r_antiAliasing.GetInteger() ];
+		}
+		else
+		{
+			aaMode = aaValues[ r_antiAliasing.GetInteger() ];
+		}
 
 		idStr resolutionText;
 		resolutionScale.GetConsoleText( resolutionText );
@@ -479,9 +451,11 @@ float idConsoleLocal::DrawFPS( float y )
 		ImGui::TextColored( gameThreadTotalTime > maxTime ? colorRed : colorWhite,			"Game+RF: %5llu us   EarlyZ:       %5llu us", gameThreadTotalTime, rendererGPUEarlyZTime );
 		ImGui::TextColored( gameThreadGameTime > maxTime ? colorRed : colorWhite,			"Game:    %5llu us   SSAO:         %5llu us", gameThreadGameTime, rendererGPU_SSAOTime );
 		ImGui::TextColored( gameThreadRenderTime > maxTime ? colorRed : colorWhite,			"RF:      %5llu us   SSR:          %5llu us", gameThreadRenderTime, rendererGPU_SSRTime );
-		ImGui::TextColored( rendererBackEndTime > maxTime ? colorRed : colorWhite,			"RB:      %5llu us   AmbientPass:  %5llu us", rendererBackEndTime, rendererGPUAmbientPassTime );
+		ImGui::TextColored( rendererBackEndTime > maxTime ? colorRed : colorWhite,			"RB:      %5llu us   Ambient Pass: %5llu us", rendererBackEndTime, rendererGPUAmbientPassTime );
+		ImGui::TextColored( rendererGPUShadowAtlasTime > maxTime ? colorRed : colorWhite,	"                    Shadow Atlas: %5llu us", rendererGPUShadowAtlasTime );
 		ImGui::TextColored( rendererShadowsTime > maxTime ? colorRed : colorWhite,			"Shadows: %5llu us   Interactions: %5llu us", rendererShadowsTime, rendererGPUInteractionsTime );
-		ImGui::TextColored( rendererGPUShaderPassesTime > maxTime ? colorRed : colorWhite,	"                    ShaderPass:   %5llu us", rendererGPUShaderPassesTime );
+		ImGui::TextColored( rendererGPUShaderPassesTime > maxTime ? colorRed : colorWhite,	"                    Shader Pass:  %5llu us", rendererGPUShaderPassesTime );
+		ImGui::TextColored( rendererGPU_TAATime > maxTime ? colorRed : colorWhite,			"                    TAA:          %5llu us", rendererGPU_TAATime );
 		ImGui::TextColored( rendererGPUPostProcessingTime > maxTime ? colorRed : colorWhite, "                    PostFX:       %5llu us", rendererGPUPostProcessingTime );
 		ImGui::TextColored( totalCPUTime > maxTime || rendererGPUTime > maxTime ? colorRed : colorWhite,
 							"Total:   %5llu us   Total:        %5llu us", totalCPUTime, rendererGPUTime );
@@ -499,73 +473,41 @@ float idConsoleLocal::DrawFPS( float y )
 	int w = resolutionText.Length() * BIGCHAR_WIDTH;
 	renderSystem->DrawBigStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, resolutionText.c_str(), colorWhite, true );
 
-	const int gameThreadTotalTime = commonLocal.GetGameThreadTotalTime();
-	const int gameThreadGameTime = commonLocal.GetGameThreadGameTime();
-	const int gameThreadRenderTime = commonLocal.GetGameThreadRenderTime();
-	const int rendererBackEndTime = commonLocal.GetRendererBackEndMicroseconds();
-	const int rendererShadowsTime = commonLocal.GetRendererShadowsMicroseconds();
-	const int rendererGPUIdleTime = commonLocal.GetRendererIdleMicroseconds();
-	const int rendererGPUTime = commonLocal.GetRendererGPUMicroseconds();
-	const int maxTime = 16;
-
-	auto man = renderSystem->GetTextBufferManager();
-
-	auto textHandle = man->createTextBuffer( 1, BufferType::Dynamic );
-
 	y += SMALLCHAR_HEIGHT + 4;
 	idStr timeStr;
 	timeStr.Format( "%sG+RF: %4d", gameThreadTotalTime > maxTime ? S_COLOR_RED : "", gameThreadTotalTime );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->setPenPosition( textHandle, LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2 );
-	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( colorWhite ) );
-	man->appendText( textHandle, smallFontHandle, timeStr );
-	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
-	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
+	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sG: %4d", gameThreadGameTime > maxTime ? S_COLOR_RED : "", gameThreadGameTime );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText( textHandle, smallFontHandle, timeStr );
-	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
-	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
+	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sRF: %4d", gameThreadRenderTime > maxTime ? S_COLOR_RED : "", gameThreadRenderTime );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText( textHandle, smallFontHandle, timeStr );
-	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
-	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
+	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sRB: %4.1f", rendererBackEndTime > maxTime * 1000 ? S_COLOR_RED : "", rendererBackEndTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText( textHandle, smallFontHandle, timeStr );
-	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
-	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
+	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sSV: %4.1f", rendererShadowsTime > maxTime * 1000 ? S_COLOR_RED : "", rendererShadowsTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText( textHandle, smallFontHandle, timeStr );
-	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
-	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
+	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sIDLE: %4.1f", rendererGPUIdleTime > maxTime * 1000 ? S_COLOR_RED : "", rendererGPUIdleTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText( textHandle, smallFontHandle, timeStr );
-	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
-	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
+	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 	y += SMALLCHAR_HEIGHT + 4;
 
 	timeStr.Format( "%sGPU: %4.1f", rendererGPUTime > maxTime * 1000 ? S_COLOR_RED : "", rendererGPUTime / 1000.0f );
 	w = timeStr.LengthWithoutColors() * SMALLCHAR_WIDTH;
-	man->appendText( textHandle, smallFontHandle, timeStr );
-	man->appendText( textHandle, smallFontHandle, idStr( '\n' ) );
-	//consoleRenderer->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
-
-	man->submitTextBuffer( textHandle );
-	man->destroyTextBuffer( textHandle );
+	renderSystem->DrawSmallStringExt( LOCALSAFE_RIGHT - w, idMath::Ftoi( y ) + 2, timeStr.c_str(), colorWhite, false );
 
 	return y + BIGCHAR_HEIGHT + 4;
 #endif
@@ -649,8 +591,6 @@ void idConsoleLocal::Init()
 
 	cmdSystem->AddCommand( "clear", Con_Clear_f, CMD_FL_SYSTEM, "clears the console" );
 	cmdSystem->AddCommand( "conDump", Con_Dump_f, CMD_FL_SYSTEM, "dumps the console text to a file" );
-
-	consoleRenderer = new DefaultConsoleRenderer();
 }
 
 /*
@@ -662,8 +602,6 @@ void idConsoleLocal::Shutdown()
 {
 	cmdSystem->RemoveCommand( "clear" );
 	cmdSystem->RemoveCommand( "conDump" );
-
-	delete consoleRenderer;
 
 	debugGraphs.DeleteContents( true );
 }
@@ -1026,7 +964,7 @@ Scroll
 deals with scrolling text because we don't have key repeat
 ==============
 */
-void idConsoleLocal::Scroll( )
+void idConsoleLocal::Scroll()
 {
 	if( lastKeyEvent == -1 || ( lastKeyEvent + 200 ) > eventLoop->Milliseconds() )
 	{
@@ -1323,21 +1261,6 @@ DRAWING
 */
 
 
-void idConsoleLocal::InitView()
-{
-	if( consoleRenderer )
-	{
-		delete consoleRenderer;
-	}
-
-	consoleRenderer = new OptimizedConsoleRenderer();
-	consoleRenderer->Init();
-
-	smallFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 16 );
-	bigFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 32 );
-}
-
-
 /*
 ================
 DrawInput
@@ -1486,32 +1409,23 @@ void idConsoleLocal::DrawSolidConsole( float frac )
 
 	i = version.Length();
 
-	auto man = renderSystem->GetTextBufferManager();
-	auto textHandle = man->createTextBuffer( 0, BufferType::Dynamic );
-	man->setPenPosition( textHandle, 0, 0 );
-	man->appendText( textHandle, renderSystem->GetDefaultFontHandle(), version );
-	TextRectangle textSize = man->getRectangle( textHandle );
-	man->clearTextBuffer( textHandle );
-
-	idVec2 virtualToReal( renderSystem->GetWidth() / ( float )renderSystem->GetVirtualWidth(),
-						  renderSystem->GetHeight() / ( float )renderSystem->GetVirtualHeight() );
-
-	const idVec2 scaleToVirtual( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-								 ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
-
-	auto myX = std::max<int>( 0, renderSystem->GetWidth() - textSize.width - 5.0f );
-	auto myY = ( lines * virtualToReal.y ) - ( textSize.height + textSize.height / 4 );
-	man->setPenPosition( textHandle, myX, myY );
-	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( idStr::ColorForIndex( C_COLOR_CYAN ) ) );
-	man->appendText( textHandle, renderSystem->GetDefaultFontHandle(), version );
-	man->scale( textHandle, scaleToVirtual );
-	man->submitTextBuffer( textHandle );
-	man->destroyTextBuffer( textHandle );
+#define VERSION_LINE_SPACE (SMALLCHAR_HEIGHT + 4)
 
 	for( x = 0; x < i; x++ )
 	{
-		//renderSystem->DrawSmallChar( LOCALSAFE_WIDTH - ( i - x ) * SMALLCHAR_WIDTH,
-		//							 ( lines - ( SMALLCHAR_HEIGHT + SMALLCHAR_HEIGHT / 4 ) ), version[x] );
+		renderSystem->DrawSmallChar( LOCALSAFE_WIDTH - ( i - x ) * SMALLCHAR_WIDTH,
+									 ( lines - ( SMALLCHAR_HEIGHT + SMALLCHAR_HEIGHT / 4 ) ) - VERSION_LINE_SPACE - VERSION_LINE_SPACE, version[x] );
+
+	}
+// jmarshall
+	idStr branchVersion = va( "Branch %s", ENGINE_BRANCH );
+	i = branchVersion.Length();
+
+	for( x = 0; x < i; x++ )
+	{
+		renderSystem->DrawSmallChar( LOCALSAFE_WIDTH - ( i - x ) * SMALLCHAR_WIDTH,
+									 ( lines - ( SMALLCHAR_HEIGHT + SMALLCHAR_HEIGHT / 2 ) ) - ( VERSION_LINE_SPACE - 2 ), branchVersion[x] );
+
 	}
 
 	idStr builddate = va( "%s %s", __DATE__, __TIME__ );
@@ -1648,11 +1562,6 @@ void idConsoleLocal::Draw( bool forceFullScreen )
 
 	DrawOverlayText( lefty, righty, centery );
 	DrawDebugGraphs();
-}
-
-void idConsoleLocal::ShutdownView()
-{
-	consoleRenderer->Shutdown();
 }
 
 /*
@@ -1801,48 +1710,4 @@ void idConsoleLocal::DrawDebugGraphs()
 	{
 		debugGraphs[i]->Render( renderSystem );
 	}
-}
-
-DefaultConsoleRenderer::DefaultConsoleRenderer()
-{
-}
-
-void DefaultConsoleRenderer::Init()
-{
-}
-
-void DefaultConsoleRenderer::Shutdown()
-{
-}
-
-void DefaultConsoleRenderer::DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor )
-{
-	renderSystem->DrawSmallStringExt( x, y, string, setColor, forceColor );
-}
-
-OptimizedConsoleRenderer::OptimizedConsoleRenderer()
-{
-}
-
-void OptimizedConsoleRenderer::Init()
-{
-	smallFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 8 );
-	bigFontHandle = renderSystem->RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 16 );
-}
-
-void OptimizedConsoleRenderer::Shutdown()
-{
-}
-
-void OptimizedConsoleRenderer::DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor )
-{
-	auto man = renderSystem->GetTextBufferManager();
-
-	auto textHandle = man->createTextBuffer( 1, BufferType::Dynamic );
-
-	man->setPenPosition( textHandle, x, y );
-	man->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( setColor ) );
-	man->appendText( textHandle, smallFontHandle, string );
-	man->submitTextBuffer( textHandle );
-	man->destroyTextBuffer( textHandle );
 }

@@ -90,8 +90,6 @@ public:
 private:
 	virtual int	Run();
 
-	virtual void Shutdown();
-
 	int				gameTime;
 	int				drawTime;
 	int				threadTime;					// total time : game time + foreground render time
@@ -149,8 +147,6 @@ class idCommonLocal : public idCommon
 public:
 	idCommonLocal();
 
-	virtual                    ~idCommonLocal();
-
 	virtual void				Init( int argc, const char* const* argv, const char* cmdline );
 	virtual void				Shutdown();
 	virtual	void				CreateMainMenu();
@@ -158,9 +154,9 @@ public:
 	virtual bool				IsInitialized() const;
 	virtual void				Frame();
 	// DG: added possibility to *not* release mouse in UpdateScreen(), it fucks up the view angle for screenshots
-	void						UpdateScreen( bool captureToImage, bool releaseMouse = true ) override;
+	virtual void				UpdateScreen( bool captureToImage, bool releaseMouse = true );
 	// DG end
-	void						UpdateLevelLoadPacifier( ) override;  // Indefinate
+	virtual void				UpdateLevelLoadPacifier();  // Indefinate
 //	virtual void				UpdateLevelLoadPacifier( int mProgress );
 //	virtual void				UpdateLevelLoadPacifier( bool Secondary );
 //	virtual void				UpdateLevelLoadPacifier( bool updateSecondary, int mProgress );
@@ -357,6 +353,11 @@ public:
 		return stats_backend.gpuAmbientPassMicroSec;
 	}
 
+	uint64		GetRendererGpuShadowAtlasPassMicroseconds() const
+	{
+		return stats_backend.gpuShadowAtlasPassMicroSec;
+	}
+
 	uint64		GetRendererGpuInteractionsMicroseconds() const
 	{
 		return stats_backend.gpuInteractionsMicroSec;
@@ -365,6 +366,11 @@ public:
 	uint64		GetRendererGpuShaderPassMicroseconds() const
 	{
 		return stats_backend.gpuShaderPassMicroSec;
+	}
+
+	uint64		GetRendererGpuTAAMicroseconds() const
+	{
+		return stats_backend.gpuTemporalAntiAliasingMicroSec;
 	}
 
 	uint64		GetRendererGpuPostProcessingMicroseconds() const

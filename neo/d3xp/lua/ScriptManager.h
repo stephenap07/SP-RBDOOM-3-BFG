@@ -29,24 +29,60 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __SCRIPT_MANAGER_H__
 #define __SCRIPT_MANAGER_H__
 
+extern const idEventDef EV_LuaThread_Execute;
+extern const idEventDef EV_LuaThread_SetCallback;
+extern const idEventDef EV_LuaThread_TerminateThread;
+extern const idEventDef EV_LuaThread_Pause;
+extern const idEventDef EV_LuaThread_Wait;
+extern const idEventDef EV_LuaThread_WaitFrame;
+extern const idEventDef EV_LuaThread_WaitFor;
+extern const idEventDef EV_LuaThread_WaitForThread;
 extern const idEventDef EV_LuaThread_Print;
+extern const idEventDef EV_LuaThread_PrintLn;
+extern const idEventDef EV_LuaThread_Say;
+extern const idEventDef EV_LuaThread_Assert;
+extern const idEventDef EV_LuaThread_Trigger;
+extern const idEventDef EV_LuaThread_SetCvar;
+extern const idEventDef EV_LuaThread_GetCvar;
+extern const idEventDef EV_LuaThread_Random;
+extern const idEventDef EV_LuaThread_GetTime;
+extern const idEventDef EV_LuaThread_KillThread;
+extern const idEventDef EV_LuaThread_SetThreadName;
 extern const idEventDef EV_LuaThread_GetEntity;
-extern const idEventDef EV_LuaThread_DrawText;
+extern const idEventDef EV_LuaThread_Spawn;
+extern const idEventDef EV_LuaThread_SetSpawnArg;
+extern const idEventDef EV_LuaThread_SpawnString;
+extern const idEventDef EV_LuaThread_SpawnFloat;
+extern const idEventDef EV_LuaThread_SpawnVector;
+extern const idEventDef EV_LuaThread_AngToForward;
+extern const idEventDef EV_LuaThread_AngToRight;
+extern const idEventDef EV_LuaThread_AngToUp;
+extern const idEventDef EV_LuaThread_Sine;
+extern const idEventDef EV_LuaThread_Cosine;
+extern const idEventDef EV_LuaThread_Normalize;
+extern const idEventDef EV_LuaThread_VecLength;
+extern const idEventDef EV_LuaThread_VecDotProduct;
+extern const idEventDef EV_LuaThread_VecCrossProduct;
+extern const idEventDef EV_LuaThread_OnSignal;
+extern const idEventDef EV_LuaThread_ClearSignal;
+extern const idEventDef EV_LuaThread_SetCamera;
+extern const idEventDef EV_LuaThread_FirstPerson;
+extern const idEventDef EV_LuaThread_TraceFraction;
+extern const idEventDef EV_LuaThread_TracePos;
+extern const idEventDef EV_LuaThread_FadeIn;
+extern const idEventDef EV_LuaThread_FadeOut;
+extern const idEventDef EV_LuaThread_FadeTo;
+extern const idEventDef EV_LuaThread_Restart;
 
-class LuaThread : public idClass
+class idLuaThread : public idClass
 {
-private:
-	void	Event_Print( const char* text );
-	void	Event_GetEntity( const char* name );
-	void	Event_DrawText( const char* text, const idVec3& origin, float scale, const idVec3& color, const int align, const float lifetime );
-
 public:
-	CLASS_PROTOTYPE( LuaThread );
+	CLASS_PROTOTYPE( idLuaThread );
 
-	LuaThread( );
-	LuaThread( idEntity* self );
+	idLuaThread( );
+	idLuaThread( idEntity* self );
 
-	~LuaThread( ) override;
+	~idLuaThread( ) override;
 
 	lua_State* LuaState( )
 	{
@@ -57,22 +93,108 @@ public:
 	bool	LoadLuaScript( const char* luaScript, bool failIfFound = false );
 	void	Restart( );
 
-	void	Call( const char* name, int numargs );
+	void	Call( const idCmdArgs& args ) const;
 
-	void	ReturnString( const char* text );
-	void	ReturnFloat( float value );
-	void	ReturnInt( int value );
-	void	ReturnVector( idVec3 const& vec );
-	void	ReturnEntity( idEntity* ent );
+	void	ReturnString( const char* text ) const;
+	void	ReturnFloat( float value ) const;
+	void	ReturnInt( int value ) const;
+	void	ReturnVector( idVec3 const& vec ) const;
+	void	ReturnEntity( idEntity* ent ) const;
+
+private:
+
+	static trace_t				trace;
+
+	idDict						spawnArgs;
+
+	void						Event_Print( const char* text );
+	void						Event_PrintLn( const char* text );
+	void						Event_Say( const char* text );
+	void						Event_Assert( float value );
+	void						Event_Trigger( idEntity* ent );
+	void						Event_SetCvar( const char* name, const char* value ) const;
+	void						Event_GetCvar( const char* name ) const;
+	void						Event_Random( float range ) const;
+	void						Event_RandomInt( int range ) const;
+	void						Event_GetTime();
+	void						Event_GetEntity( const char* name );
+	void						Event_Spawn( const char* classname );
+	void						Event_CopySpawnArgs( idEntity* ent );
+	void						Event_SetSpawnArg( const char* key, const char* value );
+	void						Event_SpawnString( const char* key, const char* defaultvalue );
+	void						Event_SpawnFloat( const char* key, float defaultvalue );
+	void						Event_SpawnVector( const char* key, idVec3& defaultvalue );
+	void						Event_ClearPersistantArgs();
+	void 						Event_SetPersistantArg( const char* key, const char* value );
+	void 						Event_GetPersistantString( const char* key );
+	void 						Event_GetPersistantFloat( const char* key );
+	void 						Event_GetPersistantVector( const char* key );
+	void						Event_AngToForward( idAngles& ang );
+	void						Event_AngToRight( idAngles& ang );
+	void						Event_AngToUp( idAngles& ang );
+	void						Event_GetSine( float angle );
+	void						Event_GetCosine( float angle );
+	void						Event_GetArcSine( float a );
+	void						Event_GetArcCosine( float a );
+	void						Event_GetSquareRoot( float theSquare );
+	void						Event_VecNormalize( idVec3& vec );
+	void						Event_VecLength( idVec3& vec );
+	void						Event_VecDotProduct( idVec3& vec1, idVec3& vec2 );
+	void						Event_VecCrossProduct( idVec3& vec1, idVec3& vec2 );
+	void						Event_VecToAngles( idVec3& vec );
+	void						Event_VecToOrthoBasisAngles( idVec3& vec );
+	void						Event_RotateVector( idVec3& vec, idVec3& ang );
+	void						Event_OnSignal( int signal, idEntity* ent, const char* func );
+	void						Event_ClearSignalThread( int signal, idEntity* ent );
+	void						Event_SetCamera( idEntity* ent );
+	void						Event_FirstPerson();
+	void						Event_Trace( const idVec3& start, const idVec3& end, const idVec3& mins, const idVec3& maxs, int contents_mask, idEntity* passEntity );
+	void						Event_TracePoint( const idVec3& start, const idVec3& end, int contents_mask, idEntity* passEntity );
+	void						Event_GetTraceFraction();
+	void						Event_GetTraceEndPos();
+	void						Event_GetTraceNormal();
+	void						Event_GetTraceEntity();
+	void						Event_GetTraceJoint();
+	void						Event_GetTraceBody();
+	void						Event_FadeIn( idVec3& color, float time );
+	void						Event_FadeOut( idVec3& color, float time );
+	void						Event_FadeTo( idVec3& color, float alpha, float time );
+	void						Event_SetShaderParm( int parmnum, float value );
+	void						Event_StartMusic( const char* name );
+	void						Event_Warning( const char* text );
+	void						Event_Error( const char* text );
+	void 						Event_StrLen( const char* string );
+	void 						Event_StrLeft( const char* string, int num );
+	void 						Event_StrRight( const char* string, int num );
+	void 						Event_StrSkip( const char* string, int num );
+	void 						Event_StrMid( const char* string, int start, int num );
+	void						Event_StrToFloat( const char* string );
+	void						Event_RadiusDamage( const idVec3& origin, idEntity* inflictor, idEntity* attacker, idEntity* ignore, const char* damageDefName, float dmgPower );
+	void						Event_IsClient();
+	void 						Event_IsMultiplayer();
+	void 						Event_GetFrameTime();
+	void 						Event_GetTicsPerSecond();
+	void						Event_CacheSoundShader( const char* soundName );
+	void						Event_DebugLine( const idVec3& color, const idVec3& start, const idVec3& end, const float lifetime );
+	void						Event_DebugArrow( const idVec3& color, const idVec3& start, const idVec3& end, const int size, const float lifetime );
+	void						Event_DebugCircle( const idVec3& color, const idVec3& origin, const idVec3& dir, const float radius, const int numSteps, const float lifetime );
+	void						Event_DebugBounds( const idVec3& color, const idVec3& mins, const idVec3& maxs, const float lifetime );
+	void						Event_DrawText( const char* text, const idVec3& origin, float scale, const idVec3& color, const int align, const float lifetime );
+	void						Event_InfluenceActive();
 
 private:
 	friend class ScriptManager;
 	friend class ScopedLuaState;
 
-	void InitLuaState( );
+	void						InitLuaState( );
+
+	void						Error( VERIFY_FORMAT_STRING const char* fmt, ... ) const;
+	void						Warning( VERIFY_FORMAT_STRING const char* fmt, ... ) const;
 
 	lua_State* luaState;
 };
+
+class idStateScript;
 
 class ScriptManager
 {
@@ -82,31 +204,37 @@ public:
 
 	~ScriptManager();
 
-	bool		Init( );
-	void		Shutdown( );
-	void		Reload( );
-	void		Restart( );
-	void		SendEvent( const char* eventName );
+	bool		Init();
+	void		Shutdown();
+	void		Reload();
+	void		Restart();
 	void		LoadScript( const char* script );
-	void		Think( int mSeconds );
+	void		AddReloadable( idStateScript* stateScript );
+	void		DestroyReloadable( idStateScript* stateScript );
 
 	lua_State*	LuaState( )
 	{
 		return luaThread->LuaState();
 	}
-	void		Call( const char* name, int numargs );
+	idLuaThread*	GetLuaThread()
+	{
+		return luaThread;
+	}
+	static void	Call_f( const idCmdArgs& args );
 	void		ReturnString( const char* text );
 	void		ReturnFloat( float value );
 	void		ReturnInt( int value );
 	void		ReturnVector( idVec3 const& vec );
 	void		ReturnEntity( idEntity* ent );
 
+	void		Error( VERIFY_FORMAT_STRING const char* fmt, ... ) const;
+	void		Warning( VERIFY_FORMAT_STRING const char* fmt, ... ) const;
+
 private:
 	friend class ScopedLuaState;
 
-	int startTime = 0;
-	bool firstThink = false;
-	LuaThread* luaThread;
+	idLuaThread*				luaThread;
+	idList<idStateScript*>	reloadables;
 };
 
 /// This class updates the lua_State* to the current call so that any return
@@ -118,6 +246,7 @@ public:
 	~ScopedLuaState( );
 
 private:
+	lua_State* originalProgramThread;
 	lua_State* originalThread;
 	lua_State* newThread;
 };

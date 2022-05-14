@@ -27,22 +27,16 @@
 // *INDENT-OFF*
 struct VS_INPUT
 {
-float3 pos		:
-	POSITION;
-float4 color	:
-	COLOR;
-float2 uv		:
-	TEXCOORD0;
+	float3 pos		: POSITION;
+	float4 color	: COLOR;
+	float2 uv		: TEXCOORD0;
 };
 
 struct PS_INPUT
 {
-float4 pos		:
-	SV_POSITION;
-float4 color	:
-	COLOR0;
-float2 uv		:
-	TEXCOORD0;
+	float4 pos		: SV_POSITION;
+	float4 color	: COLOR0;
+	float2 uv		: TEXCOORD0;
 };
 // *INDENT-ON*
 

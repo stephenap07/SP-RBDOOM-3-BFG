@@ -121,22 +121,55 @@ bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 	return true;
 }
 
+struct WindowSizePair
+{
+	int width, height;
+	bool operator==( const WindowSizePair& aRight ) const
+	{
+		return width == aRight.width && height == aRight.height;
+	}
+};
+
 struct ShellOptions
 {
-	std::vector<vidMode_t> vidModes;
+	idList<vidMode_t> vidModes;
+	idList<WindowSizePair> windowSizes;
+	idList<int> displayHzs;
+
 	int windowMode;
 
 	void Init( )
 	{
-		vidModes.clear( );
+		vidModes.Clear( );
 		idList<vidMode_t> tempModeList;
 		R_GetModeListForDisplay( 0, tempModeList );
 		for( int i = 0; i < tempModeList.Num( ); i++ )
 		{
-			vidModes.push_back( tempModeList[i] );
+			vidModes.Append( tempModeList[i] );
+			windowSizes.AddUnique( { tempModeList[i].width, tempModeList[i].height } );
+			displayHzs.AddUnique( tempModeList[i].displayHz );
 		}
 
 		windowMode = r_fullscreen.GetInteger( );
+	}
+
+	int FindVidModeIndex( int windowSizeIndex, int displayIndex ) const
+	{
+		int width = windowSizes[windowSizeIndex].width;
+		int height = windowSizes[windowSizeIndex].height;
+		int di = displayHzs[displayIndex];
+
+		for( int i = 0; i < vidModes.Num(); i++ )
+		{
+			if( vidModes[i].width == width &&
+					vidModes[i].height == height &&
+					vidModes[i].displayHz == di )
+			{
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 } shellOptions;
@@ -225,15 +258,16 @@ void UI_Shell::SetupDataBinding( )
 		return;
 	}
 
-	if( auto vidModeHandle = constructor.RegisterStruct<vidMode_t>( ) )
+	if( auto vidModeHandle = constructor.RegisterStruct<WindowSizePair>( ) )
 	{
-		vidModeHandle.RegisterMember( "width", &vidMode_t::width );
-		vidModeHandle.RegisterMember( "height", &vidMode_t::height );
-		vidModeHandle.RegisterMember( "displayHz", &vidMode_t::displayHz );
+		vidModeHandle.RegisterMember( "width", &WindowSizePair::width );
+		vidModeHandle.RegisterMember( "height", &WindowSizePair::height );
 	}
 
-	constructor.RegisterArray<std::vector<vidMode_t>>( );
-	constructor.Bind( "vidModes", &shellOptions.vidModes );
+	constructor.RegisterArray<idList<WindowSizePair>>( );
+	constructor.Bind( "windowSizes", &shellOptions.windowSizes );
+	constructor.RegisterArray<idList<int>>();
+	constructor.Bind( "displayHzs", &shellOptions.displayHzs );
 
 	vidModeModel = constructor.GetModelHandle( );
 }
@@ -316,6 +350,11 @@ void UI_Shell::HideScreen( const char* _screen )
 
 void UI_Shell::UpdateSavedGames( )
 {
+}
+
+int UI_Shell::FindVidModeIndex( int windowSizeIndex, int displayIndex ) const
+{
+	return shellOptions.FindVidModeIndex( windowSizeIndex, displayIndex );
 }
 
 bool UI_Shell::IsPausingGame( )

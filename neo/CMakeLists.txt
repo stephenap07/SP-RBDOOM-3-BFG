@@ -23,9 +23,6 @@ option(FORCE_COLOR_OUTPUT
 option(COMPILE_COMMANDS
 		"Generate compile_commands.json" OFF)
 
-option(USE_MFC_TOOLS
-		"Compile the legacy MFC based tools (unsupported)" OFF)
-
 option(USE_PRECOMPILED_HEADERS
 		"Use precompiled headers during build" ON)
 		
@@ -34,12 +31,6 @@ option(SDL2
 		
 option(OPENAL
 		"Use OpenAL soft instead of XAudio2" OFF)
-
-option(FFMPEG
-		"Use FMPEG to render Bink videos" ON)
-
-option(BINKDEC
-		"Use included libbinkdec to render Bink videos" OFF)
 
 option(USE_VULKAN
 		"Use Vulkan instead of OpenGL" OFF)
@@ -54,7 +45,7 @@ option(ONATIVE
 		"Optimize for the host CPU" OFF)
 		
 option(WINDOWS10
-		"Build for Windows 10+" OFF)
+		"Build for Windows 10+" ON)
 		
 option(USE_SYSTEM_ZLIB
                 "Use the system zlib instead of the bundled one" OFF)
@@ -81,7 +72,7 @@ option(USE_DX12
 				"Use DirectX 12" ON)
 
 option(USE_NVRHI_VULKAN
-						"Use Vulkan" OFF)
+						"Use Vulkan" ON)
 
 set(CPU_TYPE "" CACHE STRING "When set, passes this string as CPU-ID which will be embedded into the binary.")
 
@@ -91,10 +82,18 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" OR CMAKE_OSX_AR
 endif()
 
 # SRS - Turn off MMX/SSE intrinsics when cross-compiling from Apple x86_64 to arm64
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)|(e2k)|(E2K)" AND NOT CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)|(e2k)|(E2K)" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(arm64)|(x64)")
 	option(USE_INTRINSICS_SSE "Compile using SSE intrinsics (e.g mmx, sse, msse2)" ON)
+
+	option(FFMPEG "Use FMPEG to render Bink videos" ON)
+
+	option(BINKDEC "Use included libbinkdec to render Bink videos" OFF)
 else()
 	option(USE_INTRINSICS_SSE "Compile using SSE intrinsics (e.g mmx, sse, msse2)" OFF)
+
+	option(FFMPEG "Use FMPEG to render Bink videos" OFF)
+
+	option(BINKDEC "Use included libbinkdec to render Bink videos" ON)
 endif()
 
 if(FFMPEG AND BINKDEC)
@@ -105,8 +104,9 @@ if(UNIX)
 	set(OPENAL ON)
 	
     # SRS - Disable precompiled headers when cross-compiling on OSX, e.g. when creating universal binaries
-    if((CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64" AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64" ) OR
-       (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64"  AND CMAKE_OSX_ARCHITECTURES MATCHES "x86_64"))
+    if((CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64" AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64"  ) OR
+      # (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64"  AND CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+	  (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64") OR  (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x64")) 
         set(USE_PRECOMPILED_HEADERS OFF)
     endif()
 
@@ -309,15 +309,6 @@ elseif(MSVC)
 					
 	if(NOT CMAKE_CL_64)
 		add_definitions(-D_USE_32BIT_TIME_T)
-	endif()
-					
-	if(USE_MFC_TOOLS)
-		add_definitions(-D_AFXDLL)
-		
-		# 0: Use Standard Windows Libraries
-		# 1: Use MFC in a Static Library
-		# 2: Use MFC in a Shared DLL 
-		set(CMAKE_MFC_FLAG 2)
 	endif()
 
 endif()
@@ -566,7 +557,9 @@ endif (RAPIDJSON_FOUND)
 
 add_subdirectory(idlib)
 add_subdirectory(typeinfo)
-add_subdirectory(libs/lua-5.4.1)
+add_subdirectory(libs/LuaJIT-cmake)
+
+set(Lua_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/LuaJIT-cmake/src)
 
 file(GLOB AAS_INCLUDES aas/*.h)
 file(GLOB AAS_SOURCES aas/*.cpp)
@@ -578,7 +571,7 @@ file(GLOB FRAMEWORK_INCLUDES framework/*.h)
 file(GLOB FRAMEWORK_SOURCES framework/*.cpp)
 
 file(GLOB FRAMEWORK_IMGUI_INCLUDES imgui/*.h)
-file(GLOB FRAMEWORK_IMGUI_SOURCES imgui/*.cpp)
+file(GLOB FRAMEWORK_IMGUI_SOURCES imgui/*.cpp imgui/*.c)
 
 file(GLOB RENDERER_INCLUDES renderer/*.h)
 file(GLOB RENDERER_SOURCES renderer/*.cpp)
@@ -1723,34 +1716,6 @@ if(MSVC)
 				swresample)
 		
 	endif()
-
-	if(USE_MFC_TOOLS)
-		
-		include_directories(libs/atlmfc/include)
-		if(CMAKE_CL_64)
-			link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/atlmfc/lib/amd64)
-		else()
-			link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/atlmfc/lib)
-		endif()
-		
-		add_definitions(-DUSE_MFC_TOOLS)
-		
-		list(APPEND RBDOOM3_SOURCES
-			${TOOLS_COMAFX_INCLUDES} ${TOOLS_COMAFX_SOURCES}
-			${TOOLS_COMMON_INCLUDES} ${TOOLS_COMMON_SOURCES}
-			${TOOLS_COMMON_PROPTREE_INCLUDES} ${TOOLS_COMMON_PROPTREE_SOURCES}
-			
-			${EDITOR_AF_INCLUDES} ${EDITOR_AF_SOURCES}
-			${EDITOR_DEBUGGER_INCLUDES} ${EDITOR_DEBUGGER_SOURCES}
-			${EDITOR_DECL_INCLUDES} ${EDITOR_DECL_SOURCES}
-			${EDITOR_GUIED_INCLUDES} ${EDITOR_GUIED_SOURCES}
-			${EDITOR_MATERIALEDITOR_INCLUDES} ${EDITOR_MATERIALEDITOR_SOURCES}
-			${EDITOR_PARTICLE_INCLUDES} ${EDITOR_PARTICLE_SOURCES}
-			${EDITOR_PDA_INCLUDES} ${EDITOR_PDA_SOURCES}
-			${EDITOR_RADIANT_INCLUDES} ${EDITOR_RADIANT_SOURCES}
-			${EDITOR_SCRIPT_INCLUDES} ${EDITOR_SCRIPT_SOURCES}
-			${EDITOR_SOUND_INCLUDES} ${EDITOR_SOUND_SOURCES})
-	endif()
 	
 	list(APPEND RBDOOM3_INCLUDES
 		${SYS_INCLUDES} 
@@ -1813,7 +1778,8 @@ if(MSVC)
 	add_executable(RBDoom3BFG WIN32 ${RBDOOM3_INCLUDES} ${RBDOOM3_SOURCES})
 
 	add_dependencies(RBDoom3BFG idlib typeinfogen)
-	add_dependencies(RBDoom3BFG lua_static)
+	#add_dependencies(RBDoom3BFG lua_static)
+	add_dependencies(RBDoom3BFG  liblua-static)
 
 	if(USE_DX12)
 		add_dependencies(RBDoom3BFG nvrhi_d3d12)
@@ -1839,11 +1805,12 @@ if(MSVC)
 
 	target_include_directories(RBDoom3BFG PRIVATE
 		${RMLUI_INCLUDE}
-		${PhysX_INCLUDE_DIR})
+		${PhysX_INCLUDE_DIR}
+		${Lua_INCLUDE_DIR})
 
 	target_link_libraries(RBDoom3BFG
 		idlib
-		lua_static
+		liblua-static
 		${DirectX_LIBRARIES}
 		dbghelp
 		#eaxguid
@@ -2051,6 +2018,7 @@ else()
 
 		target_link_libraries(RBDoom3BFG
 			idlib
+			liblua-static
 			${Vulkan_LIBRARIES}
 			${OPENGL_LIBRARIES}
 			pthread
@@ -2066,6 +2034,13 @@ else()
 			)
 	endif()
 endif()
+
+target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1 CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1)
+if (WIN32)
+    target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_IMPL_API="extern \"C\" __declspec\(dllexport\)")
+else (WIN32)
+    target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_IMPL_API="extern \"C\" ")
+endif (WIN32)
 
 if(USE_DX11)
 	target_compile_definitions(RBDoom3BFG PUBLIC USE_DX11=1)

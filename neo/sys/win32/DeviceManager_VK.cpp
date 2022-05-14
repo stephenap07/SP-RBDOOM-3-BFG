@@ -916,7 +916,7 @@ bool DeviceManager_VK::createWindowSurface()
 
 	if( err != VK_SUCCESS )
 	{
-		common->FatalError( "Failed to create a GLFW window surface, error code = %s", nvrhi::vulkan::resultToString( err ) );
+		common->FatalError( "Failed to create a window surface, error code = %s", nvrhi::vulkan::resultToString( err ) );
 		return false;
 	}
 

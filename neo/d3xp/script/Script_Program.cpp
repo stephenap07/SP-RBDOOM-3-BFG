@@ -1391,6 +1391,30 @@ idTypeDef* idProgram::FindType( const char* name )
 
 /*
 ============
+idProgram::SetLuaState
+
+Sets the current lua state.
+============
+*/
+void idProgram::SetLuaState( lua_State* L )
+{
+	luaState = L;
+}
+
+/*
+============
+idProgram::LuaState
+
+Returns current lua state.
+============
+*/
+lua_State* idProgram::LuaState()
+{
+	return luaState;
+}
+
+/*
+============
 idProgram::GetDefList
 ============
 */
@@ -2283,6 +2307,8 @@ void idProgram::FreeData()
 	top_files		= 0;
 
 	filename = "";
+
+	luaState = nullptr;
 }
 
 /*

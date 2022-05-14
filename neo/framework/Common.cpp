@@ -177,6 +177,7 @@ idCommonLocal::idCommonLocal() :
 
 	gameDLL = 0;
 
+	loadGUI = NULL;
 	nextLoadTip = 0;
 	isHellMap = false;
 	wipeForced = false;
@@ -214,16 +215,6 @@ idCommonLocal::idCommonLocal() :
 	stringsFile = NULL;
 
 	ClearWipe();
-}
-
-/*
-==================
-idCommonLocal::~idCommonLocal
-==================
-*/
-idCommonLocal::~idCommonLocal()
-{
-	printf( "Called common local destructor!" );
 }
 
 /*
@@ -1307,7 +1298,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		// if any archived cvars are modified after this, we will trigger a writing of the config file
 		cvarSystem->ClearModifiedFlags( CVAR_ARCHIVE );
 
-		// init OpenGL, which will open a window and connect sound and input hardware
+		// init the render api, which will open a window and connect sound and input hardware
 		renderSystem->InitBackend();
 
 		// Support up to 2 digits after the decimal point
@@ -1319,8 +1310,6 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		// initialize the renderSystem data structures
 		renderSystem->Init();
-
-		console->InitView();
 
 		whiteMaterial = declManager->FindMaterial( "_white" );
 
@@ -1611,11 +1600,15 @@ void idCommonLocal::Shutdown()
 	eventLoop->Shutdown();
 
 	// shutdown the decl manager
+	// SRS - Note this also shuts down all cinematic resources, including cinematic audio voices
 	printf( "declManager->Shutdown();\n" );
 	declManager->Shutdown();
 
-	// shutdown the console render view
-	console->ShutdownView();
+	// shut down the sound system
+	// SRS - Shut down sound system after decl manager so cinematic audio voices are destroyed first
+	// Important for XAudio2 where the mastering voice cannot be destroyed if any other voices exist
+	printf( "soundSystem->Shutdown();\n" );
+	soundSystem->Shutdown();
 
 	// shut down the renderSystem
 	printf( "renderSystem->Shutdown();\n" );

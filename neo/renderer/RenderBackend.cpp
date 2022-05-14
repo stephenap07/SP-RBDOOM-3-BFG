@@ -5445,7 +5445,7 @@ void idRenderBackend::DrawMotionVectors()
 		return;
 	}
 
-	if( !r_useTemporalAA.GetBool() && r_motionBlur.GetInteger() <= 0 )
+	if( !R_UseTemporalAA() && r_motionBlur.GetInteger() <= 0 )
 	{
 		return;
 	}
@@ -5455,7 +5455,7 @@ void idRenderBackend::DrawMotionVectors()
 		return;
 	}
 
-	if( viewDef->renderView.rdflags & RDF_NOAMBIENT )
+	if( viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) )
 	{
 		return;
 	}
@@ -5528,27 +5528,51 @@ void idRenderBackend::DrawMotionVectors()
 	int mvpIndex = ( viewDef->renderView.viewEyeBuffer == 1 ) ? 1 : 0;
 
 	// derive the matrix to go from current pixels to previous frame pixels
-	idRenderMatrix	inverseMVP;
-	idRenderMatrix::Inverse( viewDef->worldSpace.mvp, inverseMVP );
-
+	bool cameraMoved = false;
 	idRenderMatrix	motionMatrix;
-	idRenderMatrix::Multiply( prevMVP[mvpIndex], inverseMVP, motionMatrix );
 
-	prevMVP[mvpIndex] = viewDef->worldSpace.mvp;
+	if( memcmp( &viewDef->worldSpace.unjitteredMVP[0][0], &prevMVP[mvpIndex][0][0], sizeof( idRenderMatrix ) ) != 0 )
+	{
+		idRenderMatrix	inverseMVP;
+		idRenderMatrix::Inverse( viewDef->worldSpace.unjitteredMVP, inverseMVP );
 
-	RB_SetMVP( motionMatrix );
+		idRenderMatrix::Multiply( prevMVP[mvpIndex], inverseMVP, motionMatrix );
 
-	GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_DEPTHMASK | GLS_CULL_TWOSIDED );
+		cameraMoved = true;
+	}
 
-	renderProgManager.BindShader_MotionVectors();
+	prevMVP[mvpIndex] = viewDef->worldSpace.unjitteredMVP;
 
-	GL_SelectTexture( 0 );
-	globalImages->currentRenderHDRImage->Bind();
+	// make sure rpWindowCoord is set even without post processing surfaces in the view
+	int x = viewDef->viewport.x1;
+	int y = viewDef->viewport.y1;
+	int	w = viewDef->viewport.x2 - viewDef->viewport.x1 + 1;
+	int	h = viewDef->viewport.y2 - viewDef->viewport.y1 + 1;
 
-	GL_SelectTexture( 1 );
-	globalImages->currentDepthImage->Bind();
+	// window coord to 0.0 to 1.0 conversion
+	float windowCoordParm[4];
+	windowCoordParm[0] = 1.0f / w;
+	windowCoordParm[1] = 1.0f / h;
+	windowCoordParm[2] = w;
+	windowCoordParm[3] = h;
+	SetFragmentParm( RENDERPARM_WINDOWCOORD, windowCoordParm ); // rpWindowCoord
 
-	DrawElementsWithCounters( &unitSquareSurface );
+	if( r_taaMotionVectors.GetBool() && prevViewsValid && cameraMoved )
+	{
+		RB_SetMVP( motionMatrix );
+
+		GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_DEPTHMASK | GLS_CULL_TWOSIDED );
+
+		renderProgManager.BindShader_MotionVectors();
+
+		GL_SelectTexture( 0 );
+		globalImages->currentRenderHDRImage->Bind();
+
+		GL_SelectTexture( 1 );
+		globalImages->currentDepthImage->Bind();
+
+		DrawElementsWithCounters( &unitSquareSurface );
+	}
 
 	renderLog.CloseBlock();
 }
@@ -5561,7 +5585,7 @@ void idRenderBackend::TemporalAAPass( const viewDef_t* _viewDef )
 		return;
 	}
 
-	if( !r_useTemporalAA.GetBool() )
+	if( !R_UseTemporalAA() )
 	{
 		return;
 	}
@@ -5571,11 +5595,12 @@ void idRenderBackend::TemporalAAPass( const viewDef_t* _viewDef )
 		return;
 	}
 
-	if( viewDef->renderView.rdflags & RDF_NOAMBIENT )
+	if( viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) )
 	{
 		return;
 	}
 
+	renderLog.OpenMainBlock( MRB_TAA );
 	renderLog.OpenBlock( "Render_TemporalAA" );
 
 	TemporalAntiAliasingParameters params =
@@ -5589,6 +5614,7 @@ void idRenderBackend::TemporalAAPass( const viewDef_t* _viewDef )
 	prevViewsValid = true;
 
 	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
 }
 
 idVec2 idRenderBackend::GetCurrentPixelOffset() const
@@ -5851,7 +5877,8 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		return;
 	}
 
-	if( r_useSSAO.GetInteger() <= 0 || r_useSSAO.GetInteger() > 1 )
+	// FIXME: the hierarchical depth buffer does not work with the MSAA depth texture source
+	if( r_useSSAO.GetInteger() <= 0 || r_useSSAO.GetInteger() > 1 || R_GetMSAASamples() > 1 )
 	{
 		return;
 	}
@@ -5890,16 +5917,22 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 #if defined( USE_NVRHI )
 		renderLog.OpenBlock( "Render_HiZ" );
 
-		commonPasses.BlitTexture(
-			commandList,
-			globalFramebuffers.csDepthFBO[0]->GetApiObject(),
-			globalImages->currentDepthImage->GetTextureHandle(),
-			&bindingCache );
+		//if( R_GetMSAASamples() > 1 )
+		//{
+		//	commandList->resolveTexture( globalImages->hierarchicalZbufferImage->GetTextureHandle(), nvrhi::AllSubresources, globalImages->currentDepthImage->GetTextureHandle(), nvrhi::AllSubresources );
+		//}
+		//else
+		{
+			commonPasses.BlitTexture(
+				commandList,
+				globalFramebuffers.csDepthFBO[0]->GetApiObject(),
+				globalImages->currentDepthImage->GetTextureHandle(),
+				&bindingCache );
+		}
 
 		hiZGenPass->Dispatch( commandList, MAX_HIERARCHICAL_ZBUFFERS );
 
 		renderLog.CloseBlock();
-
 #else
 		renderLog.OpenBlock( "Render_HiZ", colorDkGrey );
 
@@ -6718,15 +6751,14 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// ensures that depth writes are enabled for the depth clear
 	GL_State( GLS_DEFAULT | GLS_CULL_FRONTSIDED, true );
 
-	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
-	GL_Clear( false, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
-
 	bool useHDR = r_useHDR.GetBool() && !_viewDef->is2Dgui;
+	bool clearColor = false;
 	if( useHDR )
 	{
 		if( _viewDef->renderView.rdflags & RDF_IRRADIANCE )
 		{
 			globalFramebuffers.envprobeFBO->Bind();
+			clearColor = true;
 		}
 		else
 		{
@@ -6745,6 +6777,9 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		Framebuffer::Unbind();
 #endif
 	}
+
+	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
+	GL_Clear( clearColor, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
 
 	// RB end
 
@@ -6882,14 +6917,27 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		// resolve the screen
 #if defined( USE_NVRHI )
 
-		renderLog.OpenBlock( "Blit to _currentRender" );
 
-		BlitParameters blitParms;
-		nvrhi::IFramebuffer* currentFB = ( nvrhi::IFramebuffer* )currentFrameBuffer->GetApiObject();
-		blitParms.sourceTexture = currentFB->getDesc().colorAttachments[0].texture;
-		blitParms.targetFramebuffer = globalFramebuffers.postProcFBO->GetApiObject(); // _currentRender image
-		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
-		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+
+		//if( currentFrameBuffer->GetApiObject()->getDesc().colorAttachments.begin().)
+
+		if( R_GetMSAASamples() > 1 )
+		{
+			renderLog.OpenBlock( "Resolve to _currentRender" );
+
+			commandList->resolveTexture( globalImages->currentRenderImage->GetTextureHandle(), nvrhi::AllSubresources, globalImages->currentRenderHDRImage->GetTextureHandle(), nvrhi::AllSubresources );
+		}
+		else
+		{
+			renderLog.OpenBlock( "Blit to _currentRender" );
+
+			BlitParameters blitParms;
+			nvrhi::IFramebuffer* currentFB = ( nvrhi::IFramebuffer* )currentFrameBuffer->GetApiObject();
+			blitParms.sourceTexture = currentFB->getDesc().colorAttachments[0].texture;
+			blitParms.targetFramebuffer = globalFramebuffers.postProcFBO->GetApiObject(); // _currentRender image
+			blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
+			commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+		}
 
 		renderLog.CloseBlock();
 #else
@@ -6970,13 +7018,22 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		Tonemap( _viewDef );
 #else
 		ToneMappingParameters parms;
-		if( r_useTemporalAA.GetBool() )
+		if( R_UseTemporalAA() )
 		{
 			toneMapPass->SimpleRender( commandList, parms, viewDef, globalImages->taaResolvedImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
 		}
 		else
 		{
-			toneMapPass->SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
+			if( R_GetMSAASamples() > 1 )
+			{
+				commandList->resolveTexture( globalImages->taaResolvedImage->GetTextureHandle(), nvrhi::AllSubresources, globalImages->currentRenderHDRImage->GetTextureHandle(), nvrhi::AllSubresources );
+
+				toneMapPass->SimpleRender( commandList, parms, viewDef, globalImages->taaResolvedImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
+			}
+			else
+			{
+				toneMapPass->SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
+			}
 		}
 #endif
 	}
@@ -7000,6 +7057,22 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 #if defined( USE_NVRHI )
 	//TODO(Stephen): Move somewhere else?
 	// RB: this needs to be done after next post processing steps later on
+
+	if( _viewDef->renderView.rdflags & RDF_IRRADIANCE )
+	{
+		// we haven't changed ldrImage so it's basically the previewsRenderLDR
+		BlitParameters blitParms;
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
+		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
+		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->envprobeHDRImage->GetTextureID();
+		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
+		blitParms.targetViewport = nvrhi::Viewport( ENVPROBE_CAPTURE_SIZE, ENVPROBE_CAPTURE_SIZE );
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+	}
+	else
 	{
 		BlitParameters blitParms;
 		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
@@ -7253,6 +7326,11 @@ void idRenderBackend::PostProcess( const void* data )
 	}
 
 	if( ( r_ssaoDebug.GetInteger() > 0 ) || ( r_ssgiDebug.GetInteger() > 0 ) )
+	{
+		return;
+	}
+
+	if( viewDef->renderView.rdflags & RDF_IRRADIANCE )
 	{
 		return;
 	}

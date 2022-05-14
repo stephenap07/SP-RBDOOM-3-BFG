@@ -78,6 +78,7 @@ extern idCVar	g_showcamerainfo;
 extern idCVar	g_showTestModelFrame;
 extern idCVar	g_showActiveEntities;
 extern idCVar	g_showEnemies;
+extern idCVar	g_showWeaponDebug;
 
 extern idCVar	g_frametime;
 extern idCVar	g_timeentities;

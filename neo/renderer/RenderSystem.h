@@ -108,10 +108,10 @@ enum graphicsDriverType_t
 enum antiAliasingMode_t
 {
 	ANTI_ALIASING_NONE,
-	ANTI_ALIASING_SMAA_1X,
+	ANTI_ALIASING_TAA,
+	ANTI_ALIASING_TAA_SMAA_1X,
 	ANTI_ALIASING_MSAA_2X,
 	ANTI_ALIASING_MSAA_4X,
-	ANTI_ALIASING_MSAA_8X
 };
 
 // CPU counters and timers
@@ -168,6 +168,7 @@ struct backEndCounters_t
 	uint64	gpuShadowAtlasPassMicroSec;
 	uint64	gpuInteractionsMicroSec;
 	uint64	gpuShaderPassMicroSec;
+	uint64	gpuTemporalAntiAliasingMicroSec;
 	uint64	gpuPostProcessingMicroSec;
 	uint64	gpuMicroSec;
 };
@@ -245,7 +246,6 @@ struct glconfig_t
 	bool				debugOutputAvailable;
 	bool				swapControlTearAvailable;
 
-	// RB begin
 	bool				gremedyStringMarkerAvailable;
 	bool				khronosDebugAvailable;
 	bool				vertexHalfFloatAvailable;
@@ -431,7 +431,7 @@ public:
 	// then perform all desired rendering, then capture to an image
 	// if the specified physical dimensions are larger than the current cropped region, they will be cut down to fit
 	virtual void			CropRenderSize( int width, int height ) = 0;
-	virtual void            CropRenderSize( int x, int y, int width, int height ) = 0;
+	virtual void            CropRenderSize( int x, int y, int width, int height, bool topLeftAncor ) = 0;
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false ) = 0;
 	// fixAlpha will set all the alpha channel values to 0xff, which allows screen captures
 	// to use the default tga loading code without having dimmed down areas in many places

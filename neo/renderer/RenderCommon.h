@@ -474,6 +474,7 @@ struct viewEntity_t
 	float					modelViewMatrix[16];	// local coords to eye coords
 
 	idRenderMatrix			mvp;
+	idRenderMatrix			unjitteredMVP;			// no TAA subpixel jittering
 
 	// parallelAddModels will build a chain of surfaces here that will need to
 	// be linked to the lights or added to the drawsurf list in a serial code section
@@ -609,6 +610,9 @@ struct viewDef_t
 	idRenderMatrix		projectionRenderMatrix;	// tech5 version of projectionMatrix
 
 	// RB begin
+	float				unjitteredProjectionMatrix[16];		// second version without TAA subpixel jittering
+	idRenderMatrix		unjitteredProjectionRenderMatrix;
+
 	float				unprojectionToCameraMatrix[16];
 	idRenderMatrix		unprojectionToCameraRenderMatrix;
 
@@ -970,7 +974,7 @@ public:
 	virtual void			TakeScreenshot( int width, int height, const char* fileName, renderView_t* ref );
 	virtual byte*			CaptureRenderToBuffer( int width, int height, renderView_t* ref );
 	virtual void			CropRenderSize( int width, int height );
-	virtual void            CropRenderSize( int x, int y, int width, int height );
+	virtual void            CropRenderSize( int x, int y, int width, int height, bool topLeftAncor );
 	virtual void			CaptureRenderToImage( const char* imageName, bool clearColorAfterCopy = false );
 	virtual void			CaptureRenderToFile( const char* fileName, bool fixAlpha );
 	virtual void			UnCrop();
@@ -1323,6 +1327,7 @@ extern idCVar r_taaEnableHistoryClamping;
 extern idCVar r_taaClampingFactor;
 extern idCVar r_taaNewFrameWeight;
 extern idCVar r_taaMaxRadiance;
+extern idCVar r_taaMotionVectors;
 // RB end
 
 /*
@@ -1333,11 +1338,25 @@ INITIALIZATION
 ====================================================================
 */
 
+bool R_UseTemporalAA();
+
+uint R_GetMSAASamples();
+
 void R_SetNewMode( const bool fullInit );
 
 void R_SetColorMappings();
 
 void R_ScreenShot_f( const idCmdArgs& args );
+
+/*
+====================================================================
+
+NVRHI helpers
+
+====================================================================
+*/
+bool R_ReadPixelsRGB8( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, const char* fullname );
+bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, void* pic, int picWidth, int picHeight );
 
 /*
 ====================================================================

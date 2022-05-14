@@ -18,6 +18,8 @@
 
 
 idCVar imgui_showDemoWindow( "imgui_showDemoWindow", "0", CVAR_GUI | CVAR_BOOL, "show big ImGui demo window" );
+extern idCVar g_showWeaponDebug;
+extern idCVar g_showLuaWindows;
 
 // our custom ImGui functions from BFGimgui.h
 
@@ -206,7 +208,7 @@ void SetClipboardText( void*, const char* text )
 
 bool ShowWindows()
 {
-	return ( ImGuiTools::AreEditorsActive() || imgui_showDemoWindow.GetBool() || com_showFPS.GetInteger() > 1 );
+	return ( ImGuiTools::AreEditorsActive() || imgui_showDemoWindow.GetBool() || com_showFPS.GetInteger() > 1 || g_showWeaponDebug.GetBool() || g_showLuaWindows.GetBool() );
 }
 
 bool UseInput()
@@ -248,8 +250,6 @@ bool Init( int windowWidth, int windowHeight )
 	g_DisplaySize.x = windowWidth;
 	g_DisplaySize.y = windowHeight;
 	io.DisplaySize = g_DisplaySize;
-
-	io.RenderDrawListsFn = idRenderBackend::ImGui_RenderDrawLists;
 
 	// RB: FIXME double check
 	io.SetClipboardTextFn = SetClipboardText;
@@ -437,6 +437,7 @@ void Render()
 		//ImGui::End();
 
 		ImGui::Render();
+		idRenderBackend::ImGui_RenderDrawLists( ImGui::GetDrawData() );
 		g_haveNewFrame = false;
 	}
 }
@@ -458,3 +459,13 @@ bool IsInitialized()
 }
 
 } //namespace ImGuiHook
+
+void igHookNewFrame()
+{
+	ImGuiHook::NewFrame();
+}
+
+bool igIsReadyToRender()
+{
+	return ImGuiHook::IsReadyToRender();
+}

@@ -21,6 +21,13 @@ LuaEntity::~LuaEntity( )
 
 void LuaEntity::Spawn( )
 {
+	BecomeActive( TH_THINK );
+}
+
+void LuaEntity::Think()
+{
+	idAnimatedEntity::Think();
+	stateScript.Think();
 }
 
 void LuaEntity::Event_PlayAnim( int channel, const char* animname, bool loop )

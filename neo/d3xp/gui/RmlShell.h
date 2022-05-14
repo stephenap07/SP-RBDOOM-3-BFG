@@ -75,6 +75,8 @@ public:
 
 	void					UpdateSavedGames( );
 
+	int						FindVidModeIndex( int windowSizeIndex, int displayIndex ) const;
+
 	RmlUserInterface*		Ui()
 	{
 		return ui;

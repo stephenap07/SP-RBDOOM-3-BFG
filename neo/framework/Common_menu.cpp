@@ -115,7 +115,7 @@ void idCommonLocal::OnStartHosting( idMatchParameters& parms )
 			}
 			else
 			{
-				parms.gameMap = supportedMaps[idLib::frameNumber % supportedMaps.Num()];
+				parms.gameMap = supportedMaps[ idLib::frameNumber % supportedMaps.Num() ];
 			}
 		}
 	}
@@ -132,7 +132,7 @@ void idCommonLocal::OnStartHosting( idMatchParameters& parms )
 				numSupportedModes++;
 			}
 		}
-		parms.gameMode = supportedModeList[( idLib::frameNumber / mpGameMaps.Num() ) % numSupportedModes];
+		parms.gameMode = supportedModeList[( idLib::frameNumber / mpGameMaps.Num() ) % numSupportedModes ];
 	}
 	parms.mapName = mpGameMaps[parms.gameMap].mapFile;
 	parms.numSlots = session->GetTitleStorageInt( "MAX_PLAYERS_ALLOWED", 4 );
@@ -147,7 +147,6 @@ void idCommonLocal::StartMenu( bool playIntro )
 {
 	if( game && game->Shell_IsActive() )
 	{
-		game->Shell_SetPauseGame( true );
 		return;
 	}
 
@@ -164,6 +163,7 @@ void idCommonLocal::StartMenu( bool playIntro )
 	}
 
 	console->Close();
+
 }
 
 /*
@@ -177,8 +177,6 @@ void idCommonLocal::ExitMenu()
 	{
 		game->Shell_Show( false );
 	}
-
-	soundSystem->SetPlayingSoundWorld( soundWorld );
 }
 
 /*
@@ -190,6 +188,7 @@ Executes any commands returned by the gui
 */
 bool idCommonLocal::MenuEvent( const sysEvent_t* event )
 {
+
 	if( session->GetSignInManager().ProcessInputEvent( event ) )
 	{
 		return true;

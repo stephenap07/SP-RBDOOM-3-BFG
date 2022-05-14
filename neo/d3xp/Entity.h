@@ -178,24 +178,45 @@ inline void	ReadFromBitMsg( netBoolEvent_t& netEvent, const idBitMsg& msg )
 	assert( netEvent.count <= netBoolEvent_t::Maximum );
 }
 
+struct waitingThread
+{
+	lua_State*	thread;
+	float		wakeUpTime;
+};
+
 class idStateScript
 {
 public:
-	idStateScript( idEntity* _owner ) : owner( _owner ), scriptName( ) {}
+	idStateScript( idEntity* _owner );
 
 	void SetName( const char* name )
 	{
 		scriptName = name;
 	}
 
-	virtual ~idStateScript( ) {}
+	virtual ~idStateScript() {}
 
-	void Load( );
+	void Construct();
+
+	void Destroy();
+
+	void Think();
+
+	void Reload();
+
+	void SendEvent( int entityNumber, const char* eventName );
+
+	const char* GetName()
+	{
+		return scriptName.c_str();
+	}
 
 private:
 
-	idEntity* owner;
-	idStr scriptName;
+	idEntity*				owner;
+	idStr					scriptName;
+	idHashIndex				waitingHash;
+	idList<waitingThread>	waitingThreads;
 };
 
 class idEntity : public idClass
@@ -626,6 +647,7 @@ public:
 
 	void					Event_GetName();
 	void					Event_SetName( const char* name );
+	void					Event_GetEntityNum();
 	void					Event_FindTargets();
 	void					Event_ActivateTargets( idEntity* activator );
 	void					Event_NumTargets();
@@ -692,6 +714,7 @@ public:
 	void					Event_GetGuiParm( int guiNum, const char* key );
 	void					Event_GetGuiParmFloat( int guiNum, const char* key );
 	void					Event_GuiNamedEvent( int guiNum, const char* event );
+	void					Event_WaitSeconds();
 };
 
 ID_INLINE float idEntity::DistanceTo( idEntity* ent )
