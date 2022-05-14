@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef USE_PHYSX
 #include "task/PxCpuDispatcher.h"
 
 class GamePXCpuDispatcher : public physx::PxCpuDispatcher
@@ -19,3 +20,4 @@ private:
 	idParallelJobList* subJobList;
 };
 
+#endif

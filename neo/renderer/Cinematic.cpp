@@ -137,8 +137,8 @@ private:
 #endif
 #ifdef USE_BINKDEC
 	BinkHandle				binkHandle;
-	cinData_t				ImageForTimeBinkDec( int milliseconds );
-	bool					InitFromBinkDecFile( const char* qpath, bool looping );
+	cinData_t				ImageForTimeBinkDec( int milliseconds, nvrhi::ICommandList* commandList );
+	bool					InitFromBinkDecFile( const char* qpath, bool looping, nvrhi::ICommandList* commandList );
 	void					BinkDecReset();
 
 	YUVbuffer				yuvBuffer;
@@ -856,7 +856,7 @@ void idCinematicLocal::FFMPEGReset()
 #endif
 
 #ifdef USE_BINKDEC
-bool idCinematicLocal::InitFromBinkDecFile( const char* qpath, bool amilooping )
+bool idCinematicLocal::InitFromBinkDecFile( const char* qpath, bool amilooping, nvrhi::ICommandList* commandList )
 {
 	looping = amilooping;
 	startTime = 0;
@@ -925,7 +925,7 @@ bool idCinematicLocal::InitFromBinkDecFile( const char* qpath, bool amilooping )
 	status = FMV_PLAY;
 	hasFrame = false;                               // SRS - Implemented hasFrame for BinkDec behaviour consistency with FFMPEG
 	framePos = -1;
-	ImageForTime( 0 );                              // SRS - Was missing initial call to ImageForTime() - fixes validation errors when using Vulkan renderer
+	ImageForTime( 0, commandList );                              // SRS - Was missing initial call to ImageForTime() - fixes validation errors when using Vulkan renderer
 	status = ( looping ) ? FMV_PLAY : FMV_IDLE;     // SRS - Update status based on looping flag
 
 	return true;
@@ -1009,7 +1009,7 @@ bool idCinematicLocal::InitFromFile( const char* qpath, bool amilooping, nvrhi::
 		animationLength = 0;
 		fileName = temp;
 		//idLib::Warning( "New filename: '%s'\n", fileName.c_str() );
-		return InitFromBinkDecFile( fileName.c_str(), amilooping );
+		return InitFromBinkDecFile( fileName.c_str(), amilooping, commandList );
 #else
 		animationLength = 0;
 		return false;
@@ -1181,7 +1181,7 @@ cinData_t idCinematicLocal::ImageForTime( int thisTime, nvrhi::ICommandList* com
 #elif defined(USE_BINKDEC) // DG: libbinkdec support
 	if( !isRoQ )
 	{
-		return ImageForTimeBinkDec( thisTime );
+		return ImageForTimeBinkDec( thisTime, commandList );
 	}
 #endif
 
@@ -1505,7 +1505,7 @@ cinData_t idCinematicLocal::ImageForTimeFFMPEG( int thisTime, nvrhi::ICommandLis
 
 
 #ifdef USE_BINKDEC
-cinData_t idCinematicLocal::ImageForTimeBinkDec( int thisTime )
+cinData_t idCinematicLocal::ImageForTimeBinkDec( int thisTime, nvrhi::ICommandList* commandList )
 {
 	cinData_t	cinData;
 	int16_t*	audioBuffer = NULL;
@@ -1639,7 +1639,7 @@ cinData_t idCinematicLocal::ImageForTimeBinkDec( int thisTime )
 			opts.height = h;
 			img->AllocImage( opts, TF_LINEAR, TR_REPEAT );
 		}
-		img->SubImageUpload( 0, 0, 0, 0, w, h, yuvBuffer[i].data );
+		img->SubImageUpload( 0, 0, 0, 0, w, h, yuvBuffer[i].data, commandList );
 	}
 
 	hasFrame = true;

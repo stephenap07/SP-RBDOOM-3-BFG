@@ -74,6 +74,9 @@ option(USE_DX12
 option(USE_NVRHI_VULKAN
 						"Use Vulkan" ON)
 
+option(USE_PHYSX
+                "Use PhysX" OFF)
+
 set(CPU_TYPE "" CACHE STRING "When set, passes this string as CPU-ID which will be embedded into the binary.")
 
 # SRS - Turn on optimization when cross-compiling from Apple arm64 to x86_64
@@ -110,7 +113,7 @@ if(UNIX)
         set(USE_PRECOMPILED_HEADERS OFF)
     endif()
 
-	if(USE_VULKAN)
+    if(USE_VULKAN OR USE_NVRHI)
 		SET(SDL2 ON)
 		
 		# RB: disable precompiled headers on Linux with Vulkan because of error: POSIX thread support was disabled in PCH file but is currently enabled
@@ -157,13 +160,13 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 
 	# Compiler check (needs -std=c++11 flag)
 	include(CheckCXXCompilerFlag)
-	CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-	if(COMPILER_SUPPORTS_CXX11)
-		set(CMAKE_CXX_STANDARD 11)
+	CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
+	if(COMPILER_SUPPORTS_CXX17)
+		set(CMAKE_CXX_STANDARD 17)
 		set(CMAKE_CXX_STANDARD_REQUIRED ON)
 		set(CMAKE_CXX_EXTENSIONS OFF)
 	else()
-		message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+		message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++17 support. Please use a different C++ compiler.")
 	endif()
 
 	if(CPU_TYPE)
@@ -206,7 +209,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 	add_compile_options(-fno-strict-aliasing)
 
 	# SRS - Make sure OSX can find system headers and add support for minimum OSX runtime version
-	if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    if(APPLE)
 		# SRS - Also add -fasm-blocks otherwise Xcode complains and -Qunused-arguments to silence MMX/SSE unused arg warnings when compiling for Apple arm64
 		add_definitions(-fasm-blocks -Qunused-arguments)
         if(CMAKE_OSX_SYSROOT)
@@ -371,7 +374,7 @@ if(USE_VULKAN)
 	# which causes all kinds of weird segmentation faults because struct sizes don't match
  
     # SRS - Set default VULKAN_SDK location if environment variable not defined on OSX
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT DEFINED ENV{VULKAN_SDK})
+    if(APPLE AND NOT DEFINED ENV{VULKAN_SDK})
         if(NOT USE_MoltenVK)
             # SRS - Vulkan SDK installer copies standard vulkan headers and libs to /usr/local on OSX
             set(ENV{VULKAN_SDK} /usr/local)
@@ -428,7 +431,7 @@ if(USE_VULKAN)
         add_definitions(-DUSE_VULKAN)
         include_directories($ENV{VULKAN_SDK}/include)
 
-		if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        if(APPLE)
             # SRS - Enable Beta extensions for VULKAN_SDK portability subset features on OSX
             add_definitions(-DVK_ENABLE_BETA_EXTENSIONS)
             # SRS - Optionally use MoltenVK headers/library for runtime config functions on OSX
@@ -453,7 +456,7 @@ elseif(USE_NVRHI_VULKAN)
 	# which causes all kinds of weird segmentation faults because struct sizes don't match
  
     # SRS - Set default VULKAN_SDK location if environment variable not defined on OSX
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT DEFINED ENV{VULKAN_SDK})
+    if(APPLE AND NOT DEFINED ENV{VULKAN_SDK})
         if(NOT USE_MoltenVK)
             # SRS - Vulkan SDK installer copies standard vulkan headers and libs to /usr/local on OSX
             set(ENV{VULKAN_SDK} /usr/local)
@@ -473,7 +476,7 @@ elseif(USE_NVRHI_VULKAN)
 	else()
         include_directories($ENV{VULKAN_SDK}/include)
 
-		if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        if(APPLE)
             # SRS - Enable Beta extensions for VULKAN_SDK portability subset features on OSX
             add_definitions(-DVK_ENABLE_BETA_EXTENSIONS)
             # SRS - Optionally use MoltenVK headers/library for runtime config functions on OSX
@@ -489,9 +492,7 @@ elseif(USE_NVRHI_VULKAN)
 	# Eric: For use with SDL2/Vulkan
 	if(UNIX)
         # SRS - For UNIX-like target OSs use the generic SDL Vulkan platform
-        add_definitions(-DVULKAN_USE_PLATFORM_SDL)
-	elseif(WIN32)
-		add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
+        add_definitions(-DUSE_NVRHI_SDL)
 	endif()
 else()
 
@@ -544,6 +545,10 @@ if(USE_NVRHI)
     include_directories(${NVRHI_DIR}/include)
 endif(USE_NVRHI)
 
+set(RMLUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/RmlUi)
+add_subdirectory(${RMLUI_DIR})
+include_directories(${RMLUI_DIR}/Include)
+
 if(USE_SYSTEM_RAPIDJSON)
 find_package(rapidjson REQUIRED)
 endif(USE_SYSTEM_RAPIDJSON)
@@ -556,7 +561,6 @@ else (RAPIDJSON_FOUND)
 endif (RAPIDJSON_FOUND)
 
 add_subdirectory(idlib)
-add_subdirectory(typeinfo)
 add_subdirectory(libs/LuaJIT-cmake)
 
 set(Lua_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/LuaJIT-cmake/src)
@@ -759,15 +763,15 @@ set(FREETYPE_SOURCES
 	libs/freetype/src/type42/type42.c
 	libs/freetype/src/winfonts/winfnt.c)
 
+if(USE_PHYSX)
 find_package(PhysX REQUIRED)
+add_definitions("-DUSE_PHYSX")
+endif()
 
 add_definitions("-DRMLUI_STATIC_LIB")
+
 set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
 
-set(RMLUI_LIBRARIES
-    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlCore.lib optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlCore.lib
-    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlDebugger.lib optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlDebugger.lib)	
-	
 set(SOUND_INCLUDES
 	sound/snd_local.h
 	sound/sound.h
@@ -938,9 +942,6 @@ set(GAMED3XP_SOURCES
 file(GLOB GAMED3XP_AI_INCLUDES d3xp/ai/*.h)
 file(GLOB GAMED3XP_AI_SOURCES d3xp/ai/*.cpp)
 
-file(GLOB GAMED3XP_WEAPONS_INCLUDES d3xp/weapons/*.h)
-file(GLOB GAMED3XP_WEAPONS_SOURCES d3xp/weapons/*.cpp)
-
 file(GLOB GAMED3XP_ANIM_INCLUDES d3xp/anim/*.h)
 file(GLOB GAMED3XP_ANIM_SOURCES d3xp/anim/*.cpp)
 
@@ -950,7 +951,7 @@ set(GAMED3XP_GAMESYS_SOURCES
 	d3xp/gamesys/Class.cpp
 	#d3xp/gamesys/DebugGraph.cpp
 	d3xp/gamesys/Event.cpp
-	d3xp/gamesys/GameTypeInfo.cpp
+	#d3xp/gamesys/GameTypeInfo.cpp
 	d3xp/gamesys/SaveGame.cpp
 	d3xp/gamesys/State.cpp
 	d3xp/gamesys/SysCmds.cpp
@@ -1211,7 +1212,7 @@ file(GLOB SDF_INCLUDE libs/sdf/*.h)
 
 # Eric: Utilize either the Vulkan or GL implementation of SDL
 if(UNIX)
-	if(USE_VULKAN)
+    if(USE_VULKAN OR USE_NVRHI)
 		get_filename_component(sdl_glimp_cpp_full_path ${CMAKE_CURRENT_SOURCE_DIR}/sys/sdl/sdl_glimp.cpp ABSOLUTE)
 		list(REMOVE_ITEM SDL_SOURCES "${sdl_glimp_cpp_full_path}")
 	else()
@@ -1777,9 +1778,14 @@ if(MSVC)
 	
 	add_executable(RBDoom3BFG WIN32 ${RBDOOM3_INCLUDES} ${RBDOOM3_SOURCES})
 
+<<<<<<< HEAD
 	add_dependencies(RBDoom3BFG idlib typeinfogen)
 	#add_dependencies(RBDoom3BFG lua_static)
 	add_dependencies(RBDoom3BFG  liblua-static)
+=======
+	add_dependencies(RBDoom3BFG idlib)
+	add_dependencies(RBDoom3BFG lua_static)
+>>>>>>> d46b559be12a8466867baf21027a462308b2c657
 
 	if(USE_DX12)
 		add_dependencies(RBDoom3BFG nvrhi_d3d12)
@@ -1793,20 +1799,21 @@ if(MSVC)
 		add_dependencies(RBDoom3BFG nvrhi_vk)
 	endif()
 
-	# call typeinfogen to generate neo/d3xp/gamesys/GameTypeInfo.h
-	add_custom_command(
-			TARGET RBDoom3BFG
-			PRE_BUILD
-			DEPENDS typeinfogen
-			COMMAND typeinfogen
-			WORKING_DIRECTORY ..
-			COMMENT "Generating neo/d3xp/gamesys/GameTypeInfo.h"
-			)
+    add_dependencies(RBDoom3BFG RmlCore)
 
 	target_include_directories(RBDoom3BFG PRIVATE
+<<<<<<< HEAD
 		${RMLUI_INCLUDE}
 		${PhysX_INCLUDE_DIR}
 		${Lua_INCLUDE_DIR})
+=======
+		${RMLUI_INCLUDE})
+
+    if(USE_PHYSX)
+        target_include_directories(RBDoom3BFG PRIVATE
+            ${PhysX_INCLUDE_DIR})
+    endif()
+>>>>>>> d46b559be12a8466867baf21027a462308b2c657
 
 	target_link_libraries(RBDoom3BFG
 		idlib
@@ -1825,12 +1832,17 @@ if(MSVC)
         ${PNG_LIBRARY}
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
-        ${RMLUI_LIBRARIES}
-        PhysX::PhysXExtensions
-    	PhysX::PhysXCommon
-    	PhysX::PhysXCooking
 		${CMAKE_DL_LIBS}
+		RmlCore
+		RmlDebugger
 		)
+
+    if(USE_PHYSX)
+        target_link_libraries(RBDoom3BFG
+            PhysX::PhysXExtensions
+            PhysX::PhysXCommon
+            PhysX::PhysXCooking)
+    endif()
 		
 	# set MSVC default debug directory on executable	
 	if(CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER_EQUAL 8)
@@ -1870,7 +1882,7 @@ else()
 			set(SDLx_LIBRARY ${SDL_LIBRARY})
 		endif()
 
-		if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        if(APPLE)
 			list(REMOVE_ITEM POSIX_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sys/posix/platform_linux.cpp)
 		else()
 			list(REMOVE_ITEM POSIX_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sys/posix/platform_osx.cpp)
@@ -1885,7 +1897,7 @@ else()
 			add_definitions(-DUSE_OPENAL)
 
 			# SRS - Added support for OpenAL Soft headers on OSX (vs default macOS SDK headers)
-			if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT OPENAL_INCLUDE_DIR MATCHES "SDKs/MacOSX.*\.sdk")
+            if(APPLE AND NOT OPENAL_INCLUDE_DIR MATCHES "SDKs/MacOSX.*\.sdk")
 				include_directories(${OPENAL_INCLUDE_DIR})
 				add_definitions(-DUSE_OPENAL_SOFT_INCLUDES)
 			endif()
@@ -1922,7 +1934,13 @@ else()
                     list(APPEND Vulkan_LIBRARIES glslang-default-resource-limits)
                 endif()
             endif()
+        elseif(USE_NVRHI)
+            list(APPEND RBDOOM3_INCLUDES ${RENDERER_NVRHI_INCLUDES})
+            list(APPEND RBDOOM3_SOURCES ${RENDERER_NVRHI_SOURCES})
 
+            set(OpenGL_LIBRARIES
+                opengl32
+                glu32)
         else()
 			find_package(OpenGL REQUIRED)
 			include_directories(${OPENGL_INCLUDE_DIRS})
@@ -2003,22 +2021,51 @@ else()
 
 	add_executable(RBDoom3BFG WIN32 ${RBDOOM3_SOURCES})
 
+    add_dependencies(RBDoom3BFG idlib)
+    add_dependencies(RBDoom3BFG lua_static)
+
+    if(USE_DX12)
+        add_dependencies(RBDoom3BFG nvrhi_d3d12)
+    endif()
+    
+    if(USE_DX11)
+        add_dependencies(RBDoom3BFG nvrhi_d3d11)
+    endif()
+    
+    if(USE_NVRHI_VULKAN)
+        add_dependencies(RBDoom3BFG nvrhi_vk)
+    endif()
+
+    add_dependencies(RBDoom3BFG RmlCore)
+
 	if (USE_PRECOMPILED_HEADERS)
 		# make sure precompiled header is created before executable is compiled
 		add_dependencies(RBDoom3BFG precomp_header_rbdoom3bfg)
 		
 		# make sure precompiled header is deleted after executable is compiled
 		add_dependencies(rm_precomp_header RBDoom3BFG)
-	endif()	
+	endif()
+ 
+    target_include_directories(RBDoom3BFG PRIVATE
+        ${RMLUI_INCLUDE})
+
+    if(USE_PHYSX)
+        target_include_directories(RBDoom3BFG PRIVATE
+            ${PhysX_INCLUDE_DIR})
+    endif()
 
 	if(NOT WIN32)
-		if(NOT "${CMAKE_SYSTEM}" MATCHES "Darwin")
+        if(NOT APPLE)
 			set(RT_LIBRARY rt)
 		endif()
 
 		target_link_libraries(RBDoom3BFG
 			idlib
+<<<<<<< HEAD
 			liblua-static
+=======
+            lua_static
+>>>>>>> d46b559be12a8466867baf21027a462308b2c657
 			${Vulkan_LIBRARIES}
 			${OPENGL_LIBRARIES}
 			pthread
@@ -2031,6 +2078,8 @@ else()
             ${JPEG_LIBRARY}
             ${GLEW_LIBRARY}
 	    	${CMAKE_DL_LIBS}
+            RmlCore
+            RmlDebugger
 			)
 	endif()
 endif()
@@ -2060,6 +2109,11 @@ if(USE_NVRHI_VULKAN)
 	target_compile_definitions(RBDoom3BFG PUBLIC USE_VK=1)
 	target_link_libraries(RBDoom3BFG nvrhi_vk)
 endif()
+
+target_compile_options(RBDoom3BFG PRIVATE
+	-Wno-register
+	-Wno-inconsistent-missing-override
+)
 
 target_link_libraries(RBDoom3BFG nvrhi)
 

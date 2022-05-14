@@ -10,3 +10,6 @@
 [submodule "neo/extern/cimgui"]
 	path = neo/extern/cimgui
 	url = https://github.com/cimgui/cimgui.git
+[submodule "neo/extern/RmlUi"]
+	path = neo/extern/RmlUi
+	url = https://github.com/mikke89/RmlUi.git

@@ -73,79 +73,6 @@ typedef struct
 	renderLight_t	light;
 } WeaponLight_t;
 
-typedef enum
-{
-	WP_READY,
-	WP_OUTOFAMMO,
-	WP_RELOAD,
-	WP_HOLSTERED,
-	WP_RISING,
-	WP_LOWERING
-} weaponStatus_t;
-
-class LuaWeaponObject : public idClass
-{
-public:
-	CLASS_PROTOTYPE( LuaWeaponObject );
-
-	virtual void	Init( idWeapon* weapon, const char* luaObjStr );
-
-protected:
-	idWeapon* owner;
-};
-
-class rvmWeaponObject : public idClass
-{
-public:
-	CLASS_PROTOTYPE( rvmWeaponObject );
-
-	virtual void			Init( idWeapon* weapon );
-
-	void					SetState( const char* state )
-	{
-		stateThread.SetState( state );
-	}
-	void					AppendState( const char* state, int blendframes = 0, int delay = 0, int flags = 0 )
-	{
-		stateThread.PostState( state, blendframes, delay, flags );
-	}
-	void					Execute( void )
-	{
-		stateThread.Execute();
-	}
-	bool					IsRunning( void )
-	{
-		return stateThread.IsExecuting();
-	}
-	bool					IsStateRunning( const char* name )
-	{
-		return stateThread.CurrentStateIs( name );
-	}
-
-	virtual void			OwnerDied( void ) { }
-
-	bool					IsFiring();
-	bool					IsReloading();
-
-	stateResult_t			Holstered( stateParms_t* parms )
-	{
-		return SRESULT_WAIT;
-	}
-
-	virtual bool			IsHolstered( void )
-	{
-		return IsStateRunning( "Holstered" );
-	}
-
-protected:
-	idWeapon* owner;
-
-	const idSoundShader* FindSound( const char* name );
-protected:
-	rvStateThread			stateThread;
-	float					next_attack;
-};
-
 class idWeapon : public idAnimatedEntity
 {
 public:
@@ -163,7 +90,7 @@ public:
 
 	virtual idClass* InvokeChild() override
 	{
-		return currentWeaponObject;
+        return nullptr;
 	}
 
 	// Cache the ejected brass model and the weapon gui.
@@ -517,7 +444,6 @@ public:
 	void					Event_GetState() const;
 	void					Event_SetState( const char* nextState );
 private:
-	rvmWeaponObject*		currentWeaponObject;
 	bool					OutOfAmmo;
 };
 

@@ -43,7 +43,7 @@ struct VS_IN {
 
 struct VS_OUT {
 	float4 position		: SV_Position;
-	float2 texcoord		: TEXCOORD0;
+	float2 texcoord		: TEXCOORD0_centroid;
 	float4 color		: COLOR;
 };
 // *INDENT-ON*

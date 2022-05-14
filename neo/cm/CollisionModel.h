@@ -48,11 +48,13 @@ If you have questions concerning this license or the applicable additional terms
 ===============================================================================
 */
 
+#ifdef USE_PHYSX
 namespace physx
 {
 class PxPhysics;
 class PxScene;
 }
+#endif
 
 // contact type
 typedef enum
@@ -98,9 +100,11 @@ class idCollisionModelManager
 public:
 	virtual					~idCollisionModelManager() {}
 
+#ifdef USE_PHYSX
 	virtual void			InitPhysX( ) = 0;
 
 	virtual void			ShutdownPhysX( ) = 0;
+#endif
 
 	// Loads collision models from a map file.
 	virtual void			LoadMap( const idMapFile* mapFile ) = 0;
@@ -158,11 +162,13 @@ public:
 	// Writes a collision model file for the given map entity.
 	virtual bool			WriteCollisionModelForMapEntity( const idMapEntity* mapEnt, const char* filename, const bool testTraceModel = true ) = 0;
 
+#ifdef USE_PHYSX
 	virtual void			Simulate( float simTime ) = 0;
 	virtual void			FetchResults( bool wait ) = 0;
 
 	virtual physx::PxPhysics* Physics( ) = 0;
 	virtual physx::PxScene* PhysicsScene( ) = 0;
+#endif
 };
 
 extern idCollisionModelManager* 		collisionModelManager;

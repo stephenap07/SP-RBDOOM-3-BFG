@@ -70,7 +70,6 @@ function(compile_shaders)
         add_custom_command(TARGET ${params_TARGET} PRE_BUILD
                           COMMAND shaderCompiler
                                    --infile ${params_CONFIG}
-                                   --parallel
                                    --out ${params_DXIL}
                                    --platform dxil
                                    --cflags "${CFLAGS}"
@@ -110,6 +109,8 @@ function(compile_shaders)
         else()
             set(CFLAGS ${params_CFLAGS})
         endif()
+
+        message(STATUS ${shaderCompiler} " --infile " ${params_CONFIG} " --parallel" " --out " ${params_SPIRV_DXC} " --platform spirv -I " ${SHADER_INCLUDE_DIR} " -D SPIRV " "--cflags " ${CFLAGS} " --compiler " ${DXC_SPIRV_EXECUTABLE} )
 
         add_custom_command(TARGET ${params_TARGET} PRE_BUILD
                           COMMAND shaderCompiler

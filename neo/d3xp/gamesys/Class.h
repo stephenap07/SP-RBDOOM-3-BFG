@@ -133,9 +133,7 @@ Use this on single inheritance concrete classes only.
 public:																									\
 	static	idTypeInfo						Type;														\
 	static	idClass							*CreateInstance();											\
-	virtual	idTypeInfo						*GetType() const;											\
-	virtual intptr_t						Invoke(const char* functionName, void* param1) override;	\
-	virtual bool							HasNativeFunction(const char* functionName) override;		\
+	virtual	idTypeInfo						*GetType() const override;									\
 	static	idEventFunc<nameofclass>		eventCallbacks[]
 
 /*
@@ -199,7 +197,7 @@ Use this on single inheritance abstract classes only.
 public:																	\
 	static	idTypeInfo						Type;						\
 	static	idClass							*CreateInstance();	\
-	virtual	idTypeInfo						*GetType() const;		\
+	virtual	idTypeInfo						*GetType() const;	\
 	static	idEventFunc<nameofclass>		eventCallbacks[]
 
 /*

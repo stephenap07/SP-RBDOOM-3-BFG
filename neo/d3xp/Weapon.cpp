@@ -108,74 +108,6 @@ void LuaWeaponObject::Init( idWeapon* weapon, const char* luaObjStr )
 
 const idEventDef EV_Weapon_Grabber_SetGrabDistance( "grabberGrabDistance", "f" );
 
-CLASS_DECLARATION( idClass, rvmWeaponObject )
-EVENT( EV_Weapon_Grabber_SetGrabDistance, idWeapon::Event_GrabberSetGrabDistance )
-END_CLASS
-
-/*
-==================
-rvmWeaponObject::Init
-==================
-*/
-void rvmWeaponObject::Init( idWeapon* weapon )
-{
-	next_attack = 0.0f;
-	owner = weapon;
-	stateThread.SetOwner( this );
-	owner->Event_WeaponRising();
-}
-
-/*
-==================
-rvmWeaponObject::IsFiring
-==================
-*/
-bool rvmWeaponObject::IsFiring()
-{
-	if( IsStateRunning( "Fire" ) )
-	{
-		return true;
-	}
-
-	if( next_attack >= gameLocal.realClientTime )
-	{
-		return true;
-	}
-
-	return false;
-}
-
-/*
-==================
-rvmWeaponObject::IsReloading
-==================
-*/
-bool rvmWeaponObject::IsReloading()
-{
-	if( IsStateRunning( "Reload" ) )
-	{
-		return true;
-	}
-
-	return false;
-}
-
-/*
-==================
-rvmWeaponObject::FindSound
-==================
-*/
-const idSoundShader* rvmWeaponObject::FindSound( const char* name )
-{
-	const char* soundName = owner->GetKey( name );
-	if( soundName == NULL || soundName[0] == 0 )
-	{
-		return NULL;
-	}
-	return declManager->FindSound( soundName );
-}
-
-
 /***********************************************************************
 
   idWeapon
@@ -308,7 +240,6 @@ idWeapon::idWeapon()
 
 	isFiring = false;
 	isLinked = false;
-	currentWeaponObject = nullptr;
 	isFlashLight = false;
 	OutOfAmmo = false;
 
@@ -993,13 +924,7 @@ void idWeapon::Clear()
 	meleeDef = NULL;
 	meleeDefName = "";
 	meleeDistance = 0.0f;
-	brassDict.Clear();
-
-	if( currentWeaponObject != nullptr )
-	{
-		delete currentWeaponObject;
-		currentWeaponObject = nullptr;
-	}
+    brassDict.Clear();
 
 	stateScript.Destroy();
 
@@ -1422,27 +1347,6 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 	{
 		//gameLocal.Error( "No 'weaponclass' set on '%s'.", objectname );
 	}
-
-	// setup script object
-	if( objectType )
-	{
-		idTypeInfo* typeInfo;
-		typeInfo = idClass::GetClass( objectType );
-		if( !typeInfo )
-		{
-			gameLocal.Error( "Failed to get weapon class" );
-		}
-		if( currentWeaponObject != nullptr )
-		{
-			delete currentWeaponObject;
-			currentWeaponObject = nullptr;
-		}
-		currentWeaponObject = static_cast< rvmWeaponObject* >( typeInfo->CreateInstance( ) );
-		currentWeaponObject->Init( this );
-		currentWeaponObject->CallSpawn( );
-	}
-
-	weaponDef->dict.GetString( "luaWeapon", nullptr, &luaObject );
 
 	spawnArgs = weaponDef->dict;
 
@@ -2140,6 +2044,8 @@ void idWeapon::BeginAttack()
 	}
 
 	stateScript.SendEvent( entityNumber, "BeginAttack" );
+
+	isFiring = true;
 }
 
 /*
@@ -2192,14 +2098,9 @@ idWeapon::ShowCrosshair
 */
 bool idWeapon::ShowCrosshair() const
 {
-	if( !currentWeaponObject )
-	{
-		return false;
-	}
-
 	// JDC: this code would never function as written, I'm assuming they wanted the following behavior
 	//	return !( state == idStr( WP_RISING ) || state == idStr( WP_LOWERING ) || state == idStr( WP_HOLSTERED ) );
-	return !currentWeaponObject->IsRunning() || currentWeaponObject->IsStateRunning( "Fire" );
+    return false;
 }
 
 /*

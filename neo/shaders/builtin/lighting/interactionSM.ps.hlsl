@@ -115,7 +115,7 @@ void main( PS_IN fragment, out PS_OUT result )
 	float3 localNormal;
 	// RB begin
 #if USE_NORMAL_FMT_RGB8
-	localNormal.xy = bumpMap.rg - 0.5;
+	localNormal.xy = bumpMap.xy - 0.5;
 #else
 	localNormal.xy = bumpMap.wy - 0.5;
 #endif

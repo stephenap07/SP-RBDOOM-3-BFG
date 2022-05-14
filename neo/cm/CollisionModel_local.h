@@ -37,12 +37,14 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "CollisionModel.h"
 
+#ifdef USE_PHYSX
 #include "PxPhysicsApi.h"
 #include "extensions/PxDefaultAllocator.h"
 #include "PxFoundation.h"
 #include "PxPhysics.h"
 #include "PxMaterial.h"
 #include "PxScene.h"
+#endif
 
 #define MIN_NODE_SIZE						64.0f
 #define MAX_NODE_POLYGONS					128
@@ -334,9 +336,11 @@ class idCollisionModelManagerLocal : public idCollisionModelManager
 {
 public:
 
+#ifdef USE_PHYSX
 	void			InitPhysX( ) override;
 
 	void			ShutdownPhysX( ) override;
+#endif
 
 	// load collision models from a map file
 	void			LoadMap( const idMapFile* mapFile );
@@ -392,11 +396,13 @@ public:
 	// write a collision model file for the map entity
 	bool			WriteCollisionModelForMapEntity( const idMapEntity* mapEnt, const char* filename, const bool testTraceModel = true );
 
+#ifdef USE_PHYSX
 	void			Simulate( float simTime ) override;
 	void			FetchResults( bool wait ) override;
 
 	physx::PxPhysics*	Physics( ) override;
 	physx::PxScene*		PhysicsScene( ) override;
+#endif
 
 private:			// CollisionMap_translate.cpp
 	int				TranslateEdgeThroughEdge( idVec3& cross, idPluecker& l1, idPluecker& l2, float* fraction );
@@ -582,6 +588,7 @@ private:			// collision map data
 	int				maxContacts;
 	int				numContacts;
 
+#ifdef USE_PHYSX
 	// Begin PhysX
 	idParallelJobList* physxJobList;
 	idParallelJobList* physxSubJobList;
@@ -606,6 +613,7 @@ private:			// collision map data
 	void InitScene( );
 	void FreePhysXScene( );
 	// End PhysX
+#endif
 };
 
 // for debugging

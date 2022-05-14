@@ -291,7 +291,11 @@ bool VKimp_Init( glimpParms_t parms )
 							 channelcolorbits, tdepthbits, tstencilbits, SDL_GetError() );
 			continue;
 		}
+		
+#ifdef USE_VULKAN
 		vkcontext.sdlWindow = window;
+#endif
+
 		// RB begin
 		SDL_GetWindowSize( window, &glConfig.nativeScreenWidth, &glConfig.nativeScreenHeight );
 		// RB end

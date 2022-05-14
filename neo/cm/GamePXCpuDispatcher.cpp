@@ -1,5 +1,7 @@
 #include "precompiled.h"
 
+#ifdef USE_PHYSX
+
 #include "GamePXCpuDispatcher.h"
 
 #include "task/PxTask.h"
@@ -44,3 +46,5 @@ uint32_t GamePXCpuDispatcher::getWorkerCount( ) const
 {
 	return parallelJobManager->GetNumProcessingUnits( );
 }
+
+#endif

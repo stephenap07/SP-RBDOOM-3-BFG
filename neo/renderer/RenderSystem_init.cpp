@@ -706,6 +706,9 @@ void R_TestVideo_f( const idCmdArgs& args )
 	int	len = tr.testVideo->AnimationLength();
 	common->Printf( "%5.1f seconds of video\n", len * 0.001 );
 
+	// SRS - Not needed or used since InitFromFile() sets the correct start time automatically
+	//tr.testVideoStartTime = tr.primaryRenderView.time[1];
+
 	// try to play the matching wav file
 	idStr	wavString = args.Argv( ( args.Argc() == 2 ) ? 1 : 2 );
 	wavString.StripFileExtension();
@@ -1432,7 +1435,7 @@ void R_SetColorMappings()
 		tr.gammaTable[i] = idMath::ClampInt( 0, 0xFFFF, inf );
 	}
 // SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL)
+#if defined(VULKAN_USE_PLATFORM_SDL) || defined(NVRHI_USE_SDL)
 	VKimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );
 #else
 	GLimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );

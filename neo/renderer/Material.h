@@ -189,7 +189,7 @@ typedef struct
 	int					width, height;
 	int					dynamicFrameCount;
 
-	const idMaterial*	renderTargetMaterial = nullptr;
+	idMaterial*	renderTargetMaterial;
 } textureStage_t;
 
 // the order BUMP / DIFFUSE / SPECULAR is necessary for interactions to draw correctly on low end cards
@@ -240,28 +240,28 @@ typedef struct
 {
 	// The value to be compared against (if Comp is anything else than always) and/or the value to be written to the buffer
 	// (if either Pass, Fail or ZFail is set to replace).
-	byte ref = 0;
+	byte ref;
 
-	// An 8 bit mask as an 0–255 integer, used when comparing the reference value with the contents of the buffer
+	// An 8 bit mask as an 0ï¿½255 integer, used when comparing the reference value with the contents of the buffer
 	// (referenceValue & readMask) comparisonFunction (stencilBufferValue & readMask).
-	byte readMask = 255;
+	byte readMask;
 
-	// An 8 bit mask as an 0–255 integer, used when writing to the buffer.Note that, like other write masks,
+	// An 8 bit mask as an 0ï¿½255 integer, used when writing to the buffer.Note that, like other write masks,
 	// it specifies which bits of stencil buffer will be affected by write
 	// (i.e.WriteMask 0 means that no bits are affected and not that 0 will be written).
-	byte writeMask = 255;
+	byte writeMask;
 
 	// Function used to compare the reference value to the current contents of the buffer.
-	stencilComp_t comp = STENCIL_COMP_ALWAYS;
+	stencilComp_t comp;
 
 	// What to do with the contents of the buffer if the stencil test(and the depth test) passes.
-	stencilOperation_t pass = STENCIL_OP_KEEP;
+	stencilOperation_t pass;
 
 	// What to do with the contents of the buffer if the stencil test fails.
-	stencilOperation_t fail = STENCIL_OP_KEEP;
+	stencilOperation_t fail;
 
 	// What to do with the contents of the buffer if the stencil test passes, but the depth test fails.
-	stencilOperation_t zFail = STENCIL_OP_KEEP;
+	stencilOperation_t zFail;
 } stencilStage_t;
 // SP End
 

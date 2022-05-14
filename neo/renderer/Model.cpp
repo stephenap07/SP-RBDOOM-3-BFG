@@ -1431,7 +1431,7 @@ bool idRenderModelStatic::ConvertDAEToModelSurfaces( const ColladaParser* dae )
 				Collada::Mesh** mesh( nullptr );
 				if( !dae->mMeshLibrary.Get( meshInstance->mMeshOrController, &mesh ) )
 				{
-					common->FatalError( "Cannot find the specified material in the material library for mesh %s", meshInstance->mMeshOrController );
+					common->FatalError( "Cannot find the specified material in the material library for mesh %s", meshInstance->mMeshOrController.c_str() );
 				}
 
 				for( int subMeshIndex = 0; subMeshIndex < ( *mesh )->mSubMeshes.Num(); subMeshIndex++ )
@@ -1513,7 +1513,7 @@ bool idRenderModelStatic::ConvertDAEToModelSurfaces( const ColladaParser* dae )
 			Collada::Mesh** mesh( nullptr );
 			if( !dae->mMeshLibrary.Get( meshInstance->mMeshOrController, &mesh ) )
 			{
-				common->FatalError( "Cannot find the specified material in the material library for mesh %s", meshInstance->mMeshOrController );
+				common->FatalError( "Cannot find the specified material in the material library for mesh %s", meshInstance->mMeshOrController.c_str() );
 			}
 
 			for( int subMeshIndex = 0; subMeshIndex < ( *mesh )->mSubMeshes.Num(); subMeshIndex++ )

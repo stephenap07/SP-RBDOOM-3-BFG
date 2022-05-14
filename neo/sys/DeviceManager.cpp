@@ -109,16 +109,16 @@ void DefaultMessageCallback::message( nvrhi::MessageSeverity severity, const cha
 	switch( severity )
 	{
 		case nvrhi::MessageSeverity::Info:
-			common->Printf( messageText );
+			common->Printf( "%s", messageText );
 			break;
 		case nvrhi::MessageSeverity::Warning:
-			common->Warning( messageText );
+			common->Warning( "%s", messageText );
 			break;
 		case nvrhi::MessageSeverity::Error:
-			common->FatalError( messageText );
+			common->FatalError( "%s", messageText );
 			break;
 		case nvrhi::MessageSeverity::Fatal:
-			common->FatalError( messageText );
+			common->FatalError( "%s", messageText );
 			break;
 	}
 }

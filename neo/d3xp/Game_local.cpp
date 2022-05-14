@@ -36,12 +36,14 @@ If you have questions concerning this license or the applicable additional terms
 #include "../imgui/BFGimgui.h"
 #include "rmlui/RmlUserInterface.h"
 
+#ifdef USE_PHYSX
 #include "PxPhysicsApi.h"
 #include "extensions/PxDefaultAllocator.h"
 #include "PxFoundation.h"
 #include "PxPhysics.h"
 #include "PxMaterial.h"
 #include "PxScene.h"
+#endif
 
 #ifdef GAME_DLL
 
@@ -376,7 +378,9 @@ void idGameLocal::Init()
 	scriptManager.Init();
 	// SP End
 
-	collisionModelManager->InitPhysX( );
+#ifdef USE_PHYSX
+	collisionModelManager->InitPhysX();
+#endif
 
 	smokeParticles = new( TAG_PARTICLE ) idSmokeParticles;
 
@@ -461,7 +465,9 @@ void idGameLocal::Shutdown()
 	// free the collision map
 	collisionModelManager->FreeMap();
 
-	collisionModelManager->ShutdownPhysX( );
+#ifdef USE_PHYSX
+	collisionModelManager->ShutdownPhysX();
+#endif
 
 	ShutdownConsoleCommands();
 
@@ -2774,8 +2780,10 @@ void idGameLocal::RunFrame( idUserCmdMgr& cmdMgr, gameReturn_t& ret )
 			timer_think.Clear();
 			timer_think.Start();
 
+#ifdef USE_PHYSX
 			collisionModelManager->Simulate( ( time - previousTime ) / 1000.0f );
 			collisionModelManager->FetchResults( true );
+#endif
 
 			// let entities think
 			if( g_timeentities.GetFloat() )
