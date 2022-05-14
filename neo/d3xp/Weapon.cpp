@@ -39,73 +39,6 @@ If you have questions concerning this license or the applicable additional terms
 
 #include <lua.hpp>
 
-/***********************************************************************
-
-  luaWeaponObject
-
-***********************************************************************/
-
-CLASS_DECLARATION( idClass, LuaWeaponObject )
-END_CLASS
-
-/*
-==================
-rvmWeaponObject::Init
-==================
-*/
-void LuaWeaponObject::Init( idWeapon* weapon, const char* luaObjStr )
-{
-	owner = weapon;
-
-	lua_State* L = gameLocal.scriptManager.LuaState();
-
-	lua_getglobal( L, luaObjStr );
-
-	// Get the Construct function in the lua table.
-	if( !lua_istable( L, -1 ) )
-	{
-		gameLocal.Warning( "Lua %s table does not exist", luaObjStr );
-		return;
-	}
-
-	lua_getfield( L, -1, "Construct" );
-
-	if( !lua_isfunction( L, -1 ) )
-	{
-		gameLocal.Warning( "Construct field does not exist in table %s", luaObjStr );
-		return;
-	}
-
-	// Begin class table
-	lua_createtable( L, 0, 2 );
-	lua_pushlightuserdata( L, ( void* )owner );
-	lua_setfield( L, -2, "classPtr" );
-
-	luaL_getmetatable( L, owner->GetClassname() );
-	if( !lua_istable( L, -1 ) )
-	{
-		lua_setmetatable( L, -2 );
-	}
-	else
-	{
-		gameLocal.Warning( "Failed to initialize metatable for %s\n", owner->GetClassname() );
-	}
-	// End class table.
-
-	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
-	{
-		gameLocal.Warning( "Something went wrong in the destroy function for %s: %s", luaObjStr, lua_tostring( L, -1 ) );
-		lua_pop( L, 1 );
-	}
-	// End function
-}
-
-/***********************************************************************
-
-  rvmWeaponObject
-
-***********************************************************************/
-
 const idEventDef EV_Weapon_Grabber_SetGrabDistance( "grabberGrabDistance", "f" );
 
 /***********************************************************************
@@ -1080,15 +1013,15 @@ idWeapon::GetWeaponDef
 */
 void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 {
-	const char* shader;
-	const char* objectType;
-	const char* luaObject;
-	const char* vmodel;
-	const char* guiName;
-	const char* projectileName;
-	const char* brassDefName;
-	const char* smokeName;
-	int			ammoAvail;
+	const char* shader = nullptr;
+	const char* objectType = nullptr;
+	const char* luaObject = nullptr;
+	const char* vmodel = nullptr;
+	const char* guiName = nullptr;
+	const char* projectileName = nullptr;
+	const char* brassDefName = nullptr;
+	const char* smokeName = nullptr;
+	int			ammoAvail = 0;
 
 	Clear();
 
@@ -1358,6 +1291,8 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 	}
 
 	isLinked = true;
+
+	luaObject = spawnArgs.GetString("stateScript");
 
 	if( luaObject )
 	{

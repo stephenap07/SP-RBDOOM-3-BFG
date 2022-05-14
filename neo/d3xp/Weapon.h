@@ -41,6 +41,16 @@ If you have questions concerning this license or the applicable additional terms
 
 extern const idEventDef EV_Weapon_State;
 
+typedef enum
+{
+	WP_READY,
+	WP_OUTOFAMMO,
+	WP_RELOAD,
+	WP_HOLSTERED,
+	WP_RISING,
+	WP_LOWERING
+} weaponStatus_t;
+
 typedef int ammo_t;
 static const int AMMO_NUMTYPES = 16;
 
@@ -87,11 +97,6 @@ public:
 	idPlayer* GetOwner();
 	virtual bool			ShouldConstructScriptObjectAtSpawn() const;
 	void					SetFlashlightOwner( idPlayer* owner );
-
-	virtual idClass* InvokeChild() override
-	{
-        return nullptr;
-	}
 
 	// Cache the ejected brass model and the weapon gui.
 	static void				CacheWeapon( const char* weaponName );
@@ -144,6 +149,11 @@ public:
 	bool					CanDrop() const;
 	void					WeaponStolen();
 	void					ForceAmmoInClip();
+
+	weaponStatus_t			GetStatus()
+	{
+		return status;
+	};
 
 	// Visual presentation
 	void					PresentWeapon( bool showViewModel );

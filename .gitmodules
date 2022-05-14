@@ -7,9 +7,3 @@
 [submodule "neo/libs/LuaJIT-cmake"]
 	path = neo/libs/LuaJIT-cmake
 	url = https://github.com/9chu/LuaJIT-cmake.git
-[submodule "neo/extern/cimgui"]
-	path = neo/extern/cimgui
-	url = https://github.com/cimgui/cimgui.git
-[submodule "neo/extern/RmlUi"]
-	path = neo/extern/RmlUi
-	url = https://github.com/mikke89/RmlUi.git

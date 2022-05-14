@@ -99,7 +99,7 @@ if(MSVC)
             OBJECT_DEPENDS "precompiled.pch"
             )
 
-    add_library(idlib ${ID_SOURCES_ALL} ${ID_INCLUDES_ALL})
+    add_library(idlib STATIC ${ID_SOURCES_ALL} ${ID_INCLUDES_ALL})
 else()
 	if (USE_PRECOMPILED_HEADERS)
 	foreach( src_file ${ID_PRECOMPILED_SOURCES} )

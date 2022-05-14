@@ -121,6 +121,11 @@ if(UNIX)
             set(USE_PRECOMPILED_HEADERS OFF)
         endif()
 	endif()
+
+	target_compile_options(RBDoom3BFG PRIVATE
+		-Wno-register
+		-Wno-inconsistent-missing-override
+	)
 endif()
 
 if(COMPILE_COMMANDS)
@@ -545,10 +550,6 @@ if(USE_NVRHI)
     include_directories(${NVRHI_DIR}/include)
 endif(USE_NVRHI)
 
-set(RMLUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/RmlUi)
-add_subdirectory(${RMLUI_DIR})
-include_directories(${RMLUI_DIR}/Include)
-
 if(USE_SYSTEM_RAPIDJSON)
 find_package(rapidjson REQUIRED)
 endif(USE_SYSTEM_RAPIDJSON)
@@ -772,6 +773,12 @@ add_definitions("-DRMLUI_STATIC_LIB")
 
 set(RMLUI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/include)
 
+set(RMLUI_LIBRARIES
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlCore.lib
+	optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlCore.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/debug/RmlDebugger.lib
+	optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/RmlUi/lib/release/RmlDebugger.lib)
+
 set(SOUND_INCLUDES
 	sound/snd_local.h
 	sound/sound.h
@@ -953,7 +960,6 @@ set(GAMED3XP_GAMESYS_SOURCES
 	d3xp/gamesys/Event.cpp
 	#d3xp/gamesys/GameTypeInfo.cpp
 	d3xp/gamesys/SaveGame.cpp
-	d3xp/gamesys/State.cpp
 	d3xp/gamesys/SysCmds.cpp
 	d3xp/gamesys/SysCvar.cpp
 	#d3xp/gamesys/TypeInfo.cpp
@@ -1778,14 +1784,9 @@ if(MSVC)
 	
 	add_executable(RBDoom3BFG WIN32 ${RBDOOM3_INCLUDES} ${RBDOOM3_SOURCES})
 
-<<<<<<< HEAD
-	add_dependencies(RBDoom3BFG idlib typeinfogen)
+	add_dependencies(RBDoom3BFG idlib)
 	#add_dependencies(RBDoom3BFG lua_static)
 	add_dependencies(RBDoom3BFG  liblua-static)
-=======
-	add_dependencies(RBDoom3BFG idlib)
-	add_dependencies(RBDoom3BFG lua_static)
->>>>>>> d46b559be12a8466867baf21027a462308b2c657
 
 	if(USE_DX12)
 		add_dependencies(RBDoom3BFG nvrhi_d3d12)
@@ -1799,21 +1800,15 @@ if(MSVC)
 		add_dependencies(RBDoom3BFG nvrhi_vk)
 	endif()
 
-    add_dependencies(RBDoom3BFG RmlCore)
-
 	target_include_directories(RBDoom3BFG PRIVATE
-<<<<<<< HEAD
 		${RMLUI_INCLUDE}
-		${PhysX_INCLUDE_DIR}
-		${Lua_INCLUDE_DIR})
-=======
-		${RMLUI_INCLUDE})
+		${Lua_INCLUDE_DIR}
+		)
 
     if(USE_PHYSX)
         target_include_directories(RBDoom3BFG PRIVATE
             ${PhysX_INCLUDE_DIR})
     endif()
->>>>>>> d46b559be12a8466867baf21027a462308b2c657
 
 	target_link_libraries(RBDoom3BFG
 		idlib
@@ -1833,8 +1828,7 @@ if(MSVC)
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
 		${CMAKE_DL_LIBS}
-		RmlCore
-		RmlDebugger
+		${RMLUI_LIBRARIES}
 		)
 
     if(USE_PHYSX)
@@ -2036,8 +2030,6 @@ else()
         add_dependencies(RBDoom3BFG nvrhi_vk)
     endif()
 
-    add_dependencies(RBDoom3BFG RmlCore)
-
 	if (USE_PRECOMPILED_HEADERS)
 		# make sure precompiled header is created before executable is compiled
 		add_dependencies(RBDoom3BFG precomp_header_rbdoom3bfg)
@@ -2061,11 +2053,7 @@ else()
 
 		target_link_libraries(RBDoom3BFG
 			idlib
-<<<<<<< HEAD
 			liblua-static
-=======
-            lua_static
->>>>>>> d46b559be12a8466867baf21027a462308b2c657
 			${Vulkan_LIBRARIES}
 			${OPENGL_LIBRARIES}
 			pthread
@@ -2084,12 +2072,7 @@ else()
 	endif()
 endif()
 
-target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1 CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1)
-if (WIN32)
-    target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_IMPL_API="extern \"C\" __declspec\(dllexport\)")
-else (WIN32)
-    target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_IMPL_API="extern \"C\" ")
-endif (WIN32)
+#target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1 CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1)
 
 if(USE_DX11)
 	target_compile_definitions(RBDoom3BFG PUBLIC USE_DX11=1)
@@ -2109,11 +2092,6 @@ if(USE_NVRHI_VULKAN)
 	target_compile_definitions(RBDoom3BFG PUBLIC USE_VK=1)
 	target_link_libraries(RBDoom3BFG nvrhi_vk)
 endif()
-
-target_compile_options(RBDoom3BFG PRIVATE
-	-Wno-register
-	-Wno-inconsistent-missing-override
-)
 
 target_link_libraries(RBDoom3BFG nvrhi)
 

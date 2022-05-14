@@ -36,7 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "RenderCommon.h"
 
 #include "RmlUi/Core/ElementDocument.h"
-#include "../../../../RmlUi/Include/RmlUi/Core/Core.h"
+#include "RmlUi/Core/Core.h"
 
 /*
 
