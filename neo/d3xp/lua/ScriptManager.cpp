@@ -453,7 +453,7 @@ void idLuaThread::Restart( )
 {
 	if( !LoadLuaScript( "script/entry.lua" ) )
 	{
-		gameLocal.Error( "Failed to load lua scripts" );
+		gameLocal.Warning( "Failed to load lua scripts" );
 	}
 
 	lua_getglobal( luaState, "tech4" );
@@ -485,7 +485,7 @@ bool idLuaThread::LoadLuaScript( const char* luaScript, bool failIfNotFound )
 	{
 		if( failIfNotFound )
 		{
-			gameLocal.Error( "Failed to find lua script %s\n", luaScript );
+			gameLocal.Warning( "Failed to find lua script %s\n", luaScript );
 		}
 		else
 		{

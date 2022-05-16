@@ -343,7 +343,7 @@ bool DeviceManager_VK::createInstance()
 
 		if( vk::enumerateInstanceExtensionProperties( nullptr, &extCount, &extensions[0] ) == vk::Result::eSuccess )
 		{
-			for( VkExtensionProperties extension : extensions )
+			for( vk::ExtensionProperties extension : extensions )
 			{
 				enabledExtensions.instance.insert( extension.extensionName );
 			}

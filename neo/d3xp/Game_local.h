@@ -101,6 +101,7 @@ void gameError( const char* fmt, ... );
 #include "script/Script_Program.h"
 
 #include "lua/ScriptManager.h"
+#include "lua/StateScript.h"
 
 #include "anim/Anim.h"
 

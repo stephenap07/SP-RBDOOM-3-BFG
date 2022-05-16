@@ -3268,6 +3268,10 @@ void idWeapon::Event_WeaponOutOfAmmo()
 	status = WP_OUTOFAMMO;
 	OutOfAmmo = true;
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_OUTOFAMMO \n" );
+	if( isLinked )
+	{
+		stateScript.SendEvent(entityNumber, "LowerWeapon");
+	}
 }
 
 /*

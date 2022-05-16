@@ -85,8 +85,8 @@ public:
 	int							GetArgOffset( int arg ) const;
 
 	static int					NumEventCommands();
-	static const idEventDef*		GetEventCommand( int eventnum );
-	static const idEventDef*		FindEvent( const char* name );
+	static const idEventDef*	GetEventCommand( int eventnum );
+	static const idEventDef*	FindEvent( const char* name );
 };
 
 class idSaveGame;
@@ -98,7 +98,7 @@ private:
 	const idEventDef*			eventdef;
 	byte*						data;
 	int							time;
-	idClass*						object;
+	idClass*					object;
 	const idTypeInfo*			typeinfo;
 
 	idLinkList<idEvent>			eventNode;

@@ -32,6 +32,12 @@ option(SDL2
 option(OPENAL
 		"Use OpenAL soft instead of XAudio2" OFF)
 
+option(FFMPEG
+		"Use FMPEG to render Bink videos" ON)
+
+option(BINKDEC
+		"Use included libbinkdec to render Bink videos" OFF)
+
 option(USE_VULKAN
 		"Use Vulkan instead of OpenGL" OFF)
 
@@ -87,16 +93,8 @@ endif()
 # SRS - Turn off MMX/SSE intrinsics when cross-compiling from Apple x86_64 to arm64
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)|(e2k)|(E2K)" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(arm64)|(x64)")
 	option(USE_INTRINSICS_SSE "Compile using SSE intrinsics (e.g mmx, sse, msse2)" ON)
-
-	option(FFMPEG "Use FMPEG to render Bink videos" ON)
-
-	option(BINKDEC "Use included libbinkdec to render Bink videos" OFF)
 else()
 	option(USE_INTRINSICS_SSE "Compile using SSE intrinsics (e.g mmx, sse, msse2)" OFF)
-
-	option(FFMPEG "Use FMPEG to render Bink videos" OFF)
-
-	option(BINKDEC "Use included libbinkdec to render Bink videos" ON)
 endif()
 
 if(FFMPEG AND BINKDEC)
@@ -498,6 +496,8 @@ elseif(USE_NVRHI_VULKAN)
 	if(UNIX)
         # SRS - For UNIX-like target OSs use the generic SDL Vulkan platform
         add_definitions(-DUSE_NVRHI_SDL)
+	elseif(WIN32)
+		add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 	endif()
 else()
 
@@ -2037,9 +2037,6 @@ else()
 		# make sure precompiled header is deleted after executable is compiled
 		add_dependencies(rm_precomp_header RBDoom3BFG)
 	endif()
- 
-    target_include_directories(RBDoom3BFG PRIVATE
-        ${RMLUI_INCLUDE})
 
     if(USE_PHYSX)
         target_include_directories(RBDoom3BFG PRIVATE
