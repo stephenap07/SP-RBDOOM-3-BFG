@@ -3,9 +3,9 @@
 class idStateScript
 {
 public:
-	idStateScript(idEntity* _owner);
+	idStateScript( idEntity* _owner );
 
-	void SetName(const char* name)
+	void SetName( const char* name )
 	{
 		scriptName = name;
 	}
@@ -20,7 +20,7 @@ public:
 
 	void Reload();
 
-	void SendEvent(int entityNumber, const char* eventName);
+	void SendEvent( int entityNumber, const char* eventName );
 
 	const char* GetName()
 	{

@@ -60,6 +60,26 @@ public:
 	/// RmlUi renders everything as triangles.
 	void RenderGeometry( Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture, const Rml::Vector2f& translation ) override;
 
+	/// Called by RmlUi when it wants to compile geometry it believes will be static for the forseeable future.
+	/// If supported, this should return a handle to an optimised, application-specific version of the data. If
+	/// not, do not override the function or return zero; the simpler RenderGeometry() will be called instead.
+	/// @param[in] vertices The geometry's vertex data.
+	/// @param[in] num_vertices The number of vertices passed to the function.
+	/// @param[in] indices The geometry's index data.
+	/// @param[in] num_indices The number of indices passed to the function. This will always be a multiple of three.
+	/// @param[in] texture The texture to be applied to the geometry. This may be nullptr, in which case the geometry is untextured.
+	/// @return The application-specific compiled geometry. Compiled geometry will be stored and rendered using RenderCompiledGeometry() in future calls, and released with ReleaseCompiledGeometry() when it is no longer needed.
+	Rml::CompiledGeometryHandle CompileGeometry( Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture ) override;
+
+	/// Called by RmlUi when it wants to render application-compiled geometry.
+	/// @param[in] geometry The application-specific compiled geometry to render.
+	/// @param[in] translation The translation to apply to the geometry.
+	void RenderCompiledGeometry( Rml::CompiledGeometryHandle geometry, const Rml::Vector2f& translation ) override;
+
+	/// Called by RmlUi when it wants to release application-compiled geometry.
+	/// @param[in] geometry The application-specific compiled geometry to release.
+	void ReleaseCompiledGeometry( Rml::CompiledGeometryHandle geometry ) override;
+
 	/// Called by RmlUi when it wants to enable or disable scissoring to clip content.
 	void EnableScissorRegion( bool enable ) override;
 

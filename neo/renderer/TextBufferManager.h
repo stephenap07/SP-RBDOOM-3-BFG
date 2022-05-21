@@ -48,6 +48,12 @@ public:
 	void scale( TextBufferHandle _handle, idVec2 _scale );
 	void submitTextBuffer( TextBufferHandle _handle, int32_t _depth = 0 );
 
+	idDrawVert* getVertices( TextBufferHandle _handle, int32_t _depth = 0 );
+	int vertexCount( TextBufferHandle _handle );
+
+	const uint16_t* getIndexes( TextBufferHandle _handle );
+	int indexCount( TextBufferHandle _handle );
+
 	void setStyle( TextBufferHandle _handle, uint32_t _flags = STYLE_NORMAL );
 	void setTextColor( TextBufferHandle _handle, uint32_t _rgba = 0x000000FF );
 	void setBackgroundColor( TextBufferHandle _handle, uint32_t _rgba = 0x000000FF );
@@ -72,6 +78,11 @@ public:
 
 	/// Return the rectangular size of the current text buffer (including all its content).
 	TextRectangle getRectangle( TextBufferHandle _handle ) const;
+
+	const idMaterial* fontMaterial()
+	{
+		return m_fontMaterial;
+	}
 
 private:
 	struct BufferCache

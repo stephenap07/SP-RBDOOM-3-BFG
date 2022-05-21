@@ -52,11 +52,11 @@ If you have questions concerning this license or the applicable additional terms
 #include "CollisionModel_local.h"
 
 #ifdef USE_PHYSX
-#include "cooking/PxCooking.h"
-#include "cooking/PxConvexMeshDesc.h"
-#include "GamePxCpuDispatcher.h"
+	#include "cooking/PxCooking.h"
+	#include "cooking/PxConvexMeshDesc.h"
+	#include "GamePxCpuDispatcher.h"
 
-using namespace physx;
+	using namespace physx;
 #endif
 
 

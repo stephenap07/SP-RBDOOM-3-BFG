@@ -38,8 +38,8 @@ If you have questions concerning this license or the applicable additional terms
 #include <lua.hpp>
 
 #ifdef USE_PHYSX
-#include "PxActor.h"
-#include <PxPhysicsAPI.h>
+	#include "PxActor.h"
+	#include <PxPhysicsAPI.h>
 #endif
 
 /*
@@ -521,7 +521,7 @@ idEntity::idEntity():
 	interpolationBehavior( USE_NO_INTERPOLATION ),
 	stateScript( this )
 #ifdef USE_PHYSX
-	,physicsActor( nullptr )
+	, physicsActor( nullptr )
 #endif
 {
 
@@ -1821,9 +1821,9 @@ void idEntity::Present()
 	// don't present to the renderer if the entity hasn't changed
 	if( !( thinkFlags & TH_UPDATEVISUALS )
 #ifdef USE_PHYSX
-	&& !physicsActor )
+			&& !physicsActor )
 #else
-	)
+	  )
 #endif
 	{
 		return;

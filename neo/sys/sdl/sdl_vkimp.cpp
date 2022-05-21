@@ -291,7 +291,7 @@ bool VKimp_Init( glimpParms_t parms )
 							 channelcolorbits, tdepthbits, tstencilbits, SDL_GetError() );
 			continue;
 		}
-		
+
 #ifdef USE_VULKAN
 		vkcontext.sdlWindow = window;
 #endif

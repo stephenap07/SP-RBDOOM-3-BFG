@@ -37,8 +37,26 @@ public:
 	/// @return true if the initialization succeed
 	bool init( const uint8_t* _buffer, uint32_t _bufferSize, int32_t _fontIndex, uint32_t _pixelHeight );
 
+	/// <summary>
+	///  Initialize without the pixel height
+	/// </summary>
+	/// <param name="_buffer"></param>
+	/// <param name="_bufferSize"></param>
+	/// <param name="_fontIndex"></param>
+	/// <returns></returns>
+	bool init( const uint8_t* _buffer, uint32_t _bufferSize, int32_t _fontIndex );
+
+	/// <summary>
+	/// Sets the pixel height of the already initialized font.
+	/// </summary>
+	/// <param name="_pixelHeight"></param>
+	/// <returns></returns>
+	bool setPixelHeight( uint32_t _pixelHeight );
+
 	/// return the font descriptor of the current font
 	FontInfo getFontInfo();
+
+	const char* getFamilyName() const;
 
 	/// raster a glyph as 8bit alpha to a memory buffer
 	/// update the GlyphInfo according to the raster strategy
@@ -145,6 +163,83 @@ err0:
 	return false;
 }
 
+bool TrueTypeFont::init( const uint8_t* _buffer, uint32_t _bufferSize, int32_t _fontIndex )
+{
+	assert( m_font == NULL && "TrueTypeFont already initialized" );
+	assert( ( _bufferSize > 256 && _bufferSize < 100000000 ) && "TrueType buffer size is suspicious" );
+
+	FTHolder* holder = new FTHolder;
+
+	FT_Error error = FT_Init_FreeType( &holder->library );
+	if( error )
+	{
+		common->Warning( "FT_Init_FreeType failed." );
+	}
+
+	if( error )
+	{
+		goto err0;
+	}
+
+	error = FT_New_Memory_Face( holder->library, _buffer, _bufferSize, _fontIndex, &holder->face );
+	if( error )
+	{
+		common->Warning( "FT_Init_FreeType failed." );
+	}
+
+	if( error )
+	{
+		if( FT_Err_Unknown_File_Format == error )
+		{
+			goto err0;
+		}
+
+		goto err1;
+	}
+
+	error = FT_Select_Charmap( holder->face, FT_ENCODING_UNICODE );
+	if( error )
+	{
+		common->Warning( "FT_Init_FreeType failed." );
+	}
+
+	if( error )
+	{
+		goto err2;
+	}
+
+	m_font = holder;
+	return true;
+
+err2:
+	FT_Done_Face( holder->face );
+
+err1:
+	FT_Done_FreeType( holder->library );
+
+err0:
+	delete holder;
+	return false;
+}
+
+bool TrueTypeFont::setPixelHeight( uint32_t _pixelHeight )
+{
+	assert( m_font );
+	assert( ( _pixelHeight > 4 && _pixelHeight < 128 ) && "TrueType buffer size is suspicious" );
+
+	FT_Error error = FT_Set_Pixel_Sizes( m_font->face, 0, _pixelHeight );
+	if( error )
+	{
+		common->Warning( "FT_Init_FreeType failed." );
+		FT_Done_Face( m_font->face );
+		delete m_font;
+		m_font = nullptr;
+		return false;
+	}
+
+	return true;
+}
+
 FontInfo TrueTypeFont::getFontInfo()
 {
 	assert( m_font != NULL && "TrueTypeFont not initialized" );
@@ -162,6 +257,11 @@ FontInfo TrueTypeFont::getFontInfo()
 	outFontInfo.underlinePosition = FT_MulFix( m_font->face->underline_position, metrics.y_scale ) / 64.0f;
 	outFontInfo.underlineThickness = FT_MulFix( m_font->face->underline_thickness, metrics.y_scale ) / 64.0f;
 	return outFontInfo;
+}
+
+const char* TrueTypeFont::getFamilyName() const
+{
+	return m_font->face->family_name;
 }
 
 static void glyphInfoInit( GlyphInfo& _glyphInfo, FT_BitmapGlyph _bitmap, FT_GlyphSlot _slot, uint8_t* _dst, uint32_t _bpp )
@@ -357,7 +457,7 @@ struct FontManager::CachedFont
 	int16_t padding;
 };
 
-#define MAX_FONT_BUFFER_SIZE (512 * 512 * 4)
+#define MAX_FONT_BUFFER_SIZE (1024 * 1024 * 4)
 
 FontManager::FontManager( Atlas* _atlas )
 	: m_ownAtlas( false )
@@ -417,6 +517,10 @@ TrueTypeHandle FontManager::createTtf( const uint8_t* _buffer, uint32_t _size )
 	m_cachedFiles[id].bufferSize = _size;
 	memcpy( m_cachedFiles[id].buffer, _buffer, _size );
 
+	TrueTypeFont fontObj;
+	fontObj.init( _buffer, _size, 0 );
+	m_cachedFiles[id].familyName = fontObj.getFamilyName();
+
 	TrueTypeHandle ret = { id };
 	return ret;
 }
@@ -427,6 +531,7 @@ void FontManager::destroyTtf( TrueTypeHandle _handle )
 	delete m_cachedFiles[_handle.id].buffer;
 	m_cachedFiles[_handle.id].bufferSize = 0;
 	m_cachedFiles[_handle.id].buffer = NULL;
+	m_cachedFiles[_handle.id].familyName.Clear();
 	m_filesHandles.free( _handle.id );
 }
 
@@ -617,6 +722,12 @@ const GlyphInfo* FontManager::getGlyphInfo( FontHandle _handle, CodePoint _codeP
 
 	assert( it != cachedGlyphs.end() && "Failed to preload glyph." );
 	return &it->second;
+}
+
+const char* FontManager::getFamilyName( TrueTypeHandle _handle ) const
+{
+	assert( _handle.id != kInvalidHandle && "Invalid handle used" );
+	return m_cachedFiles[_handle.id].familyName.c_str();
 }
 
 bool FontManager::addBitmap( GlyphInfo& _glyphInfo, const uint8_t* _data )

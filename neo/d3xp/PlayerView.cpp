@@ -72,6 +72,18 @@ idPlayerView::idPlayerView()
 	}
 
 	ClearEffects();
+
+	focusUi = rmlManager->Find( "focus", false );
+	focusUi->Init( "focus", gameSoundWorld );
+	if( focusUi )
+	{
+		auto doc = focusUi->LoadDocument( "guis/rml/hud/hud.rml" );
+		if( doc )
+		{
+			doc->Show();
+		}
+	}
+	focusUi->Activate( true );
 }
 
 /*
@@ -510,6 +522,8 @@ void idPlayerView::SingleView( const renderView_t* view, idMenuHandler_HUD* hudM
 			}
 		}
 		player->DrawHUD( hudManager );
+
+		focusUi->Redraw( Sys_Milliseconds() );
 
 		if( player->spectating )
 		{

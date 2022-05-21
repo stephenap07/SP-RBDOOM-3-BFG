@@ -3,7 +3,7 @@
 
 #ifndef __TYPEINFOGEN__
 	#include "../../renderer/RenderCommon.h"
-#include "RmlUi/Core.h"
+	#include "RmlUi/Core.h"
 #endif
 
 #include <vector>

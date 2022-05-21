@@ -38,12 +38,12 @@ If you have questions concerning this license or the applicable additional terms
 #include "CollisionModel.h"
 
 #ifdef USE_PHYSX
-#include "PxPhysicsApi.h"
-#include "extensions/PxDefaultAllocator.h"
-#include "PxFoundation.h"
-#include "PxPhysics.h"
-#include "PxMaterial.h"
-#include "PxScene.h"
+	#include "PxPhysicsApi.h"
+	#include "extensions/PxDefaultAllocator.h"
+	#include "PxFoundation.h"
+	#include "PxPhysics.h"
+	#include "PxMaterial.h"
+	#include "PxScene.h"
 #endif
 
 #define MIN_NODE_SIZE						64.0f

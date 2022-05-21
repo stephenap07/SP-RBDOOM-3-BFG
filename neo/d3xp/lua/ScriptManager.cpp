@@ -208,7 +208,7 @@ bool ScriptManager::Init()
 void ScriptManager::Shutdown()
 {
 	delete luaThread;
-    luaThread = nullptr;
+	luaThread = nullptr;
 }
 
 void ScriptManager::Reload( )

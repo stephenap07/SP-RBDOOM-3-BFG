@@ -37,12 +37,12 @@ If you have questions concerning this license or the applicable additional terms
 #include "rmlui/RmlUserInterface.h"
 
 #ifdef USE_PHYSX
-#include "PxPhysicsApi.h"
-#include "extensions/PxDefaultAllocator.h"
-#include "PxFoundation.h"
-#include "PxPhysics.h"
-#include "PxMaterial.h"
-#include "PxScene.h"
+	#include "PxPhysicsApi.h"
+	#include "extensions/PxDefaultAllocator.h"
+	#include "PxFoundation.h"
+	#include "PxPhysics.h"
+	#include "PxMaterial.h"
+	#include "PxScene.h"
 #endif
 
 #ifdef GAME_DLL

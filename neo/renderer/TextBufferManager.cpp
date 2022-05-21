@@ -1,3 +1,32 @@
+/*
+===========================================================================
+
+Doom 3 BFG Edition GPL Source Code
+Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2022 Stephen Pridham
+
+This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
+
+Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Doom 3 BFG Edition Source Code is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Doom 3 BFG Edition Source Code.  If not, see <http://www.gnu.org/licenses/>.
+
+In addition, the Doom 3 BFG Edition Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the Doom 3 BFG Edition Source Code.  If not, please request a copy in writing from id Software at the address below.
+
+If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
+
+===========================================================================
+*/
+
 #include "precompiled.h"
 
 #include "TextBufferManager.h"
@@ -7,7 +36,6 @@
 
 #include "CubeAtlas.h"
 #include "GuiModel.h"
-
 
 #define MAX_BUFFERED_CHARACTERS (8192 - 5)
 
@@ -675,6 +703,58 @@ void TextBufferManager::submitTextBuffer( TextBufferHandle _handle, int32_t _dep
 							STEREO_DEPTH_TYPE_NONE );
 
 	WriteDrawVerts16( verts, ( idDrawVert* )bc.textBuffer->getVertexBuffer(), bc.textBuffer->getVertexCount() );
+}
+
+idDrawVert* TextBufferManager::getVertices( TextBufferHandle _handle, int32_t _depth )
+{
+	assert( _handle._id != kInvalidHandle && "Invalid handle used" );
+
+	BufferCache& bc = m_textBuffers[_handle._id];
+
+	uint32_t indexSize = bc.textBuffer->getIndexCount() * bc.textBuffer->getIndexSize();
+	uint32_t vertexSize = bc.textBuffer->getVertexCount() * bc.textBuffer->getVertexSize();
+
+	if( 0 == indexSize || 0 == vertexSize )
+	{
+		return nullptr;
+	}
+
+	idDrawVert* vert = ( idDrawVert* )( bc.textBuffer->getVertexBuffer() );
+
+	for( uint32_t i = 0; i < bc.textBuffer->getVertexCount(); i++ )
+	{
+		vert[i].xyz.x *= bc.textBuffer->getScale().x;
+		vert[i].xyz.y *= bc.textBuffer->getScale().y;
+	}
+
+	return vert;
+}
+
+const uint16_t* TextBufferManager::getIndexes( TextBufferHandle _handle )
+{
+	assert( _handle._id != kInvalidHandle && "Invalid handle used" );
+
+	BufferCache& bc = m_textBuffers[_handle._id];
+
+	return bc.textBuffer->getIndexBuffer();
+}
+
+int TextBufferManager::indexCount( TextBufferHandle _handle )
+{
+	assert( _handle._id != kInvalidHandle && "Invalid handle used" );
+
+	BufferCache& bc = m_textBuffers[_handle._id];
+
+	return bc.textBuffer->getIndexCount();
+}
+
+int TextBufferManager::vertexCount( TextBufferHandle _handle )
+{
+	assert( _handle._id != kInvalidHandle && "Invalid handle used" );
+
+	BufferCache& bc = m_textBuffers[_handle._id];
+
+	return bc.textBuffer->getVertexCount();
 }
 
 void TextBufferManager::setStyle( TextBufferHandle _handle, uint32_t _flags )

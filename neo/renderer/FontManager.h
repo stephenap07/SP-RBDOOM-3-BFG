@@ -6,7 +6,7 @@ class Atlas;
 
 
 #define MAX_OPENED_FILES 64
-#define MAX_OPENED_FONT  64
+#define MAX_OPENED_FONT  1024
 
 #define FONT_TYPE_ALPHA             UINT32_C(0x00000100) // L8
 // #define FONT_TYPE_LCD               UINT32_C(0x00000200) // BGRA8
@@ -76,15 +76,18 @@ struct GlyphInfo
 	uint16_t regionIndex;
 };
 
-struct TrueTypeHandle
+struct Handle
 {
 	uint16_t id = kInvalidHandle;
 };
 
-struct FontHandle
+inline bool operator==( Handle lhs, Handle rhs )
 {
-	uint16_t id = kInvalidHandle;
-};
+	return lhs.id == rhs.id;
+}
+
+using TrueTypeHandle = Handle;
+using FontHandle = Handle;
 
 class FontManager
 {
@@ -149,12 +152,15 @@ public:
 		return m_blackGlyph;
 	}
 
+	const char* getFamilyName( TrueTypeHandle _handle ) const;
+
 private:
 	struct CachedFont;
 	struct CachedFile
 	{
 		uint8_t* buffer;
 		uint32_t bufferSize;
+		idStr	 familyName;
 	};
 
 	bool addBitmap( GlyphInfo& _glyphInfo, const uint8_t* _data );

@@ -452,6 +452,9 @@ private:
 
 	screenBlob_t		screenBlobs[MAX_SCREEN_BLOBS];
 
+	// UI elements that interact with the game world.
+	RmlUserInterface*	focusUi;
+
 public:
 	int					dvFinishTime;		// double vision will be stopped at this time
 

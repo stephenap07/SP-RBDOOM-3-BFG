@@ -6996,7 +6996,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 // SRS - For OSX OpenGL record the final portion of GPU time while no other elapsed time query is active (after final shader pass and before post processing)
 #if defined(__APPLE__)
-	renderLog.OpenMainBlock( MRB_GPU_TIME, commandList);
+	renderLog.OpenMainBlock( MRB_GPU_TIME, commandList );
 #endif
 
 	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) && !_viewDef->targetRender )

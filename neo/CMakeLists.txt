@@ -1827,15 +1827,16 @@ if(MSVC)
         ${PNG_LIBRARY}
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
-		${CMAKE_DL_LIBS}
 		${RMLUI_LIBRARIES}
+		${CMAKE_DL_LIBS}
 		)
 
     if(USE_PHYSX)
         target_link_libraries(RBDoom3BFG
             PhysX::PhysXExtensions
             PhysX::PhysXCommon
-            PhysX::PhysXCooking)
+            PhysX::PhysXCooking
+			)
     endif()
 		
 	# set MSVC default debug directory on executable	
@@ -2062,9 +2063,8 @@ else()
             ${PNG_LIBRARY}
             ${JPEG_LIBRARY}
             ${GLEW_LIBRARY}
-	    	${CMAKE_DL_LIBS}
-            RmlCore
-            RmlDebugger
+			${CMAKE_DL_LIBS}
+			${RMLUI_LIBRARIES}
 			)
 	endif()
 endif()

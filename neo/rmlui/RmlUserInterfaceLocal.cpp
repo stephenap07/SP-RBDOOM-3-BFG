@@ -597,11 +597,14 @@ void RmlUserInterfaceManagerLocal::Init()
 	Rml::SetRenderInterface( &_rmlRender );
 	Rml::SetSystemInterface( &_rmlSystem );
 	Rml::SetFileInterface( &_rmlFileSystem );
+	Rml::SetFontEngineInterface( &_rmlFontEngine );
 
 	if( !Rml::Initialise() )
 	{
 		common->Error( "Failed to initialize RML UI system" );
 	}
+
+	_rmlFontEngine.Init();
 
 	// Make this font face stuff configurable. Or put it in one of the base classes.
 	struct FontFace
@@ -738,6 +741,7 @@ void RmlUserInterfaceManagerLocal::Reload( bool all )
 	for( int i = 0; i < _guis.Num(); i++ )
 	{
 		_guis[i]->Reload();
+		_guis[i]->Context()->Update();
 	}
 }
 

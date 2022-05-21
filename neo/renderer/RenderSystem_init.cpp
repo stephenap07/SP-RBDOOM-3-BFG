@@ -2321,6 +2321,48 @@ bool idRenderSystemLocal::AreAutomaticBackgroundSwapsRunning( autoRenderIconType
 	return false;
 }
 
+TrueTypeHandle idRenderSystemLocal::RegisterFontFace( const char* fontName, bool useFallback )
+{
+	// Look for an already loaded font.
+	idStrStatic< MAX_OSPATH > baseFontName = fontName;
+	baseFontName.Replace( "fonts/", "" );
+
+	for( int i = 0; i < fontFaces.Num(); i++ )
+	{
+		if( idStr::Icmp( fontFaces[i].name, baseFontName ) == 0 )
+		{
+			// Found one. Return it.
+			return fontFaces[i].ttfHandle;
+		}
+	}
+
+	std::unique_ptr<idFile> fd( fileSystem->OpenFileRead( fontName ) );
+	if( fd == nullptr )
+	{
+		// TODO(Stephen): Use fallback font face handle.
+		common->Error( "Failed to load font %s", fontName );
+		return TrueTypeHandle();
+	}
+
+	const int len = fd->Length();
+
+	idTempArray<byte> buffer( len );
+	if( ( int )fd->Read( buffer.Ptr(), len ) != len )
+	{
+		// Couldn't open this file. Cleanup and return an invalid handle.
+		common->Warning( "Failed to read file %s", fontName );
+		return TrueTypeHandle();
+	}
+
+	NamedTrueTypeHandle data;
+	data.ttfHandle = fontManager->createTtf( buffer.Ptr(), len );
+	data.name = baseFontName;
+	data.family = fontManager->getFamilyName( data.ttfHandle );
+	fontFaces.Append( data );
+
+	return data.ttfHandle;
+}
+
 /*
 ============
 idRenderSystemLocal::RegisterFont
@@ -2328,7 +2370,6 @@ idRenderSystemLocal::RegisterFont
 */
 idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 {
-
 	idStrStatic< MAX_OSPATH > baseFontName = fontName;
 	baseFontName.Replace( "fonts/", "" );
 	for( int i = 0; i < fonts.Num(); i++ )
@@ -2346,44 +2387,45 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 
 FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize )
 {
-	// Look for an already loaded font.
+	TrueTypeHandle ttfHandle;
+	for( int i = 0; i < fontFaces.Num(); i++ )
+	{
+		if( idStr::Icmp( fontFaces[i].family, fontName ) == 0 )
+		{
+			// Found one. Return it.
+			ttfHandle = fontFaces[i].ttfHandle;
+			break;
+		}
+	}
+
+	if( ttfHandle.id == kInvalidHandle )
+	{
+		common->Warning( "Unable to find font family %s", fontName );
+		return FontHandle{ kInvalidHandle };
+	}
+
 	idStrStatic< MAX_OSPATH > baseFontName = fontName;
 	baseFontName.Replace( "fonts/", "" );
+	baseFontName.Append( aSize );
 
 	for( int i = 0; i < newFonts.Num(); i++ )
 	{
 		if( idStr::Icmp( newFonts[i].name, baseFontName ) == 0 &&
-				newFonts[i].size == aSize )
+				newFonts[i].size == aSize &&
+				newFonts[i].ttfHandle == ttfHandle )
 		{
-			// Found one. Return it.
 			return newFonts[i].fontHandle;
 		}
 	}
 
-	std::unique_ptr<idFile> fd( fileSystem->OpenFileRead( fontName ) );
-	if( fd == nullptr )
-	{
-		common->Error( "Failed to load font %s", fontName );
-		return FontHandle();
-	}
-
-	const int len = fd->Length();
-
-	idTempArray<byte> buffer( len );
-	if( ( int )fd->Read( buffer.Ptr(), len ) != len )
-	{
-		// Couldn't open this file. Cleanup and return an invalid handle.
-		return FontHandle();
-	}
-
 	NewFontData data;
-	data.ttfHandle = fontManager->createTtf( buffer.Ptr(), len );
+	data.ttfHandle = ttfHandle;
 	data.fontHandle = fontManager->createFontByPixelSize( data.ttfHandle, 0, aSize );
 	data.name = baseFontName;
 	data.size = aSize;
 	newFonts.Append( data );
 
-	fontManager->preloadGlyph( data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!_/ \n" );
+	fontManager->preloadGlyph( data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!_/ " );
 
 	return data.fontHandle;
 }

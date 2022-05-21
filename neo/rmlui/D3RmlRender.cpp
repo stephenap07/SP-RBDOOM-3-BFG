@@ -299,6 +299,21 @@ uint64 idRmlRender::GenerateGlState() const
 	return glState;
 }
 
+Rml::CompiledGeometryHandle idRmlRender::CompileGeometry( Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture )
+{
+	return Rml::CompiledGeometryHandle( 0 );
+}
+
+void idRmlRender::RenderCompiledGeometry( Rml::CompiledGeometryHandle geometry, const Rml::Vector2f& translation )
+{
+	return;
+}
+
+void idRmlRender::ReleaseCompiledGeometry( Rml::CompiledGeometryHandle geometry )
+{
+	return;
+}
+
 /*
 ===============
 

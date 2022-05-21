@@ -37,6 +37,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "rmlui/D3RmlRender.h"
 #include "rmlui/RmlFileSystem.h"
 #include "rmlui/RmlSystem.h"
+#include "rmlui/RmlFontEngine.h"
 
 #include "ui/DeviceContext.h"
 
@@ -295,6 +296,7 @@ private:
 	idRmlSystem						_rmlSystem;
 	idRmlRender						_rmlRender;
 	RmlFileSystem					_rmlFileSystem;
+	RmlFontEngine					_rmlFontEngine;
 	bool							_inLevelLoad;
 };
 

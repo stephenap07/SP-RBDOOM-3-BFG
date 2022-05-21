@@ -929,6 +929,7 @@ public:
 	virtual void			EndAutomaticBackgroundSwaps();
 	virtual bool			AreAutomaticBackgroundSwapsRunning( autoRenderIconType_t* usingAlternateIcon = NULL ) const;
 
+	virtual TrueTypeHandle	RegisterFontFace( const char* fontName, bool useFallback = false ) override;
 	virtual idFont* 		RegisterFont( const char* fontName );
 	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize );
 	virtual void            FreeFont( FontHandle aHandle );
@@ -1071,7 +1072,15 @@ public:
 		idStr name;
 	};
 
-	idList<NewFontData, TAG_FONT> newFonts;
+	struct NamedTrueTypeHandle
+	{
+		TrueTypeHandle ttfHandle;
+		idStr name;
+		idStr family;
+	};
+
+	idList<NamedTrueTypeHandle, TAG_FONT>	fontFaces;
+	idList<NewFontData, TAG_FONT>			newFonts;
 
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
 
@@ -1413,7 +1422,7 @@ struct glimpParms_t
 // SRS - Generalized Vulkan SDL platform
 
 #if defined(VULKAN_USE_PLATFORM_SDL)
-extern vulkanContext_t vkcontext;
+	extern vulkanContext_t vkcontext;
 #endif
 
 #if defined(VULKAN_USE_PLATFORM_SDL) || defined(NVRHI_USE_SDL)

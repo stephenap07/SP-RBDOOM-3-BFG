@@ -857,7 +857,7 @@ void idWeapon::Clear()
 	meleeDef = NULL;
 	meleeDefName = "";
 	meleeDistance = 0.0f;
-    brassDict.Clear();
+	brassDict.Clear();
 
 	stateScript.Destroy();
 
@@ -1292,7 +1292,7 @@ void idWeapon::GetWeaponDef( const char* objectname, int ammoinclip )
 
 	isLinked = true;
 
-	luaObject = spawnArgs.GetString("stateScript");
+	luaObject = spawnArgs.GetString( "stateScript" );
 
 	if( luaObject )
 	{
@@ -2035,7 +2035,7 @@ bool idWeapon::ShowCrosshair() const
 {
 	// JDC: this code would never function as written, I'm assuming they wanted the following behavior
 	//	return !( state == idStr( WP_RISING ) || state == idStr( WP_LOWERING ) || state == idStr( WP_HOLSTERED ) );
-    return false;
+	return false;
 }
 
 /*
@@ -3270,7 +3270,7 @@ void idWeapon::Event_WeaponOutOfAmmo()
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_OUTOFAMMO \n" );
 	if( isLinked )
 	{
-		stateScript.SendEvent(entityNumber, "LowerWeapon");
+		stateScript.SendEvent( entityNumber, "LowerWeapon" );
 	}
 }
 

@@ -345,6 +345,7 @@ public:
 	virtual bool			AreAutomaticBackgroundSwapsRunning( autoRenderIconType_t* icon = NULL ) const = 0;
 
 	// font support
+	virtual TrueTypeHandle	RegisterFontFace( const char* fontName, bool useFallback = false ) = 0;
 	virtual class idFont* 	RegisterFont( const char* fontName ) = 0;
 	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize ) = 0;
 	virtual void            FreeFont( FontHandle aHandle ) = 0;

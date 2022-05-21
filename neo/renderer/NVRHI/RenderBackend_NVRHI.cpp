@@ -775,6 +775,11 @@ We want to exit this with the GPU idle, right at vsync
 */
 void idRenderBackend::GL_BlockingSwapBuffers()
 {
+	if( !deviceManager->GetDevice() )
+	{
+		return;
+	}
+
 	// Make sure that all frames have finished rendering
 	deviceManager->GetDevice()->waitForIdle();
 

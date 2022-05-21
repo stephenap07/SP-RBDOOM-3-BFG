@@ -82,6 +82,14 @@ Type Lerp(float t, Type v0, Type v1)
 	return v0 * (1.0f - t) + v1 * t;
 }
 
+/// Element-wise maximum.
+template <>
+RMLUICORE_API Vector2f Max<Vector2f>(Vector2f a, Vector2f b);
+/// Element-wise minimum.
+template <>
+RMLUICORE_API Vector2f Min<Vector2f>(Vector2f a, Vector2f b);
+
+/// Color interpolation.
 RMLUICORE_API Colourb RoundedLerp(float t, Colourb c0, Colourb c1);
 
 /// Evaluates if a number is, or close to, zero.
@@ -99,6 +107,10 @@ RMLUICORE_API bool AreEqual(float value_0, float value_1);
 /// @param[in] value The number of get the absolute value of.
 /// @return The absolute value of the number.
 RMLUICORE_API float AbsoluteValue(float value);
+/// Calculates the absolute value of a number.
+/// @param[in] value The number of get the absolute value of.
+/// @return The absolute value of the number.
+RMLUICORE_API int AbsoluteValue(int value);
 
 /// Calculates the cosine of an angle.
 /// @param[in] angle The angle to calculate the cosine of, in radians.
