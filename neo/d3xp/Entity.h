@@ -222,20 +222,20 @@ public:
 
 	struct entityFlags_s
 	{
-		bool				notarget			: 1;	// if true never attack or target this entity
-		bool				noknockback			: 1;	// if true no knockback from hits
-		bool				takedamage			: 1;	// if true this entity can be damaged
-		bool				hidden				: 1;	// if true this entity is not visible
-		bool				bindOrientated		: 1;	// if true both the master orientation is used for binding
-		bool				solidForTeam		: 1;	// if true this entity is considered solid when a physics team mate pushes entities
-		bool				forcePhysicsUpdate	: 1;	// if true always update from the physics whether the object moved or not
-		bool				selected			: 1;	// if true the entity is selected for editing
-		bool				neverDormant		: 1;	// if true the entity never goes dormant
-		bool				isDormant			: 1;	// if true the entity is dormant
-		bool				hasAwakened			: 1;	// before a monster has been awakened the first time, use full PVS for dormant instead of area-connected
-		bool				networkSync			: 1; // if true the entity is synchronized over the network
-		bool				grabbed				: 1;	// if true object is currently being grabbed
-		bool				skipReplication		: 1; // don't replicate this entity over the network.
+		bool				notarget			: 1;	//!< if true never attack or target this entity
+		bool				noknockback			: 1;	//!< if true no knockback from hits
+		bool				takedamage			: 1;	//!< if true this entity can be damaged
+		bool				hidden				: 1;	//!< if true this entity is not visible
+		bool				bindOrientated		: 1;	//!< if true both the master orientation is used for binding
+		bool				solidForTeam		: 1;	//!< if true this entity is considered solid when a physics team mate pushes entities
+		bool				forcePhysicsUpdate	: 1;	//!< if true always update from the physics whether the object moved or not
+		bool				selected			: 1;	//!< if true the entity is selected for editing
+		bool				neverDormant		: 1;	//!< if true the entity never goes dormant
+		bool				isDormant			: 1;	//!< if true the entity is dormant
+		bool				hasAwakened			: 1;	//!< before a monster has been awakened the first time, use full PVS for dormant instead of area-connected
+		bool				networkSync			: 1;	//!< if true the entity is synchronized over the network
+		bool				grabbed				: 1;	//!< if true object is currently being grabbed
+		bool				skipReplication		: 1;	//!< don't replicate this entity over the network.
 	} fl;
 
 	int						timeGroup;
@@ -368,69 +368,69 @@ public:
 	bool					GetMasterPosition( idVec3& masterOrigin, idMat3& masterAxis ) const;
 	void					GetWorldVelocities( idVec3& linearVelocity, idVec3& angularVelocity ) const;
 
-	// physics
-	// set a new physics object to be used by this entity
+	/// # physics
+	/// set a new physics object to be used by this entity
 	void					SetPhysics( idPhysics* phys );
-	// get the physics object used by this entity
+	/// get the physics object used by this entity
 	idPhysics* 				GetPhysics() const;
-	// restore physics pointer for save games
+	/// restore physics pointer for save games
 	void					RestorePhysics( idPhysics* phys );
-	// run the physics for this entity
+	/// run the physics for this entity
 	bool					RunPhysics();
-	// Interpolates the physics, used on MP clients.
+	/// Interpolates the physics, used on MP clients.
 	void					InterpolatePhysics( const float fraction );
-	// InterpolatePhysics actually calls evaluate, this version doesn't.
+	/// InterpolatePhysics actually calls evaluate, this version doesn't.
 	void					InterpolatePhysicsOnly( const float fraction, bool updateTeam = false );
-	// set the origin of the physics object (relative to bindMaster if not NULL)
+	/// set the origin of the physics object (relative to bindMaster if not NULL)
 	void					SetOrigin( const idVec3& org );
-	// set the axis of the physics object (relative to bindMaster if not NULL)
+	/// set the axis of the physics object (relative to bindMaster if not NULL)
 	void					SetAxis( const idMat3& axis );
-	// use angles to set the axis of the physics object (relative to bindMaster if not NULL)
+	/// use angles to set the axis of the physics object (relative to bindMaster if not NULL)
 	void					SetAngles( const idAngles& ang );
-	// get the floor position underneath the physics object
+	/// get the floor position underneath the physics object
 	bool					GetFloorPos( float max_dist, idVec3& floorpos ) const;
-	// retrieves the transformation going from the physics origin/axis to the visual origin/axis
+	/// retrieves the transformation going from the physics origin/axis to the visual origin/axis
 	virtual bool			GetPhysicsToVisualTransform( idVec3& origin, idMat3& axis );
-	// retrieves the transformation going from the physics origin/axis to the sound origin/axis
+	/// retrieves the transformation going from the physics origin/axis to the sound origin/axis
 	virtual bool			GetPhysicsToSoundTransform( idVec3& origin, idMat3& axis );
-	// called from the physics object when colliding, should return true if the physics simulation should stop
+	/// called from the physics object when colliding, should return true if the physics simulation should stop
 	virtual bool			Collide( const trace_t& collision, const idVec3& velocity );
-	// retrieves impact information, 'ent' is the entity retrieving the info
+	/// retrieves impact information, 'ent' is the entity retrieving the info
 	virtual void			GetImpactInfo( idEntity* ent, int id, const idVec3& point, impactInfo_t* info );
-	// apply an impulse to the physics object, 'ent' is the entity applying the impulse
+	/// apply an impulse to the physics object, 'ent' is the entity applying the impulse
 	virtual void			ApplyImpulse( idEntity* ent, int id, const idVec3& point, const idVec3& impulse );
-	// add a force to the physics object, 'ent' is the entity adding the force
+	/// add a force to the physics object, 'ent' is the entity adding the force
 	virtual void			AddForce( idEntity* ent, int id, const idVec3& point, const idVec3& force );
-	// activate the physics object, 'ent' is the entity activating this entity
+	/// activate the physics object, 'ent' is the entity activating this entity
 	virtual void			ActivatePhysics( idEntity* ent );
-	// returns true if the physics object is at rest
+	/// returns true if the physics object is at rest
 	virtual bool			IsAtRest() const;
-	// returns the time the physics object came to rest
+	/// returns the time the physics object came to rest
 	virtual int				GetRestStartTime() const;
-	// add a contact entity
+	/// add a contact entity
 	virtual void			AddContactEntity( idEntity* ent );
-	// remove a touching entity
+	/// remove a touching entity
 	virtual void			RemoveContactEntity( idEntity* ent );
 
 #ifdef USE_PHYSX
 	virtual physx::PxRigidActor* GetRigidActor( ) const;
 #endif
 
-	// damage
-	// returns true if this entity can be damaged from the given origin
+	/// # damage
+	/// returns true if this entity can be damaged from the given origin
 	virtual bool			CanDamage( const idVec3& origin, idVec3& damagePoint ) const;
-	// applies damage to this entity
+	/// applies damage to this entity
 	virtual	void			Damage( idEntity* inflictor, idEntity* attacker, const idVec3& dir, const char* damageDefName, const float damageScale, const int location );
-	// adds a damage effect like overlays, blood, sparks, debris etc.
+	/// adds a damage effect like overlays, blood, sparks, debris etc.
 	virtual void			AddDamageEffect( const trace_t& collision, const idVec3& velocity, const char* damageDefName );
-	// callback function for when another entity received damage from this entity.  damage can be adjusted and returned to the caller.
+	/// callback function for when another entity received damage from this entity.  damage can be adjusted and returned to the caller.
 	virtual void			DamageFeedback( idEntity* victim, idEntity* inflictor, int& damage );
-	// notifies this entity that it is in pain
+	/// notifies this entity that it is in pain
 	virtual bool			Pain( idEntity* inflictor, idEntity* attacker, int damage, const idVec3& dir, int location );
-	// notifies this entity that is has been killed
+	/// notifies this entity that is has been killed
 	virtual void			Killed( idEntity* inflictor, idEntity* attacker, int damage, const idVec3& dir, int location );
 
-	// scripting
+	/// # scripting
 	virtual bool			ShouldConstructScriptObjectAtSpawn() const;
 	virtual idThread* 		ConstructScriptObject();
 	virtual void			DeconstructScriptObject();
@@ -441,20 +441,20 @@ public:
 	void					Signal( signalNum_t signalnum );
 	void					SignalEvent( idThread* thread, signalNum_t signalnum );
 
-	// lua scripting
+	/// # lua scripting
 	void					ConstructStateScript( const char* loadScript );
 
-	// gui
+	/// # gui
 	void					TriggerGuis();
 	bool					HandleGuiCommands( idEntity* entityGui, const char* cmds );
 	virtual bool			HandleSingleGuiCommand( idEntity* entityGui, idLexer* src );
 
-	// targets
+	/// # targets
 	void					FindTargets();
 	void					RemoveNullTargets();
 	void					ActivateTargets( idEntity* activator ) const;
 
-	// misc
+	/// # misc
 	virtual void			Teleport( const idVec3& origin, const idAngles& angles, idEntity* destination );
 	bool					TouchTriggers() const;
 	idCurve_Spline<idVec3>* GetSpline() const;
