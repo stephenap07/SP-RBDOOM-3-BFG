@@ -70,10 +70,10 @@ extern const idEventDef EV_CacheSoundShader;
 enum
 {
 	TH_ALL					= -1,
-	TH_THINK				= 1,		// run think function each frame
-	TH_PHYSICS				= 2,		// run physics each frame
-	TH_ANIMATE				= 4,		// update animation each frame
-	TH_UPDATEVISUALS		= 8,		// update renderEntity
+	TH_THINK				= 1,		//!< run think function each frame
+	TH_PHYSICS				= 2,		//!< run physics each frame
+	TH_ANIMATE				= 4,		//!< update animation each frame
+	TH_UPDATEVISUALS		= 8,		//!< update renderEntity
 	TH_UPDATEPARTICLES		= 16
 };
 
@@ -83,17 +83,17 @@ enum
 //
 typedef enum
 {
-	SIG_TOUCH,				// object was touched
-	SIG_USE,				// object was used
-	SIG_TRIGGER,			// object was activated
-	SIG_REMOVED,			// object was removed from the game
-	SIG_DAMAGE,				// object was damaged
-	SIG_BLOCKED,			// object was blocked
+	SIG_TOUCH,				//!< object was touched
+	SIG_USE,				//!< object was used
+	SIG_TRIGGER,			//!< object was activated
+	SIG_REMOVED,			//!< object was removed from the game
+	SIG_DAMAGE,				//!< object was damaged
+	SIG_BLOCKED,			//!< object was blocked
 
-	SIG_MOVER_POS1,			// mover at position 1 (door closed)
-	SIG_MOVER_POS2,			// mover at position 2 (door open)
-	SIG_MOVER_1TO2,			// mover changing from position 1 to 2
-	SIG_MOVER_2TO1,			// mover changing from position 2 to 1
+	SIG_MOVER_POS1,			//!< mover at position 1 (door closed)
+	SIG_MOVER_POS2,			//!< mover at position 2 (door open)
+	SIG_MOVER_1TO2,			//!< mover changing from position 1 to 2
+	SIG_MOVER_2TO1,			//!< mover changing from position 2 to 1
 
 	NUM_SIGNALS
 } signalNum_t;
@@ -115,7 +115,7 @@ public:
 };
 
 
-/*
+/**
 ================================================
 idNetEvent
 
@@ -180,45 +180,39 @@ inline void	ReadFromBitMsg( netBoolEvent_t& netEvent, const idBitMsg& msg )
 	assert( netEvent.count <= netBoolEvent_t::Maximum );
 }
 
-struct waitingThread
-{
-	lua_State*	thread;
-	float		wakeUpTime;
-};
-
 class idEntity : public idClass
 {
 public:
 	static const int		MAX_PVS_AREAS = 4;
 	static const uint32		INVALID_PREDICTION_KEY = 0xFFFFFFFF;
 
-	int						entityNumber;			// index into the entity list
-	int						entityDefNumber;		// index into the entity def list
+	int						entityNumber;			//!< index into the entity list
+	int						entityDefNumber;		//!< index into the entity def list
 
-	idLinkList<idEntity>	spawnNode;				// for being linked into spawnedEntities list
-	idLinkList<idEntity>	activeNode;				// for being linked into activeEntities list
-	idLinkList<idEntity>	aimAssistNode;			// linked into gameLocal.aimAssistEntities
+	idLinkList<idEntity>	spawnNode;				//!< for being linked into spawnedEntities list
+	idLinkList<idEntity>	activeNode;				//!< for being linked into activeEntities list
+	idLinkList<idEntity>	aimAssistNode;			//!< linked into gameLocal.aimAssistEntities
 
-	idLinkList<idEntity>	snapshotNode;			// for being linked into snapshotEntities list
-	int						snapshotChanged;		// used to detect snapshot state changes
-	int						snapshotBits;			// number of bits this entity occupied in the last snapshot
-	bool					snapshotStale;			// Set to true if this entity is considered stale in the snapshot
+	idLinkList<idEntity>	snapshotNode;			//!< for being linked into snapshotEntities list
+	int						snapshotChanged;		//!< used to detect snapshot state changes
+	int						snapshotBits;			//!< number of bits this entity occupied in the last snapshot
+	bool					snapshotStale;			//!< Set to true if this entity is considered stale in the snapshot
 
-	idStr					name;					// name of entity
-	idDict					spawnArgs;				// key/value pairs used to spawn and initialize entity
-	idScriptObject			scriptObject;			// contains all script defined data for this entity
+	idStr					name;					//!< name of entity
+	idDict					spawnArgs;				//!< key/value pairs used to spawn and initialize entity
+	idScriptObject			scriptObject;			//!< contains all script defined data for this entity
 	idStateScript			stateScript;
 
-	int						thinkFlags;				// TH_? flags
-	int						dormantStart;			// time that the entity was first closed off from player
-	bool					cinematic;				// during cinematics, entity will only think if cinematic is set
+	int						thinkFlags;				//!< TH_? flags
+	int						dormantStart;			//!< time that the entity was first closed off from player
+	bool					cinematic;				//!< during cinematics, entity will only think if cinematic is set
 
-	renderView_t* 			renderView;				// for camera views from this entity
-	idEntity* 				cameraTarget;			// any remoteRenderMap shaders will use this
+	renderView_t* 			renderView;				//!< for camera views from this entity
+	idEntity* 				cameraTarget;			//!< any remoteRenderMap shaders will use this
 
-	idList< idEntityPtr<idEntity>, TAG_ENTITY >	targets;		// when this entity is activated these entities entity are activated
+	idList< idEntityPtr<idEntity>, TAG_ENTITY >	targets;		//!< when this entity is activated these entities entity are activated
 
-	int						health;					// FIXME: do all objects really need health?
+	int						health;					//!< FIXME: do all objects really need health?
 
 	struct entityFlags_s
 	{
@@ -271,15 +265,15 @@ public:
 		return entityNumber;
 	}
 
-	// clients generate views based on all the player specific options,
-	// cameras have custom code, and everything else just uses the axis orientation
+	/// clients generate views based on all the player specific options,
+	/// cameras have custom code, and everything else just uses the axis orientation
 	virtual renderView_t* 	GetRenderView();
 
-	// thinking
+	/// # thinking
 	virtual void			Think();
-	bool					CheckDormant();	// dormant == on the active list, but out of PVS
-	virtual	void			DormantBegin();	// called when entity becomes dormant
-	virtual	void			DormantEnd();		// called when entity wakes from being dormant
+	bool					CheckDormant();		//!< dormant == on the active list, but out of PVS
+	virtual	void			DormantBegin();		//!< called when entity becomes dormant
+	virtual	void			DormantEnd();		//!< called when entity wakes from being dormant
 	bool					IsActive() const;
 	void					BecomeActive( int flags );
 	void					BecomeInactive( int flags );
@@ -325,24 +319,24 @@ public:
 
 	virtual void			CallNativeEvent( idStr& name ) { }
 
-	// animation
+	/// # animation
 	virtual bool			UpdateAnimationControllers();
 	bool					UpdateRenderEntity( renderEntity_t* renderEntity, const renderView_t* renderView );
 	static bool				ModelCallback( renderEntity_t* renderEntity, const renderView_t* renderView );
-	virtual idAnimator* 	GetAnimator();	// returns animator object used by this entity
+	virtual idAnimator* 	GetAnimator();	//!< returns animator object used by this entity
 
-	// sound
+	/// # sound
 	virtual bool			CanPlayChatterSounds() const;
 	bool					StartSound( const char* soundName, const s_channelType channel, int soundShaderFlags, bool broadcast, int* length );
 	bool					StartSoundShader( const idSoundShader* shader, const s_channelType channel, int soundShaderFlags, bool broadcast, int* length );
-	void					StopSound( const s_channelType channel, bool broadcast );	// pass SND_CHANNEL_ANY to stop all sounds
+	void					StopSound( const s_channelType channel, bool broadcast );	//!< pass SND_CHANNEL_ANY to stop all sounds
 	void					SetSoundVolume( float volume );
 	void					UpdateSound();
 	int						GetListenerId() const;
 	idSoundEmitter* 		GetSoundEmitter() const;
 	void					FreeSoundEmitter( bool immediate );
 
-	// entity binding
+	/// entity binding
 	virtual void			PreBind();
 	virtual void			PostBind();
 	virtual void			PreUnbind();
@@ -416,7 +410,8 @@ public:
 	virtual physx::PxRigidActor* GetRigidActor( ) const;
 #endif
 
-	/// # damage
+	/// @name Damage
+	/// @{
 	/// returns true if this entity can be damaged from the given origin
 	virtual bool			CanDamage( const idVec3& origin, idVec3& damagePoint ) const;
 	/// applies damage to this entity
@@ -429,8 +424,10 @@ public:
 	virtual bool			Pain( idEntity* inflictor, idEntity* attacker, int damage, const idVec3& dir, int location );
 	/// notifies this entity that is has been killed
 	virtual void			Killed( idEntity* inflictor, idEntity* attacker, int damage, const idVec3& dir, int location );
+	/// @}
 
-	/// # scripting
+	/// @name Scripting
+	/// @{
 	virtual bool			ShouldConstructScriptObjectAtSpawn() const;
 	virtual idThread* 		ConstructScriptObject();
 	virtual void			DeconstructScriptObject();
@@ -440,25 +437,34 @@ public:
 	bool					HasSignal( signalNum_t signalnum ) const;
 	void					Signal( signalNum_t signalnum );
 	void					SignalEvent( idThread* thread, signalNum_t signalnum );
+	/// @}
 
-	/// # lua scripting
+	/// @name Lua Scripting
+	/// @{
 	void					ConstructStateScript( const char* loadScript );
+	/// @}
 
-	/// # gui
+	/// @name GUI
+	/// @{
 	void					TriggerGuis();
 	bool					HandleGuiCommands( idEntity* entityGui, const char* cmds );
 	virtual bool			HandleSingleGuiCommand( idEntity* entityGui, idLexer* src );
+	/// @}
 
-	/// # targets
+	/// @name Targets
+	/// @{
 	void					FindTargets();
 	void					RemoveNullTargets();
 	void					ActivateTargets( idEntity* activator ) const;
+	/// @}
 
-	/// # misc
+	/// @name Misc
+	/// @{
 	virtual void			Teleport( const idVec3& origin, const idAngles& angles, idEntity* destination );
 	bool					TouchTriggers() const;
 	idCurve_Spline<idVec3>* GetSpline() const;
 	virtual void			ShowEditingDialog();
+	/// @}
 
 	enum
 	{
@@ -467,8 +473,8 @@ public:
 		EVENT_MAXEVENTS
 	};
 
-	// Called on clients in an MP game, does the actual interpolation for the entity.
-	// This function will eventually replace ClientPredictionThink completely.
+	/// Called on clients in an MP game, does the actual interpolation for the entity.
+	/// This function will eventually replace ClientPredictionThink completely.
 	virtual void			ClientThink( const int curTime, const float fraction, const bool predict );
 
 	virtual void			ClientPredictionThink();
@@ -542,9 +548,9 @@ public:
 	}
 
 protected:
-	renderEntity_t			renderEntity;						// used to present a model to the renderer
-	int						modelDefHandle;						// handle to static renderer model
-	refSound_t				refSound;							// used to present sound to the audio engine
+	renderEntity_t			renderEntity;						//!< used to present a model to the renderer
+	int						modelDefHandle;						//!< handle to static renderer model
+	refSound_t				refSound;							//!< used to present sound to the audio engine
 
 	idVec3					GetOriginDelta() const
 	{
@@ -556,28 +562,28 @@ protected:
 	}
 
 private:
-	idPhysics_Static		defaultPhysicsObj;					// default physics object
-	idPhysics* 				physics;							// physics used for this entity
-	idEntity* 				bindMaster;							// entity bound to if unequal NULL
-	jointHandle_t			bindJoint;							// joint bound to if unequal INVALID_JOINT
-	int						bindBody;							// body bound to if unequal -1
-	idEntity* 				teamMaster;							// master of the physics team
-	idEntity* 				teamChain;							// next entity in physics team
-	bool					useClientInterpolation;				// disables interpolation for some objects (handy for weapon world models)
-	int						numPVSAreas;						// number of renderer areas the entity covers
-	int						PVSAreas[MAX_PVS_AREAS];			// numbers of the renderer areas the entity covers
+	idPhysics_Static		defaultPhysicsObj;					//!< default physics object
+	idPhysics* 				physics;							//!< physics used for this entity
+	idEntity* 				bindMaster;							//!< entity bound to if unequal NULL
+	jointHandle_t			bindJoint;							//!< joint bound to if unequal INVALID_JOINT
+	int						bindBody;							//!< body bound to if unequal -1
+	idEntity* 				teamMaster;							//!< master of the physics team
+	idEntity* 				teamChain;							//!< next entity in physics team
+	bool					useClientInterpolation;				//!< disables interpolation for some objects (handy for weapon world models)
+	int						numPVSAreas;						//!< number of renderer areas the entity covers
+	int						PVSAreas[MAX_PVS_AREAS];			//!< numbers of the renderer areas the entity covers
 #ifdef USE_PHYSX
 	physx::PxRigidActor*	physicsActor;
 #endif
 
 	signalList_t* 			signals;
 
-	int						mpGUIState;							// local cache to avoid systematic SetStateInt
+	int						mpGUIState;							//!< local cache to avoid systematic SetStateInt
 
-	uint32					predictionKey;						// Unique key used to sync predicted ents (projectiles) in MP.
+	uint32					predictionKey;						//!< Unique key used to sync predicted ents (projectiles) in MP.
 
-	// Delta values that are set when the server or client disagree on where the render model should be. If this happens,
-	// they resolve it through DecayOriginAndAxisDelta()
+	/// Delta values that are set when the server or client disagree on where the render model should be. If this happens,
+	/// they resolve it through DecayOriginAndAxisDelta()
 	idVec3					originDelta;
 	idMat3					axisDelta;
 
@@ -587,26 +593,32 @@ private:
 private:
 	void					FixupLocalizedStrings();
 
-	bool					DoDormantTests();				// dormant == on the active list, but out of PVS
+	bool					DoDormantTests();				//!< dormant == on the active list, but out of PVS
 
-	// physics
-	// initialize the default physics
+	/// @name Physics
+	/// @{
+	/// initialize the default physics
 	void					InitDefaultPhysics( const idVec3& origin, const idMat3& axis, const idDeclEntityDef* def );
-	// update visual position from the physics
+	/// update visual position from the physics
 	void					UpdateFromPhysics( bool moveBack );
-	// get physics timestep
+	/// get physics timestep
 	virtual int				GetPhysicsTimeStep() const;
+	/// @}
 
-	// entity binding
+	/// @name Entity Binding
+	/// @{
 	bool					InitBind( idEntity* master );		// initialize an entity binding
 	void					FinishBind();					// finish an entity binding
 	void					RemoveBinds();				// deletes any entities bound to this object
 	void					QuitTeam();					// leave the current team
+	/// @}
 
 	void					UpdatePVSAreas();
 
 	// events
 public:
+	/// @name Events
+	/// @{
 // jmarshall
 	idVec3					GetOrigin( void );
 	float					DistanceTo( idEntity* ent );
@@ -685,7 +697,7 @@ public:
 	void					Event_GetGuiParm( int guiNum, const char* key );
 	void					Event_GetGuiParmFloat( int guiNum, const char* key );
 	void					Event_GuiNamedEvent( int guiNum, const char* event );
-	void					Event_WaitSeconds();
+	/// @}
 };
 
 ID_INLINE float idEntity::DistanceTo( idEntity* ent )
@@ -698,7 +710,7 @@ ID_INLINE float idEntity::DistanceTo( const idVec3& pos ) const
 	return ( pos - GetPhysics()->GetOrigin() ).LengthFast();
 }
 
-/*
+/**
 ===============================================================================
 
 	Animated entity base class.
