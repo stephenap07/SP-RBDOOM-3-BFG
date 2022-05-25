@@ -1,4 +1,12 @@
-#pragma once
+/*
+ * Copyright 2013 Jeremie Roy.
+ * Copyright 2022 Stephen Pridham.
+ * All rights reserved.
+ * License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
+ */
+
+#ifndef FONT_MANAGER_H__
+#define FONT_MANAGER_H__
 
 #include "../idlib/HandleManager.h"
 
@@ -13,6 +21,13 @@ class Atlas;
 // #define FONT_TYPE_RGBA              UINT32_C(0x00000300) // BGRA8
 #define FONT_TYPE_DISTANCE          UINT32_C(0x00000400) // L8
 #define FONT_TYPE_DISTANCE_SUBPIXEL UINT32_C(0x00000500) // L8
+
+enum FontStyle
+{
+	FONT_STYLE_NORMAL = 0,
+	FONT_STYLE_ITALIC,
+	FONT_STYLE_CONDENSED
+};
 
 struct FontInfo
 {
@@ -158,9 +173,9 @@ private:
 	struct CachedFont;
 	struct CachedFile
 	{
-		uint8_t* buffer;
-		uint32_t bufferSize;
-		idStr	 familyName;
+		uint8_t*	buffer;
+		uint32_t	bufferSize;
+		idStr		familyName;
 	};
 
 	bool addBitmap( GlyphInfo& _glyphInfo, const uint8_t* _data );
@@ -179,3 +194,5 @@ private:
 	// temporary buffer to raster glyph
 	uint8_t* m_buffer;
 };
+
+#endif

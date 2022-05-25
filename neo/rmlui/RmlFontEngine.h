@@ -33,7 +33,11 @@ If you have questions concerning this license or the applicable additional terms
 #include "rmlui/Core/FontEngineInterface.h"
 #include "rmlui/Core/Texture.h"
 
-
+/**
+* IdTech 4 implementation for rendering font glyphs and using them in RML.
+* 
+* @author Stephen Pridham
+*/
 class RmlFontEngine : public Rml::FontEngineInterface
 {
 public:

@@ -645,7 +645,9 @@ void RmlUserInterfaceManagerLocal::Shutdown()
 	// The guis destructor is responsible for closing the documents within each gui context.
 	_guis.DeleteContents( true );
 
-	Rml::Shutdown( );
+	Rml::Shutdown();
+	_rmlFontEngine.ReleaseFontResources();
+
 }
 
 RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool autoload )

@@ -56,6 +56,7 @@ public:
 	/// return the font descriptor of the current font
 	FontInfo getFontInfo();
 
+	/// Return family name.
 	const char* getFamilyName() const;
 
 	/// raster a glyph as 8bit alpha to a memory buffer

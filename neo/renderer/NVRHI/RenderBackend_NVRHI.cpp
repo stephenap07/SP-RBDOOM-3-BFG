@@ -245,6 +245,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	if( currentIndexOffset != indexOffset )
 	{
 		currentIndexOffset = indexOffset;
+		changeState = true;
 	}
 
 	if( currentIndexBuffer != ( nvrhi::IBuffer* )indexBuffer->GetAPIObject() || !r_useStateCaching.GetBool() )
@@ -680,6 +681,36 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[1].bindings =
 			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearWrapSampler )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearWrapSampler;
+		}
+	}
+	else if (type == BINDING_LAYOUT_BLENDLIGHT)
+	{
+		if (desc[0].bindings.empty())
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer(0, renderProgManager.ConstantBuffer()),
+				nvrhi::BindingSetItem::Texture_SRV(0, (nvrhi::ITexture*)GetImageAt(0)->GetTextureID()),
+				nvrhi::BindingSetItem::Texture_SRV(1, (nvrhi::ITexture*)GetImageAt(1)->GetTextureID())
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			desc[0].bindings[1].resourceHandle = (nvrhi::ITexture*)GetImageAt(0)->GetTextureID();
+			desc[0].bindings[2].resourceHandle = (nvrhi::ITexture*)GetImageAt(1)->GetTextureID();
+		}
+
+		if (desc[1].bindings.empty())
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler(0, commonPasses.m_LinearWrapSampler)
 			};
 		}
 		else
@@ -1472,15 +1503,21 @@ void idRenderBackend::ResizeImages()
 
 void idRenderBackend::SetCurrentImage( idImage* image )
 {
+	idImage* theImage = image;
+	if (!image)
+	{
+		theImage = globalImages->defaultImage;
+	}
+
 	// load the image if necessary (FIXME: not SMP safe!)
 	// RB: don't try again if last time failed
-	if( !image->IsLoaded() && !image->IsDefaulted() )
+	if( !theImage->IsLoaded() && !theImage->IsDefaulted() )
 	{
 		// TODO(Stephen): Fix me.
 		image->FinalizeImage( true, commandList );
 	}
 
-	context.imageParms[context.currentImageParm] = image;
+	context.imageParms[context.currentImageParm] = theImage;
 }
 
 idImage* idRenderBackend::GetCurrentImage()

@@ -189,7 +189,7 @@ typedef struct
 	int					width, height;
 	int					dynamicFrameCount;
 
-	idMaterial*	renderTargetMaterial;
+	const idMaterial*	renderTargetMaterial;
 } textureStage_t;
 
 // the order BUMP / DIFFUSE / SPECULAR is necessary for interactions to draw correctly on low end cards

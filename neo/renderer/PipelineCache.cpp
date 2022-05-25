@@ -78,9 +78,6 @@ nvrhi::GraphicsPipelineHandle PipelineCache::GetOrCreatePipeline( const Pipeline
 	{
 		target.enableBlend();
 	}
-	//pipelineDesc.renderState.rasterState.enableDepthClip();
-	//pipelineDesc.renderState.rasterState.depthBias = 0;
-	//pipelineDesc.renderState.rasterState.slopeScaledDepthBias = 0;
 
 	// Specialize the state with the state key.
 	GetRenderState( key.state, key, pipelineDesc.renderState );
@@ -102,7 +99,7 @@ void PipelineCache::GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::Re
 	{
 		return;
 	}
-	*/
+	*/ 
 
 	auto& rasterizationState = renderState.rasterState;
 

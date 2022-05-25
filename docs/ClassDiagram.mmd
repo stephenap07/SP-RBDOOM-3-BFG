@@ -1,0 +1,8 @@
+classDiagram
+idClass <|-- idEntity : Scriptable
+idEntity <|-- idAnimatedEntity
+idAnimatedEntity <|-- idWeapon
+idClass: Spawn()
+idClass: IsType(const idTypeInfo& c)
+idClass: char* GetClassname()
+idClass: char* GetSuperclass()

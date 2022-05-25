@@ -2155,10 +2155,11 @@ void idRenderSystemLocal::Init()
 	common->Printf( "--------------------------------------\n" );
 
 	// Initialize new font code
-	fontManager = new FontManager( 512 );
+	fontManager = new FontManager( 1024 );
 	fontManager->init();
 	textBufferManager = new TextBufferManager( fontManager );
-	defaultFont = RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 24 );
+	defaultTtf = RegisterFontFace("fonts/Merriweather/Merriweather-Regular.ttf");
+	defaultFont = RegisterFont2( "merriweather", 24 );
 }
 
 /*
@@ -2170,19 +2171,16 @@ void idRenderSystemLocal::Shutdown()
 {
 	common->Printf( "idRenderSystem::Shutdown()\n" );
 
-	//fontManager->destroyFont(defaultFont);
-
 	for( int i = 0; i < newFonts.Num(); i++ )
 	{
-		FreeFont( newFonts[i].fontHandle );
+		fontManager->destroyFont( newFonts[i].fontHandle );
 		fontManager->destroyTtf( newFonts[i].ttfHandle );
 	}
-
 	newFonts.Clear();
 
 	fonts.DeleteContents();
 
-	RenderDebug::Get( ).Shutdown( );
+	RenderDebug::Get().Shutdown();
 
 	if( IsInitialized() )
 	{
@@ -2385,7 +2383,7 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 	return newFont;
 }
 
-FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize )
+FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize, FontStyle fontStyle )
 {
 	TrueTypeHandle ttfHandle;
 	for( int i = 0; i < fontFaces.Num(); i++ )
@@ -2412,7 +2410,8 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize )
 	{
 		if( idStr::Icmp( newFonts[i].name, baseFontName ) == 0 &&
 				newFonts[i].size == aSize &&
-				newFonts[i].ttfHandle == ttfHandle )
+				newFonts[i].ttfHandle == ttfHandle &&
+				newFonts[i].style == fontStyle )
 		{
 			return newFonts[i].fontHandle;
 		}
@@ -2423,16 +2422,31 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize )
 	data.fontHandle = fontManager->createFontByPixelSize( data.ttfHandle, 0, aSize );
 	data.name = baseFontName;
 	data.size = aSize;
+	data.style = fontStyle;
 	newFonts.Append( data );
 
-	fontManager->preloadGlyph( data.fontHandle, L"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!_/ " );
+	fontManager->preloadGlyph( data.fontHandle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
 
 	return data.fontHandle;
 }
 
+void idRenderSystemLocal::FreeFontFace(TrueTypeHandle aHandle)
+{
+	fontManager->destroyTtf(aHandle);
+}
+
 void idRenderSystemLocal::FreeFont( FontHandle aHandle )
 {
-	fontManager->destroyFont( aHandle );
+	for (int i = 0; i < newFonts.Num(); i++)
+	{
+		if (newFonts[i].fontHandle == aHandle)
+		{
+			newFonts.RemoveIndexFast(i);
+			break;
+		}
+	}
+
+	fontManager->destroyFont(aHandle);
 }
 
 /*

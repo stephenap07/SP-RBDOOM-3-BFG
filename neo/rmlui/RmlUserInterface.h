@@ -45,6 +45,8 @@ class Context;
 
 class RmlEventHandler;
 
+using RmlDocHandle = Handle;
+
 // This class provides an interface to manage the rml documents. It provides access to reload documents and handle material loading as you edit them in real time.
 class RmlUserInterface
 {

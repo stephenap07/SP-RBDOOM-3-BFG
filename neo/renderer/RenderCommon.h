@@ -866,6 +866,7 @@ enum bindingLayoutType_t
 	BINDING_LAYOUT_DRAW_FOG,
 	BINDING_LAYOUT_POST_PROCESS_CNM,
 	BINDING_LAYOUT_NORMAL_CUBE,
+	BINDING_LAYOUT_BLENDLIGHT,
 
 	// NVRHI render passes specific
 	BINDING_LAYOUT_TAA_MOTION_VECTORS,
@@ -931,8 +932,10 @@ public:
 
 	virtual TrueTypeHandle	RegisterFontFace( const char* fontName, bool useFallback = false ) override;
 	virtual idFont* 		RegisterFont( const char* fontName );
-	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize );
+	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize, FontStyle fontStyle = FONT_STYLE_NORMAL );
+	virtual void			FreeFontFace(TrueTypeHandle aHandle);
 	virtual void            FreeFont( FontHandle aHandle );
+
 	virtual void			ResetFonts();
 	virtual void			PrintMemInfo( MemInfo_t* mi );
 
@@ -1040,6 +1043,7 @@ public:
 	const idMaterial* 		defaultMaterial;
 	FontManager*            fontManager;
 	TextBufferManager*      textBufferManager;
+	TrueTypeHandle			defaultTtf;
 	FontHandle              defaultFont;
 	idImage* 				testImage;
 	idCinematic* 			testVideo;
@@ -1069,14 +1073,16 @@ public:
 		TrueTypeHandle ttfHandle;
 		FontHandle fontHandle;
 		int size;
+		FontStyle style;
 		idStr name;
 	};
 
 	struct NamedTrueTypeHandle
 	{
-		TrueTypeHandle ttfHandle;
-		idStr name;
-		idStr family;
+		TrueTypeHandle	ttfHandle;
+		idStr			name;
+		idStr			family;
+		FontStyle		fontStyle;
 	};
 
 	idList<NamedTrueTypeHandle, TAG_FONT>	fontFaces;
