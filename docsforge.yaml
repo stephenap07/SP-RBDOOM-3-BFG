@@ -4,6 +4,7 @@ sidebar:
   - License: LICENSE.md
   Engine Docs:
   - Entity: docs/Entity.md
+  - Code Style: docs/Style.md
 autodocSettings:
   Public API:
     language: cpp
