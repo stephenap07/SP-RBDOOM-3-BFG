@@ -99,7 +99,7 @@ void PipelineCache::GetRenderState( uint64 stateBits, PipelineKey key, nvrhi::Re
 	{
 		return;
 	}
-	*/ 
+	*/
 
 	auto& rasterizationState = renderState.rasterState;
 

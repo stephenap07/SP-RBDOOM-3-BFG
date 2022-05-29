@@ -349,7 +349,7 @@ public:
 	virtual class idFont* 	RegisterFont( const char* fontName ) = 0;
 	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize, FontStyle fontStyle ) = 0;
 	virtual void            FreeFont( FontHandle aHandle ) = 0;
-	virtual void			FreeFontFace(TrueTypeHandle aHandle) = 0;
+	virtual void			FreeFontFace( TrueTypeHandle aHandle ) = 0;
 	virtual void			ResetFonts() = 0;
 
 	virtual void			SetColor( const idVec4& rgba ) = 0;

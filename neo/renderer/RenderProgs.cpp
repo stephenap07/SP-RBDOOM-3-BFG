@@ -301,12 +301,12 @@ void idRenderProgManager::Init( nvrhi::IDevice* _device )
 	bindingLayouts[BINDING_LAYOUT_NORMAL_CUBE] = { device->createBindingLayout( normalCubeBindingLayout ), samplerOneBindingLayout };
 
 	auto blendLightBindingLayout = nvrhi::BindingLayoutDesc()
-		.setVisibility(nvrhi::ShaderType::All)
-		.addItem(nvrhi::BindingLayoutItem::VolatileConstantBuffer(0))
-		.addItem(nvrhi::BindingLayoutItem::Texture_SRV(0)) // light 1
-		.addItem(nvrhi::BindingLayoutItem::Texture_SRV(1)); // light 2
+								   .setVisibility( nvrhi::ShaderType::All )
+								   .addItem( nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 ) )
+								   .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 0 ) ) // light 1
+								   .addItem( nvrhi::BindingLayoutItem::Texture_SRV( 1 ) ); // light 2
 
-	bindingLayouts[BINDING_LAYOUT_BLENDLIGHT] = { device->createBindingLayout(blendLightBindingLayout), samplerOneBindingLayout };
+	bindingLayouts[BINDING_LAYOUT_BLENDLIGHT] = { device->createBindingLayout( blendLightBindingLayout ), samplerOneBindingLayout };
 
 	auto motionVectorsBindingLayout = nvrhi::BindingLayoutDesc()
 									  .setVisibility( nvrhi::ShaderType::All )

@@ -2158,7 +2158,7 @@ void idRenderSystemLocal::Init()
 	fontManager = new FontManager( 1024 );
 	fontManager->init();
 	textBufferManager = new TextBufferManager( fontManager );
-	defaultTtf = RegisterFontFace("fonts/Merriweather/Merriweather-Regular.ttf");
+	defaultTtf = RegisterFontFace( "fonts/Merriweather/Merriweather-Regular.ttf" );
 	defaultFont = RegisterFont2( "merriweather", 24 );
 }
 
@@ -2425,28 +2425,28 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize, 
 	data.style = fontStyle;
 	newFonts.Append( data );
 
-	fontManager->preloadGlyph( data.fontHandle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
+	fontManager->preloadGlyph( data.fontHandle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n" );
 
 	return data.fontHandle;
 }
 
-void idRenderSystemLocal::FreeFontFace(TrueTypeHandle aHandle)
+void idRenderSystemLocal::FreeFontFace( TrueTypeHandle aHandle )
 {
-	fontManager->destroyTtf(aHandle);
+	fontManager->destroyTtf( aHandle );
 }
 
 void idRenderSystemLocal::FreeFont( FontHandle aHandle )
 {
-	for (int i = 0; i < newFonts.Num(); i++)
+	for( int i = 0; i < newFonts.Num(); i++ )
 	{
-		if (newFonts[i].fontHandle == aHandle)
+		if( newFonts[i].fontHandle == aHandle )
 		{
-			newFonts.RemoveIndexFast(i);
+			newFonts.RemoveIndexFast( i );
 			break;
 		}
 	}
 
-	fontManager->destroyFont(aHandle);
+	fontManager->destroyFont( aHandle );
 }
 
 /*

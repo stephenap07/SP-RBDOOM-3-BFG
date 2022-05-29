@@ -933,7 +933,7 @@ public:
 	virtual TrueTypeHandle	RegisterFontFace( const char* fontName, bool useFallback = false ) override;
 	virtual idFont* 		RegisterFont( const char* fontName );
 	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize, FontStyle fontStyle = FONT_STYLE_NORMAL );
-	virtual void			FreeFontFace(TrueTypeHandle aHandle);
+	virtual void			FreeFontFace( TrueTypeHandle aHandle );
 	virtual void            FreeFont( FontHandle aHandle );
 
 	virtual void			ResetFonts();
