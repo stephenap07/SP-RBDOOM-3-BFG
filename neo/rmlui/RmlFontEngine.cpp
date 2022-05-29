@@ -30,34 +30,33 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #pragma hdrstop
 
-#include "RmlFontEngine.h"
-
-#include "rmlui/Core/FontEngineInterface.h"
+#include <rmlui/RmlFontEngine.h>
 
 #include "renderer/FontManager.h"
 #include "renderer/RenderSystem.h"
+#include "RmlUi/Core/FontEngineInterface.h"
 
 RmlFontEngine::RmlFontEngine()
-	: fontManager( nullptr )
+	: _fontManager( nullptr )
 {
 }
 
 RmlFontEngine::~RmlFontEngine()
 {
-	ReleaseFontResources();
+	RmlFontEngine::ReleaseFontResources();
 }
 
 void RmlFontEngine::Init()
 {
-	fontManager = renderSystem->GetFontManager();
+	_fontManager = renderSystem->GetFontManager();
 	const idMaterial* mat = renderSystem->GetTextBufferManager()->fontMaterial();
-	texture.Set( mat->GetName(), mat->GetName() );
+	_texture.Set( mat->GetName(), mat->GetName() );
 }
 
 bool RmlFontEngine::LoadFontFace( const Rml::String& file_name, bool fallback_face, Rml::Style::FontWeight weight )
 {
-	TrueTypeHandle ttf = renderSystem->RegisterFontFace( file_name.c_str() );
-	fontFaces.AddUnique( ttf );
+	const TrueTypeHandle ttf = renderSystem->RegisterFontFace( file_name.c_str() );
+	_fontFaces.AddUnique( ttf );
 	return ttf.id != kInvalidHandle;
 }
 
@@ -66,45 +65,45 @@ bool RmlFontEngine::LoadFontFace( const byte* data, int data_size, const Rml::St
 	return false;
 }
 
-Rml::FontFaceHandle RmlFontEngine::GetFontFaceHandle( const Rml::String& family, Rml::Style::FontStyle style, Rml::Style::FontWeight weight, int size )
+Rml::FontFaceHandle RmlFontEngine::GetFontFaceHandle( const Rml::String& family_, const Rml::Style::FontStyle style, Rml::Style::FontWeight weight, int size )
 {
 	FontStyle fontStyle = FONT_STYLE_NORMAL;
-	if (style == Rml::Style::FontStyle::Italic)
+	if( style == Rml::Style::FontStyle::Italic )
 	{
 		fontStyle = FONT_STYLE_ITALIC;
 	}
 
-	FontHandle handle = renderSystem->RegisterFont2( family.c_str(), size, fontStyle );
+	const FontHandle handle = renderSystem->RegisterFont2( family_.c_str(), size, fontStyle );
 
 	if( handle.id == kInvalidHandle )
 	{
-		return ( Rml::FontFaceHandle )nullptr;
+		return reinterpret_cast<Rml::FontFaceHandle>( nullptr );
 	}
 
-	fonts.AddUnique( handle );
-	return ( Rml::FontFaceHandle )handle.id + 1;
+	_fonts.AddUnique( handle );
+	return static_cast<Rml::FontFaceHandle>( handle.id ) + 1;
 }
 
-Rml::FontEffectsHandle RmlFontEngine::PrepareFontEffects( Rml::FontFaceHandle handle, const Rml::FontEffectList& font_effects )
+Rml::FontEffectsHandle RmlFontEngine::PrepareFontEffects( Rml::FontFaceHandle handle_, const Rml::FontEffectList& fontEffects_ )
 {
 	return 0;
 }
 
-int RmlFontEngine::GetSize( Rml::FontFaceHandle handle )
+int RmlFontEngine::GetSize( const Rml::FontFaceHandle handle_ )
 {
 	FontHandle fontHandle;
-	fontHandle.id = ( uint16_t )handle - 1;
-	return fontManager->getFontInfo( fontHandle ).pixelSize;
+	fontHandle.id = static_cast<uint16_t>( handle_ ) - 1;
+	return _fontManager->getFontInfo( fontHandle ).pixelSize;
 }
 
 int RmlFontEngine::GetXHeight( Rml::FontFaceHandle handle )
 {
-	auto textBufferManager = renderSystem->GetTextBufferManager();
-	TextBufferHandle textHandle = textBufferManager->createTextBuffer( 1, BufferType::Transient );
+	const auto textBufferManager = renderSystem->GetTextBufferManager();
+	const TextBufferHandle textHandle = textBufferManager->createTextBuffer( 1, BufferType::Transient );
 	FontHandle fontHandle;
-	fontHandle.id = ( uint16_t )handle - 1;
+	fontHandle.id = static_cast<uint16_t>( handle ) - 1;
 	textBufferManager->appendText( textHandle, fontHandle, "x" );
-	int height = textBufferManager->getRectangle( textHandle ).height;
+	const int height = textBufferManager->getRectangle( textHandle ).height;
 	textBufferManager->destroyTextBuffer( textHandle );
 	return height;
 }
@@ -112,68 +111,71 @@ int RmlFontEngine::GetXHeight( Rml::FontFaceHandle handle )
 int RmlFontEngine::GetLineHeight( Rml::FontFaceHandle handle )
 {
 	FontHandle fontHandle;
-	fontHandle.id = ( uint16_t )handle - 1;
-	return fontManager->getFontInfo( fontHandle ).pixelSize;
+	fontHandle.id = static_cast<uint16_t>( handle ) - 1;
+	return _fontManager->getFontInfo( fontHandle ).pixelSize;
 }
 
 int RmlFontEngine::GetBaseline( Rml::FontFaceHandle handle )
 {
 	FontHandle fontHandle;
-	fontHandle.id = ( uint16_t )handle - 1;
-	return fontManager->getFontInfo( fontHandle ).ascender;
+	fontHandle.id = static_cast<uint16_t>( handle ) - 1;
+	return _fontManager->getFontInfo( fontHandle ).ascender;
 }
 
 float RmlFontEngine::GetUnderline( Rml::FontFaceHandle handle, float& thickness )
 {
 	FontHandle fontHandle;
-	fontHandle.id = ( uint16_t )handle - 1;
-	return fontManager->getFontInfo( fontHandle ).underlinePosition;
+	fontHandle.id = static_cast<uint16_t>( handle ) - 1;
+	return _fontManager->getFontInfo( fontHandle ).underlinePosition;
 }
 
 int RmlFontEngine::GetStringWidth( Rml::FontFaceHandle handle, const Rml::String& string, Rml::Character prior_character )
 {
-	auto textBufferManager = renderSystem->GetTextBufferManager();
-	TextBufferHandle textHandle = textBufferManager->createTextBuffer( 1, BufferType::Transient );
+	const auto textBufferManager = renderSystem->GetTextBufferManager();
+	const TextBufferHandle textHandle = textBufferManager->createTextBuffer( 1, BufferType::Transient );
 	FontHandle fontHandle;
-	fontHandle.id = ( uint16_t )handle - 1;
+	fontHandle.id = static_cast<uint16_t>( handle ) - 1;
 	textBufferManager->appendText( textHandle, fontHandle, string.c_str() );
-	int width = textBufferManager->getRectangle( textHandle ).width;
+	const int width = textBufferManager->getRectangle( textHandle ).width;
 	textBufferManager->destroyTextBuffer( textHandle );
 	return width;
 }
 
-int RmlFontEngine::GenerateString( Rml::FontFaceHandle face_handle, Rml::FontEffectsHandle font_effects_handle, const Rml::String& string, const Rml::Vector2f& position, const Rml::Colourb& colour, float opacity, Rml::GeometryList& geometry )
+int RmlFontEngine::GenerateString( Rml::FontFaceHandle faceHandle_, Rml::FontEffectsHandle fontEffectsHandle_, const Rml::String& string_, const Rml::Vector2f& position_, const Rml::Colourb& colour_, float opacity_, Rml::GeometryList& geometry_ )
 {
-	auto textBufferManager = renderSystem->GetTextBufferManager();
-	TextBufferHandle textHandle = textBufferManager->createTextBuffer( 1, BufferType::Transient );
+	const auto textBufferManager = renderSystem->GetTextBufferManager();
+	const TextBufferHandle textHandle = textBufferManager->createTextBuffer( 1, BufferType::Transient );
 	FontHandle fontHandle;
-	fontHandle.id = ( uint16_t )face_handle - 1;
-	textBufferManager->setPenPosition( textHandle, position.x, position.y );
-	idVec4 theColor(colour.red, colour.green, colour.blue, (opacity * colour.alpha));
-	textBufferManager->setTextColor( textHandle, VectorUtil::Vec4ToColorInt(theColor / 255.f) );
-	textBufferManager->appendText( textHandle, fontHandle, string.c_str() );
-	int width = textBufferManager->getRectangle( textHandle ).width;
-	idDrawVert* verts = textBufferManager->getVertices( textHandle );
+	fontHandle.id = ( uint16_t )faceHandle_ - 1;
+	textBufferManager->setPenPosition( textHandle, position_.x, position_.y );
+	const idVec4 theColor( colour_.red, colour_.green, colour_.blue, ( opacity_ * colour_.alpha ) );
+	textBufferManager->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( theColor / 255.f ) );
+	textBufferManager->appendText( textHandle, fontHandle, string_.c_str() );
+	const int width = textBufferManager->getRectangle( textHandle ).width;
+	const idDrawVert* verts = textBufferManager->getVertices( textHandle );
 	const uint16_t* indexes = textBufferManager->getIndexes( textHandle );
-	int vertexCount = textBufferManager->vertexCount( textHandle );
-	int indexCount = textBufferManager->indexCount( textHandle );
+	const int vertexCount = textBufferManager->vertexCount( textHandle );
+	const int indexCount = textBufferManager->indexCount( textHandle );
 
-	geometry.emplace_back();
-	Rml::Geometry& geo = geometry.back();
+	geometry_.emplace_back();
+	Rml::Geometry& geo = geometry_.back();
 
-	geo.GetVertices().reserve(vertexCount);
+	geo.GetVertices().reserve( vertexCount );
 
 	for( int i = 0; i < vertexCount; i++ )
 	{
-		auto& vert = verts[i].xyz;
+		auto& vert = verts[ i ].xyz;
 		Rml::Vertex vertex;
 		vertex.position.x = vert.x;
 		vertex.position.y = vert.y;
 		idVec4 color;
-		UnpackColor(verts[i].GetColor(), color);
-		vertex.colour = Rml::Colourb(idMath::Ftob(color.x * 255.f), idMath::Ftob(color.y * 255.f), idMath::Ftob(color.z * 255.f), idMath::Ftob(color.w * 255.f));
-		vertex.tex_coord.x = verts[i].GetTexCoordS();
-		vertex.tex_coord.y = verts[i].GetTexCoordT();
+		UnpackColor( verts[ i ].GetColor(), color );
+		vertex.colour = Rml::Colourb( idMath::Ftob( color.x * 255.f ),
+									  idMath::Ftob( color.y * 255.f ),
+									  idMath::Ftob( color.z * 255.f ),
+									  idMath::Ftob( color.w * 255.f ) );
+		vertex.tex_coord.x = verts[ i ].GetTexCoordS();
+		vertex.tex_coord.y = verts[ i ].GetTexCoordT();
 		geo.GetVertices().push_back( vertex );
 	}
 
@@ -181,31 +183,31 @@ int RmlFontEngine::GenerateString( Rml::FontFaceHandle face_handle, Rml::FontEff
 
 	for( int i = 0; i < indexCount; i++ )
 	{
-		geo.GetIndices().emplace_back( indexes[i] );
+		geo.GetIndices().emplace_back( indexes[ i ] );
 	}
 
-	geo.SetTexture( &texture );
+	geo.SetTexture( &_texture );
 
 	textBufferManager->destroyTextBuffer( textHandle );
 	return width;
 }
 
-int RmlFontEngine::GetVersion( Rml::FontFaceHandle handle )
+int RmlFontEngine::GetVersion( Rml::FontFaceHandle handle_ )
 {
 	return 0;
 }
 
 void RmlFontEngine::ReleaseFontResources()
 {
-	for( auto font : fonts )
+	for( const auto font : _fonts )
 	{
-		renderSystem->FreeFont(font);
+		renderSystem->FreeFont( font );
 	}
-	fonts.Clear();
+	_fonts.Clear();
 
-	for (auto fontFace : fontFaces)
+	for( const auto fontFace : _fontFaces )
 	{
-		renderSystem->FreeFontFace(fontFace);
+		renderSystem->FreeFontFace( fontFace );
 	}
-	fontFaces.Clear();
+	_fontFaces.Clear();
 }

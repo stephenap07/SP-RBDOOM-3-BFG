@@ -1615,6 +1615,8 @@ idPlayer::idPlayer():
 
 	focusTime				= 0;
 	focusGUIent				= NULL;
+	frobEnt					= nullptr;
+	interactEnt				= nullptr;
 	focusUI					= NULL;
 	focusCharacter			= NULL;
 	talkCursor				= 0;
@@ -5856,6 +5858,22 @@ void idPlayer::Weapon_GUI()
 	}
 }
 
+void idPlayer::Weapon_Frob()
+{
+	if( !frobEnt )
+	{
+		return;
+	}
+
+	bool wasDown = ( oldButtons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+	bool isDown = ( usercmd.buttons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+
+	if( isDown && !wasDown )
+	{
+		playerView.frobGui.ToggleView( frobEnt );
+	}
+}
+
 /*
 ===============
 idPlayer::UpdateWeapon
@@ -5922,6 +5940,20 @@ void idPlayer::UpdateWeapon()
 	else if( focusCharacter && ( focusCharacter->health > 0 ) )
 	{
 		Weapon_NPC();
+	}
+	else if( frobEnt )
+	{
+		Weapon_Frob();
+	}
+	else if( interactEnt )
+	{
+		bool wasDown = ( oldButtons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+		bool isDown = ( usercmd.buttons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+
+		if( isDown && !wasDown )
+		{
+			static_cast<idTrigger_Interaction*>( interactEnt )->ActivateTargets( this );
+		}
 	}
 	else
 	{
@@ -6443,6 +6475,8 @@ void idPlayer::ClearFocus()
 	focusRml		= nullptr;
 	focusVehicle	= NULL;
 	talkCursor		= 0;
+	frobEnt			= nullptr;
+	interactEnt		= nullptr;
 }
 
 /*
@@ -6460,6 +6494,8 @@ void idPlayer::UpdateFocus()
 	int			listedClipModels;
 	idEntity*	oldFocus;
 	idEntity*	ent;
+	idEntity*	oldFrobEnt = nullptr;
+	idEntity*	oldInteractEnt = nullptr;
 	idUserInterface* oldUI;
 	idAI*		oldChar;
 	int			oldTalkCursor;
@@ -6495,6 +6531,8 @@ void idPlayer::UpdateFocus()
 	oldChar			= focusCharacter;
 	oldTalkCursor	= talkCursor;
 	oldVehicle		= focusVehicle;
+	oldFrobEnt		= frobEnt;
+	oldInteractEnt	= interactEnt;
 
 	if( focusTime <= gameLocal.time )
 	{
@@ -6589,6 +6627,32 @@ void idPlayer::UpdateFocus()
 				{
 					ClearFocus();
 					focusVehicle = static_cast<idAFEntity_Vehicle*>( ent );
+					focusTime = gameLocal.time + FOCUS_TIME;
+					break;
+				}
+				continue;
+			}
+
+			if( ent->IsType( LuaEntity::Type ) )
+			{
+				gameLocal.clip.TracePoint( trace, start, end, MASK_SHOT_RENDERMODEL, this );
+				if( ( trace.fraction < 1.0f ) && ( trace.c.entityNum == ent->entityNumber ) )
+				{
+					ClearFocus();
+					frobEnt = static_cast<LuaEntity*>( ent );
+					focusTime = gameLocal.time + FOCUS_TIME;
+					break;
+				}
+				continue;
+			}
+
+			if( ent->IsType( idTrigger_Interaction::Type ) )
+			{
+				gameLocal.clip.TracePoint( trace, start, end, MASK_SHOT_RENDERMODEL, this );
+				if( ( trace.fraction < 1.0f ) && ( trace.c.entityNum == ent->entityNumber ) )
+				{
+					ClearFocus();
+					interactEnt = static_cast<idTrigger_Interaction*>( ent );
 					focusTime = gameLocal.time + FOCUS_TIME;
 					break;
 				}
@@ -6778,6 +6842,19 @@ void idPlayer::UpdateFocus()
 		{
 			hud->SetCursorText( "", "" );
 			hud->UpdateCursorState();
+		}
+	}
+
+	// Update the frobbed entity the player is looking at right now.
+	if( frobEnt != oldFrobEnt )
+	{
+		if( frobEnt )
+		{
+			playerView.frobGui.SetMode( FrobGui::MODE_INTERACT );
+		}
+		else
+		{
+			playerView.frobGui.SetMode( FrobGui::MODE_NONE );
 		}
 	}
 }

@@ -35,7 +35,7 @@ If you have questions concerning this license or the applicable additional terms
 
 /**
 * IdTech 4 implementation for rendering font glyphs and using them in RML.
-* 
+*
 * @author Stephen Pridham
 */
 class RmlFontEngine : public Rml::FontEngineInterface
@@ -67,23 +67,23 @@ public:
 
 	/// Called by RmlUi when a font configuration is resolved for an element. Should return a handle that
 	/// can later be used to resolve properties of the face, and generate string geometry to be rendered.
-	/// @param[in] family The family of the desired font handle.
+	/// @param[in] family_ The family of the desired font handle.
 	/// @param[in] style The style of the desired font handle.
 	/// @param[in] weight The weight of the desired font handle.
 	/// @param[in] size The size of desired handle, in points.
 	/// @return A valid handle if a matching (or closely matching) font face was found, NULL otherwise.
-	Rml::FontFaceHandle GetFontFaceHandle( const Rml::String& family, Rml::Style::FontStyle style, Rml::Style::FontWeight weight, int size ) override;
+	Rml::FontFaceHandle GetFontFaceHandle( const Rml::String& family_, Rml::Style::FontStyle style, Rml::Style::FontWeight weight, int size ) override;
 
 	/// Called by RmlUi when a list of font effects is resolved for an element with a given font face.
-	/// @param[in] handle The font handle.
-	/// @param[in] font_effects The list of font effects to generate the configuration for.
+	/// @param[in] handle_ The font handle.
+	/// @param[in] fontEffects_ The list of font effects to generate the configuration for.
 	/// @return A handle to the prepared font effects which will be used when generating geometry for a string.
-	Rml::FontEffectsHandle PrepareFontEffects( Rml::FontFaceHandle handle, const Rml::FontEffectList& font_effects ) override;
+	Rml::FontEffectsHandle PrepareFontEffects( Rml::FontFaceHandle handle_, const Rml::FontEffectList& fontEffects_ ) override;
 
 	/// Should return the point size of this font face.
-	/// @param[in] handle The font handle.
+	/// @param[in] handle_ The font handle.
 	/// @return The face's point size.
-	int GetSize( Rml::FontFaceHandle handle ) override;
+	int GetSize( Rml::FontFaceHandle handle_ ) override;
 
 	/// Should return the pixel height of a lower-case x in this font face.
 	/// @param[in] handle The font handle.
@@ -114,22 +114,22 @@ public:
 	int GetStringWidth( Rml::FontFaceHandle handle, const Rml::String& string, Rml::Character prior_character = Rml::Character::Null ) override;
 
 	/// Called by RmlUi when it wants to retrieve the geometry required to render a single line of text.
-	/// @param[in] face_handle The font handle.
-	/// @param[in] font_effects_handle The handle to the prepared font effects for which the geometry should be generated.
-	/// @param[in] string The string to render.
-	/// @param[in] position The position of the baseline of the first character to render.
-	/// @param[in] colour The colour to render the text. Colour alpha is premultiplied with opacity.
-	/// @param[in] opacity The opacity of the text, should be applied to font effects.
-	/// @param[out] geometry An array of geometries to generate the geometry into.
+	/// @param[in] faceHandle_ The font handle.
+	/// @param[in] fontEffectsHandle_ The handle to the prepared font effects for which the geometry should be generated.
+	/// @param[in] string_ The string to render.
+	/// @param[in] position_ The position of the baseline of the first character to render.
+	/// @param[in] colour_ The colour to render the text. Colour alpha is premultiplied with opacity.
+	/// @param[in] opacity_ The opacity of the text, should be applied to font effects.
+	/// @param[out] geometry_ An array of geometries to generate the geometry into.
 	/// @return The width, in pixels, of the string geometry.
-	int GenerateString( Rml::FontFaceHandle face_handle, Rml::FontEffectsHandle font_effects_handle, const Rml::String& string, const Rml::Vector2f& position,
-						const Rml::Colourb& colour, float opacity, Rml::GeometryList& geometry ) override;
+	int GenerateString( Rml::FontFaceHandle faceHandle_, Rml::FontEffectsHandle fontEffectsHandle_, const Rml::String& string_, const Rml::Vector2f& position_,
+						const Rml::Colourb& colour_, float opacity_, Rml::GeometryList& geometry_ ) override;
 
 	/// Called by RmlUi to determine if the text geometry is required to be re-generated. Whenever the returned version
 	/// is changed, all geometry belonging to the given face handle will be re-generated.
 	/// @param[in] face_handle The font handle.
 	/// @return The version required for using any geometry generated with the face handle.
-	int GetVersion( Rml::FontFaceHandle handle ) override;
+	int GetVersion( Rml::FontFaceHandle handle_ ) override;
 
 	/// Called by RmlUi when it wants to garbage collect memory used by fonts.
 	/// @note All existing FontFaceHandles and FontEffectsHandles are considered invalid after this call.
@@ -137,10 +137,10 @@ public:
 
 private:
 
-	FontManager*			fontManager;
-	Rml::Texture			texture;
-	idList<FontHandle>		fonts;
-	idList<TrueTypeHandle>	fontFaces;
+	FontManager*			_fontManager;
+	Rml::Texture			_texture;
+	idList<FontHandle>		_fonts;
+	idList<TrueTypeHandle>	_fontFaces;
 };
 
 #endif

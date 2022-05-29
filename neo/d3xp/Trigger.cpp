@@ -1569,3 +1569,19 @@ void idTrigger_Flag::Event_Touch( idEntity* other, trace_t* trace )
 		idTrigger_Multi::Event_Touch( other, trace );
 	}
 }
+
+/*
+===============================================================================
+
+  idTrigger_Interact
+
+===============================================================================
+*/
+
+CLASS_DECLARATION( idTrigger_Multi, idTrigger_Interaction )
+END_CLASS
+
+void idTrigger_Interaction::Spawn()
+{
+	GetPhysics()->SetContents( CONTENTS_RENDERMODEL );
+}

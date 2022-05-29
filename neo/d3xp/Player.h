@@ -890,6 +890,8 @@ private:
 
 	// if there is a focusGUIent, the attack button will be changed into mouse clicks
 	idEntity* 				focusGUIent;
+	idEntity*				frobEnt;
+	idEntity*				interactEnt;
 	idUserInterface* 		focusUI;				// focusGUIent->renderEntity.gui, gui2, or gui3
 	RmlUserInterface*		focusRml;
 	idAI* 					focusCharacter;
@@ -949,6 +951,7 @@ private:
 	void					Weapon_Combat();
 	void					Weapon_NPC();
 	void					Weapon_GUI();
+	void					Weapon_Frob();
 	void					UpdateWeapon();
 	void					UpdateFlashlight();
 	void					FlashlightOn();

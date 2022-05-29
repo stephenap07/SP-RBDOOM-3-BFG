@@ -17,13 +17,7 @@ const idEventDef EV_ResetGravity( "resetGravityPortal", NULL );
 CLASS_DECLARATION( idEntity, spGamePortal )
 END_CLASS
 
-spGamePortal::spGamePortal()
-	: areaPortal( 0 )
-	, portalState( PORTAL_OPENED )
-	, bNoTeleport( false )
-	, slavePortals()
-	, masterPortal()
-	, proximityEntities()
+spGamePortal::spGamePortal(): _areaPortal( 0 ), _portalState( 0 ), _noTeleport( false ), _flipX( false )
 {
 }
 
@@ -35,12 +29,26 @@ void spGamePortal::Spawn()
 {
 	idBounds bounds;
 
-	bNoTeleport = spawnArgs.GetBool( "noTeleport" );
-	flipX = spawnArgs.GetBool( "flipX" );
+	_noTeleport = spawnArgs.GetBool( "noTeleport" );
+	_flipX = spawnArgs.GetBool( "flipX", true );
 
-	areaPortal = 1;
+	if( const char* partnerName = spawnArgs.GetString( "cameratarget" ) )
+	{
+		idEntity* ent = gameLocal.FindEntity( partnerName );
+		if( ent && ent->IsType( Type ) )
+		{
+			_partner = static_cast<spGamePortal*>( ent );
+		}
+	}
 
-	if( bNoTeleport )
+	if( !_partner )
+	{
+		gameLocal.Warning( "Game portal %s has no partner", name.c_str() );
+	}
+
+	_areaPortal = gameRenderWorld->FindPortal( GetPhysics()->GetAbsBounds().Expand( 32.0f ) );
+
+	if( _noTeleport )
 	{
 		GetPhysics()->SetContents( 0 );
 	}
@@ -52,62 +60,64 @@ void spGamePortal::Spawn()
 	// Setup the initial state for the portal
 	if( spawnArgs.GetBool( "startActive" ) ) // Start Active
 	{
-		portalState = PORTAL_OPENED;
+		_portalState = PORTAL_OPENED;
 	}
 	else   // Start closed
 	{
 		Hide();
-		portalState = PORTAL_CLOSED;
-		GetPhysics()->SetContents( 0 ); //rww - if closed, ensure things will not hit and go through
+		_portalState = PORTAL_CLOSED;
+		GetPhysics()->SetContents( 0 ); // rww - if closed, ensure things will not hit and go through
 	}
 
-	BecomeActive( TH_THINK | TH_UPDATEVISUALS | TH_ANIMATE );
+	int pState = ( _portalState == PORTAL_OPENED ) ? PS_BLOCK_NONE : PS_BLOCK_ALL;
+	gameRenderWorld->SetPortalState( _areaPortal, pState );
+
+	BecomeActive( TH_THINK | TH_UPDATEVISUALS );
 
 	UpdateVisuals();
 
 	PostEventMS( &EV_PostSpawn, 0 );
 
-	fl.networkSync = true; //rww
-
-	proximityEntities.Clear(); // Clear the list of potential entities to be portalled
+	fl.networkSync = true; // rww
+	_proximityEntities.Clear(); // Clear the list of potential entities to be portalled
 }
 
-void spGamePortal::Save( idSaveGame* savefile ) const
+void spGamePortal::Save( idSaveGame* savefile_ ) const
 {
 }
 
-void spGamePortal::Restore( idRestoreGame* savefile )
+void spGamePortal::Restore( idRestoreGame* savefile_ )
 {
 }
 
-void spGamePortal::ClientPredictionThink( void )
+void spGamePortal::ClientPredictionThink()
 {
 	Think();
 }
 
-void spGamePortal::CheckPlayerDistances( void )
+void spGamePortal::CheckPlayerDistances()
 {
 }
 
-static void PortalRotate( idVec3& vec, const idMat3& sourceTranspose, const idMat3& dest, const bool flipX )
+static void PortalRotate( idVec3& vec_, const idMat3& sourceTranspose_, const idMat3& dest_, const bool flipX_ )
 {
-	vec *= sourceTranspose;
-	vec.y *= -1;
-	if( flipX )
+	vec_ *= sourceTranspose_;
+	vec_.y *= -1;
+	if( flipX_ )
 	{
-		vec.x *= -1;
+		vec_.x *= -1;
 	}
-	vec *= dest;
+	vec_ *= dest_;
 }
 
-void spGamePortal::Think( void )
+void spGamePortal::Think()
 {
 	int				i;
 	idPlane			plane;
 
 	idEntity::Think();
 
-	if( portalState == PORTAL_CLOSED || bNoTeleport )
+	if( _portalState == PORTAL_CLOSED || _noTeleport )
 	{
 		return;
 	}
@@ -118,7 +128,12 @@ void spGamePortal::Think( void )
 		BecomeActive( TH_UPDATEVISUALS );
 	}
 
-	if( bNoTeleport )
+	if( _partner )
+	{
+		gameRenderWorld->SetPortalState( _partner->_areaPortal, PS_BLOCK_NONE );
+	}
+
+	if( _noTeleport )
 	{
 		return;
 	}
@@ -129,7 +144,7 @@ void spGamePortal::Think( void )
 	bounds.ExpandSelf( 1.0f );
 
 	idEntity* entityList[MAX_GENTITIES];
-	int numListedEntities = gameLocal.clip.EntitiesTouchingBounds( bounds, -1, entityList, MAX_GENTITIES );
+	const int numListedEntities = gameLocal.clip.EntitiesTouchingBounds( bounds, -1, entityList, MAX_GENTITIES );
 	for( int i = 0; i < numListedEntities; i++ )
 	{
 		idEntity* ent = entityList[i];
@@ -137,14 +152,14 @@ void spGamePortal::Think( void )
 		{
 			idEntityPtr<idEntity> traceEntPtr;
 			traceEntPtr = ent;
-			if( !ignoredEntities.Find( traceEntPtr ) )
+			if( !_ignoredEntities.Find( traceEntPtr ) )
 			{
 				AddProximityEntity( ent );
 			}
 		}
 	}
 
-	ignoredEntities.Clear();
+	_ignoredEntities.Clear();
 
 	for( int i = 0; i < numListedEntities; i++ )
 	{
@@ -154,13 +169,12 @@ void spGamePortal::Think( void )
 			idEntityPtr<idEntity> traceEntPtr;
 			traceEntPtr = ent;
 
-			ignoredEntities.AddUnique( traceEntPtr );
+			_ignoredEntities.AddUnique( traceEntPtr );
 
-			if( cameraTarget )
-			{
-				spGamePortal* targetPortal = static_cast<spGamePortal*>( cameraTarget );
-				targetPortal->ignoredEntities.AddUnique( traceEntPtr );
-			}
+			//if( cameraTarget )
+			//{
+			//	auto targetPortal = static_cast<spGamePortal*>( cameraTarget );
+			//}
 		}
 	}
 
@@ -172,16 +186,16 @@ void spGamePortal::Think( void )
 	//	}
 	//}
 
-	for( i = 0; i < proximityEntities.Num(); i++ )
+	for( i = 0; i < _proximityEntities.Num(); i++ )
 	{
-		if( !proximityEntities[i].entity.IsValid() )
+		if( !_proximityEntities[i].entity.IsValid() )
 		{
 			// Remove this entity from the list
-			proximityEntities.RemoveIndex( i );
+			_proximityEntities.RemoveIndex( i );
 			continue;
 		}
 
-		idEntity* hit = proximityEntities[i].entity.GetEntity();
+		idEntity* hit = _proximityEntities[i].entity.GetEntity();
 
 		if( cameraTarget && cameraTarget->IsType( spGamePortal::Type ) )
 		{
@@ -220,7 +234,7 @@ void spGamePortal::Think( void )
 				newEntAxis = static_cast<idPlayer*>( hit )->firstPersonViewAxis;
 			}
 
-			idAngles angleDiff = GetPhysics()->GetAxis().ToAngles() - newEntAxis.ToAngles();
+			const idAngles angleDiff = GetPhysics()->GetAxis().ToAngles() - newEntAxis.ToAngles();
 			idAngles origAngle = destAxis.ToAngles();
 			origAngle.yaw = origAngle.yaw - angleDiff.yaw;
 			origAngle.pitch = origAngle.pitch - angleDiff.pitch;
@@ -228,12 +242,12 @@ void spGamePortal::Think( void )
 			origAngle.Normalize180();
 
 			idVec3 vel = hit->GetPhysics()->GetLinearVelocity();
-			PortalRotate( vel, sourceAxis, destAxis, true );
+			PortalRotate( vel, sourceAxis, destAxis, _flipX );
 			hit->GetPhysics()->SetLinearVelocity( vel );
 
 			if( hit->IsType( idPlayer::Type ) )
 			{
-				idPlayer* player = static_cast<idPlayer*>( hit );
+				auto player = static_cast<idPlayer*>( hit );
 				//player->Teleport(newLocation, origAngle, nullptr);
 				player->SetOrigin( newLocation + idVec3( 0, 0, CM_CLIP_EPSILON ) );
 				player->SetViewAngles( origAngle );
@@ -247,18 +261,18 @@ void spGamePortal::Think( void )
 				hit->SetAngles( origAngle );
 			}
 
-			proximityEntities.RemoveIndex( i );
+			_proximityEntities.RemoveIndex( i );
 		}
 	}
 }
 
-void spGamePortal::AddProximityEntity( const idEntity* other )
+void spGamePortal::AddProximityEntity( const idEntity* other_ )
 {
 	// Go through the list and guarantee that this entity isn't in multiple times
 // note:  cannot use IdList::AddUnique, because the lastPortalPoint might be different during this add
-	for( int i = 0; i < proximityEntities.Num(); i++ )
+	for( int i = 0; i < _proximityEntities.Num(); i++ )
 	{
-		if( proximityEntities[i].entity.GetEntity() == other )
+		if( _proximityEntities[i].entity.GetEntity() == other_ )
 		{
 			return;
 		}
@@ -266,16 +280,16 @@ void spGamePortal::AddProximityEntity( const idEntity* other )
 
 	// Add this entity to the potential portal list
 	ProximityEntity prox;
-	prox.entity = other;
-	prox.lastPortalPoint = ( ( idEntity* )( other ) )->GetPhysics()->GetOrigin();
+	prox.entity = other_;
+	prox.lastPortalPoint = other_->GetPhysics()->GetOrigin();
 
-	proximityEntities.Append( prox );
+	_proximityEntities.Append( prox );
 
 	// If the entity is a player, then inform the player that they are close to this portal
 	// needed for weapon projectile firing
-	if( other->IsType( idPlayer::Type ) )
+	if( other_->IsType( idPlayer::Type ) )
 	{
-		idPlayer* player = ( idPlayer* )( other );
+		auto player = ( idPlayer* )( other_ );
 		//player->SetPortalColliding(true);
 	}
 }

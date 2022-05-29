@@ -318,4 +318,29 @@ private:
 	void				Event_Touch( idEntity* other, trace_t* trace );
 };
 
+/**
+ * \class idTrigger_Interaction
+ * \brief Trigger which activates on user interaction. Entities can be chained together
+ * starting from this entity.
+ * For example, you can instance this entity with a collision model
+ * \code
+ * "classname"	"trigger_interact"
+ * "size"		"32 32 32"
+ * "target0"	"light_1"
+ * "target1"	"speaker_lightSwitch"
+ * \endcode
+ * Then you can set the target entities to a light to turn it on/off as
+ * well as a speaker to toggle it on/off as well. A light switch can be easily
+ * made with this entity without touching code.
+*/
+
+class idTrigger_Interaction : public idTrigger_Multi
+{
+public:
+
+	CLASS_PROTOTYPE( idTrigger_Interaction );
+
+	void				Spawn();
+};
+
 #endif /* !__GAME_TRIGGER_H__ */

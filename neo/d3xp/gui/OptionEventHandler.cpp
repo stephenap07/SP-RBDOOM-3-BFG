@@ -5,6 +5,8 @@
 
 #include "../Game_local.h"
 
+#include "RmlShell.h"
+
 #include "RmlUi/Core.h"
 #include "RmlUi/Core/EventListener.h"
 

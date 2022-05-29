@@ -245,6 +245,8 @@ void AddRenderRml( const char* name, RmlUserInterface** rml, const idDict* args 
 
 	( *rml )->SetNextScreen( name );
 
+	( *rml )->Activate( true );
+
 	// Load up the generated textures.
 	( *rml )->Redraw( 0 );
 }

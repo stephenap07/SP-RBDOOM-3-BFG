@@ -607,10 +607,10 @@ private:
 
 	/// @name Entity Binding
 	/// @{
-	bool					InitBind( idEntity* master );		// initialize an entity binding
-	void					FinishBind();					// finish an entity binding
-	void					RemoveBinds();				// deletes any entities bound to this object
-	void					QuitTeam();					// leave the current team
+	bool					InitBind( idEntity* master );	//!< initialize an entity binding
+	void					FinishBind();					//!< finish an entity binding
+	void					RemoveBinds();					//!< deletes any entities bound to this object
+	void					QuitTeam();						//!< leave the current team
 	/// @}
 
 	void					UpdatePVSAreas();

@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) Stephen Pridham
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -27,31 +27,66 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#ifndef GAME_LUAENTITY_H
-#define GAME_LUAENTITY_H
+#ifndef GAME_GUI_FROBGUI_H
+#define GAME_GUI_FROBGUI_H
 
-extern const idEventDef EV_LuaEntity_PlayAnim;
+#include "rmlui/RmlUserInterface.h"
 
-class LuaEntity : public idAnimatedEntity
+
+/**
+ * \brief A gui to display text on the bottom center of the screen.
+ * A 'Frob' is a word made up by the Thief developers to indicate something
+ * that can be interacted with.
+ *
+ * "The player frobbed the computer and it turned on."
+ */
+class FrobGui
 {
 public:
-	CLASS_PROTOTYPE( LuaEntity );
 
-	LuaEntity();
+	/**
+	 * \brief Current mode of the Frob gui.
+	 */
+	enum Mode
+	{
+		MODE_INVALID,	//!< Initial mode to set in the class before initialization
+		MODE_NONE,		//!< Do not show the elements
+		MODE_INTERACT,	//!< Show the interact reticule in the center of the screen
+		MODE_SHOW_TEXT	//!< Show the frob text on the center bottom of the screen
+	};
 
-	~LuaEntity() override;
+	FrobGui();
 
-	void			Spawn( );
+	void Init( idSoundWorld* soundWorld_ );
 
-	void			Think() override;
+	void Redraw();
 
-	/// Script Events
-	void			Event_PlayAnim( int channel_, const char* animname_, bool loop_ );
+	void Show( bool show_ );
+
+	void SetMode( Mode mode_ );
+
+	void ShowText( bool show_ );
+
+	void ShowInteract( bool show_ );
+
+	void SetText( const char* text_ );
+
+	/**
+	 * \brief Toggle between @c MODE_INTERACT and @c MODE_SHOW_TEXT.
+	 * \param entity_ Get the flavor text from the entity
+	 */
+	void ToggleView( const idEntity* entity_ );
+
+	[[nodiscard]] Mode GetMode() const
+	{
+		return _mode;
+	}
 
 private:
 
-	int _animBlendFrames;
-	int _animDoneTime;
+	RmlUserInterface*		_ui;	//!< Reference to the control class for managing RML documents within the game
+	Rml::ElementDocument*	_doc;	//!< Reference to the RML document to manipulate the visual RML document.
+	Mode					_mode;	//!< Current mode of the Frobbing.
 };
 
 #endif

@@ -35,6 +35,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../imgui/BFGimgui.h"
 #include "rmlui/RmlUserInterface.h"
+#include "gui/RmlShell.h"
 
 #ifdef USE_PHYSX
 	#include "PxPhysicsApi.h"
@@ -1283,6 +1284,9 @@ void idGameLocal::MapPopulate()
 	// parse the key/value pairs and spawn entities
 	SpawnMapEntities();
 
+	// RB
+	PopulateEnvironmentProbes();
+
 	// mark location entities in all connected areas
 	SpreadLocations();
 
@@ -1409,9 +1413,6 @@ void idGameLocal::InitFromNewMap( const char* mapName, idRenderWorld* renderWorl
 	InitScriptForMap();
 
 	MapPopulate();
-
-	// RB
-	PopulateEnvironmentProbes();
 
 	mpGame.Reset();
 	mpGame.Precache();

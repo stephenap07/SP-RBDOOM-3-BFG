@@ -962,10 +962,6 @@ const int	CINEMATIC_SKIP_DELAY	= SEC2MS( 2.0f );
 #include "menus/MenuScreen.h"
 #include "menus/MenuHandler.h"
 
-// SP Begin New ui
-#include "gui/RmlShell.h"
-// SP End
-
 #include "script/Script_Compiler.h"
 #include "script/Script_Interpreter.h"
 #include "script/Script_Thread.h"

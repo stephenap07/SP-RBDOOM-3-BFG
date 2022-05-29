@@ -2,6 +2,7 @@
 #pragma hdrstop
 
 #include "EventHandlers.h"
+#include "RmlShell.h"
 
 #include "../Game_local.h"
 

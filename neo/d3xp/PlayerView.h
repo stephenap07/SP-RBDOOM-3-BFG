@@ -26,10 +26,11 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../renderer/TextBufferManager.h"
-
 #ifndef __GAME_PLAYERVIEW_H__
 #define __GAME_PLAYERVIEW_H__
+
+#include "../renderer/TextBufferManager.h"
+#include "gui/FrobGui.h"
 
 class idMenuHandler_HUD;
 
@@ -452,9 +453,6 @@ private:
 
 	screenBlob_t		screenBlobs[MAX_SCREEN_BLOBS];
 
-	// UI elements that interact with the game world.
-	RmlUserInterface*	focusUi;
-
 public:
 	int					dvFinishTime;		// double vision will be stopped at this time
 
@@ -484,6 +482,8 @@ public:
 	renderView_t		view;
 
 	FullscreenFXManager*	fxManager;
+
+	FrobGui				frobGui;			//!< UI elements that interact with the game world.
 
 public:
 	int					AddWarp( idVec3 worldOrigin, float centerx, float centery, float initialRadius, float durationMsec );
