@@ -1434,11 +1434,6 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 		{
 			globalFramebuffers.envprobeFBO->Bind();
 		}
-		//else if( viewDef && viewDef->targetRender )
-		//{
-		//	// TODO(Stephen): this sometimes crashes. figure out why.
-		//	viewDef->targetRender->Bind( );
-		//}
 		else
 		{
 			globalFramebuffers.hdrFBO->Bind();

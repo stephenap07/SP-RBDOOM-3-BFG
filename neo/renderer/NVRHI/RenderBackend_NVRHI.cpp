@@ -3,8 +3,9 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2019 Robert Beckebans
+Copyright (C) 2013-2022 Robert Beckebans
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -35,6 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../RenderBackend.h"
 #include "../../framework/Common_local.h"
 #include "../../imgui/imgui.h"
+#include "../ImmediateMode.h"
 
 #include "nvrhi/utils.h"
 #include <sys/DeviceManager.h>
@@ -158,6 +160,8 @@ void idRenderBackend::Init()
 	commandList->close();
 	deviceManager->GetDevice()->executeCommandList( commandList );
 
+	fhImmediateMode::Init();
+
 	// allocate the frame data, which may be more if smp is enabled
 	R_InitFrameData();
 
@@ -271,13 +275,6 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 
 	uint64_t stateBits = glStateBits;
-
-	if( currentFrameBuffer == globalFramebuffers.ldrFBO )
-	{
-		// make sure that FBO doesn't require a depth buffer
-		stateBits |= GLS_DEPTHFUNC_ALWAYS | GLS_DEPTHMASK;
-		stateBits &= ~( GLS_STENCIL_FUNC_BITS | GLS_STENCIL_OP_BITS );
-	}
 
 	int program = renderProgManager.CurrentProgram();
 	PipelineKey key{ stateBits, program, depthBias, slopeScaleBias, currentFrameBuffer };
@@ -559,13 +556,13 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[2].bindings =
 			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
-				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearClampSampler )
+				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearBorderSampler )
 			};
 		}
 		else
 		{
 			desc[2].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
-			desc[2].bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
+			desc[2].bindings[1].resourceHandle = commonPasses.m_LinearBorderSampler;
 		}
 	}
 	else if( type == BINDING_LAYOUT_DRAW_INTERACTION_SM )
@@ -615,7 +612,7 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			bindings =
 			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
-				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearClampSampler ),
+				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearBorderSampler ),
 				nvrhi::BindingSetItem::Sampler( 2, commonPasses.m_LinearClampCompareSampler ),
 				nvrhi::BindingSetItem::Sampler( 3, commonPasses.m_PointWrapSampler )  // blue noise
 			};
@@ -624,7 +621,7 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		{
 			auto& bindings = desc[2].bindings;
 			bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
-			bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
+			bindings[1].resourceHandle = commonPasses.m_LinearBorderSampler;
 			bindings[2].resourceHandle = commonPasses.m_LinearClampCompareSampler;
 			bindings[3].resourceHandle = commonPasses.m_PointWrapSampler;
 		}
@@ -661,7 +658,37 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[1].bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
 		}
 	}
-	else if( type == BINDING_LAYOUT_POST_PROCESS_CNM )
+	else if( type == BINDING_LAYOUT_BLENDLIGHT )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			desc[0].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			desc[0].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearBorderSampler )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearBorderSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_POST_PROCESS_INGAME )
 	{
 		if( desc[0].bindings.empty() )
 		{
@@ -693,6 +720,38 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearClampSampler;
 		}
 	}
+	else if( type == BINDING_LAYOUT_POST_PROCESS_FINAL )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			desc[0].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			desc[0].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearClampSampler ),
+				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearWrapSampler )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearClampSampler;
+			desc[1].bindings[1].resourceHandle = commonPasses.m_LinearWrapSampler;
+		}
+	}
 	else if( type == BINDING_LAYOUT_NORMAL_CUBE )
 	{
 		if( desc[0].bindings.empty() )
@@ -721,38 +780,6 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		else
 		{
 			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearWrapSampler;
-		}
-	}
-	else if( type == BINDING_LAYOUT_BLENDLIGHT )
-	{
-		if( desc[ 0 ].bindings.empty() )
-		{
-			desc[ 0 ].bindings =
-			{
-				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::Texture_SRV(
-					0, static_cast<nvrhi::ITexture*>( GetImageAt( 0 )->GetTextureID() ) ),
-				nvrhi::BindingSetItem::Texture_SRV(
-					1, static_cast<nvrhi::ITexture*>( GetImageAt( 1 )->GetTextureID() ) )
-			};
-		}
-		else
-		{
-			desc[ 0 ].bindings[ 0 ].resourceHandle = renderProgManager.ConstantBuffer();
-			desc[ 0 ].bindings[ 1 ].resourceHandle = static_cast<nvrhi::ITexture*>( GetImageAt( 0 )->GetTextureID() );
-			desc[ 0 ].bindings[ 2 ].resourceHandle = static_cast<nvrhi::ITexture*>( GetImageAt( 1 )->GetTextureID() );
-		}
-
-		if( desc[ 1 ].bindings.empty() )
-		{
-			desc[ 1 ].bindings =
-			{
-				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearWrapSampler )
-			};
-		}
-		else
-		{
-			desc[ 1 ].bindings[ 0 ].resourceHandle = commonPasses.m_LinearWrapSampler;
 		}
 	}
 	else if( type == BINDING_LAYOUT_TAA_MOTION_VECTORS )
@@ -843,11 +870,6 @@ We want to exit this with the GPU idle, right at vsync
 */
 void idRenderBackend::GL_BlockingSwapBuffers()
 {
-	if( !deviceManager->GetDevice() )
-	{
-		return;
-	}
-
 	// Make sure that all frames have finished rendering
 	deviceManager->GetDevice()->waitForIdle();
 
@@ -858,19 +880,6 @@ void idRenderBackend::GL_BlockingSwapBuffers()
 	deviceManager->Present();
 
 	renderLog.EndFrame();
-}
-
-void idRenderBackend::GL_EndRenderPass()
-{
-#if 0
-	commandList->close();
-
-	deviceManager->GetDevice()->executeCommandList( commandList );
-
-	deviceManager->GetDevice()->runGarbageCollection();
-
-	commandList->open();
-#endif
 }
 
 /*
@@ -1540,21 +1549,15 @@ void idRenderBackend::ResizeImages()
 
 void idRenderBackend::SetCurrentImage( idImage* image )
 {
-	idImage* theImage = image;
-	if( !image )
-	{
-		theImage = globalImages->defaultImage;
-	}
-
 	// load the image if necessary (FIXME: not SMP safe!)
 	// RB: don't try again if last time failed
-	if( !theImage->IsLoaded() && !theImage->IsDefaulted() )
+	if( !image->IsLoaded() && !image->IsDefaulted() )
 	{
 		// TODO(Stephen): Fix me.
 		image->FinalizeImage( true, commandList );
 	}
 
-	context.imageParms[context.currentImageParm] = theImage;
+	context.imageParms[context.currentImageParm] = image;
 }
 
 idImage* idRenderBackend::GetCurrentImage()

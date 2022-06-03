@@ -80,7 +80,11 @@ idCVar r_glDriver( "r_glDriver", "", CVAR_RENDERER, "\"opengl32\", etc." );
 #endif
 // SRS end
 // RB: disabled 16x MSAA
-idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = TAA 1x\n 2 = TAA + SMAA 1x\n 3 = MSAA 2x\n 4 = MSAA 4x\n", 0, ANTI_ALIASING_MSAA_4X );
+#if ID_MSAA
+	idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = TAA 1x\n 2 = TAA + SMAA 1x\n 3 = MSAA 2x\n 4 = MSAA 4x\n", 0, ANTI_ALIASING_MSAA_4X );
+#else
+	idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = TAA 1x", 0, ANTI_ALIASING_TAA );
+#endif
 // RB end
 idCVar r_vidMode( "r_vidMode", "0", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_INTEGER, "fullscreen video mode number" );
 idCVar r_displayRefresh( "r_displayRefresh", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_NOCHEAT, "optional display refresh rate option for vid mode", 0.0f, 240.0f );
@@ -363,8 +367,10 @@ bool R_UseTemporalAA()
 		case ANTI_ALIASING_TAA:
 			return true;
 
+#if ID_MSAA
 		case ANTI_ALIASING_TAA_SMAA_1X:
 			return true;
+#endif
 
 		default:
 			return false;
@@ -373,6 +379,7 @@ bool R_UseTemporalAA()
 
 uint R_GetMSAASamples()
 {
+#if ID_MSAA
 	switch( r_antiAliasing.GetInteger() )
 	{
 		case ANTI_ALIASING_MSAA_2X:
@@ -384,6 +391,9 @@ uint R_GetMSAASamples()
 		default:
 			return 1;
 	}
+#else
+	return 1;
+#endif
 }
 
 /*
@@ -474,12 +484,14 @@ void R_SetNewMode( const bool fullInit )
 
 		switch( r_antiAliasing.GetInteger() )
 		{
+#if ID_MSAA
 			case ANTI_ALIASING_MSAA_2X:
 				parms.multiSamples = 2;
 				break;
 			case ANTI_ALIASING_MSAA_4X:
 				parms.multiSamples = 4;
 				break;
+#endif
 
 			default:
 				parms.multiSamples = 1;
@@ -705,9 +717,6 @@ void R_TestVideo_f( const idCmdArgs& args )
 
 	int	len = tr.testVideo->AnimationLength();
 	common->Printf( "%5.1f seconds of video\n", len * 0.001 );
-
-	// SRS - Not needed or used since InitFromFile() sets the correct start time automatically
-	//tr.testVideoStartTime = tr.primaryRenderView.time[1];
 
 	// try to play the matching wav file
 	idStr	wavString = args.Argv( ( args.Argc() == 2 ) ? 1 : 2 );
@@ -1435,7 +1444,7 @@ void R_SetColorMappings()
 		tr.gammaTable[i] = idMath::ClampInt( 0, 0xFFFF, inf );
 	}
 // SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL) || defined(NVRHI_USE_SDL)
+#if defined(VULKAN_USE_PLATFORM_SDL)
 	VKimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );
 #else
 	GLimp_SetGamma( tr.gammaTable, tr.gammaTable, tr.gammaTable );

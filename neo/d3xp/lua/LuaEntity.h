@@ -46,12 +46,12 @@ public:
 	void			Think() override;
 
 	/// Script Events
-	void			Event_PlayAnim( int channel_, const char* animname_, bool loop_ );
+	void			Event_PlayAnim( int channel, const char* animName, bool loop );
 
 private:
 
-	int _animBlendFrames;
-	int _animDoneTime;
+	int animBlendFrames;
+	int animDoneTime;
 };
 
 #endif

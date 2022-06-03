@@ -180,7 +180,7 @@ private:
 	void						Event_DebugCircle( const idVec3& color, const idVec3& origin, const idVec3& dir, const float radius, const int numSteps, const float lifetime );
 	void						Event_DebugBounds( const idVec3& color, const idVec3& mins, const idVec3& maxs, const float lifetime );
 	void						Event_DrawText( const char* text, const idVec3& origin, float scale, const idVec3& color, const int align, const float lifetime );
-	void						Event_InfluenceActive();
+	void						Event_InfluenceActive() const;
 
 private:
 	friend class ScriptManager;

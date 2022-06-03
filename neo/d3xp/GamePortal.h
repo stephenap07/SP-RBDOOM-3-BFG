@@ -28,8 +28,8 @@ public:
 	~spGamePortal() override;
 
 	void					Spawn();
-	void					Save( idSaveGame* savefile_ ) const;
-	void					Restore( idRestoreGame* savefile_ );
+	void					Save( idSaveGame* savefile ) const;
+	void					Restore( idRestoreGame* savefile );
 
 	void					ClientPredictionThink() override;
 
@@ -38,21 +38,21 @@ public:
 
 	[[nodiscard]] bool		IsActive() const
 	{
-		return _portalState < PORTAL_CLOSING;
+		return portalState < PORTAL_CLOSING;
 	}
 
-	void					AddProximityEntity( const idEntity* other_ );
+	void					AddProximityEntity( const idEntity* other );
 
 private:
 
-	qhandle_t							_areaPortal;	//!< 0 = no portal
-	int									_portalState;	//!< Current portal state
-	bool								_noTeleport;	//!< Is purely a visual portal.  Will not try to teleport anything near it
-	bool								_flipX;			//!< If this is true, it flips the teleportation mechanism so the player is facing opposite face of the surface.
+	qhandle_t							areaPortal;	//!< 0 = no portal
+	int									portalState;	//!< Current portal state
+	bool								noTeleport;	//!< Is purely a visual portal.  Will not try to teleport anything near it
+	bool								flipX;			//!< If this is true, it flips the teleportation mechanism so the player is facing opposite face of the surface.
 
-	idEntityPtr<spGamePortal>			_partner;
-	idList<ProximityEntity>		        _proximityEntities;
-	idList<idEntityPtr<idEntity> >      _ignoredEntities;
+	idEntityPtr<spGamePortal>			partner;
+	idList<ProximityEntity>		        proximityEntities;
+	idList<idEntityPtr<idEntity> >      ignoredEntities;
 };
 
 

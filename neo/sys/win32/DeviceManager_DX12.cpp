@@ -152,7 +152,7 @@ static RefCountPtr<IDXGIAdapter> FindAdapter( const std::wstring& targetName )
 	return targetAdapter;
 }
 
-// Adjust window rect so that it is centred on the given adapter.  Clamps to fit if it's too big.
+// Adjust window rect so that it is centered on the given adapter.  Clamps to fit if it's too big.
 static bool MoveWindowOntoAdapter( IDXGIAdapter* targetAdapter, RECT& rect )
 {
 	assert( targetAdapter != NULL );

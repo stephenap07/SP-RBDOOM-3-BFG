@@ -1083,12 +1083,11 @@ LuaThread::Event_VecToOrthoBasisAngles
 void idLuaThread::Event_VecToOrthoBasisAngles( idVec3& vec )
 {
 	idVec3 left, up;
-	idAngles ang;
 
 	vec.OrthogonalBasis( left, up );
-	idMat3 axis( left, up, vec );
+	const idMat3 axis( left, up, vec );
 
-	ang = axis.ToAngles();
+	idAngles ang = axis.ToAngles();
 
 	ReturnVector( idVec3( ang[0], ang[1], ang[2] ) );
 }
@@ -1110,8 +1109,6 @@ LuaThread::Event_OnSignal
 */
 void idLuaThread::Event_OnSignal( int signal, idEntity* ent, const char* func )
 {
-	const function_t* function;
-
 	assert( func );
 
 	if( ent == NULL )
@@ -1125,7 +1122,7 @@ void idLuaThread::Event_OnSignal( int signal, idEntity* ent, const char* func )
 		Error( "Signal out of range" );
 	}
 
-	function = gameLocal.program.FindFunction( func );
+	const function_t* function = gameLocal.program.FindFunction( func );
 	if( !function )
 	{
 		Error( "Function '%s' not found", func );
@@ -1301,7 +1298,7 @@ void idLuaThread::Event_GetTraceBody()
 		idAFEntity_Base* af = static_cast< idAFEntity_Base* >( gameLocal.entities[trace.c.entityNum] );
 		if( af && af->IsType( idAFEntity_Base::Type ) && af->IsActiveAF() )
 		{
-			int bodyId = af->BodyForClipModelId( trace.c.id );
+			const int bodyId = af->BodyForClipModelId( trace.c.id );
 			idAFBody* body = af->GetAFPhysics()->GetBody( bodyId );
 			if( body )
 			{
@@ -1320,12 +1317,10 @@ LuaThread::Event_FadeIn
 */
 void idLuaThread::Event_FadeIn( idVec3& color, float time )
 {
-	idVec4		fadeColor;
-	idPlayer* player;
-
-	player = gameLocal.GetLocalPlayer();
+	idPlayer* player = gameLocal.GetLocalPlayer();
 	if( player )
 	{
+		idVec4 fadeColor;
 		fadeColor.Set( color[0], color[1], color[2], 0.0f );
 		player->playerView.Fade( fadeColor, SEC2MS( time ) );
 	}
@@ -1338,12 +1333,10 @@ LuaThread::Event_FadeOut
 */
 void idLuaThread::Event_FadeOut( idVec3& color, float time )
 {
-	idVec4		fadeColor;
-	idPlayer* player;
-
-	player = gameLocal.GetLocalPlayer();
+	idPlayer* player = gameLocal.GetLocalPlayer();
 	if( player )
 	{
+		idVec4 fadeColor;
 		fadeColor.Set( color[0], color[1], color[2], 1.0f );
 		player->playerView.Fade( fadeColor, SEC2MS( time ) );
 	}
@@ -1356,12 +1349,10 @@ LuaThread::Event_FadeTo
 */
 void idLuaThread::Event_FadeTo( idVec3& color, float alpha, float time )
 {
-	idVec4		fadeColor;
-	idPlayer* player;
-
-	player = gameLocal.GetLocalPlayer();
+	idPlayer* player = gameLocal.GetLocalPlayer();
 	if( player )
 	{
+		idVec4 fadeColor;
 		fadeColor.Set( color[0], color[1], color[2], alpha );
 		player->playerView.Fade( fadeColor, SEC2MS( time ) );
 	}
@@ -1420,10 +1411,8 @@ LuaThread::Event_StrLen
 */
 void idLuaThread::Event_StrLen( const char* string )
 {
-	int len;
-
-	len = strlen( string );
-	idLuaThread::ReturnInt( len );
+	const int len = strlen( string );
+	ReturnInt( len );
 }
 
 /*
@@ -1433,23 +1422,21 @@ LuaThread::Event_StrLeft
 */
 void idLuaThread::Event_StrLeft( const char* string, int num )
 {
-	int len;
-
 	if( num < 0 )
 	{
-		idLuaThread::ReturnString( "" );
+		ReturnString( "" );
 		return;
 	}
 
-	len = strlen( string );
+	const int len = strlen( string );
 	if( len < num )
 	{
-		idLuaThread::ReturnString( string );
+		ReturnString( string );
 		return;
 	}
 
 	idStr result( string, 0, num );
-	idLuaThread::ReturnString( result );
+	ReturnString( result );
 }
 
 /*
@@ -1459,22 +1446,20 @@ LuaThread::Event_StrRight
 */
 void idLuaThread::Event_StrRight( const char* string, int num )
 {
-	int len;
-
 	if( num < 0 )
 	{
-		idLuaThread::ReturnString( "" );
+		ReturnString( "" );
 		return;
 	}
 
-	len = strlen( string );
+	const int len = strlen( string );
 	if( len < num )
 	{
-		idLuaThread::ReturnString( string );
+		ReturnString( string );
 		return;
 	}
 
-	idLuaThread::ReturnString( string + len - num );
+	ReturnString( string + len - num );
 }
 
 /*
@@ -1484,22 +1469,20 @@ LuaThread::Event_StrSkip
 */
 void idLuaThread::Event_StrSkip( const char* string, int num )
 {
-	int len;
-
 	if( num < 0 )
 	{
-		idLuaThread::ReturnString( string );
+		ReturnString( string );
 		return;
 	}
 
-	len = strlen( string );
+	const int len = strlen( string );
 	if( len < num )
 	{
-		idLuaThread::ReturnString( "" );
+		ReturnString( "" );
 		return;
 	}
 
-	idLuaThread::ReturnString( string + num );
+	ReturnString( string + num );
 }
 
 /*
@@ -1509,11 +1492,9 @@ LuaThread::Event_StrMid
 */
 void idLuaThread::Event_StrMid( const char* string, int start, int num )
 {
-	int len;
-
 	if( num < 0 )
 	{
-		idLuaThread::ReturnString( "" );
+		ReturnString( "" );
 		return;
 	}
 
@@ -1521,7 +1502,7 @@ void idLuaThread::Event_StrMid( const char* string, int start, int num )
 	{
 		start = 0;
 	}
-	len = strlen( string );
+	const int len = strlen( string );
 	if( start > len )
 	{
 		start = len;
@@ -1533,7 +1514,7 @@ void idLuaThread::Event_StrMid( const char* string, int start, int num )
 	}
 
 	idStr result( string, start, start + num );
-	idLuaThread::ReturnString( result );
+	ReturnString( result );
 }
 
 /*
@@ -1543,10 +1524,8 @@ LuaThread::Event_StrToFloat( const char *string )
 */
 void idLuaThread::Event_StrToFloat( const char* string )
 {
-	float result;
-
-	result = atof( string );
-	idLuaThread::ReturnFloat( result );
+	const float result = atof( string );
+	ReturnFloat( result );
 }
 
 /*
@@ -1566,7 +1545,7 @@ LuaThread::Event_IsClient
 */
 void idLuaThread::Event_IsClient()
 {
-	idLuaThread::ReturnFloat( common->IsClient() );
+	ReturnFloat( common->IsClient() );
 }
 
 /*
@@ -1576,7 +1555,7 @@ LuaThread::Event_IsMultiplayer
 */
 void idLuaThread::Event_IsMultiplayer()
 {
-	idLuaThread::ReturnFloat( common->IsMultiplayer() );
+	ReturnFloat( common->IsMultiplayer() );
 }
 
 /*
@@ -1586,7 +1565,7 @@ LuaThread::Event_GetFrameTime
 */
 void idLuaThread::Event_GetFrameTime()
 {
-	idLuaThread::ReturnFloat( MS2SEC( gameLocal.time - gameLocal.previousTime ) );
+	ReturnFloat( MS2SEC( gameLocal.time - gameLocal.previousTime ) );
 }
 
 /*
@@ -1596,7 +1575,7 @@ LuaThread::Event_GetTicsPerSecond
 */
 void idLuaThread::Event_GetTicsPerSecond()
 {
-	idLuaThread::ReturnFloat( com_engineHz_latched );
+	ReturnFloat( com_engineHz_latched );
 }
 
 /*
@@ -1654,9 +1633,11 @@ void idLuaThread::Event_DebugBounds( const idVec3& color, const idVec3& mins, co
 LuaThread::Event_DrawText
 ================
 */
-void idLuaThread::Event_DrawText( const char* text, const idVec3& origin, float scale, const idVec3& color, const int align, const float lifetime )
+void idLuaThread::Event_DrawText( const char* text, const idVec3& origin, float scale, const idVec3& color,
+								  const int align, const float lifetime )
 {
-	gameRenderWorld->DebugText( text, origin, scale, idVec4( color.x, color.y, color.z, 0.0f ), gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), align, SEC2MS( lifetime ) );
+	gameRenderWorld->DrawText( text, origin, scale, idVec4( color.x, color.y, color.z, 0.0f ),
+								gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), align, SEC2MS( lifetime ) );
 }
 
 /*
@@ -1664,17 +1645,15 @@ void idLuaThread::Event_DrawText( const char* text, const idVec3& origin, float 
 LuaThread::Event_InfluenceActive
 ================
 */
-void idLuaThread::Event_InfluenceActive()
+void idLuaThread::Event_InfluenceActive() const
 {
-	idPlayer* player;
-
-	player = gameLocal.GetLocalPlayer();
-	if( player != NULL && player->GetInfluenceLevel() )
+	idPlayer* player = gameLocal.GetLocalPlayer();
+	if( player != nullptr && player->GetInfluenceLevel() )
 	{
-		idLuaThread::ReturnInt( true );
+		ReturnInt( true );
 	}
 	else
 	{
-		idLuaThread::ReturnInt( false );
+		ReturnInt( false );
 	}
 }

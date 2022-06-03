@@ -3,21 +3,18 @@
 
 #include "Game_local.h"
 
-#include <lua.hpp>
-#include <luaconf.h>
-
-const idEventDef EV_Opened( "<portalopened>", NULL );
-const idEventDef EV_Closed( "<portalclosed>", NULL );
-const idEventDef EV_PortalSpark( "<portalSpark>", NULL );
-const idEventDef EV_PortalSparkEnd( "<portalSparkEnd>", NULL );
-const idEventDef EV_ShowGlowPortal( "showGlowPortal", NULL );
-const idEventDef EV_HideGlowPortal( "hideGlowPortal", NULL );
-const idEventDef EV_ResetGravity( "resetGravityPortal", NULL );
+const idEventDef EV_Opened( "<portalopened>", nullptr );
+const idEventDef EV_Closed( "<portalclosed>", nullptr );
+const idEventDef EV_PortalSpark( "<portalSpark>", nullptr );
+const idEventDef EV_PortalSparkEnd( "<portalSparkEnd>", nullptr );
+const idEventDef EV_ShowGlowPortal( "showGlowPortal", nullptr );
+const idEventDef EV_HideGlowPortal( "hideGlowPortal", nullptr );
+const idEventDef EV_ResetGravity( "resetGravityPortal", nullptr );
 
 CLASS_DECLARATION( idEntity, spGamePortal )
 END_CLASS
 
-spGamePortal::spGamePortal(): _areaPortal( 0 ), _portalState( 0 ), _noTeleport( false ), _flipX( false )
+spGamePortal::spGamePortal(): areaPortal( 0 ), portalState( 0 ), noTeleport( false ), flipX( false )
 {
 }
 
@@ -29,26 +26,26 @@ void spGamePortal::Spawn()
 {
 	idBounds bounds;
 
-	_noTeleport = spawnArgs.GetBool( "noTeleport" );
-	_flipX = spawnArgs.GetBool( "flipX", true );
+	noTeleport = spawnArgs.GetBool( "noTeleport" );
+	flipX = spawnArgs.GetBool( "flipX", true );
 
 	if( const char* partnerName = spawnArgs.GetString( "cameratarget" ) )
 	{
 		idEntity* ent = gameLocal.FindEntity( partnerName );
 		if( ent && ent->IsType( Type ) )
 		{
-			_partner = static_cast<spGamePortal*>( ent );
+			partner = static_cast<spGamePortal*>( ent );
 		}
 	}
 
-	if( !_partner )
+	if( !partner )
 	{
 		gameLocal.Warning( "Game portal %s has no partner", name.c_str() );
 	}
 
-	_areaPortal = gameRenderWorld->FindPortal( GetPhysics()->GetAbsBounds().Expand( 32.0f ) );
+	areaPortal = gameRenderWorld->FindPortal( GetPhysics()->GetAbsBounds().Expand( 32.0f ) );
 
-	if( _noTeleport )
+	if( noTeleport )
 	{
 		GetPhysics()->SetContents( 0 );
 	}
@@ -60,17 +57,17 @@ void spGamePortal::Spawn()
 	// Setup the initial state for the portal
 	if( spawnArgs.GetBool( "startActive" ) ) // Start Active
 	{
-		_portalState = PORTAL_OPENED;
+		portalState = PORTAL_OPENED;
 	}
 	else   // Start closed
 	{
 		Hide();
-		_portalState = PORTAL_CLOSED;
+		portalState = PORTAL_CLOSED;
 		GetPhysics()->SetContents( 0 ); // rww - if closed, ensure things will not hit and go through
 	}
 
-	int pState = ( _portalState == PORTAL_OPENED ) ? PS_BLOCK_NONE : PS_BLOCK_ALL;
-	gameRenderWorld->SetPortalState( _areaPortal, pState );
+	int pState = ( portalState == PORTAL_OPENED ) ? PS_BLOCK_NONE : PS_BLOCK_ALL;
+	gameRenderWorld->SetPortalState( areaPortal, pState );
 
 	BecomeActive( TH_THINK | TH_UPDATEVISUALS );
 
@@ -79,14 +76,14 @@ void spGamePortal::Spawn()
 	PostEventMS( &EV_PostSpawn, 0 );
 
 	fl.networkSync = true; // rww
-	_proximityEntities.Clear(); // Clear the list of potential entities to be portalled
+	proximityEntities.Clear(); // Clear the list of potential entities to be portalled
 }
 
-void spGamePortal::Save( idSaveGame* savefile_ ) const
+void spGamePortal::Save( idSaveGame* savefile ) const
 {
 }
 
-void spGamePortal::Restore( idRestoreGame* savefile_ )
+void spGamePortal::Restore( idRestoreGame* savefile )
 {
 }
 
@@ -99,15 +96,15 @@ void spGamePortal::CheckPlayerDistances()
 {
 }
 
-static void PortalRotate( idVec3& vec_, const idMat3& sourceTranspose_, const idMat3& dest_, const bool flipX_ )
+static void PortalRotate( idVec3& vec, const idMat3& sourceTranspose, const idMat3& dest, const bool flipX )
 {
-	vec_ *= sourceTranspose_;
-	vec_.y *= -1;
-	if( flipX_ )
+	vec *= sourceTranspose;
+	vec.y *= -1;
+	if( flipX )
 	{
-		vec_.x *= -1;
+		vec.x *= -1;
 	}
-	vec_ *= dest_;
+	vec *= dest;
 }
 
 void spGamePortal::Think()
@@ -117,7 +114,7 @@ void spGamePortal::Think()
 
 	idEntity::Think();
 
-	if( _portalState == PORTAL_CLOSED || _noTeleport )
+	if( portalState == PORTAL_CLOSED || noTeleport )
 	{
 		return;
 	}
@@ -128,12 +125,12 @@ void spGamePortal::Think()
 		BecomeActive( TH_UPDATEVISUALS );
 	}
 
-	if( _partner )
+	if( partner )
 	{
-		gameRenderWorld->SetPortalState( _partner->_areaPortal, PS_BLOCK_NONE );
+		gameRenderWorld->SetPortalState( partner->areaPortal, PS_BLOCK_NONE );
 	}
 
-	if( _noTeleport )
+	if( noTeleport )
 	{
 		return;
 	}
@@ -152,14 +149,14 @@ void spGamePortal::Think()
 		{
 			idEntityPtr<idEntity> traceEntPtr;
 			traceEntPtr = ent;
-			if( !_ignoredEntities.Find( traceEntPtr ) )
+			if( !ignoredEntities.Find( traceEntPtr ) )
 			{
 				AddProximityEntity( ent );
 			}
 		}
 	}
 
-	_ignoredEntities.Clear();
+	ignoredEntities.Clear();
 
 	for( int i = 0; i < numListedEntities; i++ )
 	{
@@ -169,7 +166,7 @@ void spGamePortal::Think()
 			idEntityPtr<idEntity> traceEntPtr;
 			traceEntPtr = ent;
 
-			_ignoredEntities.AddUnique( traceEntPtr );
+			ignoredEntities.AddUnique( traceEntPtr );
 
 			//if( cameraTarget )
 			//{
@@ -186,16 +183,16 @@ void spGamePortal::Think()
 	//	}
 	//}
 
-	for( i = 0; i < _proximityEntities.Num(); i++ )
+	for( i = 0; i < proximityEntities.Num(); i++ )
 	{
-		if( !_proximityEntities[i].entity.IsValid() )
+		if( !proximityEntities[i].entity.IsValid() )
 		{
 			// Remove this entity from the list
-			_proximityEntities.RemoveIndex( i );
+			proximityEntities.RemoveIndex( i );
 			continue;
 		}
 
-		idEntity* hit = _proximityEntities[i].entity.GetEntity();
+		idEntity* hit = proximityEntities[i].entity.GetEntity();
 
 		if( cameraTarget && cameraTarget->IsType( spGamePortal::Type ) )
 		{
@@ -242,7 +239,7 @@ void spGamePortal::Think()
 			origAngle.Normalize180();
 
 			idVec3 vel = hit->GetPhysics()->GetLinearVelocity();
-			PortalRotate( vel, sourceAxis, destAxis, _flipX );
+			PortalRotate( vel, sourceAxis, destAxis, flipX );
 			hit->GetPhysics()->SetLinearVelocity( vel );
 
 			if( hit->IsType( idPlayer::Type ) )
@@ -261,18 +258,18 @@ void spGamePortal::Think()
 				hit->SetAngles( origAngle );
 			}
 
-			_proximityEntities.RemoveIndex( i );
+			proximityEntities.RemoveIndex( i );
 		}
 	}
 }
 
-void spGamePortal::AddProximityEntity( const idEntity* other_ )
+void spGamePortal::AddProximityEntity( const idEntity* other )
 {
 	// Go through the list and guarantee that this entity isn't in multiple times
-// note:  cannot use IdList::AddUnique, because the lastPortalPoint might be different during this add
-	for( int i = 0; i < _proximityEntities.Num(); i++ )
+	// note:  cannot use IdList::AddUnique, because the lastPortalPoint might be different during this add
+	for( int i = 0; i < proximityEntities.Num(); i++ )
 	{
-		if( _proximityEntities[i].entity.GetEntity() == other_ )
+		if( proximityEntities[i].entity.GetEntity() == other )
 		{
 			return;
 		}
@@ -280,16 +277,16 @@ void spGamePortal::AddProximityEntity( const idEntity* other_ )
 
 	// Add this entity to the potential portal list
 	ProximityEntity prox;
-	prox.entity = other_;
-	prox.lastPortalPoint = other_->GetPhysics()->GetOrigin();
+	prox.entity = other;
+	prox.lastPortalPoint = other->GetPhysics()->GetOrigin();
 
-	_proximityEntities.Append( prox );
+	proximityEntities.Append( prox );
 
 	// If the entity is a player, then inform the player that they are close to this portal
 	// needed for weapon projectile firing
-	if( other_->IsType( idPlayer::Type ) )
-	{
-		auto player = ( idPlayer* )( other_ );
-		//player->SetPortalColliding(true);
-	}
+	//if( other->IsType( idPlayer::Type ) )
+	//{
+	//	auto player = static_cast<const idPlayer*>( other );
+	//	player->SetPortalColliding(true);
+	//}
 }

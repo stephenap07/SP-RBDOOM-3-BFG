@@ -533,9 +533,11 @@ void idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::AdjustFi
 			{
 				ANTI_ALIASING_NONE,
 				ANTI_ALIASING_TAA,
+#if ID_MSAA
 				ANTI_ALIASING_TAA_SMAA_1X,
 				ANTI_ALIASING_MSAA_2X,
 				ANTI_ALIASING_MSAA_4X,
+#endif
 			};
 			// RB end
 			r_antiAliasing.SetInteger( AdjustOption( r_antiAliasing.GetInteger(), values, numValues, adjustAmount ) );
@@ -658,17 +660,27 @@ idSWFScriptVar idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings
 				return "#str_swf_disabled";
 			}
 
-			static const int numValues = 5;
+#if ID_MSAA
+			static constexpr int numValues = 5;
+#else
+			static constexpr int numValues = 2;
+#endif
 			static const char* values[numValues] =
 			{
 				"None",
 				"TAA",
+#if ID_MSAA
 				"TAA + SMAA 1X",
 				"MSAA 2X",
 				"MSAA 4X",
+#endif
 			};
 
+#if ID_MSAA
 			compile_time_assert( numValues == ( ANTI_ALIASING_MSAA_4X + 1 ) );
+#else
+			compile_time_assert(numValues == (ANTI_ALIASING_TAA + 1));
+#endif
 
 			return values[ r_antiAliasing.GetInteger() ];
 		}

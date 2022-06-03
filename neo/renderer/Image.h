@@ -511,13 +511,7 @@ private:
 	idStr				imgName;				// game path, including extension (except for cube maps), may be an image program
 	cubeFiles_t			cubeFiles;				// If this is a cube map, and if so, what kind
 	int                 cubeMapSize;
-
-#ifdef USE_NVRHI
 	void	( *generatorFunction )( idImage* image, nvrhi::ICommandList* commandList );	// NULL for files
-#else
-	void	( *generatorFunction )( idImage* image );	// NULL for files
-#endif
-
 	textureUsage_t		usage;					// Used to determine the type of compression to use
 	idImageOpts			opts;					// Parameters that determine the storage method
 

@@ -47,10 +47,7 @@ struct VS_OUT {
 void main( VS_IN vertex, out VS_OUT result )
 {
 	result.position = vertex.position;
+	result.position.y = -result.position.y;
 
-	//result.position.x = vertex.position; //dot4( vertex.position, rpMVPmatrixX );
-	//result.position.y = dot4( vertex.position, rpMVPmatrixY );
-	//result.position.z = dot4( vertex.position, rpMVPmatrixZ );
-	//result.position.w = dot4( vertex.position, rpMVPmatrixW );
 	result.texcoord0 =  vertex.texcoord;
 }

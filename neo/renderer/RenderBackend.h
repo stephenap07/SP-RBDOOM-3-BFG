@@ -127,7 +127,7 @@ void RB_SetVertexColorParms( stageVertexColor_t svc );
 #if defined( USE_VULKAN )
 
 // SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL) || defined(USE_NVRHI_SDL)
+#if defined(VULKAN_USE_PLATFORM_SDL)
 	#include <SDL.h>
 	#include <SDL_vulkan.h>
 #endif
@@ -148,7 +148,7 @@ struct vulkanContext_t
 {
 	// Eric: If on linux, use this to pass SDL_Window pointer to the SDL_Vulkan_* methods not in sdl_vkimp.cpp file.
 // SRS - Generalized Vulkan SDL platform
-#if defined(VULKAN_USE_PLATFORM_SDL) || defined(USE_NVRHI_SDL)
+#if defined(VULKAN_USE_PLATFORM_SDL)
 	SDL_Window*						sdlWindow = nullptr;
 #endif
 	uint64							frameCounter;
@@ -268,6 +268,7 @@ class ForwardShadingPass;
 class idRenderBackend
 {
 	friend class Framebuffer;
+	friend class fhImmediateMode;
 
 public:
 	idRenderBackend();
@@ -289,10 +290,11 @@ public:
 	static void			ImGui_Shutdown();
 	static void			ImGui_RenderDrawLists( ImDrawData* draw_data );
 
+	void				DrawElementsWithCounters( const drawSurf_t* surf );
+
 private:
 	void				DrawFlickerBox();
 
-	void				DrawElementsWithCounters( const drawSurf_t* surf );
 	void				GetCurrentBindingLayout( int bindingLayoutType );
 	void				DrawStencilShadowPass( const drawSurf_t* drawSurf, const bool renderZPass );
 
@@ -363,11 +365,14 @@ private:
 	void				GL_StartFrame();
 	void				GL_EndFrame();
 
-	void				GL_EndRenderPass();
-
 public:
 	uint64				GL_GetCurrentState() const;
 	idVec2				GetCurrentPixelOffset() const;
+
+	nvrhi::ICommandList* GL_GetCommandList() const
+	{
+		return commandList;
+	}
 
 private:
 	uint64				GL_GetCurrentStateMinusStencil() const;

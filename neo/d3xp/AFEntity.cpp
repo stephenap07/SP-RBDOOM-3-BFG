@@ -2852,7 +2852,7 @@ void idAFEntity_VehicleAutomated::Think()
 	{
 		gameRenderWorld->DebugBounds( colorRed, idBounds( idVec3( -4, -4, -4 ), idVec3( 4, 4, 4 ) ), vehicle_origin );
 		gameRenderWorld->DebugBounds( colorRed, idBounds( idVec3( -4, -4, -4 ), idVec3( 4, 4, 4 ) ), waypoint_origin );
-		gameRenderWorld->DebugText( waypoint->name.c_str(), waypoint_origin + idVec3( 0, 0, 16 ), 0.25f, colorYellow, gameLocal.GetLocalPlayer()->viewAxis );
+		gameRenderWorld->DrawText( waypoint->name.c_str(), waypoint_origin + idVec3( 0, 0, 16 ), 0.25f, colorYellow, gameLocal.GetLocalPlayer()->viewAxis );
 		gameRenderWorld->DebugArrow( colorWhite, vehicle_origin, waypoint_origin, 12.f );
 	}
 

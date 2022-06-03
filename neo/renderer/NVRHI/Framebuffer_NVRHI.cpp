@@ -2,7 +2,8 @@
 ===========================================================================
 
 Doom 3 BFG Edition GPL Source Code
-Copyright (C) 2014-2020 Robert Beckebans
+Copyright (C) 2014-2022 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -163,8 +164,8 @@ void Framebuffer::ResizeFramebuffers()
 
 	globalFramebuffers.ldrFBO = new Framebuffer( "_ldr",
 			nvrhi::FramebufferDesc()
-			.addColorAttachment( globalImages->ldrImage->texture ) );
-	//.setDepthAttachment( globalImages->currentDepthImage->texture ) );
+			.addColorAttachment( globalImages->ldrImage->texture )
+			.setDepthAttachment( globalImages->currentDepthImage->texture ) );
 
 	globalFramebuffers.hdrFBO = new Framebuffer( "_hdr",
 			nvrhi::FramebufferDesc()
@@ -218,7 +219,7 @@ void Framebuffer::ResizeFramebuffers()
 			nvrhi::FramebufferDesc()
 			.addColorAttachment( globalImages->smaaEdgesImage->texture ) );
 
-	globalFramebuffers.smaaEdgesFBO = new Framebuffer( "_smaaBlend",
+	globalFramebuffers.smaaBlendFBO = new Framebuffer( "_smaaBlend",
 			nvrhi::FramebufferDesc()
 			.addColorAttachment( globalImages->smaaBlendImage->texture ) );
 

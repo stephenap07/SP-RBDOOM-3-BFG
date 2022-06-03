@@ -486,7 +486,7 @@ void idSWF::RenderSprite( idRenderSystem* gui, idSWFSpriteInstance* spriteInstan
 			sprintf( str, "%s\n%s", spriteInstance->name.c_str(), GetName() );
 
 			DebugText( gui, str, 0.35f, 0, color, swfRect_t( rect.tl.x, rect.tl.y, 300, 40 ), false );
-			//DebugText( gui, str, 0.25 * 2, 0, colorWhite, swfRect_t( rect.tl.x, rect.tl.y, 300, 40 ), false );
+			//DrawText( gui, str, 0.25 * 2, 0, colorWhite, swfRect_t( rect.tl.x, rect.tl.y, 300, 40 ), false );
 		}
 	}
 	// RB end
@@ -2032,7 +2032,7 @@ int idSWF::DebugText( idRenderSystem* gui, float x, float y, float scale, idVec4
 	if( !matIsIdentity || cursor != -1 )
 	{
 		// fallback to old code
-		return idDeviceContext::DebugText( x, y, scale, color, text, adjust, limit, style, cursor );
+		return idDeviceContext::DrawText( x, y, scale, color, text, adjust, limit, style, cursor );
 	}
 	*/
 

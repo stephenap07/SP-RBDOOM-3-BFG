@@ -56,7 +56,7 @@ struct PS_IN
 
 struct PS_OUT
 {
-    float4 color : SV_Target0;
+	half4 color : SV_Target0;
 };
 // *INDENT-ON*
 

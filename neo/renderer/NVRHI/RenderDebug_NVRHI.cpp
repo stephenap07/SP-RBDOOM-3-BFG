@@ -3,9 +3,9 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2014-2021 Robert Beckebans
-Copyright (C) 2014-2016 Kot in Action Creative Artel
+Copyright (C) 2014-2022 Robert Beckebans
 Copyright (C) 2016-2017 Dustin Land
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -34,6 +34,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../RenderCommon.h"
 #include "../simplex.h"	// line font definition
+#include "../ImmediateMode.h"
 
 idCVar r_showCenterOfProjection( "r_showCenterOfProjection", "0", CVAR_RENDERER | CVAR_BOOL, "Draw a cross to show the center of projection" );
 idCVar r_showLines( "r_showLines", "0", CVAR_RENDERER | CVAR_INTEGER, "1 = draw alternate horizontal lines, 2 = draw alternate vertical lines" );
@@ -657,13 +658,12 @@ void idRenderBackend::DBG_ShowSurfaceInfo( drawSurf_t** drawSurfs, int numDrawSu
 
 	DBG_SimpleWorldSetup();
 
-	// foresthale 2014-05-02: don't use a shader for tools
-	//renderProgManager.BindShader_TextureVertexColor();
 	GL_SelectTexture( 0 );
 	globalImages->whiteImage->Bind();
 
 	RB_SetVertexColorParms( SVC_MODULATE );
-	// foresthale 2014-05-02: don't use a shader for tools
+
+	renderProgManager.BindShader_TextureVertexColor();
 	//renderProgManager.CommitUniforms();
 
 	GL_Color( 1, 1, 1 );
@@ -680,9 +680,9 @@ void idRenderBackend::DBG_ShowSurfaceInfo( drawSurf_t** drawSurfs, int numDrawSu
 	// transform the object verts into global space
 	// R_AxisToModelMatrix( mt.entity->axis, mt.entity->origin, matrix );
 
-	tr.primaryWorld->DebugText( surfModelName, surfPoint + tr.primaryView->renderView.viewaxis[2] * 12,
+	tr.primaryWorld->DrawText( surfModelName, surfPoint + tr.primaryView->renderView.viewaxis[2] * 12,
 								0.35f, colorRed, tr.primaryView->renderView.viewaxis );
-	tr.primaryWorld->DebugText( surfMatName, surfPoint,
+	tr.primaryWorld->DrawText( surfMatName, surfPoint,
 								0.35f, colorBlue, tr.primaryView->renderView.viewaxis );
 }
 
@@ -754,7 +754,7 @@ void idRenderBackend::DBG_ShowViewEntitys( viewEntity_t* vModels )
 			idVec3 corner;
 			R_LocalPointToGlobal( vModel->modelMatrix, edef->localReferenceBounds[1], corner );
 
-			tr.primaryWorld->DebugText(
+			tr.primaryWorld->DrawText(
 				va( "%i:%s", edef->index, edef->parms.hModel->Name() ),
 				corner,
 				0.25f, color,
@@ -1623,6 +1623,74 @@ Debugging tool, won't work correctly with SMP or when mirrors are present
 */
 void idRenderBackend::DBG_ShowPortals()
 {
+	if( !r_showPortals.GetBool() )
+	{
+		return;
+	}
+
+	// all portals are expressed in world coordinates
+	DBG_SimpleWorldSetup();
+
+	renderProgManager.BindShader_Color();
+	GL_State( GLS_POLYMODE_LINE | GLS_DEPTHFUNC_ALWAYS );
+
+	idRenderWorldLocal& world = *viewDef->renderWorld;
+
+	fhImmediateMode im( tr.backend.GL_GetCommandList() );
+
+	// flood out through portals, setting area viewCount
+	for( int i = 0; i < world.numPortalAreas; i++ )
+	{
+		portalArea_t* area = &world.portalAreas[i];
+
+		if( area->viewCount != tr.viewCount )
+		{
+			continue;
+		}
+
+		for( portal_t* p = area->portals; p; p = p->next )
+		{
+			idWinding* w = p->w;
+			if( !w )
+			{
+				continue;
+			}
+
+			if( world.portalAreas[ p->intoArea ].viewCount != tr.viewCount )
+			{
+				// red = can't see
+				GL_Color( 1, 0, 0 );
+			}
+			else
+			{
+				// green = see through
+				GL_Color( 0, 1, 0 );
+			}
+
+			// RB begin
+			renderProgManager.CommitUniforms( glStateBits );
+			// RB end
+
+			im.Begin( GFX_LINES );
+			int j = 0;
+			for( ; j < w->GetNumPoints(); j++ )
+			{
+				// draw a triangle for each line
+				if( j >= 1 )
+				{
+					im.Vertex3fv( ( *w )[ j - 1 ].ToFloatPtr() );
+					im.Vertex3fv( ( *w )[ j ].ToFloatPtr() );
+					im.Vertex3fv( ( *w )[ j ].ToFloatPtr() );
+				}
+			}
+
+			im.Vertex3fv( ( *w )[ 0 ].ToFloatPtr() );
+			im.Vertex3fv( ( *w )[ 0 ].ToFloatPtr() );
+			im.Vertex3fv( ( *w )[ j - 1 ].ToFloatPtr() );
+
+			im.End();
+		}
+	}
 }
 
 /*
@@ -1749,6 +1817,94 @@ RB_DrawText
 */
 static void RB_DrawText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align )
 {
+	renderProgManager.BindShader_Color();
+	renderProgManager.CommitUniforms( tr.backend.GL_GetCurrentState() );
+
+	fhImmediateMode im( tr.backend.GL_GetCommandList() );
+
+	int i, j, len, num, index, charIndex, line;
+	float textLen = 1.0f, spacing = 1.0f;
+	idVec3 org, p1, p2;
+
+	if( text && *text )
+	{
+		im.Begin( GFX_LINES );
+		//im.Color3fv( color.ToFloatPtr() );
+
+		if( text[0] == '\n' )
+		{
+			line = 1;
+		}
+		else
+		{
+			line = 0;
+		}
+
+		len = strlen( text );
+		for( i = 0; i < len; i++ )
+		{
+
+			if( i == 0 || text[i] == '\n' )
+			{
+				org = origin - viewAxis[2] * ( line * 36.0f * scale );
+				if( align != 0 )
+				{
+					for( j = 1; i + j <= len; j++ )
+					{
+						if( i + j == len || text[i + j] == '\n' )
+						{
+							textLen = RB_DrawTextLength( text + i, scale, j );
+							break;
+						}
+					}
+					if( align == 2 )
+					{
+						// right
+						org += viewAxis[1] * textLen;
+					}
+					else
+					{
+						// center
+						org += viewAxis[1] * ( textLen * 0.5f );
+					}
+				}
+				line++;
+			}
+
+			charIndex = text[i] - 32;
+			if( charIndex < 0 || charIndex > NUM_SIMPLEX_CHARS )
+			{
+				continue;
+			}
+			num = simplex[charIndex][0] * 2;
+			spacing = simplex[charIndex][1];
+			index = 2;
+
+			while( index - 2 < num )
+			{
+				if( simplex[charIndex][index] < 0 )
+				{
+					index++;
+					continue;
+				}
+				p1 = org + scale * simplex[charIndex][index] * -viewAxis[1] + scale * simplex[charIndex][index + 1] * viewAxis[2];
+				index += 2;
+				if( simplex[charIndex][index] < 0 )
+				{
+					index++;
+					continue;
+				}
+				p2 = org + scale * simplex[charIndex][index] * -viewAxis[1] + scale * simplex[charIndex][index + 1] * viewAxis[2];
+
+				im.Vertex3fv( p1.ToFloatPtr() );
+				im.Vertex3fv( p2.ToFloatPtr() );
+				im.Vertex3fv( p2.ToFloatPtr() ); // RB: just build a triangle of this line
+			}
+			org -= viewAxis[1] * ( spacing * scale );
+		}
+
+		im.End();
+	}
 }
 
 /*
@@ -1758,6 +1914,67 @@ idRenderBackend::DBG_ShowDebugText
 */
 void idRenderBackend::DBG_ShowDebugText()
 {
+	int			i;
+	debugText_t*	text;
+
+	if( !rb_numDebugText )
+	{
+		return;
+	}
+
+	// all lines are expressed in world coordinates
+	DBG_SimpleWorldSetup();
+
+	/*
+	int width = r_debugLineWidth.GetInteger();
+	if( width < 1 )
+	{
+		width = 1;
+	}
+	else if( width > 10 )
+	{
+		width = 10;
+	}
+
+	// draw lines
+	glLineWidth( width );
+	*/
+
+	if( !r_debugLineDepthTest.GetBool() )
+	{
+		GL_State( GLS_POLYMODE_LINE | GLS_DEPTHFUNC_ALWAYS );
+	}
+	else
+	{
+		GL_State( GLS_POLYMODE_LINE );
+	}
+
+	text = rb_debugText;
+	for( i = 0; i < rb_numDebugText; i++, text++ )
+	{
+		if( !text->depthTest )
+		{
+			GL_Color( text->color.ToVec3() );
+			RB_DrawText( text->text, text->origin, text->scale, text->color, text->viewAxis, text->align );
+		}
+	}
+
+	if( !r_debugLineDepthTest.GetBool() )
+	{
+		GL_State( GLS_POLYMODE_LINE );
+	}
+
+	text = rb_debugText;
+	for( i = 0; i < rb_numDebugText; i++, text++ )
+	{
+		if( text->depthTest )
+		{
+			GL_Color( text->color.ToVec3() );
+			RB_DrawText( text->text, text->origin, text->scale, text->color, text->viewAxis, text->align );
+		}
+	}
+
+	//glLineWidth( 1 );
 }
 
 /*
@@ -1823,6 +2040,88 @@ idRenderBackend::DBG_ShowDebugLines
 */
 void idRenderBackend::DBG_ShowDebugLines()
 {
+	int			i;
+	debugLine_t*	line;
+
+	if( !rb_numDebugLines )
+	{
+		return;
+	}
+
+	// all lines are expressed in world coordinates
+	DBG_SimpleWorldSetup();
+
+	renderProgManager.BindShader_VertexColor();
+	renderProgManager.CommitUniforms( glStateBits );
+
+	/*
+	int width = r_debugLineWidth.GetInteger();
+	if( width < 1 )
+	{
+		width = 1;
+	}
+	else if( width > 10 )
+	{
+		width = 10;
+	}
+
+	// draw lines
+	glLineWidth( width );
+	*/
+
+	if( !r_debugLineDepthTest.GetBool() )
+	{
+		GL_State( GLS_POLYMODE_LINE | GLS_DEPTHFUNC_ALWAYS );
+	}
+	else
+	{
+		GL_State( GLS_POLYMODE_LINE );
+	}
+
+	fhImmediateMode im( tr.backend.GL_GetCommandList() );
+
+	im.Begin( GFX_LINES );
+	line = rb_debugLines;
+	for( i = 0; i < rb_numDebugLines; i++, line++ )
+	{
+		if( !line->depthTest )
+		{
+			im.Color3fv( line->rgb.ToFloatPtr() );
+
+			im.Vertex3fv( line->start.ToFloatPtr() );
+			im.Vertex3fv( line->end.ToFloatPtr() );
+			im.Vertex3fv( line->end.ToFloatPtr() );
+		}
+	}
+	im.End();
+
+	if( !r_debugLineDepthTest.GetBool() )
+	{
+		GL_State( GLS_POLYMODE_LINE );
+	}
+
+	im.Begin( GFX_LINES );
+	line = rb_debugLines;
+	for( i = 0; i < rb_numDebugLines; i++, line++ )
+	{
+		if( line->depthTest )
+		{
+			im.Color4fv( line->rgb.ToFloatPtr() );
+
+			im.Vertex3fv( line->start.ToFloatPtr() );
+			im.Vertex3fv( line->end.ToFloatPtr() );
+
+			// RB: could use nvrhi::PrimitiveType::LineList
+			// but we rather to keep the number of pipelines low so just make a triangle of this
+			im.Vertex3fv( line->end.ToFloatPtr() );
+
+		}
+	}
+
+	im.End();
+
+	//glLineWidth( 1 );
+	GL_State( GLS_DEFAULT );
 }
 
 /*
@@ -1955,12 +2254,19 @@ void idRenderBackend::DBG_TestImage()
 	{
 		cinData_t	cin;
 
-		cin = tr.testVideo->ImageForTime( viewDef->renderView.time[1] - tr.testVideoStartTime );
+		// SRS - Don't need calibrated time for testing cinematics, so just call ImageForTime( 0 ) for current system time
+		// This simplification allows cinematic test playback to work over both 2D and 3D background scenes
+		cin = tr.testVideo->ImageForTime( 0 /*viewDef->renderView.time[1] - tr.testVideoStartTime*/ );
 		if( cin.imageY != NULL )
 		{
 			image = cin.imageY;
 			imageCr = cin.imageCr;
 			imageCb = cin.imageCb;
+		}
+		// SRS - Also handle ffmpeg and original RoQ decoders for test videos (using cin.image)
+		else if( cin.image != NULL )
+		{
+			image = cin.image;
 		}
 		else
 		{
@@ -2041,8 +2347,9 @@ void idRenderBackend::DBG_TestImage()
 
 		GL_SelectTexture( 2 );
 		imageCb->Bind();
-
-		renderProgManager.BindShader_Bink();
+		// SRS - Use Bink shader without sRGB to linear conversion, otherwise cinematic colours may be wrong
+		// BindShader_BinkGUI() does not seem to work here - perhaps due to vertex shader input dependencies?
+		renderProgManager.BindShader_Bink_sRGB();
 	}
 	else
 	{

@@ -5732,6 +5732,7 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 	renderLog.OpenMainBlock( MRB_BLOOM );
 	renderLog.OpenBlock( "Render_Bloom", colorBlue );
 
+
 	// BRIGHTPASS
 	renderLog.OpenBlock( "Brightpass" );
 
@@ -6996,7 +6997,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 // SRS - For OSX OpenGL record the final portion of GPU time while no other elapsed time query is active (after final shader pass and before post processing)
 #if defined(__APPLE__)
-	renderLog.OpenMainBlock( MRB_GPU_TIME, commandList );
+	renderLog.OpenMainBlock( MRB_GPU_TIME );
 #endif
 
 	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) && !_viewDef->targetRender )
@@ -7319,27 +7320,33 @@ void idRenderBackend::PostProcess( const void* data )
 {
 	// only do the post process step if resolution scaling is enabled. Prevents the unnecessary copying of the framebuffer and
 	// corresponding full screen quad pass.
+	/*
 	if( rs_enable.GetInteger() == 0 && !r_useFilmicPostProcessing.GetBool() && r_antiAliasing.GetInteger() == 0 )
 	{
 		return;
 	}
-
-	if( ( r_ssaoDebug.GetInteger() > 0 ) || ( r_ssgiDebug.GetInteger() > 0 ) )
-	{
-		return;
-	}
+	*/
 
 	if( viewDef->renderView.rdflags & RDF_IRRADIANCE )
 	{
+#if defined( USE_NVRHI )
+		// we haven't changed ldrImage so it's basically the previewsRenderLDR
+		BlitParameters blitParms;
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
+		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
+		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->envprobeHDRImage->GetTextureID();
+		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
+		blitParms.targetViewport = nvrhi::Viewport( ENVPROBE_CAPTURE_SIZE, ENVPROBE_CAPTURE_SIZE );
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+#endif
 		return;
 	}
 
-
 	renderLog.OpenMainBlock( MRB_POSTPROCESS );
 	renderLog.OpenBlock( "Render_PostProcessing", colorBlue );
-
-// FIXME
-#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
 
 	// resolve the scaled rendering to a temporary texture
 	postProcessCommand_t* cmd = ( postProcessCommand_t* )data;
@@ -7354,6 +7361,7 @@ void idRenderBackend::PostProcess( const void* data )
 	GL_Viewport( 0, 0, screenWidth, screenHeight );
 	GL_Scissor( 0, 0, screenWidth, screenHeight );
 
+#if 0
 	// SMAA
 	int aaMode = r_antiAliasing.GetInteger();
 	if( aaMode == ANTI_ALIASING_SMAA_1X )
@@ -7434,13 +7442,28 @@ void idRenderBackend::PostProcess( const void* data )
 		DrawElementsWithCounters( &unitSquareSurface );
 #endif
 	}
+#endif
 
 	if( r_useFilmicPostProcessing.GetBool() )
 	{
+#if defined( USE_NVRHI )
+		BlitParameters blitParms;
+		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
+		blitParms.targetFramebuffer = globalFramebuffers.smaaBlendFBO->GetApiObject();
+		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
+		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+
+		GL_SelectTexture( 0 );
+		globalImages->smaaBlendImage->Bind();
+#else
 		globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
 
 		GL_SelectTexture( 0 );
 		globalImages->currentRenderImage->Bind();
+#endif
+
+
+		globalFramebuffers.ldrFBO->Bind();
 
 		GL_SelectTexture( 1 );
 		globalImages->blueNoiseImage256->Bind();
@@ -7471,6 +7494,20 @@ void idRenderBackend::PostProcess( const void* data )
 	GL_SelectTexture( 0 );
 	renderProgManager.Unbind();
 
+#if defined( USE_NVRHI )
+	BlitParameters blitParms;
+	blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
+	blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
+	blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
+	commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+
+	GL_SelectTexture( 0 );
+	globalImages->currentRenderImage->Bind();
+#else
+	globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
+
+	GL_SelectTexture( 0 );
+	globalImages->currentRenderImage->Bind();
 #endif
 
 	renderLog.CloseBlock();

@@ -234,8 +234,6 @@ static void R_RGBA8LinearImage( idImage* image, nvrhi::ICommandList* commandList
 
 static void R_LdrNativeImage( idImage* image, nvrhi::ICommandList* commandList )
 {
-	//uint sampleCount = GetMSAASamples();
-
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_NEAREST, TR_CLAMP, TD_LOOKUP_TABLE_RGBA, nullptr, true, false, 1 );
 }
 
@@ -347,11 +345,6 @@ static void R_HierarchicalZBufferImage_ResNative( idImage* image, nvrhi::IComman
 }
 
 static void R_R8Image_ResNative_Linear( idImage* image, nvrhi::ICommandList* commandList )
-{
-	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_LOOKUP_TABLE_MONO, nullptr, true );
-}
-
-static void R_R8Image_ResNative_Linear( idImage* image )
 {
 	image->GenerateImage( NULL, renderSystem->GetWidth(), renderSystem->GetHeight(), TF_LINEAR, TR_CLAMP, TD_LOOKUP_TABLE_MONO, nullptr, true );
 }

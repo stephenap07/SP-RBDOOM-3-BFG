@@ -1175,7 +1175,7 @@ bool idDeviceContextOptimized::ClippedCoords( float* x, float* y, float* w, floa
 
 /*
 =============
-idDeviceContextOptimized::DebugText
+idDeviceContextOptimized::DrawText
 =============
 */
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };

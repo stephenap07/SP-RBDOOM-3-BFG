@@ -2439,7 +2439,7 @@ void idTextEntity::Think()
 {
 	if( thinkFlags & TH_THINK )
 	{
-		gameRenderWorld->DebugText( text, GetPhysics()->GetOrigin(), 0.25, colorWhite, playerOriented ? gameLocal.GetLocalPlayer()->viewAngles.ToMat3() : GetPhysics()->GetAxis().Transpose(), 1 );
+		gameRenderWorld->DrawText( text, GetPhysics()->GetOrigin(), 0.25, colorWhite, playerOriented ? gameLocal.GetLocalPlayer()->viewAngles.ToMat3() : GetPhysics()->GetAxis().Transpose(), 1 );
 		for( int i = 0; i < targets.Num(); i++ )
 		{
 			if( targets[i].GetEntity() )

@@ -94,8 +94,8 @@ void idTrigger::DrawDebugInfo()
 			gameRenderWorld->DebugBounds( colorOrange, ent->GetPhysics()->GetAbsBounds() );
 			if( viewTextBounds.IntersectsBounds( ent->GetPhysics()->GetAbsBounds() ) )
 			{
-				gameRenderWorld->DebugText( ent->name.c_str(), ent->GetPhysics()->GetAbsBounds().GetCenter(), 0.1f, colorWhite, axis, 1 );
-				gameRenderWorld->DebugText( ent->GetEntityDefName(), ent->GetPhysics()->GetAbsBounds().GetCenter() + up, 0.1f, colorWhite, axis, 1 );
+				gameRenderWorld->DrawText( ent->name.c_str(), ent->GetPhysics()->GetAbsBounds().GetCenter(), 0.1f, colorWhite, axis, 1 );
+				gameRenderWorld->DrawText( ent->GetEntityDefName(), ent->GetPhysics()->GetAbsBounds().GetCenter() + up, 0.1f, colorWhite, axis, 1 );
 				if( ent->IsType( idTrigger::Type ) )
 				{
 					func = static_cast<idTrigger*>( ent )->GetScriptFunction();
@@ -107,7 +107,7 @@ void idTrigger::DrawDebugInfo()
 
 				if( func )
 				{
-					gameRenderWorld->DebugText( va( "call script '%s'", func->Name() ), ent->GetPhysics()->GetAbsBounds().GetCenter() - up, 0.1f, colorWhite, axis, 1 );
+					gameRenderWorld->DrawText( va( "call script '%s'", func->Name() ), ent->GetPhysics()->GetAbsBounds().GetCenter() - up, 0.1f, colorWhite, axis, 1 );
 				}
 			}
 
@@ -120,7 +120,7 @@ void idTrigger::DrawDebugInfo()
 					gameRenderWorld->DebugBounds( colorGreen, box, target->GetPhysics()->GetOrigin() );
 					if( viewTextBounds.IntersectsBounds( target->GetPhysics()->GetAbsBounds() ) )
 					{
-						gameRenderWorld->DebugText( target->name.c_str(), target->GetPhysics()->GetAbsBounds().GetCenter(), 0.1f, colorWhite, axis, 1 );
+						gameRenderWorld->DrawText( target->name.c_str(), target->GetPhysics()->GetAbsBounds().GetCenter(), 0.1f, colorWhite, axis, 1 );
 					}
 				}
 			}

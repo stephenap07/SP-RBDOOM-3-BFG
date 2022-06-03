@@ -2601,20 +2601,20 @@ float idRenderWorldLocal::DrawTextLength( const char* text, float scale, int len
 
 /*
 ================
-idRenderWorldLocal::DebugText
+idRenderWorldLocal::DrawText
 
   oriented on the viewaxis
   align can be 0-left, 1-center (default), 2-right
 ================
 */
-void idRenderWorldLocal::DebugText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align, const int lifetime, const bool depthTest )
+void idRenderWorldLocal::DrawText( const char* text, const idVec3& origin, float scale, const idVec4& color, const idMat3& viewAxis, const int align, const int lifetime, const bool depthTest )
 {
-	RenderDebug::Get().DebugText( text, origin, scale, color, viewAxis, align, lifetime, depthTest );
+	RB_AddDebugText( text, origin, scale, color, viewAxis, align, lifetime, depthTest );
 }
 
 void idRenderWorldLocal::DebugDrawSubmitToCurrentView()
 {
-	RenderDebug::Get().SubmitForDrawing();
+	//RenderDebug::Get().SubmitForDrawing();
 }
 
 /*

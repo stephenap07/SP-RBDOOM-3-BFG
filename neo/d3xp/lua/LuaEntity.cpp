@@ -39,8 +39,8 @@ EVENT( EV_LuaEntity_PlayAnim, LuaEntity::Event_PlayAnim )
 END_CLASS
 
 LuaEntity::LuaEntity( )
-	: _animBlendFrames( 2 )
-	, _animDoneTime( 0 )
+	: animBlendFrames( 2 )
+	, animDoneTime( 0 )
 {
 	fl.networkSync = true;
 }
@@ -60,28 +60,28 @@ void LuaEntity::Think()
 	stateScript.Think();
 }
 
-void LuaEntity::Event_PlayAnim( int channel_, const char* animname_, bool loop_ )
+void LuaEntity::Event_PlayAnim( int channel, const char* animName, bool loop )
 {
-	const int anim = animator.GetAnim( animname_ );
+	const int anim = animator.GetAnim( animName );
 
 	if( !anim )
 	{
-		gameLocal.Warning( "missing '%s' animation on '%s' (%s)", animname_, name.c_str( ), GetEntityDefName( ) );
-		animator.Clear( channel_, gameLocal.time, FRAME2MS( _animBlendFrames ) );
-		_animDoneTime = 0;
+		gameLocal.Warning( "missing '%s' animation on '%s' (%s)", animName, name.c_str( ), GetEntityDefName( ) );
+		animator.Clear( channel, gameLocal.time, FRAME2MS( animBlendFrames ) );
+		animDoneTime = 0;
 	}
 	else
 	{
-		if( loop_ )
+		if( loop )
 		{
-			animator.CycleAnim( channel_, anim, gameLocal.time, FRAME2MS( _animBlendFrames ) );
+			animator.CycleAnim( channel, anim, gameLocal.time, FRAME2MS( animBlendFrames ) );
 		}
 		else
 		{
-			animator.PlayAnim( channel_, anim, gameLocal.time, FRAME2MS( _animBlendFrames ) );
+			animator.PlayAnim( channel, anim, gameLocal.time, FRAME2MS( animBlendFrames ) );
 		}
 
-		_animDoneTime = animator.CurrentAnim( channel_ )->GetEndTime();
+		animDoneTime = animator.CurrentAnim( channel )->GetEndTime();
 	}
 
 	//animBlendFrames = 0;

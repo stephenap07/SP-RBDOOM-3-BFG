@@ -864,7 +864,8 @@ enum bindingLayoutType_t
 	BINDING_LAYOUT_DRAW_INTERACTION,
 	BINDING_LAYOUT_DRAW_INTERACTION_SM,
 	BINDING_LAYOUT_DRAW_FOG,
-	BINDING_LAYOUT_POST_PROCESS_CNM,
+	BINDING_LAYOUT_POST_PROCESS_INGAME,
+	BINDING_LAYOUT_POST_PROCESS_FINAL,
 	BINDING_LAYOUT_NORMAL_CUBE,
 	BINDING_LAYOUT_BLENDLIGHT,
 
@@ -1426,17 +1427,14 @@ struct glimpParms_t
 
 // Eric: If on Linux using Vulkan use the sdl_vkimp.cpp methods
 // SRS - Generalized Vulkan SDL platform
-
 #if defined(VULKAN_USE_PLATFORM_SDL)
-	extern vulkanContext_t vkcontext;
-#endif
-
-#if defined(VULKAN_USE_PLATFORM_SDL) || defined(NVRHI_USE_SDL)
 #include <vector>
 
 #define CLAMP(x, lo, hi)    ((x) < (lo) ? (lo) : (x) > (hi) ? (hi) : (x))
 // Helper function for using SDL2 and Vulkan on Linux.
 std::vector<const char*> get_required_extensions();
+
+extern vulkanContext_t vkcontext;
 
 // DG: R_GetModeListForDisplay is called before GLimp_Init(), but SDL needs SDL_Init() first.
 // So add PreInit for platforms that need it, others can just stub it.

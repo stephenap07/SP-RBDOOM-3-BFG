@@ -31,8 +31,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "vulkan.hlsli"
 
 // *INDENT-OFF*
-Texture2D	 t_NormalMap	: register( t0 VK_DESCRIPTOR_SET( 1 ) );
-SamplerState s_Sampler		: register( s0 VK_DESCRIPTOR_SET( 2 ) );
+Texture2D	 t_NormalMap	: register( t0 VK_DESCRIPTOR_SET( 0 ) );
+SamplerState s_Sampler		: register( s0 VK_DESCRIPTOR_SET( 1 ) );
 
 struct PS_IN
 {
