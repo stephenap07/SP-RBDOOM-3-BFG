@@ -631,7 +631,7 @@ void idListWindow::Draw( int time, float x, float y )
 
 				if( tabInfo[tab].type == TAB_TYPE_TEXT )
 				{
-					dc->DebugText( work, scale, tabInfo[tab].align, color, rect, false, -1 );
+					dc->DrawText( work, scale, tabInfo[tab].align, color, rect, false, -1 );
 				}
 				else if( tabInfo[tab].type == TAB_TYPE_ICON )
 				{
@@ -702,7 +702,7 @@ void idListWindow::Draw( int time, float x, float y )
 		}
 		else
 		{
-			dc->DebugText( listItems[i], scale, 0, color, rect, false, -1 );
+			dc->DrawText( listItems[i], scale, 0, color, rect, false, -1 );
 		}
 		rect.y += lineHeight;
 		if( rect.y > bottom )

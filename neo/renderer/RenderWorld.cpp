@@ -2260,8 +2260,7 @@ idRenderWorldLocal::DebugLine
 */
 void idRenderWorldLocal::DebugLine( const idVec4& color, const idVec3& start, const idVec3& end, const int lifetime, const bool depthTest )
 {
-	//RB_AddDebugLine( color, start, end, lifetime, depthTest );
-	RenderDebug::Get().DebugLine( color, start, end, lifetime, depthTest );
+	RB_AddDebugLine( color, start, end, lifetime, depthTest );
 }
 
 /*

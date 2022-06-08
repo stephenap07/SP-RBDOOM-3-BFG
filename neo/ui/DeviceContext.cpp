@@ -599,6 +599,7 @@ void idDeviceContext::DrawCursor( float* x, float* y, float size, idVec2 bounds 
 	renderSystem->SetColor( colorWhite );
 	DrawStretchPic( *x, *y, size, size, 0, 0, 1, 1, cursorImages[cursor] );
 }
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -625,7 +626,7 @@ void idDeviceContext::PaintChar( float x, float y, const scaledGlyphInfo_t& glyp
 	DrawStretchPic( x, y, w, h, s, t, s2, t2, hShader );
 }
 
-int idDeviceContext::DebugText( float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style, int cursor )
+int idDeviceContext::DrawText( float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style, int cursor )
 {
 	int			len;
 	idVec4		newColor;
@@ -802,7 +803,7 @@ void idDeviceContext::DrawEditCursor( float x, float y, float scale )
 	PaintChar( x, y, glyphInfo );
 }
 
-int idDeviceContext::DebugText( const char* text, float textScale, int textAlign, idVec4 color, idRectangle rectDraw, bool wrap, int cursor, bool calcOnly, idList<int>* breaks, int limit )
+int idDeviceContext::DrawText( const char* text, float textScale, int textAlign, idVec4 color, idRectangle rectDraw, bool wrap, int cursor, bool calcOnly, idList<int>* breaks, int limit )
 {
 	int			count = 0;
 	int			charIndex = 0;
@@ -925,12 +926,12 @@ int idDeviceContext::DebugText( const char* text, float textScale, int textAlign
 			{
 				if( lastBreak > 0 )
 				{
-					count += DebugText( x, y, textScale, color, textBuffer.Left( lastBreak ).c_str(), 0, 0, 0, cursor );
+					count += DrawText( x, y, textScale, color, textBuffer.Left( lastBreak ).c_str(), 0, 0, 0, cursor );
 					textBuffer = textBuffer.Right( textBuffer.Length() - lastBreak );
 				}
 				else
 				{
-					count += DebugText( x, y, textScale, color, textBuffer.c_str(), 0, 0, 0, cursor );
+					count += DrawText( x, y, textScale, color, textBuffer.c_str(), 0, 0, 0, cursor );
 					textBuffer.Clear();
 				}
 			}
@@ -1078,10 +1079,7 @@ static const idRectangle baseScreenRect( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
 
 void idDeviceContextOptimized::PushClipRect( idRectangle r )
 {
-	// Stephen: I updated the clip rect to default to the render window size. Before, it
-	// was using the virtual width and height.
 	const idRectangle& prev = ( clipRects.Num() == 0 ) ? baseScreenRect : clipRects[clipRects.Num() - 1];
-	//const idRectangle& prev = (clipRects.Num() == 0) ? idRectangle(0, 0, renderSystem->GetWidth(), renderSystem->GetHeight()) : clipRects[clipRects.Num() - 1];
 
 	// instead of storing the rect, store the intersection of the rect
 	// with the previous rect, so ClippedCoords() only has to test against one rect
@@ -1179,12 +1177,12 @@ idDeviceContextOptimized::DrawText
 =============
 */
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
-int idDeviceContextOptimized::DebugText( float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style, int cursor )
+int idDeviceContextOptimized::DrawText( float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style, int cursor )
 {
 	if( !matIsIdentity || cursor != -1 )
 	{
 		// fallback to old code
-		return idDeviceContext::DebugText( x, y, scale, color, text, adjust, limit, style, cursor );
+		return idDeviceContext::DrawText( x, y, scale, color, text, adjust, limit, style, cursor );
 	}
 
 	idStr drawText = text;

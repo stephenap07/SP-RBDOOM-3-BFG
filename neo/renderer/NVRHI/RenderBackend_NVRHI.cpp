@@ -204,7 +204,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 	else
 	{
-		const uint64 frameNum = ( int )( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		const uint64 frameNum = static_cast<uint64>( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
 		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
 		{
 			idLib::Warning( "RB_DrawElementsWithCounters, vertexBuffer == NULL" );
@@ -212,7 +212,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		}
 		vertexBuffer = &vertexCache.frameData[vertexCache.drawListNum].vertexBuffer;
 	}
-	const uint vertOffset = ( uint )( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint vertOffset = static_cast<uint>( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 
 	bool changeState = false;
 
@@ -236,7 +236,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 	else
 	{
-		const uint64 frameNum = ( int )( ibHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		const uint64 frameNum = ibHandle >> VERTCACHE_FRAME_SHIFT & VERTCACHE_FRAME_MASK;
 		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
 		{
 			idLib::Warning( "RB_DrawElementsWithCounters, indexBuffer == NULL" );
@@ -244,21 +244,20 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		}
 		indexBuffer = &vertexCache.frameData[vertexCache.drawListNum].indexBuffer;
 	}
-	const uint indexOffset = ( uint )( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint indexOffset = static_cast<uint>( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 
 	if( currentIndexOffset != indexOffset )
 	{
 		currentIndexOffset = indexOffset;
-		changeState = true;
 	}
 
-	if( currentIndexBuffer != ( nvrhi::IBuffer* )indexBuffer->GetAPIObject() || !r_useStateCaching.GetBool() )
+	if( currentIndexBuffer != indexBuffer->GetAPIObject() || !r_useStateCaching.GetBool() )
 	{
 		currentIndexBuffer = indexBuffer->GetAPIObject();
 		changeState = true;
 	}
 
-	int bindingLayoutType = renderProgManager.BindingLayoutType();
+	const int bindingLayoutType = renderProgManager.BindingLayoutType();
 
 	idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>* layouts
 		= renderProgManager.GetBindingLayout( bindingLayoutType );
@@ -274,11 +273,10 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		}
 	}
 
-	uint64_t stateBits = glStateBits;
+	const uint64_t stateBits = glStateBits;
 
-	int program = renderProgManager.CurrentProgram();
-	PipelineKey key{ stateBits, program, depthBias, slopeScaleBias, currentFrameBuffer };
-	auto pipeline = pipelineCache.GetOrCreatePipeline( key );
+	const PipelineKey key{ stateBits, renderProgManager.CurrentProgram(), depthBias, slopeScaleBias, currentFrameBuffer };
+	const auto pipeline = pipelineCache.GetOrCreatePipeline( key );
 
 	if( currentPipeline != pipeline )
 	{
@@ -317,10 +315,10 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		state.pipeline = pipeline;
 		state.framebuffer = currentFrameBuffer->GetApiObject();
 
-		nvrhi::Viewport viewport{ ( float )currentViewport.x1,
-								  ( float )currentViewport.x2,
-								  ( float )currentViewport.y1,
-								  ( float )currentViewport.y2,
+		nvrhi::Viewport viewport{ static_cast<float>( currentViewport.x1 ),
+								  static_cast<float>( currentViewport.x2 ),
+								  static_cast<float>( currentViewport.y1 ),
+								  static_cast<float>( currentViewport.y2 ),
 								  currentViewport.zmin,
 								  currentViewport.zmax };
 		state.viewport.addViewport( viewport );
@@ -782,6 +780,38 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearWrapSampler;
 		}
 	}
+	else if( type == BINDING_LAYOUT_BINK_VIDEO )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			desc[0].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			desc[0].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			desc[0].bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearWrapSampler )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearWrapSampler;
+		}
+	}
 	else if( type == BINDING_LAYOUT_TAA_MOTION_VECTORS )
 	{
 		if( desc[0].bindings.empty() )
@@ -1214,6 +1244,13 @@ void idRenderBackend::ClearCaches()
 		delete taaPass;
 		taaPass = nullptr;
 	}
+
+	currentVertexBuffer = nullptr;
+	currentIndexBuffer = nullptr;
+	currentIndexOffset = -1;
+	currentVertexOffset = -1;
+	currentBindingLayout = nullptr;
+	currentPipeline = nullptr;
 }
 
 /*

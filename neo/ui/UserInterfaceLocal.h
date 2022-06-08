@@ -26,7 +26,6 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-
 class idWindow;
 
 class idUserInterfaceLocal : public idUserInterface

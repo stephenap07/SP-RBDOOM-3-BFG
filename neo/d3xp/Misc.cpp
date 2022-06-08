@@ -1276,6 +1276,11 @@ void idAnimated::PlayNextAnim()
 	int len;
 	int cycle;
 
+	if( spawnArgs.GetBool( "loopback" ) && current_anim_index >= num_anims )
+	{
+		current_anim_index = 0;
+	}
+
 	if( current_anim_index >= num_anims )
 	{
 		Hide();

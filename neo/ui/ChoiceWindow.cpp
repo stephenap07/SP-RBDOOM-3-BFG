@@ -39,7 +39,7 @@ If you have questions concerning this license or the applicable additional terms
 idChoiceWindow::InitVars
 ============
 */
-void idChoiceWindow::InitVars( )
+void idChoiceWindow::InitVars()
 {
 	if( cvarStr.Length() )
 	{
@@ -459,7 +459,7 @@ void idChoiceWindow::Draw( int time, float x, float y )
 		shadowRect.x += textShadow;
 		shadowRect.y += textShadow;
 
-		dc->DebugText( shadowText, textScale, textAlign, colorBlack, shadowRect, false, -1 );
+		dc->DrawText( shadowText, textScale, textAlign, colorBlack, shadowRect, false, -1 );
 	}
 
 	if( hover && !noEvents && Contains( gui->CursorX(), gui->CursorY() ) )
@@ -475,7 +475,7 @@ void idChoiceWindow::Draw( int time, float x, float y )
 		color = hoverColor;
 	}
 
-	dc->DebugText( choices[currentChoice], textScale, textAlign, color, textRect, false, -1 );
+	dc->DrawText( choices[currentChoice], textScale, textAlign, color, textRect, false, -1 );
 }
 
 void idChoiceWindow::Activate( bool activate, idStr& act )

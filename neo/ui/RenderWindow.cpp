@@ -122,7 +122,6 @@ void idRenderWindow::PreRender()
 			worldEntity.shaderParms[3] = 1;
 			modelDef = world->AddEntityDef( &worldEntity );
 		}
-		world->GenerateAllInteractions();
 		needsRender = false;
 	}
 }

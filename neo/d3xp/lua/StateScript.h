@@ -1,16 +1,18 @@
-#pragma once
+#ifndef STATESCRIPT_H_
+#define STATESCRIPT_H_
 
-class idStateScript
+/**
+ * \class spStateScript
+ * Constructs the lua script for an entity and acts as the main communication mechanism between entity and script.
+ */
+class spStateScript
 {
 public:
-	idStateScript( idEntity* _owner );
+	spStateScript( idEntity* owner );
 
-	void SetName( const char* name )
-	{
-		scriptName = name;
-	}
+	void SetName( const char* name );
 
-	virtual ~idStateScript() {}
+	virtual ~spStateScript() = default;
 
 	void Construct();
 
@@ -22,13 +24,12 @@ public:
 
 	void SendEvent( int entityNumber, const char* eventName );
 
-	const char* GetName()
-	{
-		return scriptName.c_str();
-	}
+	const char* GetName() const;
 
 private:
 
 	idEntity*	owner;
 	idStr		scriptName;
 };
+
+#endif

@@ -386,7 +386,7 @@ float idConsoleLocal::DrawFPS( float y )
 #if ID_MSAA
 		compile_time_assert( aaNumValues == ( ANTI_ALIASING_MSAA_4X + 1 ) );
 #else
-		compile_time_assert(aaNumValues == (ANTI_ALIASING_TAA + 1));
+		compile_time_assert( aaNumValues == ( ANTI_ALIASING_TAA + 1 ) );
 #endif
 
 		const char* aaMode = NULL;

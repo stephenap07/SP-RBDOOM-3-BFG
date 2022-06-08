@@ -236,7 +236,7 @@ typedef enum
 	STENCIL_OP_DECRWRAP
 } stencilOperation_t;
 
-typedef struct
+struct stencilStage_t
 {
 	// The value to be compared against (if Comp is anything else than always) and/or the value to be written to the buffer
 	// (if either Pass, Fail or ZFail is set to replace).
@@ -262,7 +262,7 @@ typedef struct
 
 	// What to do with the contents of the buffer if the stencil test passes, but the depth test fails.
 	stencilOperation_t zFail;
-} stencilStage_t;
+};
 // SP End
 
 

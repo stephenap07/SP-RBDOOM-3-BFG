@@ -28,6 +28,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "global_inc.hlsl"
 
+// *INDENT-OFF*
 #if USE_GPU_SKINNING
 cbuffer CB :
 register( b1 )
@@ -72,7 +73,6 @@ float4 texcoord6	:
 float4 color		:
 	COLOR0;
 };
-
 // *INDENT-ON*
 
 void main( VS_IN vertex, out VS_OUT result )

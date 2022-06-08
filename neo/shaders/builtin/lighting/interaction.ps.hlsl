@@ -35,23 +35,24 @@ If you have questions concerning this license or the applicable additional terms
 Texture2D				t_Normal			: register( t0 VK_DESCRIPTOR_SET( 0 ) );
 Texture2D				t_Specular			: register( t1 VK_DESCRIPTOR_SET( 0 ) );
 Texture2D				t_BaseColor			: register( t2 VK_DESCRIPTOR_SET( 0 ) );
-Texture2D				t_LightFalloff		: register( t3 VK_DESCRIPTOR_SET( 0 ) );
-Texture2D				t_LightProjection	: register( t4 VK_DESCRIPTOR_SET( 0 ) );
 
-SamplerState			s_Material : register( s0 VK_DESCRIPTOR_SET( 1 ) ); // for the normal/specular/basecolor
-SamplerState 			s_Lighting : register( s1 VK_DESCRIPTOR_SET( 1 ) ); // for sampling the jitter
+Texture2D				t_LightFalloff		: register( t3 VK_DESCRIPTOR_SET( 1 ) );
+Texture2D				t_LightProjection	: register( t4 VK_DESCRIPTOR_SET( 1 ) );
+
+SamplerState			s_Material			: register( s0 VK_DESCRIPTOR_SET( 2 ) ); // for the normal/specular/basecolor
+SamplerState 			s_Lighting			: register( s1 VK_DESCRIPTOR_SET( 2 ) ); // for sampling the jitter
 
 struct PS_IN
 {
-	float4 position		: SV_Position;
-	float4 texcoord0	: TEXCOORD0_centroid;
-	float4 texcoord1	: TEXCOORD1_centroid;
-	float4 texcoord2	: TEXCOORD2_centroid;
-	float4 texcoord3	: TEXCOORD3_centroid;
-	float4 texcoord4	: TEXCOORD4_centroid;
-	float4 texcoord5	: TEXCOORD5_centroid;
-	float4 texcoord6	: TEXCOORD6_centroid;
-	float4 color		: COLOR0;
+	half4 position		: SV_Position;
+	half4 texcoord0	: TEXCOORD0_centroid;
+	half4 texcoord1	: TEXCOORD1_centroid;
+	half4 texcoord2	: TEXCOORD2_centroid;
+	half4 texcoord3	: TEXCOORD3_centroid;
+	half4 texcoord4	: TEXCOORD4_centroid;
+	half4 texcoord5	: TEXCOORD5_centroid;
+	half4 texcoord6	: TEXCOORD6_centroid;
+	half4 color		: COLOR0;
 };
 
 struct PS_OUT
@@ -62,18 +63,18 @@ struct PS_OUT
 
 void main( PS_IN fragment, out PS_OUT result )
 {
-	float4 bumpMap =		t_Normal.Sample( s_Material, fragment.texcoord1.xy );
-	float4 lightFalloff =	idtex2Dproj( s_Lighting, t_LightFalloff, fragment.texcoord2 );
-	float4 lightProj =		idtex2Dproj( s_Lighting, t_LightProjection, fragment.texcoord3 );
-	float4 YCoCG =			t_BaseColor.Sample( s_Material, fragment.texcoord4.xy );
-	float4 specMapSRGB =	t_Specular.Sample( s_Material, fragment.texcoord5.xy );
-	float4 specMap =		sRGBAToLinearRGBA( specMapSRGB );
+	half4 bumpMap =		t_Normal.Sample( s_Material, fragment.texcoord1.xy );
+	half4 lightFalloff =	idtex2Dproj( s_Lighting, t_LightFalloff, fragment.texcoord2 );
+	half4 lightProj =		idtex2Dproj( s_Lighting, t_LightProjection, fragment.texcoord3 );
+	half4 YCoCG =			t_BaseColor.Sample( s_Material, fragment.texcoord4.xy );
+	half4 specMapSRGB =	t_Specular.Sample( s_Material, fragment.texcoord5.xy );
+	half4 specMap =		sRGBAToLinearRGBA( specMapSRGB );
 
-	float3 lightVector = normalize( fragment.texcoord0.xyz );
-	float3 viewVector = normalize( fragment.texcoord6.xyz );
-	float3 diffuseMap = sRGBToLinearRGB( ConvertYCoCgToRGB( YCoCG ) );
+	half3 lightVector = normalize( fragment.texcoord0.xyz );
+	half3 viewVector = normalize( fragment.texcoord6.xyz );
+	half3 diffuseMap = sRGBToLinearRGB( ConvertYCoCgToRGB( YCoCG ) );
 
-	float3 localNormal;
+	half3 localNormal;
 	// RB begin
 #if defined(USE_NORMAL_FMT_RGB8)
 	localNormal.xy = bumpMap.rg - 0.5;
@@ -99,7 +100,7 @@ void main( PS_IN fragment, out PS_OUT result )
 #endif
 
 
-	float3 halfAngleVector = normalize( lightVector + viewVector );
+	half3 halfAngleVector = normalize( lightVector + viewVector );
 	float hdotN = clamp( dot3( halfAngleVector, localNormal ), 0.0, 1.0 );
 
 #if USE_PBR

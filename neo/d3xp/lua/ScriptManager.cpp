@@ -232,12 +232,12 @@ void ScriptManager::LoadScript( const char* script )
 	luaThread->LoadLuaScript( script, true );
 }
 
-void ScriptManager::AddReloadable( idStateScript* stateScript )
+void ScriptManager::AddReloadable( spStateScript* stateScript )
 {
 	reloadables.AddUnique( stateScript );
 }
 
-void ScriptManager::DestroyReloadable( idStateScript* stateScript )
+void ScriptManager::DestroyReloadable( spStateScript* stateScript )
 {
 	reloadables.Remove( stateScript );
 }
@@ -476,11 +476,11 @@ void idLuaThread::Restart( )
 	lua_pop( luaState, 1 );
 }
 
-bool idLuaThread::LoadLuaScript( const char* luaScript, bool failIfNotFound )
+bool idLuaThread::LoadLuaScript( const char* luaScript, bool failIfNotFound ) const
 {
 	char* src;
 
-	int length = fileSystem->ReadFile( luaScript, ( void** )&src, NULL );
+	const int length = fileSystem->ReadFile( luaScript, reinterpret_cast<void**>( &src ), nullptr );
 	if( length < 0 )
 	{
 		if( failIfNotFound )
@@ -1637,7 +1637,7 @@ void idLuaThread::Event_DrawText( const char* text, const idVec3& origin, float 
 								  const int align, const float lifetime )
 {
 	gameRenderWorld->DrawText( text, origin, scale, idVec4( color.x, color.y, color.z, 0.0f ),
-								gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), align, SEC2MS( lifetime ) );
+							   gameLocal.GetLocalPlayer()->viewAngles.ToMat3(), align, SEC2MS( lifetime ) );
 }
 
 /*

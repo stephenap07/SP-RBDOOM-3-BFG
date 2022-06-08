@@ -681,9 +681,9 @@ void idRenderBackend::DBG_ShowSurfaceInfo( drawSurf_t** drawSurfs, int numDrawSu
 	// R_AxisToModelMatrix( mt.entity->axis, mt.entity->origin, matrix );
 
 	tr.primaryWorld->DrawText( surfModelName, surfPoint + tr.primaryView->renderView.viewaxis[2] * 12,
-								0.35f, colorRed, tr.primaryView->renderView.viewaxis );
+							   0.35f, colorYellow, tr.primaryView->renderView.viewaxis );
 	tr.primaryWorld->DrawText( surfMatName, surfPoint,
-								0.35f, colorBlue, tr.primaryView->renderView.viewaxis );
+							   0.35f, colorCyan, tr.primaryView->renderView.viewaxis );
 }
 
 /*
@@ -2256,7 +2256,7 @@ void idRenderBackend::DBG_TestImage()
 
 		// SRS - Don't need calibrated time for testing cinematics, so just call ImageForTime( 0 ) for current system time
 		// This simplification allows cinematic test playback to work over both 2D and 3D background scenes
-		cin = tr.testVideo->ImageForTime( 0 /*viewDef->renderView.time[1] - tr.testVideoStartTime*/ );
+		cin = tr.testVideo->ImageForTime( 0 /*viewDef->renderView.time[1] - tr.testVideoStartTime*/, commandList );
 		if( cin.imageY != NULL )
 		{
 			image = cin.imageY;

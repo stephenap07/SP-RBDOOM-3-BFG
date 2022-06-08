@@ -97,7 +97,6 @@ const char* idWindow::ScriptNames[] =
 	"onActivate",
 	"onDeactivate",
 	"onESC",
-	"onTab",
 	"onEvent",
 	"onTrigger",
 	"onActionRelease",
@@ -120,9 +119,8 @@ void idWindow::CommonInit()
 	timeLine = -1;
 	xOffset = yOffset = 0.0;
 	cursor = 0;
-	forceAspectWidth = SCREEN_WIDTH;
-	forceAspectHeight = SCREEN_HEIGHT;
-	scaleToRenderWindow = false;
+	forceAspectWidth = 640;
+	forceAspectHeight = 480;
 	matScalex = 1;
 	matScaley = 1;
 	borderSize = 0;
@@ -251,7 +249,7 @@ void idWindow::CleanUp()
 	}
 
 	// ensure the register list gets cleaned up
-	regList.Reset( );
+	regList.Reset();
 
 	// Cleanup the named events
 	namedEvents.DeleteContents( true );
@@ -347,15 +345,15 @@ void idWindow::Draw( int time, float x, float y )
 		shadowRect.x += textShadow;
 		shadowRect.y += textShadow;
 
-		dc->DebugText( shadowText, textScale, textAlign, colorBlack, shadowRect, !( flags & WIN_NOWRAP ), -1 );
+		dc->DrawText( shadowText, textScale, textAlign, colorBlack, shadowRect, !( flags & WIN_NOWRAP ), -1 );
 	}
-	dc->DebugText( text, textScale, textAlign, foreColor, textRect, !( flags & WIN_NOWRAP ), -1 );
+	dc->DrawText( text, textScale, textAlign, foreColor, textRect, !( flags & WIN_NOWRAP ), -1 );
 
 	if( gui_edit.GetBool() )
 	{
 		dc->EnableClipping( false );
-		dc->DebugText( va( "x: %i  y: %i", ( int )rect.x(), ( int )rect.y() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x(), rect.y() - 15, 100, 20 ), false );
-		dc->DebugText( va( "w: %i  h: %i", ( int )rect.w(), ( int )rect.h() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x() + rect.w(), rect.w() + rect.h() + 5, 100, 20 ), false );
+		dc->DrawText( va( "x: %i  y: %i", ( int )rect.x(), ( int )rect.y() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x(), rect.y() - 15, 100, 20 ), false );
+		dc->DrawText( va( "w: %i  h: %i", ( int )rect.w(), ( int )rect.h() ), 0.25, 0, dc->colorWhite, idRectangle( rect.x() + rect.w(), rect.w() + rect.h() + 5, 100, 20 ), false );
 		dc->EnableClipping( true );
 	}
 
@@ -531,7 +529,7 @@ void idWindow::Activate( bool activate,	idStr& act )
 	int n = ( activate ) ? ON_ACTIVATE : ON_DEACTIVATE;
 
 	//  make sure win vars are updated before activation
-	UpdateWinVars( );
+	UpdateWinVars();
 
 	RunScript( n );
 	int c = children.Num();
@@ -695,7 +693,7 @@ void idWindow::RunNamedEvent( const char* eventName )
 	int c;
 
 	// Find and run the event
-	c = namedEvents.Num( );
+	c = namedEvents.Num();
 	for( i = 0; i < c; i ++ )
 	{
 		if( namedEvents[i]->mName.Icmp( eventName ) )
@@ -1027,7 +1025,6 @@ const char* idWindow::HandleEvent( const sysEvent_t* event, bool* updateVisuals 
 								parent = NULL;
 								child = NULL;
 							}
-							RunScript( ON_TAB ); // Stephen: I want to base this on an impulse instead of a specific key
 						}
 					}
 				}
@@ -1157,7 +1154,7 @@ void idWindow::DebugDraw( int time, float x, float y )
 			//idRectangle tempRect = textRect;
 			//tempRect.x += offsetX;
 			//drawRect.y += offsetY;
-			dc->DebugText( buff, textScale, textAlign, foreColor, textRect, true );
+			dc->DrawText( buff, textScale, textAlign, foreColor, textRect, true );
 		}
 		dc->EnableClipping( true );
 	}
@@ -1439,14 +1436,14 @@ void idWindow::Redraw( float x, float y, bool hud )
 
 	if( flags & WIN_SHOWTIME )
 	{
-		dc->DebugText( va( " %0.1f seconds\n%s", ( float )( time - timeLine ) / 1000, gui->State().GetString( "name" ) ), 0.35f, 0, dc->colorWhite, idRectangle( 100, 0, 80, 80 ), false );
+		dc->DrawText( va( " %0.1f seconds\n%s", ( float )( time - timeLine ) / 1000, gui->State().GetString( "name" ) ), 0.35f, 0, dc->colorWhite, idRectangle( 100, 0, 80, 80 ), false );
 	}
 
 	if( flags & WIN_SHOWCOORDS )
 	{
 		dc->EnableClipping( false );
 		sprintf( str, "x: %i y: %i  cursorx: %i cursory: %i", ( int )rect.x(), ( int )rect.y(), ( int )gui->CursorX(), ( int )gui->CursorY() );
-		dc->DebugText( str, 0.25f, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
+		dc->DrawText( str, 0.25f, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
 		dc->EnableClipping( true );
 	}
 
@@ -1459,25 +1456,16 @@ void idWindow::Redraw( float x, float y, bool hud )
 
 	SetFont();
 
-	float customAspectWidth = forceAspectWidth;
-	float customAspectHeight = forceAspectHeight;
-
-	if( scaleToRenderWindow )
-	{
-		customAspectWidth = renderSystem->GetWidth();
-		customAspectHeight = renderSystem->GetHeight();
-	}
-
 	if( hud )
 	{
 		float tileSafeOffset = hud_titlesafe.GetFloat();
 		float tileSafeScale = 1.0f / ( 1.0f - hud_titlesafe.GetFloat() * 2.0f );
-		dc->SetSize( customAspectWidth * tileSafeScale, customAspectHeight * tileSafeScale );
-		dc->SetOffset( customAspectHeight * tileSafeOffset, customAspectHeight * tileSafeOffset );
+		dc->SetSize( forceAspectWidth * tileSafeScale, forceAspectHeight * tileSafeScale );
+		dc->SetOffset( forceAspectWidth * tileSafeOffset, forceAspectHeight * tileSafeOffset );
 	}
 	else
 	{
-		dc->SetSize( customAspectWidth, customAspectHeight );
+		dc->SetSize( forceAspectWidth, forceAspectHeight );
 		dc->SetOffset( 0.0f, 0.0f );
 	}
 
@@ -1543,8 +1531,8 @@ void idWindow::Redraw( float x, float y, bool hud )
 	{
 		dc->EnableClipping( false );
 		sprintf( str, "x: %1.f y: %1.f",  gui->CursorX(), gui->CursorY() );
-		dc->DebugText( str, 0.25, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
-		dc->DebugText( gui->GetSourceFile(), 0.25, 0, dc->colorWhite, idRectangle( 0, 20, 300, 20 ), false );
+		dc->DrawText( str, 0.25, 0, dc->colorWhite, idRectangle( 0, 0, 100, 20 ), false );
+		dc->DrawText( gui->GetSourceFile(), 0.25, 0, dc->colorWhite, idRectangle( 0, 20, 300, 20 ), false );
 		dc->EnableClipping( true );
 	}
 
@@ -2321,11 +2309,6 @@ bool idWindow::ParseInternalVar( const char* _name, idTokenParser* src )
 		forceAspectWidth = src->ParseFloat();
 		return true;
 	}
-	if( idStr::Icmp( _name, "scaletorenderwindow" ) == 0 )
-	{
-		scaleToRenderWindow = src->ParseBool();
-		return true;
-	}
 	if( idStr::Icmp( _name, "forceaspectheight" ) == 0 )
 	{
 		forceAspectHeight = src->ParseFloat();
@@ -2556,8 +2539,8 @@ void idWindow::SetInitialState( const char* _name )
 	name = _name;
 	matScalex = 1.0;
 	matScaley = 1.0;
-	forceAspectWidth = SCREEN_WIDTH;
-	forceAspectHeight = SCREEN_HEIGHT;
+	forceAspectWidth = 640.0;
+	forceAspectHeight = 480.0;
 	noTime = false;
 	visible = true;
 	flags = 0;
@@ -2597,7 +2580,7 @@ bool idWindow::Parse( idTokenParser* src, bool rebuild )
 	while( token != "}" )
 	{
 		// track what was parsed so we can maintain it for the guieditor
-		src->SetMarker( );
+		src->SetMarker();
 
 		if( token == "windowDef" || token == "animationDef" )
 		{
@@ -2777,7 +2760,7 @@ bool idWindow::Parse( idTokenParser* src, bool rebuild )
 
 			rvNamedEvent* ev = new( TAG_OLD_UI ) rvNamedEvent( token );
 
-			src->SetMarker( );
+			src->SetMarker();
 
 			if( !ParseScript( src, *ev->mEvent ) )
 			{
@@ -2799,7 +2782,7 @@ bool idWindow::Parse( idTokenParser* src, bool rebuild )
 			ev->time = atoi( token.c_str() );
 
 			// reset the mark since we dont want it to include the time
-			src->SetMarker( );
+			src->SetMarker();
 
 			if( !ParseScript( src, *ev->event, &ev->time ) )
 			{
@@ -2822,7 +2805,7 @@ bool idWindow::Parse( idTokenParser* src, bool rebuild )
 
 			// add the float to the editors wrapper dict
 			// Set the marker after the float name
-			src->SetMarker( );
+			src->SetMarker();
 
 			// Read in the float
 			regList.AddReg( work, idRegister::FLOAT, src, this, varf );
@@ -2837,7 +2820,7 @@ bool idWindow::Parse( idTokenParser* src, bool rebuild )
 
 			// set the marker so we can determine what was parsed
 			// set the marker after the vec4 name
-			src->SetMarker( );
+			src->SetMarker();
 
 			// FIXME: how about we add the var to the desktop instead of this window so it won't get deleted
 			//        when this window is destoyed which even happens during parsing with simple windows ?
@@ -2856,7 +2839,7 @@ bool idWindow::Parse( idTokenParser* src, bool rebuild )
 
 			// add the float to the editors wrapper dict
 			// set the marker to after the float name
-			src->SetMarker( );
+			src->SetMarker();
 
 			// Parse the float
 			regList.AddReg( work, idRegister::FLOAT, src, this, varf );
@@ -3993,7 +3976,6 @@ void idWindow::WriteToSaveGame( idFile* savefile )
 	savefile->Write( &cursor, sizeof( cursor ) );
 	savefile->Write( &forceAspectWidth, sizeof( forceAspectWidth ) );
 	savefile->Write( &forceAspectHeight, sizeof( forceAspectHeight ) );
-	savefile->Write( &scaleToRenderWindow, sizeof( scaleToRenderWindow ) );
 	savefile->Write( &matScalex, sizeof( matScalex ) );
 	savefile->Write( &matScaley, sizeof( matScaley ) );
 	savefile->Write( &borderSize, sizeof( borderSize ) );
@@ -4170,7 +4152,6 @@ void idWindow::ReadFromSaveGame( idFile* savefile )
 	savefile->Read( &cursor, sizeof( cursor ) );
 	savefile->Read( &forceAspectWidth, sizeof( forceAspectWidth ) );
 	savefile->Read( &forceAspectHeight, sizeof( forceAspectHeight ) );
-	savefile->Read( &scaleToRenderWindow, sizeof( scaleToRenderWindow ) );
 	savefile->Read( &matScalex, sizeof( matScalex ) );
 	savefile->Read( &matScaley, sizeof( matScaley ) );
 	savefile->Read( &borderSize, sizeof( borderSize ) );
@@ -4670,7 +4651,7 @@ Returns the number of children
 */
 int idWindow::GetChildCount()
 {
-	return drawWindows.Num( );
+	return drawWindows.Num();
 }
 
 /*
@@ -4815,9 +4796,8 @@ default colors, etc..
 */
 void idWindow::SetDefaults()
 {
-	forceAspectWidth = SCREEN_WIDTH;
-	forceAspectHeight = SCREEN_HEIGHT;
-	scaleToRenderWindow = false;
+	forceAspectWidth = 640.0f;
+	forceAspectHeight = 480.0f;
 	matScalex = 1;
 	matScaley = 1;
 	borderSize = 0;
@@ -4855,12 +4835,12 @@ bool idWindow::UpdateFromDictionary( idDict& dict )
 	const idKeyValue*	kv;
 	int					i;
 
-	SetDefaults( );
+	SetDefaults();
 
 	// Clear all registers since they will get recreated
-	regList.Reset( );
-	expressionRegisters.Clear( );
-	ops.Clear( );
+	regList.Reset();
+	expressionRegisters.Clear();
+	ops.Clear();
 
 	for( i = 0; i < dict.GetNumKeyVals(); i ++ )
 	{

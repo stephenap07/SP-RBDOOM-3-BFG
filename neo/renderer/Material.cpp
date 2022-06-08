@@ -1720,6 +1720,7 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 			continue;
 		}
 
+#if 0
 		if( !token.Icmp( "renderTargetMap" ) )
 		{
 			// Emit fullscreen view of the gui to this dynamically generated texture
@@ -1731,6 +1732,7 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 			ts->height = src.ParseInt();
 			continue;
 		}
+#endif
 
 		if( !token.Icmp( "screen" ) )
 		{
@@ -1768,7 +1770,7 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 				}
 			}
 			ts->cinematic = idCinematic::Alloc();
-			ts->cinematic->InitFromFile( token.c_str(), loop );
+			ts->cinematic->InitFromFile( token.c_str(), loop, NULL );
 			continue;
 		}
 
@@ -1780,7 +1782,7 @@ void idMaterial::ParseStage( idLexer& src, const textureRepeat_t trpDefault )
 				continue;
 			}
 			ts->cinematic = new( TAG_MATERIAL ) idSndWindow();
-			ts->cinematic->InitFromFile( token.c_str(), true );
+			ts->cinematic->InitFromFile( token.c_str(), true, NULL );
 			continue;
 		}
 

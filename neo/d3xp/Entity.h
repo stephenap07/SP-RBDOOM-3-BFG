@@ -201,7 +201,7 @@ public:
 	idStr					name;					//!< name of entity
 	idDict					spawnArgs;				//!< key/value pairs used to spawn and initialize entity
 	idScriptObject			scriptObject;			//!< contains all script defined data for this entity
-	idStateScript			stateScript;
+	spStateScript			stateScript;
 
 	int						thinkFlags;				//!< TH_? flags
 	int						dormantStart;			//!< time that the entity was first closed off from player

@@ -54,7 +54,7 @@ public:
 	virtual void			BeginLevelLoad() = 0;
 
 	// called only by renderer::EndLevelLoad
-	virtual void			EndLevelLoad( ) = 0;
+	virtual void			EndLevelLoad() = 0;
 
 	// called only by renderer::Preload
 	virtual void			Preload( const idPreloadManifest& manifest ) = 0;

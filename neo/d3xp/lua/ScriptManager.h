@@ -26,8 +26,8 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#ifndef __SCRIPT_MANAGER_H__
-#define __SCRIPT_MANAGER_H__
+#ifndef SCRIPT_MANAGER_H_
+#define SCRIPT_MANAGER_H_
 
 extern const idEventDef EV_LuaThread_Execute;
 extern const idEventDef EV_LuaThread_SetCallback;
@@ -90,7 +90,7 @@ public:
 	}
 
 	void	Init( );
-	bool	LoadLuaScript( const char* luaScript, bool failIfFound = false );
+	bool	LoadLuaScript( const char* luaScript, bool failIfFound = false ) const;
 	void	Restart( );
 
 	void	Call( const idCmdArgs& args ) const;
@@ -194,7 +194,7 @@ private:
 	lua_State* luaState;
 };
 
-class idStateScript;
+class spStateScript;
 
 class ScriptManager
 {
@@ -209,8 +209,8 @@ public:
 	void		Reload();
 	void		Restart();
 	void		LoadScript( const char* script );
-	void		AddReloadable( idStateScript* stateScript );
-	void		DestroyReloadable( idStateScript* stateScript );
+	void		AddReloadable( spStateScript* stateScript );
+	void		DestroyReloadable( spStateScript* stateScript );
 
 	lua_State*	LuaState( )
 	{
@@ -233,8 +233,8 @@ public:
 private:
 	friend class ScopedLuaState;
 
-	idLuaThread*				luaThread;
-	idList<idStateScript*>	reloadables;
+	idLuaThread*			luaThread;
+	idList<spStateScript*>	reloadables;
 };
 
 /// This class updates the lua_State* to the current call so that any return

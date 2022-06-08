@@ -310,7 +310,7 @@ void SSDEntity::Draw()
 	if( text.Length() > 0 )
 	{
 		idRectangle rect( x, y, VIRTUAL_WIDTH, VIRTUAL_HEIGHT );
-		dc->DebugText( text, textScale, 0, foreColor, rect, false );
+		dc->DrawText( text, textScale, 0, foreColor, rect, false );
 	}
 
 }

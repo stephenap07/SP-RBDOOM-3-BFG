@@ -60,11 +60,12 @@ extern idCVar sys_lang;
 
 void idUserInterfaceManagerLocal::Init()
 {
-	screenRect = idRectangle( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
+	screenRect = idRectangle( 0, 0, 640, 480 );
 	dcOld.Init();
 	dcOptimized.Init();
 
 	SetDrawingDC();
+
 }
 
 void idUserInterfaceManagerLocal::Shutdown()
@@ -132,10 +133,7 @@ void idUserInterfaceManagerLocal::BeginLevelLoad()
 {
 	for( int i = 0; i < guis.Num(); i++ )
 	{
-		if( ( guis[i]->GetDesktop()->GetFlags() & WIN_MENUGUI ) == 0 )
-		{
-			guis[i]->ClearRefs();
-		}
+		guis[ i ]->ClearRefs();
 	}
 }
 
@@ -464,7 +462,7 @@ bool idUserInterfaceLocal::InitFromFile( const char* qpath, bool rebuild, bool c
 		desktop->SetFlag( WIN_DESKTOP );
 		desktop->name = "Desktop";
 		desktop->text = va( "Invalid GUI: %s", qpath );
-		desktop->rect = idRectangle( 0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT );
+		desktop->rect = idRectangle( 0.0f, 0.0f, 640.0f, 480.0f );
 		desktop->drawRect = desktop->rect;
 		desktop->foreColor = idVec4( 1.0f, 1.0f, 1.0f, 1.0f );
 		desktop->backColor = idVec4( 0.0f, 0.0f, 0.0f, 1.0f );
@@ -529,8 +527,6 @@ void idUserInterfaceLocal::Redraw( int _time, bool hud )
 	if( !loading && desktop )
 	{
 		time = _time;
-		// Stephen: Commenting the clip rect due to it being 640x480.
-		// I want screen resolution independent gui stuff.
 		dc->PushClipRect( uiManagerLocal.screenRect );
 		desktop->Redraw( 0, 0, hud );
 		dc->PopClipRect();
@@ -540,8 +536,8 @@ void idUserInterfaceLocal::Redraw( int _time, bool hud )
 void idUserInterfaceLocal::DrawCursor()
 {
 	// Stephen: The cursor is bounded to the gui's rect.
-	// Before, it was bound to the virtual width and height regardless
-	// of gui size.
+// Before, it was bound to the virtual width and height regardless
+// of gui size.
 	idVec2 bounds;
 	if( desktop &&
 			desktop->scaleToRenderWindow )
@@ -554,7 +550,6 @@ void idUserInterfaceLocal::DrawCursor()
 		bounds.x = VIRTUAL_WIDTH;
 		bounds.y = VIRTUAL_HEIGHT;
 	}
-
 	if( !desktop || desktop->GetFlags() & WIN_MENUGUI )
 	{
 		dc->DrawCursor( &cursorX, &cursorY, 32.0f, bounds );

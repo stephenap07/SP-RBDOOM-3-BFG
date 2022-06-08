@@ -114,6 +114,7 @@ public:
 	virtual float				CursorY() = 0;
 };
 
+
 class idUserInterfaceManager
 {
 public:

@@ -276,9 +276,9 @@ void idSimpleWindow::Redraw( float x, float y )
 		shadowRect.x += textShadow;
 		shadowRect.y += textShadow;
 
-		dc->DebugText( shadowText, textScale, textAlign, colorBlack, shadowRect, !( flags & WIN_NOWRAP ), -1 );
+		dc->DrawText( shadowText, textScale, textAlign, colorBlack, shadowRect, !( flags & WIN_NOWRAP ), -1 );
 	}
-	dc->DebugText( text, textScale, textAlign, foreColor, textRect, !( flags & WIN_NOWRAP ), -1 );
+	dc->DrawText( text, textScale, textAlign, foreColor, textRect, !( flags & WIN_NOWRAP ), -1 );
 	dc->SetTransformInfo( vec3_origin, mat3_identity );
 	if( flags & WIN_NOCLIP )
 	{

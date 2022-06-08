@@ -4038,12 +4038,12 @@ void idHarvestable::Event_Touch( idEntity* other, trace_t* trace )
 				//Lock the player from harvesting to prevent multiple harvests when only one is needed
 				thePlayer->harvest_lock = true;
 
-				//idWeapon* weap = ( idWeapon* )thePlayer->weapon.GetEntity();
-				//if( weap )
-				//{
-				//	//weap->PostEventMS(&EV_Weapon_State, 0, "Charge", 8);
-				//	weap->ProcessEvent( &EV_Weapon_State, "Charge", 8 );
-				//}
+				idWeapon* weap = ( idWeapon* )thePlayer->weapon.GetEntity();
+				if( weap )
+				{
+					//weap->PostEventMS(&EV_Weapon_State, 0, "Charge", 8);
+					weap->ProcessEvent( &EV_Weapon_State, "Charge", 8 );
+				}
 
 				BeginBurn();
 				BeginFX();

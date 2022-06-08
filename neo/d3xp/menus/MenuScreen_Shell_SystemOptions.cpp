@@ -679,7 +679,7 @@ idSWFScriptVar idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings
 #if ID_MSAA
 			compile_time_assert( numValues == ( ANTI_ALIASING_MSAA_4X + 1 ) );
 #else
-			compile_time_assert(numValues == (ANTI_ALIASING_TAA + 1));
+			compile_time_assert( numValues == ( ANTI_ALIASING_TAA + 1 ) );
 #endif
 
 			return values[ r_antiAliasing.GetInteger() ];

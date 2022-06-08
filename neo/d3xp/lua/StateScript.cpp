@@ -86,12 +86,17 @@ static void TS_Think( lua_State* L, idEntity* ent )
 	}
 }
 
-idStateScript::idStateScript( idEntity* _owner )
-	: owner( _owner ), scriptName()
+spStateScript::spStateScript( idEntity* owner )
+	: owner( owner )
 {
 }
 
-void idStateScript::Construct()
+void spStateScript::SetName( const char* name )
+{
+	scriptName = name;
+}
+
+void spStateScript::Construct()
 {
 	if( scriptName.IsEmpty() )
 	{
@@ -104,7 +109,7 @@ void idStateScript::Construct()
 	TS_New( L, owner );
 }
 
-void idStateScript::Destroy()
+void spStateScript::Destroy()
 {
 	if( scriptName.IsEmpty() )
 	{
@@ -124,7 +129,7 @@ void idStateScript::Destroy()
 	lua_pop( L, 1 );
 }
 
-void idStateScript::Think()
+void spStateScript::Think()
 {
 	if( scriptName.IsEmpty() )
 	{
@@ -136,7 +141,7 @@ void idStateScript::Think()
 	TS_Think( L, owner );
 }
 
-void idStateScript::Reload()
+void spStateScript::Reload()
 {
 	if( scriptName.IsEmpty() )
 	{
@@ -146,7 +151,7 @@ void idStateScript::Reload()
 	Construct();
 }
 
-void idStateScript::SendEvent( int entityNumber, const char* eventName )
+void spStateScript::SendEvent( int entityNumber, const char* eventName )
 {
 	if( scriptName.IsEmpty() )
 	{
@@ -156,4 +161,9 @@ void idStateScript::SendEvent( int entityNumber, const char* eventName )
 	lua_State* L = gameLocal.scriptManager.LuaState();
 
 	TS_SendEvent( L, owner, eventName );
+}
+
+const char* spStateScript::GetName() const
+{
+	return scriptName.c_str();
 }
