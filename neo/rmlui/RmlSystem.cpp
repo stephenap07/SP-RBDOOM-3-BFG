@@ -53,7 +53,7 @@ idRmlSystem::~idRmlSystem()
 double idRmlSystem::GetElapsedTime()
 {
 	// Might want to use some other clock.
-	return static_cast<double>( Sys_Milliseconds() ) / 1000.0;
+	return static_cast<double>( Sys_Milliseconds() ) / 1000.0 / 2.0f;
 }
 
 bool idRmlSystem::LogMessage( Rml::Log::Type type, const Rml::String& message )

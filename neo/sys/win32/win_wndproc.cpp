@@ -45,6 +45,8 @@ extern idCVar r_windowY;
 extern idCVar r_windowWidth;
 extern idCVar r_windowHeight;
 
+extern DeviceManager* deviceManager;
+
 static void WIN_DisableAltTab()
 {
 	if( s_alttab_disabled || win32.win_allowAltTab.GetBool() )
@@ -163,8 +165,6 @@ void WIN_Sizing( WORD side, RECT* rect )
 			break;
 	}
 }
-
-extern DeviceManager* deviceManager;
 
 /*
 ====================

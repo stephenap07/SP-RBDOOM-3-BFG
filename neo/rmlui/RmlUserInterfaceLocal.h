@@ -49,7 +49,7 @@ public:
 
 	RmlUserInterfaceLocal();
 
-	virtual ~RmlUserInterfaceLocal();
+	~RmlUserInterfaceLocal() override;
 
 	// Begin RmlUserInterface
 	bool						Init( const char* name, idSoundWorld* soundWorld ) override;
@@ -69,7 +69,11 @@ public:
 	void						Redraw( int time ) override;
 
 	// Loads the document and sets up the event listeners.
-	Rml::ElementDocument*		LoadDocument( const char* filePath, RmlEventHandler* _eventHandler = nullptr ) override;
+	Rml::ElementDocument*		LoadDocument( const char* filePath, RmlEventHandler* eventHandler = nullptr ) override;
+
+	RmlDocHandle				LoadDocumentHandle( const char* filePath, RmlEventHandler* eventHandler = nullptr ) override;
+
+	Rml::ElementDocument*		GetDocumentFromHandle( RmlDocHandle handle ) override;
 
 	bool						IsDocumentOpen( const char* name ) override;
 
@@ -232,7 +236,8 @@ protected:
 	idStr						_cmds;
 	idStr						_pendingCmds;
 
-	idList<Document>			_documents;
+	HandleManagerT<kMaxDocuments>	handleManager;
+	idList<Document>				_documents;
 };
 
 struct RmlImage
@@ -256,6 +261,7 @@ public:
 	void						Shutdown() override;
 	RmlUserInterface*			Find( const char* name, bool autoload ) override;
 	RmlUserInterface*			Find( const Rml::Context* context ) override;
+	void						Remove( RmlUserInterface* gui ) override;
 
 	void						BeginLevelLoad() override;
 	void						EndLevelLoad( const char* mapName ) override;
@@ -286,7 +292,7 @@ private:
 
 	idDeviceContextOptimized		_dc;
 
-	idList<RmlUserInterfaceLocal*>	_guis;
+	idList<RmlUserInterfaceLocal*>	guis;
 	idList<RmlImage>				_imagesToReload;
 
 	HandleManagerT<kMaxDocuments>	_docHandleManager;

@@ -263,6 +263,11 @@ void idCommonLocal::Draw()
 			loadGUI->Render( renderSystem, Sys_Milliseconds() );
 		}
 
+		if( commonRml != nullptr )
+		{
+			commonRml->Redraw( Sys_Milliseconds() );
+		}
+
 		// update our progress estimates
 		int time = Sys_Milliseconds();
 		if( loadPacifierBinarizeProgress > 0.0f )
@@ -305,6 +310,13 @@ void idCommonLocal::Draw()
 		renderSystem->DrawStretchPic( 0, 0, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0, 0, 1, 1, whiteMaterial );
 
 		loadGUI->Render( renderSystem, Sys_Milliseconds() );
+	}
+	else if( commonRml != nullptr )
+	{
+		renderSystem->SetColor( colorBlack );
+		renderSystem->DrawStretchPic( 0, 0, renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight(), 0, 0, 1, 1, whiteMaterial );
+
+		commonRml->Redraw( Sys_Milliseconds() );
 	}
 
 	// RB begin
@@ -992,6 +1004,9 @@ void idCommonLocal::Frame()
 		// kill loading gui
 		delete loadGUI;
 		loadGUI = NULL;
+
+		rmlManager->Remove( commonRml );
+		commonRml = nullptr;
 
 		// drop back to main menu
 		LeaveGame();

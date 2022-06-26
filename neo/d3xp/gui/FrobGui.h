@@ -57,36 +57,41 @@ public:
 
 	FrobGui();
 
-	void Init( idSoundWorld* soundWorld_ );
+	void Init( idSoundWorld* soundWorld );
 
-	void Redraw();
+	void Redraw() const;
 
-	void Show( bool show_ );
+	void Show( bool show );
 
-	void SetMode( Mode mode_ );
+	void SetMode( Mode newMode, const idEntity* ent = nullptr );
 
-	void ShowText( bool show_ );
+	void ShowText( bool show );
 
-	void ShowInteract( bool show_ );
+	void ShowInteract( bool show );
 
-	void SetText( const char* text_ );
+	void SetText( const char* text );
+
+	void SetIcon( const char* materialName );
 
 	/**
 	 * \brief Toggle between @c MODE_INTERACT and @c MODE_SHOW_TEXT.
-	 * \param entity_ Get the flavor text from the entity
+	 * \param entity Get the flavor text from the entity
 	 */
-	void ToggleView( const idEntity* entity_ );
+	void ToggleView( const idEntity* entity );
 
 	[[nodiscard]] Mode GetMode() const
 	{
-		return _mode;
+		return mode;
 	}
 
 private:
 
-	RmlUserInterface*		_ui;	//!< Reference to the control class for managing RML documents within the game
-	Rml::ElementDocument*	_doc;	//!< Reference to the RML document to manipulate the visual RML document.
-	Mode					_mode;	//!< Current mode of the Frobbing.
+	RmlUserInterface*			ui;		//!< Reference to the control class for managing RML documents within the game
+	RmlDocHandle				doc;	//!< Reference to the RML document to manipulate the visual RML document.
+	Mode						mode;	//!< Current mode of the Frobbing.
+	int							currentIcon;
+	idHashIndex					iconHashIndex;
+	idList<const idMaterial*>	icons;
 };
 
 #endif

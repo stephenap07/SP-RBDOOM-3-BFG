@@ -6850,11 +6850,23 @@ void idPlayer::UpdateFocus()
 	{
 		if( frobEnt )
 		{
-			playerView.frobGui.SetMode( FrobGui::MODE_INTERACT );
+			playerView.frobGui.SetMode( FrobGui::MODE_INTERACT, frobEnt );
 		}
 		else
 		{
-			playerView.frobGui.SetMode( FrobGui::MODE_NONE );
+			playerView.frobGui.SetMode( FrobGui::MODE_NONE, frobEnt );
+		}
+	}
+
+	if( interactEnt != oldInteractEnt )
+	{
+		if( interactEnt )
+		{
+			playerView.frobGui.SetMode( FrobGui::MODE_INTERACT, interactEnt );
+		}
+		else
+		{
+			playerView.frobGui.SetMode( FrobGui::MODE_NONE, interactEnt );
 		}
 	}
 }

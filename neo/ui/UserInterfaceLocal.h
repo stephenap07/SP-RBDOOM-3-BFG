@@ -167,11 +167,6 @@ private:
 	int							refs;
 };
 
-namespace Rml
-{
-class Context;
-}
-
 class idUserInterfaceManagerLocal : public idUserInterfaceManager
 {
 	friend class idUserInterfaceLocal;

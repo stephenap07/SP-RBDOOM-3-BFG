@@ -177,6 +177,8 @@ idCommonLocal::idCommonLocal() :
 
 	gameDLL = 0;
 
+	commonRml = nullptr;
+
 	loadGUI = NULL;
 	nextLoadTip = 0;
 	isHellMap = false;
@@ -1547,6 +1549,10 @@ void idCommonLocal::Shutdown()
 	printf( "delete loadGUI;\n" );
 	delete loadGUI;
 	loadGUI = NULL;
+
+	printf( "delete commonRml;\n" );
+	rmlManager->Remove( commonRml );
+	commonRml = nullptr;
 
 	printf( "ImGuiHook::Destroy();\n" );
 	ImGuiHook::Destroy();

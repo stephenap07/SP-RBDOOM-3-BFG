@@ -36,118 +36,108 @@ If you have questions concerning this license or the applicable additional terms
 #include "rmlui/Core/ElementDocument.h"
 
 FrobGui::FrobGui()
-	: _ui( nullptr )
-	, _doc( nullptr )
-	, _mode( MODE_INVALID )
+	: ui( nullptr )
+	, mode( MODE_INVALID )
+	, currentIcon( -1 )
 {
 }
 
-void FrobGui::Init( idSoundWorld* soundWorld_ )
+void FrobGui::Init( idSoundWorld* soundWorld )
 {
-	_ui = rmlManager->Find( "focus", false );
-	_ui->Init( "focus", soundWorld_ );
+	ui = rmlManager->Find( "focus", false );
+	ui->Init( "focus", soundWorld );
 
-	if( _ui )
-	{
-		_doc = _ui->LoadDocument( "guis/rml/hud/hud.rml" );
-		if( _doc )
-		{
-			_doc->Show();
-		}
-	}
+	doc = ui->LoadDocumentHandle( "guis/rml/hud/hud.rml" );
+	const auto docElem = ui->GetDocumentFromHandle( doc );
 
-	_ui->Activate( true );
-
-	{
-		if( Rml::Element* elem = _doc->GetElementById( "text" ) )
-		{
-			if( !elem->IsClassSet( "fadeout" ) && !elem->IsClassSet( "fadein" ) )
-			{
-				elem->SetClass( "fadeout", true );
-			}
-		}
-	}
-
-	{
-		if( Rml::Element* elem = _doc->GetElementById( "interact" ) )
-		{
-			if( !elem->IsClassSet( "fadeout" ) && !elem->IsClassSet( "fadein" ) )
-			{
-				elem->SetClass( "fadeout", true );
-			}
-		}
-	}
-
-	SetMode( MODE_NONE );
-}
-
-void FrobGui::Redraw()
-{
-	_ui->Redraw( gameLocal.time );
-}
-
-void FrobGui::Show( const bool show_ )
-{
-	if( show_ )
-	{
-		_doc->Show();
-	}
-	else
-	{
-		_doc->Hide();
-	}
-}
-
-void FrobGui::SetMode( const Mode mode_ )
-{
-	if( _mode == mode_ )
+	if( !docElem )
 	{
 		return;
 	}
 
-	_mode = mode_;
+	docElem->Show();
 
-	switch( _mode )
+	ui->Activate( true );
+
+	SetMode( MODE_NONE );
+}
+
+void FrobGui::Redraw() const
+{
+	ui->Redraw( gameLocal.GetTime() );
+}
+
+void FrobGui::Show( const bool show )
+{
+}
+
+void FrobGui::SetMode( const Mode newMode, const idEntity* ent )
+{
+	if( mode == newMode )
 	{
-		case Mode::MODE_NONE:
+		return;
+	}
+
+	mode = newMode;
+
+	switch( mode )
+	{
+		case MODE_NONE:
 		{
 			ShowText( false );
 			ShowInteract( false );
 			break;
 		}
 
-		case Mode::MODE_INTERACT:
+		case MODE_INTERACT:
 		{
 			ShowText( false );
+			if( ent )
+			{
+				SetIcon( ent->spawnArgs.GetString( "interactIcon", "ui/assets/lightbulb" ) );
+			}
 			ShowInteract( true );
 			break;
 		}
 
-		case Mode::MODE_SHOW_TEXT:
+		case MODE_SHOW_TEXT:
 		{
+			if( ent )
+			{
+				SetText( ent->spawnArgs.GetString( "flavorText", "<insert flavor text>" ) );
+			}
+
 			ShowText( true );
 			ShowInteract( false );
 			break;
 		}
 
+		case MODE_INVALID:
+		{
+			break;
+		}
+
 		default:
 		{
-			gameLocal.Warning( "Invalid mode %d", _mode );
+			gameLocal.Warning( "Invalid newMode %d", mode );
 		}
 	}
 }
 
-void FrobGui::ShowText( const bool show_ )
+void FrobGui::ShowText( const bool show )
 {
-	Rml::Element* elem = _doc->GetElementById( "text" );
-	if( elem )
+	const auto docElem = ui->GetDocumentFromHandle( doc );
+	docElem->Show();
+
+	if( Rml::Element* elem = docElem->GetElementById( "text" ) )
 	{
-		if( show_ )
+		if( show )
 		{
-			if( elem->IsClassSet( "fadeout" ) )
+			if( elem->IsClassSet( "fadeout" ) || elem->IsClassSet( "invisible" ) )
 			{
 				elem->SetClass( "fadeout", false );
 				elem->SetClass( "fadein", true );
+				elem->SetClass( "invisible", false );
 			}
 		}
 		else
@@ -161,17 +151,20 @@ void FrobGui::ShowText( const bool show_ )
 	}
 }
 
-void FrobGui::ShowInteract( const bool show_ )
+void FrobGui::ShowInteract( const bool show )
 {
-	Rml::Element* elem = _doc->GetElementById( "interact" );
-	if( elem )
+	const auto docElem = ui->GetDocumentFromHandle( doc );
+	docElem->Show();
+
+	if( Rml::Element* elem = docElem->GetElementById( "interact" ) )
 	{
-		if( show_ )
+		if( show )
 		{
-			if( elem->IsClassSet( "fadeout" ) )
+			if( elem->IsClassSet( "fadeout" ) || elem->IsClassSet( "invisible" ) )
 			{
 				elem->SetClass( "fadeout", false );
 				elem->SetClass( "fadein", true );
+				elem->SetClass( "invisible", false );
 			}
 		}
 		else
@@ -185,31 +178,70 @@ void FrobGui::ShowInteract( const bool show_ )
 	}
 }
 
-void FrobGui::SetText( const char* text_ )
+void FrobGui::SetText( const char* text )
 {
-	if( _doc )
+	if( const auto docElem = ui->GetDocumentFromHandle( doc ) )
 	{
-		Rml::Element* elem = _doc->GetElementById( "text-content" );
-		if( elem )
+		docElem->Show();
+		if( Rml::Element* elem = docElem->GetElementById( "text-content" ) )
 		{
-			elem->SetInnerRML( text_ );
+			elem->SetInnerRML( text );
 		}
 	}
 }
 
-void FrobGui::ToggleView( const idEntity* entity_ )
+void FrobGui::SetIcon( const char* materialName )
 {
-	if( _mode == MODE_INTERACT )
-	{
-		if( entity_ )
-		{
-			SetText( entity_->spawnArgs.GetString( "flavorText", "<insert flavor text>" ) );
-		}
+	const idMaterial* mat = nullptr;
 
-		SetMode( FrobGui::MODE_SHOW_TEXT );
+	const auto h = idStr::Hash( materialName );
+	iconHashIndex.GetFirst( idStr::Hash( materialName ) );
+
+	for( int i = iconHashIndex.First( h ); i >= 0; i = iconHashIndex.Next( i ) )
+	{
+		if( idStr::Icmp( icons[i]->GetName(), materialName ) == 0 )
+		{
+			if( currentIcon == i )
+			{
+				return;
+			}
+
+			currentIcon = i;
+
+			mat = icons[i];
+			break;
+		}
+	}
+
+	if( !mat )
+	{
+		mat = declManager->FindMaterial( materialName );
+		if( mat )
+		{
+			iconHashIndex.Add( h, icons.Append( { mat } ) );
+		}
+	}
+
+	if( mat )
+	{
+		if( const auto docElem = ui->GetDocumentFromHandle( doc ) )
+		{
+			if( Rml::Element* elem = docElem->GetElementById( "interact" ) )
+			{
+				elem->SetAttribute( "src", ( idStr( "/" ) + mat->GetName() ).c_str() );
+			}
+		}
+	}
+}
+
+void FrobGui::ToggleView( const idEntity* entity )
+{
+	if( mode == MODE_INTERACT )
+	{
+		SetMode( MODE_SHOW_TEXT, entity );
 	}
 	else
 	{
-		SetMode( FrobGui::MODE_INTERACT );
+		SetMode( MODE_INTERACT, entity );
 	}
 }

@@ -71,6 +71,10 @@ public:
 
 	virtual Rml::ElementDocument*	LoadDocument( const char* filePath, RmlEventHandler* _eventHandler = nullptr ) = 0;
 
+	virtual RmlDocHandle			LoadDocumentHandle( const char* filePath, RmlEventHandler* eventHandler = nullptr ) = 0;
+
+	virtual Rml::ElementDocument*	GetDocumentFromHandle( RmlDocHandle handle ) = 0;
+
 	virtual bool					IsDocumentOpen( const char* name ) = 0;
 
 	virtual void					CloseDocument( const char* name ) = 0;
@@ -129,6 +133,7 @@ public:
 	virtual void					Shutdown() = 0;
 	virtual RmlUserInterface*		Find( const char* name, bool autoload ) = 0;
 	virtual RmlUserInterface*		Find( const Rml::Context* context ) = 0;
+	virtual void					Remove( RmlUserInterface* ui ) = 0;
 
 	virtual void					BeginLevelLoad() = 0;
 	virtual void					EndLevelLoad( const char* mapName ) = 0;

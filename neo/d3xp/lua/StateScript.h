@@ -28,8 +28,8 @@ public:
 
 private:
 
-	idEntity*	owner;
-	idStr		scriptName;
+	idEntity*	owner;			//!< Owner of the script
+	idStr		scriptName;		//!< Name of the script
 };
 
 #endif

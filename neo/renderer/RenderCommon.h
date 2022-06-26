@@ -854,6 +854,7 @@ enum vertexLayoutType_t
 enum bindingLayoutType_t
 {
 	BINDING_LAYOUT_DEFAULT,
+	BINDING_LAYOUT_DEFAULT_SKINNED,
 	BINDING_LAYOUT_CONSTANT_BUFFER_ONLY,
 	BINDING_LAYOUT_GBUFFER,
 	BINDING_LAYOUT_AMBIENT_LIGHTING_IBL,
@@ -950,18 +951,21 @@ public:
 	virtual void			DrawStretchTri( const idVec2& p1, const idVec2& p2, const idVec2& p3, const idVec2& t1, const idVec2& t2, const idVec2& t3, const idMaterial* material );
 	virtual idDrawVert* 	AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const stereoDepthType_t stereoType = STEREO_DEPTH_TYPE_NONE );
 
-	virtual FontHandle         GetDefaultFontHandle()
+	FontHandle         GetDefaultFontHandle() override
 	{
 		return defaultFont;
 	}
-	virtual TextBufferManager* GetTextBufferManager()
+
+	TextBufferManager* GetTextBufferManager() override
 	{
 		return textBufferManager;
 	}
-	virtual FontManager*       GetFontManager()
+
+	FontManager*       GetFontManager() override
 	{
 		return fontManager;
 	}
+
 	virtual void			   DrawSmallChar( int x, int y, int ch );
 	virtual void			   DrawSmallStringExt( int x, int y, const char* string, const idVec4& setColor, bool forceColor );
 	virtual void			   DrawBigChar( int x, int y, int ch );
@@ -1070,6 +1074,7 @@ public:
 
 	idList<idFont*, TAG_FONT>		fonts;
 
+	// SP Begin
 	struct NewFontData
 	{
 		TrueTypeHandle ttfHandle;
@@ -1089,6 +1094,7 @@ public:
 
 	idList<NamedTrueTypeHandle, TAG_FONT>	fontFaces;
 	idList<NewFontData, TAG_FONT>			newFonts;
+	// SP End
 
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
 

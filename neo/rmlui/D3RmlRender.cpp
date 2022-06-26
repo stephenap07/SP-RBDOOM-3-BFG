@@ -64,112 +64,107 @@ idCVar rmlShowStencilMasks( "rml_show_stencil_masks", "0", CVAR_INTEGER, "Draw a
 // Helper function to get the scaling vector for the guis.
 inline idVec2 GetScaleToVirtual()
 {
-	return idVec2( ( float )renderSystem->GetVirtualWidth() / renderSystem->GetWidth(),
-				   ( float )renderSystem->GetVirtualHeight() / renderSystem->GetHeight() );
+	return idVec2( static_cast<float>( renderSystem->GetVirtualWidth() ) / renderSystem->GetWidth(),
+				   static_cast<float>( renderSystem->GetVirtualHeight() ) / renderSystem->GetHeight() );
 }
 
 
 idRmlRender::idRmlRender()
-	: _enableScissor( false )
-	, _clipRects()
-	, _cursorImages()
-	, _guiSolid( nullptr )
-	, _numMasks( 0 )
-	, _verts( nullptr )
-	, _tris( nullptr )
-	, _texGen( 0 )
-	, _numVerts( 0 )
-	, _numIndexes( 0 )
+	: enableScissor( false )
+	, clipRects()
+	, cursorImages()
+	, guiSolid( nullptr )
+	, numMasks( 0 )
+	, drawVerts( nullptr )
+	, drawTris( nullptr )
+	, texGen( 0 )
 {
 }
 
 idRmlRender::~idRmlRender()
 {
-	delete[] _verts;
-	delete[] _tris;
+	delete[] drawVerts;
+	delete[] drawTris;
 }
 
 void idRmlRender::Init()
 {
-	_numMasks = 0;
-	_verts = new idDrawVert[kMaxInitialVerts];
-	_tris = new triIndex_t[kMaxInitialTris];
+	numMasks = 0;
+
+	// Avoid a bunch of allocations by allocating once and reusing
+	// these vertices to draw. We might want to just make this more
+	// dynamic to save them and reuse them per frame.
+	drawVerts = new idDrawVert[kMaxInitialVerts];
+	drawTris = new triIndex_t[kMaxInitialTris];
 
 	origin.Zero();
 	mat.Identity();
 
-	_guiSolid = declManager->FindMaterial( "_white", false );
+	guiSolid = declManager->FindMaterial( "_white", false );
 }
 
-void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVerts, int* indices, int numIndexes, Rml::TextureHandle texture, const Rml::Vector2f& translation )
+void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVertices, int* indices, int numIndices, Rml::TextureHandle texture, const Rml::Vector2f& translation )
 {
-	triIndex_t* tris = &_tris[_numIndexes];
-
-	for( int i = 0; i < numIndexes; i++ )
+	if( numVertices > kMaxInitialVerts )
 	{
-		tris[i] = indices[i];
-		_numIndexes++;
+		common->FatalError( "Increase kMaxInitialVerts" );
+		return;
+	}
 
-		if( _numIndexes > kMaxInitialTris )
-		{
-			// Possibly just make this dynamic
-			common->FatalError( "Increase kMaxInitialTris" );
-			return;
-		}
+	if( numIndices > kMaxInitialTris )
+	{
+		common->FatalError( "Increase kMaxInitialTris" );
+		return;
+	}
+
+	for( int i = 0; i < numIndices; i++ )
+	{
+		drawTris[i] = indices[i];
 	}
 
 	const idVec2 scaleToVirtual( GetScaleToVirtual() );
 
-	idDrawVert* temp = &_verts[_numVerts];
-	for( int i = 0; i < numVerts; i++ )
+	idVec3 pos;
+	for( int i = 0; i < numVertices; i++ )
 	{
-		const Rml::Vertex& localVertex = vertices[i];
+		const auto& [position, rmlColor, texCoord] = vertices[i];
 
-		idVec3 pos = idVec3( localVertex.position.x + translation.x, localVertex.position.y + translation.y, 0 );
+		pos.x = position.x + translation.x;
+		pos.y = position.y + translation.y;
+		pos.z = 0;
 
-		// transform
+		// Transform
 		pos *= mat;
 		pos += origin;
 
 		pos.x *= scaleToVirtual.x;
 		pos.y *= scaleToVirtual.y;
 
-		idDrawVert& localDrawVert = temp[i];
+		idDrawVert& srcVertex = drawVerts[i];
 
-		localDrawVert.xyz = pos;
-		localDrawVert.SetTexCoord( localVertex.tex_coord.x, localVertex.tex_coord.y );
-		idVec4 color = idVec4( localVertex.colour.red / 255.0f, localVertex.colour.green / 255.0f, localVertex.colour.blue / 255.0f, localVertex.colour.alpha / 255.0f );
-		int currentColorNativeBytesOrder = LittleLong( PackColor( color ) );
-		localDrawVert.SetNativeOrderColor( currentColorNativeBytesOrder );
-		localDrawVert.ClearColor2( );
-
-		_numVerts++;
-
-		if( _numVerts > kMaxInitialVerts )
-		{
-			common->FatalError( "Increase kMaxInitialVerts" );
-			return;
-		}
+		srcVertex.xyz = pos;
+		srcVertex.SetTexCoord( texCoord.x, texCoord.y );
+		idVec4 color( rmlColor.red, rmlColor.green, rmlColor.blue, rmlColor.alpha );
+		color /= 255.0f;
+		srcVertex.SetColor( PackColor( color ) );
+		srcVertex.ClearColor2();
 	}
 
-	const idMaterial* material = reinterpret_cast<const idMaterial*>( texture );
+	const auto* material = reinterpret_cast<const idMaterial*>( texture );
 
 	if( !material )
 	{
-		material = _guiSolid;
+		material = guiSolid;
 	}
 
 	material->SetSort( SS_GUI );
 
-	idDrawVert* verts = tr_guiModel->AllocTris( numVerts, tris, numIndexes, material, GenerateGlState(), STEREO_DEPTH_TYPE_NONE );
+	idDrawVert* verts = tr_guiModel->AllocTris( numVertices, drawTris, numIndices, material, GenerateGlState(), STEREO_DEPTH_TYPE_NONE );
 
 	if( verts )
 	{
-		WriteDrawVerts16( verts, temp, numVerts );
+		WriteDrawVerts16( verts, drawVerts, numVertices );
 	}
-
-	_numVerts = 0;
-	_numIndexes = 0;
 }
 
 void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
@@ -182,23 +177,23 @@ void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
 		return;
 	}
 
-	auto rmlVec1 = transform->GetColumn( 0 );
-	auto rmlVec2 = transform->GetColumn( 1 );
-	auto rmlVec3 = transform->GetColumn( 2 );
-	auto rmlVec4 = transform->GetColumn( 3 );
+	const auto rmlVec1 = transform->GetColumn( 0 );
+	const auto rmlVec2 = transform->GetColumn( 1 );
+	const auto rmlVec3 = transform->GetColumn( 2 );
+	const auto rmlVec4 = transform->GetColumn( 3 );
 
 	origin.Set( rmlVec4.x, rmlVec4.y, rmlVec4.z );
 
-	idVec3 vecX( rmlVec1.x, rmlVec1.y, rmlVec1.z );
-	idVec3 vecY( rmlVec2.x, rmlVec2.y, rmlVec2.z );
-	idVec3 vecZ( rmlVec3.x, rmlVec3.y, rmlVec3.z );
+	const idVec3 vecX( rmlVec1.x, rmlVec1.y, rmlVec1.z );
+	const idVec3 vecY( rmlVec2.x, rmlVec2.y, rmlVec2.z );
+	const idVec3 vecZ( rmlVec3.x, rmlVec3.y, rmlVec3.z );
 
 	mat = idMat3( vecX, vecY, vecZ );
 }
 
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
 
-bool idRmlRender::LoadTexture( Rml::TextureHandle& textureHandle, Rml::Vector2i& textureSize, const Rml::String& source )
+bool idRmlRender::LoadTexture( Rml::TextureHandle& textureHandle, Rml::Vector2i& textureDimensions, const Rml::String& source )
 {
 	const idMaterial* material = declManager->FindMaterial( source.c_str() );
 
@@ -213,20 +208,20 @@ bool idRmlRender::LoadTexture( Rml::TextureHandle& textureHandle, Rml::Vector2i&
 	idImage* image = material->GetStage( 0 )->texture.image;
 	if( image )
 	{
-		textureSize.x = material->GetImageWidth();
-		textureSize.y = material->GetImageHeight();
+		textureDimensions.x = material->GetImageWidth();
+		textureDimensions.y = material->GetImageHeight();
 
-		if( textureSize.x == 0 || textureSize.y == 0 )
+		if( textureDimensions.x == 0 || textureDimensions.y == 0 )
 		{
 			image->FinalizeImage( false, nullptr );
-			textureSize.x = material->GetImageWidth( );
-			textureSize.y = material->GetImageHeight( );
+			textureDimensions.x = material->GetImageWidth( );
+			textureDimensions.y = material->GetImageHeight( );
 		}
 	}
 	else
 	{
-		textureSize.x = SCREEN_WIDTH;
-		textureSize.y = SCREEN_HEIGHT;
+		textureDimensions.x = SCREEN_WIDTH;
+		textureDimensions.y = SCREEN_HEIGHT;
 	}
 
 	return true;
@@ -234,8 +229,8 @@ bool idRmlRender::LoadTexture( Rml::TextureHandle& textureHandle, Rml::Vector2i&
 
 void GenerateRmlImage( idImage* image, nvrhi::ICommandList* commandList )
 {
-	idStr name = image->GetName( );
-	int hash = name.FileNameHash( );
+	const idStr name = image->GetName( );
+	const int hash = name.FileNameHash( );
 
 	for( int i = globalImages->deferredImageHash.First( hash ); i != -1; i = globalImages->deferredImageHash.Next( i ) )
 	{
@@ -254,9 +249,9 @@ void GenerateRmlImage( idImage* image, nvrhi::ICommandList* commandList )
 	}
 }
 
-bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions )
+bool idRmlRender::GenerateTexture( Rml::TextureHandle& textureHandle, const Rml::byte* source, const Rml::Vector2i& sourceDimensions )
 {
-	const char* imgName = va( "_rmlImage%d", _texGen );
+	const char* imgName = va( "_rmlImage%d", texGen );
 	idImage* image = globalImages->ImageFromFunction( imgName, GenerateRmlImage );
 
 	const idMaterial* material = declManager->FindMaterial( imgName );
@@ -269,17 +264,17 @@ bool idRmlRender::GenerateTexture( Rml::TextureHandle& texture_handle, const Rml
 	}
 
 	idDeferredImage* img = globalImages->AllocDeferredImage( imgName );
-	img->pic = ( byte* )Mem_Alloc( 4 * source_dimensions.x * source_dimensions.y, TAG_IMAGE );
-	memcpy( img->pic, source, 4 * source_dimensions.x * source_dimensions.y );
-	img->width = source_dimensions.x;
-	img->height = source_dimensions.y;
+	img->pic = static_cast<byte*>( Mem_Alloc( 4 * sourceDimensions.x * sourceDimensions.y, TAG_IMAGE ) );
+	memcpy( img->pic, source, 4 * sourceDimensions.x * sourceDimensions.y );
+	img->width = sourceDimensions.x;
+	img->height = sourceDimensions.y;
 	img->textureFilter = TF_NEAREST;
 	img->textureRepeat = TR_REPEAT;
 	img->textureUsage = TD_LOOKUP_TABLE_RGBA;
 
-	texture_handle = reinterpret_cast<Rml::TextureHandle>( material );
+	textureHandle = reinterpret_cast<Rml::TextureHandle>( material );
 
-	_texGen++;
+	texGen++;
 
 	return material != nullptr;
 }
@@ -290,18 +285,18 @@ uint64 idRmlRender::GenerateGlState() const
 	uint64 glState( 0 );
 
 	// Stencil
-	if( _enableScissor )
+	if( enableScissor )
 	{
 		// Only draw to the backbuffer if the stencil buffer matches the existing stencil buffer value. This is good for masking.
-		glState |= GLS_STENCIL_FUNC_EQUAL | GLS_STENCIL_MAKE_REF( 128 + _numMasks ) | GLS_STENCIL_MAKE_MASK( 255 );
+		glState |= GLS_STENCIL_FUNC_EQUAL | GLS_STENCIL_MAKE_REF( 128 + numMasks ) | GLS_STENCIL_MAKE_MASK( 255 );
 	}
 
 	return glState;
 }
 
-Rml::CompiledGeometryHandle idRmlRender::CompileGeometry( Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture )
+Rml::CompiledGeometryHandle idRmlRender::CompileGeometry( Rml::Vertex* vertices, int numVertices, int* indices, int numIndices, Rml::TextureHandle texture )
 {
-	return Rml::CompiledGeometryHandle( 0 );
+	return static_cast<Rml::CompiledGeometryHandle>( 0 );
 }
 
 void idRmlRender::RenderCompiledGeometry( Rml::CompiledGeometryHandle geometry, const Rml::Vector2f& translation )
@@ -324,13 +319,13 @@ Clip Masking/Scissor testing.
 
 void idRmlRender::EnableScissorRegion( bool enable )
 {
-	_enableScissor = enable;
+	enableScissor = enable;
 }
 
 void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
 {
-	_clipRects = idRectangle( x, y, width, height );
-	_numMasks++;
+	clipRects = idRectangle( x, y, width, height );
+	numMasks++;
 	RenderClipMask();
 }
 
@@ -345,8 +340,8 @@ void idRmlRender::RenderClipMask()
 	ALIGNTYPE16 idDrawVert localVerts[4];
 
 	localVerts[0].Clear();
-	localVerts[0].xyz[0] = _clipRects.x;
-	localVerts[0].xyz[1] = _clipRects.y;
+	localVerts[0].xyz[0] = clipRects.x;
+	localVerts[0].xyz[1] = clipRects.y;
 	localVerts[0].xyz[2] = 0.0f;
 
 	localVerts[0].xyz *= mat;
@@ -360,8 +355,8 @@ void idRmlRender::RenderClipMask()
 	localVerts[0].ClearColor2();
 
 	localVerts[1].Clear();
-	localVerts[1].xyz[0] = _clipRects.x + _clipRects.w;
-	localVerts[1].xyz[1] = _clipRects.y;
+	localVerts[1].xyz[0] = clipRects.x + clipRects.w;
+	localVerts[1].xyz[1] = clipRects.y;
 	localVerts[1].xyz[2] = 0.0f;
 
 	localVerts[1].xyz *= mat;
@@ -375,8 +370,8 @@ void idRmlRender::RenderClipMask()
 	localVerts[1].ClearColor2();
 
 	localVerts[2].Clear();
-	localVerts[2].xyz[0] = ( _clipRects.x + _clipRects.w );
-	localVerts[2].xyz[1] = ( _clipRects.y + _clipRects.h );
+	localVerts[2].xyz[0] = ( clipRects.x + clipRects.w );
+	localVerts[2].xyz[1] = ( clipRects.y + clipRects.h );
 	localVerts[2].xyz[2] = 0.0f;
 	localVerts[2].xyz -= origin;
 	localVerts[2].xyz *= mat;
@@ -388,8 +383,8 @@ void idRmlRender::RenderClipMask()
 	localVerts[2].ClearColor2();
 
 	localVerts[3].Clear();
-	localVerts[3].xyz[0] = _clipRects.x;
-	localVerts[3].xyz[1] = ( _clipRects.y + _clipRects.h );
+	localVerts[3].xyz[0] = clipRects.x;
+	localVerts[3].xyz[1] = ( clipRects.y + clipRects.h );
 	localVerts[3].xyz[2] = 0.0f;
 	localVerts[3].xyz *= mat;
 	localVerts[3].xyz += origin;
@@ -406,22 +401,22 @@ void idRmlRender::RenderClipMask()
 					   | GLS_ALPHAMASK
 					   | GLS_STENCIL_OP_PASS_REPLACE
 					   | GLS_STENCIL_FUNC_ALWAYS
-					   | GLS_STENCIL_MAKE_REF( kRmlStencilRef + _numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
+					   | GLS_STENCIL_MAKE_REF( kRmlStencilRef + numMasks ) | GLS_STENCIL_MAKE_MASK( kRmlStencilMask );
 
-	idDrawVert* maskVerts = tr_guiModel->AllocTris( 4, quadPicIndexes, 6, _guiSolid, glState, STEREO_DEPTH_TYPE_NONE );
+	idDrawVert* maskVerts = tr_guiModel->AllocTris( 4, quadPicIndexes, 6, guiSolid, glState, STEREO_DEPTH_TYPE_NONE );
 
 	WriteDrawVerts16( maskVerts, localVerts, 4 );
 
 	// TODO(Stephen): Make render debug masks configurable.
 	if( rmlShowStencilMasks.GetInteger() > 0 )
 	{
-		DrawRect( _clipRects, idVec4( 1.0f, 0.0f, 0.0f, 1.0f ) );
+		DrawRect( clipRects, idVec4( 1.0f, 0.0f, 0.0f, 1.0f ) );
 	}
 }
 
 void idRmlRender::PreRender()
 {
-	_numMasks = 0;
+	numMasks = 0;
 }
 
 void idRmlRender::PostRender()
@@ -457,10 +452,10 @@ void idRmlRender::DrawRect( const idRectangle& rect, const idVec4& color )
 
 	float size = 1;
 
-	renderSystem->DrawStretchPic( x, y, size, h, 0, 0, 0, 0, _guiSolid );
-	renderSystem->DrawStretchPic( x + w - size, y, size, h, 0, 0, 0, 0, _guiSolid );
-	renderSystem->DrawStretchPic( x, y, w, size, 0, 0, 0, 0, _guiSolid );
-	renderSystem->DrawStretchPic( x, y + h - size, w, size, 0, 0, 0, 0, _guiSolid );
+	renderSystem->DrawStretchPic( x, y, size, h, 0, 0, 0, 0, guiSolid );
+	renderSystem->DrawStretchPic( x + w - size, y, size, h, 0, 0, 0, 0, guiSolid );
+	renderSystem->DrawStretchPic( x, y, w, size, 0, 0, 0, 0, guiSolid );
+	renderSystem->DrawStretchPic( x, y + h - size, w, size, 0, 0, 0, 0, guiSolid );
 }
 
 void RmlImage::Free()

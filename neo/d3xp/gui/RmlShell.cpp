@@ -107,14 +107,6 @@ bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 	ui->LoadDocument( "guis/rml/shell/pause.rml", baseEventHandler );
 	ui->LoadDocument( "guis/rml/shell/game.rml", baseEventHandler );
 
-	screenToName.AssureSize( ( int )ShellScreen::TOTAL );
-	screenToName[( int )ShellScreen::START] = "guis/rml/shell/startmenu.rml";
-	screenToName[( int )ShellScreen::OPTIONS] = "guis/rml/shell/options.rml";
-	screenToName[( int )ShellScreen::LOADING] = "guis/rml/shell/loading.rml";
-	screenToName[( int )ShellScreen::GAME] = "guis/rml/shell/game.rml";
-	screenToName[( int )ShellScreen::TEST] = "guis/rml/shell/test.rml";
-	screenToName[( int )ShellScreen::PAUSE] = "guis/rml/shell/pause.rml";
-
 	// Preload all the materials.
 	rmlManager->Preload( "" );
 
@@ -138,26 +130,26 @@ struct ShellOptions
 
 	int windowMode;
 
-	void Init( )
+	void Init()
 	{
-		vidModes.Clear( );
+		vidModes.Clear();
 		idList<vidMode_t> tempModeList;
 		R_GetModeListForDisplay( 0, tempModeList );
-		for( int i = 0; i < tempModeList.Num( ); i++ )
+		for( int i = 0; i < tempModeList.Num(); i++ )
 		{
 			vidModes.Append( tempModeList[i] );
 			windowSizes.AddUnique( { tempModeList[i].width, tempModeList[i].height } );
 			displayHzs.AddUnique( tempModeList[i].displayHz );
 		}
 
-		windowMode = r_fullscreen.GetInteger( );
+		windowMode = r_fullscreen.GetInteger();
 	}
 
-	int FindVidModeIndex( int windowSizeIndex, int displayIndex ) const
+	int FindVidModeIndex( const int windowSizeIndex, const int displayIndex ) const
 	{
-		int width = windowSizes[windowSizeIndex].width;
-		int height = windowSizes[windowSizeIndex].height;
-		int di = displayHzs[displayIndex];
+		const int width = windowSizes[windowSizeIndex].width;
+		const int height = windowSizes[windowSizeIndex].height;
+		const int di = displayHzs[displayIndex];
 
 		for( int i = 0; i < vidModes.Num(); i++ )
 		{
@@ -201,6 +193,11 @@ void UI_Shell::HandleStateChange( )
 			if( state == ShellState::LOADING )
 			{
 				HideScreen( "loading" );
+			}
+
+			if( state == ShellState::START )
+			{
+				HideScreen( "startmenu" );
 			}
 
 			if( gameComplete )
@@ -285,12 +282,11 @@ void UI_Shell::ActivateMenu( bool show )
 
 	if( inGame )
 	{
-		idPlayer* player = gameLocal.GetLocalPlayer( );
-		if( player )
+		if( const idPlayer* player = gameLocal.GetLocalPlayer() )
 		{
 			if( !show )
 			{
-				if( player->IsDead( ) && !common->IsMultiplayer( ) )
+				if( player->IsDead() && !common->IsMultiplayer() )
 				{
 					return;
 				}
@@ -325,23 +321,23 @@ void UI_Shell::SetNextScreen( ShellScreen _nextScreen )
 	nextScreen = _nextScreen;
 }
 
-void UI_Shell::SetNextScreen( const char* _nextScreen )
+void UI_Shell::SetNextScreen( const char* nextScreen )
 {
-	nextScreenName = _nextScreen;
+	nextScreenName = nextScreen;
 }
 
-void UI_Shell::ShowScreen( const char* _screen )
+void UI_Shell::ShowScreen( const char* screen )
 {
-	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", _screen ) );
+	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", screen ) );
 	if( doc )
 	{
 		doc->Show( );
 	}
 }
 
-void UI_Shell::HideScreen( const char* _screen )
+void UI_Shell::HideScreen( const char* screen )
 {
-	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", _screen ) );
+	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", screen ) );
 	if( doc )
 	{
 		doc->Hide( );

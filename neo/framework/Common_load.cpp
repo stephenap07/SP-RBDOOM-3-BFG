@@ -31,6 +31,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #pragma hdrstop
 
+#include <rmlui/Core/ElementDocument.h>
+
 #include "Common_local.h"
 #include "../sys/sys_lobby_backend.h"
 
@@ -240,7 +242,7 @@ void idCommonLocal::UnloadMap()
 	mapSpawned = false;
 }
 
-static bool use_swfLoadingScreen = true;
+static bool use_swfLoadingScreen = false;
 
 /*
 ===============
@@ -272,6 +274,27 @@ void idCommonLocal::LoadLoadingGui( const char* mapName, bool& hellMap )
 			defaultLoadscreen = true;
 			return;
 		}
+	}
+
+	if( commonRml == nullptr )
+	{
+		commonRml = rmlManager->Find( "common", true );
+		commonRml->Activate( true );
+		commonRml->SetUseScreenResolution( true );
+	}
+
+	loadRml = commonRml->LoadDocumentHandle( "guis/rml/shell/loading.rml" );
+
+	Rml::ElementDocument* doc = nullptr;
+
+	if( loadRml.id != kInvalidHandle )
+	{
+		doc = commonRml->GetDocumentFromHandle( loadRml );
+	}
+
+	if( doc )
+	{
+		doc->Show();
 	}
 
 	// load / program a gui to stay up on the screen while loading
@@ -681,6 +704,9 @@ void idCommonLocal::ExecuteMapChange()
 	// at this point we should be done with the loading gui so we kill it
 	delete loadGUI;
 	loadGUI = NULL;
+
+	rmlManager->Remove( commonRml );
+	commonRml = nullptr;
 
 	// capture the current screen and start a wipe
 	StartWipe( "wipe2Material" );

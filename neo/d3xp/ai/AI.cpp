@@ -1348,6 +1348,12 @@ idAI::LinkScriptVariables
 */
 void idAI::LinkScriptVariables()
 {
+	if( !scriptObject.data )
+	{
+		// TODO(Stephen): Replace this stuff with Lua equivalent.
+		return;
+	}
+
 	AI_TALK.LinkTo(	scriptObject, "AI_TALK" );
 	AI_DAMAGE.LinkTo(	scriptObject, "AI_DAMAGE" );
 	AI_PAIN.LinkTo(	scriptObject, "AI_PAIN" );

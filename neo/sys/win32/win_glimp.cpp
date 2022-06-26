@@ -1530,7 +1530,6 @@ bool GLimp_SetScreenParms( glimpParms_t parms )
 		stylebits = WINDOW_STYLE | WS_SYSMENU;
 	}
 
-	// TODO(Stephen): Update the swap chain.
 	SetWindowLong( win32.hWnd, GWL_STYLE, stylebits );
 	SetWindowLong( win32.hWnd, GWL_EXSTYLE, exstyle );
 	SetWindowPos( win32.hWnd, parms.fullScreen ? HWND_TOPMOST : HWND_NOTOPMOST, x, y, w, h, SWP_SHOWWINDOW );

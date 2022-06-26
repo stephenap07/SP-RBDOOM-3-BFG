@@ -58,18 +58,18 @@ public:
 
 	/// Called by RmlUi when it wants to render geometry that the application does not wish to optimise. Note that
 	/// RmlUi renders everything as triangles.
-	void RenderGeometry( Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture, const Rml::Vector2f& translation ) override;
+	void RenderGeometry( Rml::Vertex* vertices, int numVertices, int* indices, int numIndices, Rml::TextureHandle texture, const Rml::Vector2f& translation ) override;
 
 	/// Called by RmlUi when it wants to compile geometry it believes will be static for the forseeable future.
 	/// If supported, this should return a handle to an optimised, application-specific version of the data. If
 	/// not, do not override the function or return zero; the simpler RenderGeometry() will be called instead.
 	/// @param[in] vertices The geometry's vertex data.
-	/// @param[in] num_vertices The number of vertices passed to the function.
+	/// @param[in] numVertices The number of vertices passed to the function.
 	/// @param[in] indices The geometry's index data.
-	/// @param[in] num_indices The number of indices passed to the function. This will always be a multiple of three.
+	/// @param[in] numIndices The number of indices passed to the function. This will always be a multiple of three.
 	/// @param[in] texture The texture to be applied to the geometry. This may be nullptr, in which case the geometry is untextured.
 	/// @return The application-specific compiled geometry. Compiled geometry will be stored and rendered using RenderCompiledGeometry() in future calls, and released with ReleaseCompiledGeometry() when it is no longer needed.
-	Rml::CompiledGeometryHandle CompileGeometry( Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture ) override;
+	Rml::CompiledGeometryHandle CompileGeometry( Rml::Vertex* vertices, int numVertices, int* indices, int numIndices, Rml::TextureHandle texture ) override;
 
 	/// Called by RmlUi when it wants to render application-compiled geometry.
 	/// @param[in] geometry The application-specific compiled geometry to render.
@@ -87,10 +87,10 @@ public:
 	void SetScissorRegion( int x, int y, int width, int height ) override;
 
 	/// Called by RmlUi when a texture is required by the library.
-	bool LoadTexture( Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source );
+	bool LoadTexture( Rml::TextureHandle& textureHandle, Rml::Vector2i& textureDimensions, const Rml::String& source ) override;
 
 	/// Called by RmlUi when a texture is required to be built from an internally-generated sequence of pixels.
-	bool GenerateTexture( Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions );
+	bool GenerateTexture( Rml::TextureHandle& textureHandle, const Rml::byte* source, const Rml::Vector2i& sourceDimensions ) override;
 
 	/// Called by RmlUi when it wants the renderer to use a new transform matrix.
 	/// This will only be called if 'transform' properties are encountered. If no transform applies to the current element, nullptr
@@ -113,20 +113,18 @@ private:
 	// Generates render state flags. Turns on stencil testing and functions.
 	uint64				GenerateGlState() const;
 
-	bool				_enableScissor;
-	idRectangle			_clipRects;
-	const idMaterial*	_cursorImages[CURSOR_COUNT];
-	const idMaterial*	_guiSolid;
+	bool				enableScissor;
+	idRectangle			clipRects;
+	const idMaterial*	cursorImages[CURSOR_COUNT];
+	const idMaterial*	guiSolid;
 
-	int					_numMasks;
-	idDrawVert*			_verts;
-	triIndex_t*			_tris;
+	int					numMasks;
+	idDrawVert*			drawVerts;
+	triIndex_t*			drawTris;
 	idMat3				mat;
 	idVec3				origin;
 
-	int					_texGen;
-	int					_numVerts;
-	int					_numIndexes;
+	int					texGen;
 };
 
 #endif

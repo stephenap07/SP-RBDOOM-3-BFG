@@ -67,11 +67,11 @@ public:
 
 	void					SetNextScreen( ShellScreen _nextScreen );
 
-	void					SetNextScreen( const char* _nextScreen );
+	void					SetNextScreen( const char* nextScreen );
 
-	void					ShowScreen( const char* _screen );
+	void					ShowScreen( const char* screen );
 
-	void					HideScreen( const char* _screen );
+	void					HideScreen( const char* screen );
 
 	void					UpdateSavedGames( );
 
@@ -126,8 +126,6 @@ private:
 	bool						isInitialized;
 	bool						gameComplete;
 	bool						inGame;
-
-	idList<idStrStatic<128>>	screenToName;
 
 	Rml::DataModelHandle		vidModeModel;
 	std::vector<vidMode_t>		modeList;

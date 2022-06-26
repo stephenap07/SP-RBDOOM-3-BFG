@@ -578,6 +578,9 @@ private:
 	idStrList			mpDisplayGameModes;
 	idList<mpMap_t>		mpGameMaps;
 
+	RmlUserInterface*	commonRml;
+
+	RmlDocHandle		loadRml;
 	idSWF* 				loadGUI;
 	int					nextLoadTip;
 	bool				isHellMap;

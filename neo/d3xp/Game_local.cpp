@@ -86,6 +86,9 @@ const char* idGameLocal::sufaceTypeNames[ MAX_SURFACE_TYPES ] =
 
 idCVar net_usercmd_timing_debug( "net_usercmd_timing_debug", "0", CVAR_BOOL, "Print messages about usercmd timing." );
 
+// SP: I've added RmlUi to replace SWF. But if you want to use SWF, I've made it configurable for the UI Shell.
+idCVar com_useSwf( "com_useSWF", "0", CVAR_BOOL, "enables use of SWF for the UI shell" );
+
 
 // List of all defs used by the player that will stay on the fast timeline
 static const char* fastEntityList[] =
@@ -356,10 +359,14 @@ void idGameLocal::Init()
 
 	InitConsoleCommands();
 
-	shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
-
 	// SP begin
-	rmlShell = new UI_Shell();
+	if( com_useSwf.GetBool() )
+	{
+		shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
+	}
+	{
+		rmlShell = new UI_Shell();
+	}
 	// SP end
 
 	if( !g_xp_bind_run_once.GetBool() )
@@ -905,7 +912,7 @@ void idGameLocal::Error( const char* fmt, ... ) const
 	va_end( argptr );
 
 	thread = idThread::CurrentThread();
-	if( gameLocal.scriptManager.LuaState() )
+	if( gameLocal.scriptManager.GetLuaThread() && gameLocal.scriptManager.LuaState() )
 	{
 		common->Error( "%s", text );
 	}
@@ -5923,13 +5930,11 @@ void idGameLocal::Shell_CreateMenu( bool inGame )
 		if( !inGame )
 		{
 			shellHandler->SetInGame( false );
-			rmlShell->SetInGame( false );
 			Shell_Init( "shell", common->MenuSW() );
 		}
 		else
 		{
 			shellHandler->SetInGame( true );
-			rmlShell->SetInGame( true );
 			if( common->IsMultiplayer( ) )
 			{
 				Shell_Init( "pause", common->SW( ) );
@@ -5937,6 +5942,26 @@ void idGameLocal::Shell_CreateMenu( bool inGame )
 			else
 			{
 				Shell_Init( "pause", common->MenuSW( ) );
+			}
+		}
+	}
+
+	if( rmlShell )
+	{
+		rmlShell->SetInGame( inGame );
+		if( !inGame )
+		{
+			Shell_Init( "shell", common->MenuSW() );
+		}
+		else
+		{
+			if( common->IsMultiplayer() )
+			{
+				Shell_Init( "pause", common->SW() );
+			}
+			else
+			{
+				Shell_Init( "pause", common->MenuSW() );
 			}
 		}
 	}
@@ -6111,46 +6136,72 @@ idGameLocal::Shell_SyncWithSession
 */
 void idGameLocal::Shell_SyncWithSession()
 {
-	if( shellHandler == NULL )
-	{
-		return;
-	}
 	switch( session->GetState() )
 	{
 		case idSession::PRESS_START:
-			shellHandler->SetShellState( SHELL_STATE_PRESS_START );
-			rmlShell->SetState( ShellState::START );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_PRESS_START );
+			}
+			if( rmlShell )
+			{
+				rmlShell->SetState( ShellState::START );
+			}
 			break;
 		case idSession::INGAME:
-			shellHandler->SetShellState( SHELL_STATE_PAUSED );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_PAUSED );
+			}
 			rmlShell->SetState( ShellState::GAME );
 			break;
 		case idSession::IDLE:
-			shellHandler->SetShellState( SHELL_STATE_IDLE );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_IDLE );
+			}
 			rmlShell->SetState( ShellState::SHELL_ERROR );
 			break;
 		case idSession::PARTY_LOBBY:
-			shellHandler->SetShellState( SHELL_STATE_PARTY_LOBBY );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_PARTY_LOBBY );
+			}
 			rmlShell->SetState( ShellState::SHELL_ERROR );
 			break;
 		case idSession::GAME_LOBBY:
-			shellHandler->SetShellState( SHELL_STATE_GAME_LOBBY );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_GAME_LOBBY );
+			}
 			rmlShell->SetState( ShellState::SHELL_ERROR );
 			break;
 		case idSession::SEARCHING:
-			shellHandler->SetShellState( SHELL_STATE_SEARCHING );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_SEARCHING );
+			}
 			rmlShell->SetState( ShellState::SHELL_ERROR );
 			break;
 		case idSession::LOADING:
-			shellHandler->SetShellState( SHELL_STATE_LOADING );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_LOADING );
+			}
 			rmlShell->SetState( ShellState::LOADING );
 			break;
 		case idSession::CONNECTING:
-			shellHandler->SetShellState( SHELL_STATE_CONNECTING );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_CONNECTING );
+			}
 			rmlShell->SetState( ShellState::SHELL_ERROR );
 			break;
 		case idSession::BUSY:
-			shellHandler->SetShellState( SHELL_STATE_BUSY );
+			if( shellHandler )
+			{
+				shellHandler->SetShellState( SHELL_STATE_BUSY );
+			}
 			rmlShell->SetState( ShellState::SHELL_ERROR );
 			break;
 	}

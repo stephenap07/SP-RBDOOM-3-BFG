@@ -2245,7 +2245,7 @@ void idRenderSystemLocal::ResetGuiModels()
 	delete guiModel;
 	guiModel = new( TAG_RENDER ) idGuiModel;
 	guiModel->Clear();
-	guiModel->BeginFrame( commandList );
+	guiModel->BeginFrame();
 	tr_guiModel = guiModel;	// for DeviceContext fast path
 }
 
@@ -2336,7 +2336,7 @@ bool idRenderSystemLocal::AreAutomaticBackgroundSwapsRunning( autoRenderIconType
 TrueTypeHandle idRenderSystemLocal::RegisterFontFace( const char* fontName, bool useFallback )
 {
 	// Look for an already loaded font.
-	idStrStatic< MAX_OSPATH > baseFontName = fontName;
+	idStrStatic<MAX_OSPATH> baseFontName = fontName;
 	baseFontName.Replace( "fonts/", "" );
 
 	for( int i = 0; i < fontFaces.Num(); i++ )
@@ -2368,7 +2368,7 @@ TrueTypeHandle idRenderSystemLocal::RegisterFontFace( const char* fontName, bool
 
 	NamedTrueTypeHandle data;
 	data.ttfHandle = fontManager->createTtf( buffer.Ptr(), len );
-	data.name = baseFontName;
+	data.name = static_cast<idStr>( baseFontName );
 	data.family = fontManager->getFamilyName( data.ttfHandle );
 	fontFaces.Append( data );
 

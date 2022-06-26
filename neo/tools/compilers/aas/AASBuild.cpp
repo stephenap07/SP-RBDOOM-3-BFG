@@ -1023,6 +1023,12 @@ void RunAAS_f( const idCmdArgs& args )
 	}
 
 	const idKeyValue* kv = dict->MatchPrefix( "type" );
+
+	if( !kv )
+	{
+		common->Warning( "Unable to find aas type. Need to define types for aas_types" );
+	}
+
 	while( kv != NULL )
 	{
 		const idDict* settingsDict = gameEdit->FindEntityDefDict( kv->GetValue(), false );
