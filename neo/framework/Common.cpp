@@ -54,6 +54,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../sys/sys_savegame.h"
 
 
+
 #if defined( _DEBUG )
 	#define BUILD_DEBUG "-debug"
 #else
@@ -1691,7 +1692,6 @@ void idCommonLocal::CreateMainMenu()
 
 		// create main inside an "empty" game level load - so assets get
 		// purged automagically when we transition to a "real" map
-
 		game->Shell_CreateMenu( false );
 		game->Shell_Show( true );
 		game->Shell_SyncWithSession();

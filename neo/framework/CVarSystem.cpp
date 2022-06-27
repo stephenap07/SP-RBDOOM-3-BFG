@@ -29,10 +29,9 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #pragma hdrstop
 
+idCVar* idCVar::staticVars = NULL;
 
 extern idCVar net_allowCheats;
-
-idCVar* idCVar::staticVars = NULL;
 
 /*
 ===============================================================================
@@ -41,6 +40,7 @@ idCVar* idCVar::staticVars = NULL;
 
 ===============================================================================
 */
+
 class idInternalCVar : public idCVar
 {
 	friend class idCVarSystemLocal;

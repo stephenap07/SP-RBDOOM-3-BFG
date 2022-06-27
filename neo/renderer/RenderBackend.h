@@ -492,7 +492,7 @@ public:
 	drawSurf_t			testImageSurface;
 
 	float				slopeScaleBias;
-	int					depthBias;
+	float				depthBias;
 
 private:
 	uint64				glStateBits;

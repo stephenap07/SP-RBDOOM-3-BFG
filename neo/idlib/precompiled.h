@@ -99,7 +99,6 @@ const int MAX_EXPRESSION_REGISTERS = 4096;
 #elif defined(USE_VULKAN)
 	#include "../renderer/Vulkan/qvk.h"
 #else
-	// FIMXE remove GL with NVRHI
 	#include <GL/glew.h>
 #endif
 

@@ -4269,7 +4269,7 @@ void idCollisionModelManagerLocal::ListModels()
 idCollisionModelManagerLocal::BuildModels
 ================
 */
-void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
+void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile, bool ignoreOldCollisionFile )
 {
 	int i;
 	const idMapEntity* mapEnt;
@@ -4277,9 +4277,8 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 	idTimer timer;
 	timer.Start();
 
-	if( !LoadCollisionModelFile( mapFile->GetName(), mapFile->GetGeometryCRC() ) )
+	if( ignoreOldCollisionFile || !LoadCollisionModelFile( mapFile->GetName(), mapFile->GetGeometryCRC() ) )
 	{
-
 		if( !mapFile->GetNumEntities() )
 		{
 			return;
@@ -4299,8 +4298,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 				break;
 			}
 			models[numModels] = CollisionModelForMapEntity( mapEnt );
-
-			if( models[numModels] )
+			if( models[ numModels] )
 			{
 				numModels++;
 			}
@@ -4314,6 +4312,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 		WriteCollisionModelsToFile( mapFile->GetName(), 0, numModels, mapFile->GetGeometryCRC() );
 	}
 
+#ifdef USE_PHYSX
 	for( int n = 0; n < numModels; n++ )
 	{
 		if( models[n] )
@@ -4366,7 +4365,6 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 							winding.AddPoint( model->vertices[vertNum].p );
 						}
 
-#ifdef USE_PHYSX
 						if( indexes.Num( ) > 0 && indexes.Num() % 3 == 0 )
 						{
 							PxTriangleMeshDesc meshDesc;
@@ -4401,7 +4399,6 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 
 							gScene->addActor( *actor );
 						}
-#endif
 					}
 
 					if( node->planeType == -1 )
@@ -4422,6 +4419,7 @@ void idCollisionModelManagerLocal::BuildModels( const idMapFile* mapFile )
 			}
 		}
 	}
+#endif
 
 	timer.Stop();
 
@@ -4463,7 +4461,7 @@ void idCollisionModelManagerLocal::Preload( const char* mapName )
 			const preloadEntry_s& p = manifest.GetPreloadByIndex( i );
 			if( p.resType == PRELOAD_COLLISION )
 			{
-				LoadModel( p.resourceName );
+				LoadModel( p.resourceName, false );
 				numLoaded++;
 			}
 		}
@@ -4478,8 +4476,9 @@ void idCollisionModelManagerLocal::Preload( const char* mapName )
 idCollisionModelManagerLocal::LoadMap
 ================
 */
-void idCollisionModelManagerLocal::LoadMap( const idMapFile* mapFile )
+void idCollisionModelManagerLocal::LoadMap( const idMapFile* mapFile, bool ignoreOldCollisionFile )
 {
+
 	if( mapFile == NULL )
 	{
 		common->Error( "idCollisionModelManagerLocal::LoadMap: NULL mapFile" );
@@ -4525,7 +4524,7 @@ void idCollisionModelManagerLocal::LoadMap( const idMapFile* mapFile )
 	common->UpdateLevelLoadPacifier();
 
 	// build collision models
-	BuildModels( mapFile );
+	BuildModels( mapFile, ignoreOldCollisionFile );
 
 	common->UpdateLevelLoadPacifier();
 
@@ -4671,7 +4670,7 @@ bool idCollisionModelManagerLocal::GetModelPolygon( cmHandle_t model, int polygo
 idCollisionModelManagerLocal::LoadModel
 ==================
 */
-cmHandle_t idCollisionModelManagerLocal::LoadModel( const char* modelName )
+cmHandle_t idCollisionModelManagerLocal::LoadModel( const char* modelName, const bool precache )
 {
 	int handle;
 
@@ -4727,6 +4726,12 @@ cmHandle_t idCollisionModelManagerLocal::LoadModel( const char* modelName )
 		{
 			common->Warning( "idCollisionModelManagerLocal::LoadModel: collision file for '%s' contains different model", modelName );
 		}
+	}
+
+	// if only precaching .cm files do not waste memory converting render models
+	if( precache )
+	{
+		return 0;
 	}
 
 	// try to load a .ASE or .LWO model and convert it to a collision model
@@ -4908,7 +4913,7 @@ bool idCollisionModelManagerLocal::TrmFromModel( const char* modelName, idTraceM
 {
 	cmHandle_t handle;
 
-	handle = LoadModel( modelName );
+	handle = LoadModel( modelName, false );
 	if( !handle )
 	{
 		common->Printf( "idCollisionModelManagerLocal::TrmFromModel: model %s not found.\n", modelName );

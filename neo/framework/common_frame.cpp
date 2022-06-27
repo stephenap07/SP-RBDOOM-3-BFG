@@ -391,7 +391,6 @@ void idCommonLocal::Draw()
 			renderSystem->WriteDemoPics();
 			renderSystem->WriteEndFrame();
 		}
-
 	}
 	else
 	{
@@ -422,7 +421,7 @@ This is an out-of-sequence screen update, not the normal game rendering
 // DG: added possibility to *not* release mouse in UpdateScreen(), it fucks up the view angle for screenshots
 void idCommonLocal::UpdateScreen( bool captureToImage, bool releaseMouse )
 {
-	if( insideUpdateScreen )
+	if( insideUpdateScreen || com_shuttingDown )
 	{
 		return;
 	}

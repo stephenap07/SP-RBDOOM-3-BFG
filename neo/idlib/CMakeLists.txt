@@ -139,7 +139,7 @@ else()
 	
 	add_library(idlib ${ID_SOURCES_ALL} ${ID_INCLUDES_ALL})
 	if (USE_PRECOMPILED_HEADERS)
-	    add_dependencies(idlib precomp_header_idlib)
+	add_dependencies(idlib precomp_header_idlib)
 	endif()
 	
 endif()

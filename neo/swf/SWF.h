@@ -448,8 +448,8 @@ private:
 	// RB: debugging tools
 	swfRect_t		CalcRect( const idSWFSpriteInstance* sprite, const swfRenderState_t& renderState );
 	void			DrawRect( idRenderSystem* gui, const swfRect_t& rect, const idVec4& color );
-	int				DebugText( idRenderSystem* gui, float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style );
-	int				DebugText( idRenderSystem* gui, const char* text, float textScale, int textAlign, idVec4 color, const swfRect_t& rectDraw, bool wrap, int cursor = -1, bool calcOnly = false, idList<int>* breaks = NULL, int limit = 0 );
+	int				DrawText( idRenderSystem* gui, float x, float y, float scale, idVec4 color, const char* text, float adjust, int limit, int style );
+	int				DrawText( idRenderSystem* gui, const char* text, float textScale, int textAlign, idVec4 color, const swfRect_t& rectDraw, bool wrap, int cursor = -1, bool calcOnly = false, idList<int>* breaks = NULL, int limit = 0 );
 	// RB end
 
 	//----------------------------------
