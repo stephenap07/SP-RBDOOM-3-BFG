@@ -320,14 +320,11 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		changeState = true;
 	}
 
-#if 0
-	if( !currentScissor.Equals( stateScissor ) && r_useScissor.GetBool() )
+	if( !currentScissor.Equals( context.scissor ) && r_useScissor.GetBool() )
 	{
 		changeState = true;
-
-		stateScissor = currentScissor;
+		currentScissor = context.scissor;
 	}
-#endif
 
 	renderProgManager.CommitConstantBuffer( commandList );
 
@@ -353,13 +350,16 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 								  currentViewport.zmax };
 		state.viewport.addViewport( viewport );
 
-#if 0
-		if( !context.scissor.IsEmpty() )
+		if( !currentScissor.IsEmpty() && r_useScissor.GetBool() )
 		{
-			state.viewport.addScissorRect( nvrhi::Rect( context.scissor.x1, context.scissor.x2, context.scissor.y1, context.scissor.y2 ) );
+			nvrhi::Rect rect;
+			rect.minX = currentScissor.x1;
+			rect.maxX = currentScissor.x2;
+			rect.minY = currentScissor.y1;
+			rect.maxY = currentScissor.y2;
+			state.viewport.addScissorRect( rect );
 		}
 		else
-#endif
 		{
 			state.viewport.addScissorRect( nvrhi::Rect( viewport ) );
 		}
@@ -1090,10 +1090,11 @@ idRenderBackend::GL_Scissor
 */
 void idRenderBackend::GL_Scissor( int x /* left*/, int y /* bottom */, int w, int h )
 {
-	// TODO Check if this is right.
+	// Y is flipped. Y = top instead of bottom.
+	const int newY = renderSystem->GetHeight() - (h + y);
 	context.scissor.Clear();
-	context.scissor.AddPoint( x, y );
-	context.scissor.AddPoint( x + w, y + h );
+	context.scissor.AddPoint( x, newY );
+	context.scissor.AddPoint( x + w, newY + h );
 }
 
 /*
@@ -1103,9 +1104,11 @@ idRenderBackend::GL_Viewport
 */
 void idRenderBackend::GL_Viewport( int x /* left */, int y /* bottom */, int w, int h )
 {
+	// Y is flipped. Y = top instead of bottom.
+	const int newY = renderSystem->GetHeight() - (h + y);
 	currentViewport.Clear();
-	currentViewport.AddPoint( x, y );
-	currentViewport.AddPoint( x + w, y + h );
+	currentViewport.AddPoint( x, newY);
+	currentViewport.AddPoint( x + w, newY + h );
 }
 
 /*
