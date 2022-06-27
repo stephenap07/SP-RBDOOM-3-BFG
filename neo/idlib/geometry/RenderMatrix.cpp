@@ -56,7 +56,7 @@ If you have questions concerning this license or the applicable additional terms
 // RB: Vulkan requires the clip space Z is in the range [0, 1]
 // This change is especially important for all kinds of light bounding box -> clip space transformations so
 // the depth bounding tests clipping tests work properly
-#if defined( USE_VULKAN )
+#if defined( USE_VULKAN ) || defined ( USE_NVRHI )
 	#define CLIP_SPACE_D3D	1
 #endif
 

@@ -1527,12 +1527,20 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	// change the scissor if needed, it will be constant across all the surfaces lit by the light
 	if( r_useScissor.GetBool() )
 	{
-		GL_Scissor( viewDef->viewport.x1 + vLight->scissorRect.x1,
-					viewDef->viewport.y1 + vLight->scissorRect.y1,
-					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
-					vLight->scissorRect.y2 + 1 - vLight->scissorRect.y1 );
+#ifdef USE_NVRHI
+		// This fixes scissors for lights. Clip space assumes coordinate (0, 0) is
+		// on the bottom left. NVRHI uses top left.
+		int y1 = viewDef->viewport.GetHeight() - vLight->scissorRect.y1;
+		int y2 = viewDef->viewport.GetHeight() - vLight->scissorRect.y2;
+#else
+		int y1 = vLight->scissorRect.y1;
+		int y2 = vLight->scissorRect.y2;
+#endif
 
-		//currentScissor = vLight->scissorRect;
+		GL_Scissor( viewDef->viewport.x1 + vLight->scissorRect.x1,
+					viewDef->viewport.y1 + y1,
+					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
+					y2 + 1 - y1 );
 	}
 
 	// perform setup here that will be constant for all interactions
@@ -2636,8 +2644,6 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 						viewDef->viewport.y1 + drawSurf->scissorRect.y1,
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
-
-			//currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )
@@ -2740,8 +2746,6 @@ void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 					viewDef->viewport.y1 + vLight->scissorRect.y1,
 					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
 					vLight->scissorRect.y2 + 1 - vLight->scissorRect.y1 );
-
-		//currentScissor = vLight->scissorRect;
 	}
 
 	// clear stencil buffer to 0 (not drawable)
@@ -4428,8 +4432,6 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 									viewDef->viewport.y1 + rect.y1,
 									rect.x2 + 1 - rect.x1,
 									rect.y2 + 1 - rect.y1 );
-
-						//currentScissor = rect;
 					}
 					GL_State( GLS_DEFAULT );	// make sure stencil mask passes for the clear
 					GL_Clear( false, false, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
@@ -4645,8 +4647,6 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 						viewDef->viewport.y1 + surf->scissorRect.y1,
 						surf->scissorRect.x2 + 1 - surf->scissorRect.x1,
 						surf->scissorRect.y2 + 1 - surf->scissorRect.y1 );
-
-			//currentScissor = surf->scissorRect;
 		}
 
 		// get the expressions for conditionals / color / texcoords
@@ -5003,8 +5003,6 @@ void idRenderBackend::T_BlendLight( const drawSurf_t* drawSurfs, const viewLight
 						viewDef->viewport.y1 + drawSurf->scissorRect.y1,
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
-
-			//currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )
@@ -5132,8 +5130,6 @@ void idRenderBackend::T_BasicFog( const drawSurf_t* drawSurfs, const idPlane fog
 						viewDef->viewport.y1 + drawSurf->scissorRect.y1,
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
-
-			//currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )

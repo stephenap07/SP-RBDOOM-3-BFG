@@ -424,11 +424,11 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
 				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-															 currentJointBuffer,
-															 nvrhi::Format::UNKNOWN,
-															 nvrhi::BufferRange(
-																 currentJointOffset,
-																 sizeof( idVec4 ) * numBoneMatrices ) ),
+				currentJointBuffer,
+				nvrhi::Format::UNKNOWN,
+				nvrhi::BufferRange(
+					currentJointOffset,
+					sizeof( idVec4 ) * numBoneMatrices ) ),
 				nvrhi::BindingSetItem::Texture_SRV(
 					0, static_cast<nvrhi::ITexture*>( GetImageAt( 0 )->GetTextureID() ) )
 			};
@@ -462,11 +462,11 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
 				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-															 currentJointBuffer,
-															 nvrhi::Format::UNKNOWN,
-															 nvrhi::BufferRange(
-																 currentJointOffset,
-																 sizeof( idVec4 ) * numBoneMatrices ) ),
+				currentJointBuffer,
+				nvrhi::Format::UNKNOWN,
+				nvrhi::BufferRange(
+					currentJointOffset,
+					sizeof( idVec4 ) * numBoneMatrices ) ),
 			};
 		}
 		else
@@ -485,11 +485,11 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
 				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-															 currentJointBuffer,
-															 nvrhi::Format::UNKNOWN,
-															 nvrhi::BufferRange(
-																 currentJointOffset,
-																 sizeof( idVec4 ) * numBoneMatrices ) ),
+				currentJointBuffer,
+				nvrhi::Format::UNKNOWN,
+				nvrhi::BufferRange(
+					currentJointOffset,
+					sizeof( idVec4 ) * numBoneMatrices ) ),
 			};
 		}
 		else
@@ -508,11 +508,11 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
 				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-															 currentJointBuffer,
-															 nvrhi::Format::UNKNOWN,
-															 nvrhi::BufferRange(
-																 currentJointOffset,
-																 sizeof( idVec4 ) * numBoneMatrices ) ),
+				currentJointBuffer,
+				nvrhi::Format::UNKNOWN,
+				nvrhi::BufferRange(
+					currentJointOffset,
+					sizeof( idVec4 ) * numBoneMatrices ) ),
 				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
@@ -619,11 +619,11 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
 				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-															 currentJointBuffer,
-															 nvrhi::Format::UNKNOWN,
-															 nvrhi::BufferRange(
-																 currentJointOffset,
-																 sizeof( idVec4 ) * numBoneMatrices ) ),
+				currentJointBuffer,
+				nvrhi::Format::UNKNOWN,
+				nvrhi::BufferRange(
+					currentJointOffset,
+					sizeof( idVec4 ) * numBoneMatrices ) ),
 				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
@@ -676,11 +676,11 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
 				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-															 currentJointBuffer,
-															 nvrhi::Format::UNKNOWN,
-															 nvrhi::BufferRange(
-																 currentJointOffset,
-																 sizeof( idVec4 ) * numBoneMatrices ) ),
+				currentJointBuffer,
+				nvrhi::Format::UNKNOWN,
+				nvrhi::BufferRange(
+					currentJointOffset,
+					sizeof( idVec4 ) * numBoneMatrices ) ),
 				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
@@ -1104,7 +1104,7 @@ void idRenderBackend::GL_Viewport( int x /* left */, int y /* bottom */, int w, 
 {
 	// Y is flipped. Y = top instead of bottom.
 	currentViewport.Clear();
-	currentViewport.AddPoint( x, y);
+	currentViewport.AddPoint( x, y );
 	currentViewport.AddPoint( x + w, y + h );
 }
 
