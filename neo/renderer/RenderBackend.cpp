@@ -549,8 +549,6 @@ void idRenderBackend::ResetViewportAndScissorToDefaultCamera( const viewDef_t* _
 				viewDef->viewport.y1 + _viewDef->scissor.y1,
 				_viewDef->scissor.x2 + 1 - _viewDef->scissor.x1,
 				_viewDef->scissor.y2 + 1 - _viewDef->scissor.y1 );
-
-	currentScissor = viewDef->scissor;
 }
 // RB end
 
@@ -1527,14 +1525,14 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	}
 
 	// change the scissor if needed, it will be constant across all the surfaces lit by the light
-	if( !currentScissor.Equals( vLight->scissorRect ) && r_useScissor.GetBool() )
+	if( r_useScissor.GetBool() )
 	{
 		GL_Scissor( viewDef->viewport.x1 + vLight->scissorRect.x1,
 					viewDef->viewport.y1 + vLight->scissorRect.y1,
 					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
 					vLight->scissorRect.y2 + 1 - vLight->scissorRect.y1 );
 
-		currentScissor = vLight->scissorRect;
+		//currentScissor = vLight->scissorRect;
 	}
 
 	// perform setup here that will be constant for all interactions
@@ -2631,7 +2629,7 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 			continue;	// a job may have created an empty shadow volume
 		}
 
-		if( !currentScissor.Equals( drawSurf->scissorRect ) && r_useScissor.GetBool() )
+		if( r_useScissor.GetBool() )
 		{
 			// change the scissor
 			GL_Scissor( viewDef->viewport.x1 + drawSurf->scissorRect.x1,
@@ -2639,7 +2637,7 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
 
-			currentScissor = drawSurf->scissorRect;
+			//currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )
@@ -2736,14 +2734,14 @@ void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 	renderLog.OpenBlock( "Stencil Select", colorPink );
 
 	// enable the light scissor
-	if( !currentScissor.Equals( vLight->scissorRect ) && r_useScissor.GetBool() )
+	if( r_useScissor.GetBool() )
 	{
 		GL_Scissor( viewDef->viewport.x1 + vLight->scissorRect.x1,
 					viewDef->viewport.y1 + vLight->scissorRect.y1,
 					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
 					vLight->scissorRect.y2 + 1 - vLight->scissorRect.y1 );
 
-		currentScissor = vLight->scissorRect;
+		//currentScissor = vLight->scissorRect;
 	}
 
 	// clear stencil buffer to 0 (not drawable)
@@ -4424,14 +4422,14 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 					rect.x2 = ( vLight->scissorRect.x2 + 15 ) & ~15;
 					rect.y2 = ( vLight->scissorRect.y2 + 15 ) & ~15;
 
-					if( !currentScissor.Equals( rect ) && r_useScissor.GetBool() )
+					if( r_useScissor.GetBool() )
 					{
 						GL_Scissor( viewDef->viewport.x1 + rect.x1,
 									viewDef->viewport.y1 + rect.y1,
 									rect.x2 + 1 - rect.x1,
 									rect.y2 + 1 - rect.y1 );
 
-						currentScissor = rect;
+						//currentScissor = rect;
 					}
 					GL_State( GLS_DEFAULT );	// make sure stencil mask passes for the clear
 					GL_Clear( false, false, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
@@ -4641,14 +4639,14 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 		}
 
 		// change the scissor if needed
-		if( !currentScissor.Equals( surf->scissorRect ) && r_useScissor.GetBool() )
+		if( r_useScissor.GetBool() )
 		{
 			GL_Scissor( viewDef->viewport.x1 + surf->scissorRect.x1,
 						viewDef->viewport.y1 + surf->scissorRect.y1,
 						surf->scissorRect.x2 + 1 - surf->scissorRect.x1,
 						surf->scissorRect.y2 + 1 - surf->scissorRect.y1 );
 
-			currentScissor = surf->scissorRect;
+			//currentScissor = surf->scissorRect;
 		}
 
 		// get the expressions for conditionals / color / texcoords
@@ -4998,7 +4996,7 @@ void idRenderBackend::T_BlendLight( const drawSurf_t* drawSurfs, const viewLight
 			// temporarily jump over the scissor and draw so the gl error callback doesn't get hit
 		}
 
-		if( !currentScissor.Equals( drawSurf->scissorRect ) && r_useScissor.GetBool() )
+		if( r_useScissor.GetBool() )
 		{
 			// change the scissor
 			GL_Scissor( viewDef->viewport.x1 + drawSurf->scissorRect.x1,
@@ -5006,7 +5004,7 @@ void idRenderBackend::T_BlendLight( const drawSurf_t* drawSurfs, const viewLight
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
 
-			currentScissor = drawSurf->scissorRect;
+			//currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )
@@ -5127,7 +5125,7 @@ void idRenderBackend::T_BasicFog( const drawSurf_t* drawSurfs, const idPlane fog
 			// temporarily jump over the scissor and draw so the gl error callback doesn't get hit
 		}
 
-		if( !currentScissor.Equals( drawSurf->scissorRect ) && r_useScissor.GetBool() )
+		if( r_useScissor.GetBool() )
 		{
 			// change the scissor
 			GL_Scissor( viewDef->viewport.x1 + drawSurf->scissorRect.x1,
@@ -5135,7 +5133,7 @@ void idRenderBackend::T_BasicFog( const drawSurf_t* drawSurfs, const idPlane fog
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
 
-			currentScissor = drawSurf->scissorRect;
+			//currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )

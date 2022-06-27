@@ -320,10 +320,10 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		changeState = true;
 	}
 
-	if( !currentScissor.Equals( context.scissor ) && r_useScissor.GetBool() )
+	if( !currentScissor.Equals( stateScissor ) && r_useScissor.GetBool() )
 	{
+		stateScissor = currentScissor;
 		changeState = true;
-		currentScissor = context.scissor;
 	}
 
 	renderProgManager.CommitConstantBuffer( commandList );
@@ -1090,11 +1090,9 @@ idRenderBackend::GL_Scissor
 */
 void idRenderBackend::GL_Scissor( int x /* left*/, int y /* bottom */, int w, int h )
 {
-	// Y is flipped. Y = top instead of bottom.
-	const int newY = renderSystem->GetHeight() - (h + y);
-	context.scissor.Clear();
-	context.scissor.AddPoint( x, newY );
-	context.scissor.AddPoint( x + w, newY + h );
+	currentScissor.Clear();
+	currentScissor.AddPoint( x, y );
+	currentScissor.AddPoint( x + w, y + h );
 }
 
 /*
@@ -1105,10 +1103,9 @@ idRenderBackend::GL_Viewport
 void idRenderBackend::GL_Viewport( int x /* left */, int y /* bottom */, int w, int h )
 {
 	// Y is flipped. Y = top instead of bottom.
-	const int newY = renderSystem->GetHeight() - (h + y);
 	currentViewport.Clear();
-	currentViewport.AddPoint( x, newY);
-	currentViewport.AddPoint( x + w, newY + h );
+	currentViewport.AddPoint( x, y);
+	currentViewport.AddPoint( x + w, y + h );
 }
 
 /*

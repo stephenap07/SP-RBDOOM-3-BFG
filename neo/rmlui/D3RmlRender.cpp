@@ -331,7 +331,7 @@ void idRmlRender::SetScissorRegion( int x, int y, int width, int height )
 
 void idRmlRender::RenderClipMask()
 {
-	return;
+	//return;
 	// Usually, scissor regions are handled  with actual scissor render commands.
 	// We're using stencil masks to do the same thing because it works in worldspace a
 	// lot better than screen space scissor rects.
