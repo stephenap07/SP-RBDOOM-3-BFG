@@ -1527,20 +1527,10 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	// change the scissor if needed, it will be constant across all the surfaces lit by the light
 	if( r_useScissor.GetBool() )
 	{
-#ifdef USE_NVRHI
-		// This fixes scissors for lights. Clip space assumes coordinate (0, 0) is
-		// on the bottom left. NVRHI uses top left.
-		int y1 = viewDef->viewport.GetHeight() - vLight->scissorRect.y1;
-		int y2 = viewDef->viewport.GetHeight() - vLight->scissorRect.y2;
-#else
-		int y1 = vLight->scissorRect.y1;
-		int y2 = vLight->scissorRect.y2;
-#endif
-
 		GL_Scissor( viewDef->viewport.x1 + vLight->scissorRect.x1,
-					viewDef->viewport.y1 + y1,
+					viewDef->viewport.y1 + vLight->scissorRect.y1,
 					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
-					y2 + 1 - y1 );
+					vLight->scissorRect.y2 + 1 - vLight->scissorRect.y1 );
 	}
 
 	// perform setup here that will be constant for all interactions

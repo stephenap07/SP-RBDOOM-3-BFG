@@ -1102,7 +1102,6 @@ idRenderBackend::GL_Viewport
 */
 void idRenderBackend::GL_Viewport( int x /* left */, int y /* bottom */, int w, int h )
 {
-	// Y is flipped. Y = top instead of bottom.
 	currentViewport.Clear();
 	currentViewport.AddPoint( x, y );
 	currentViewport.AddPoint( x + w, y + h );
