@@ -30,7 +30,7 @@ public:
 	{
 	}
 
-	virtual ~EventHandlerOptions( ) = default;
+	~EventHandlerOptions( ) override = default;
 
-	void ProcessEvent( Rml::Event& _event, idLexer& src, idToken& token ) override;
+	void ProcessEvent( Rml::Event& event, idLexer& src, idToken& token ) override;
 };

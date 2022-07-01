@@ -598,6 +598,19 @@ idRenderMatrix implementation
 ================================================================================================
 */
 
+bool idRenderMatrix::operator==( const idRenderMatrix& rhs ) const
+{
+	for( int i = 0; i < 16; i++ )
+	{
+		if( m[i] != rhs.m[i] )
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 /*
 ========================
 idRenderMatrix::CreateFromOriginAxis

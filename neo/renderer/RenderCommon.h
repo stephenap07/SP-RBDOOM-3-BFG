@@ -34,6 +34,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "precompiled.h"
 
+#include "DynamicSky.h"
 #include "GLState.h"
 #include "ScreenRect.h"
 #include "Image.h"
@@ -853,22 +854,43 @@ enum vertexLayoutType_t
 
 enum bindingLayoutType_t
 {
+	// REGULAR AND SKINNED VERSIONS
 	BINDING_LAYOUT_DEFAULT,
 	BINDING_LAYOUT_DEFAULT_SKINNED,
+
 	BINDING_LAYOUT_CONSTANT_BUFFER_ONLY,
-	BINDING_LAYOUT_GBUFFER,
+	BINDING_LAYOUT_CONSTANT_BUFFER_ONLY_SKINNED,
+
+	//BINDING_LAYOUT_GBUFFER,
+	//BINDING_LAYOUT_GBUFFER_SKINNED,
+
 	BINDING_LAYOUT_AMBIENT_LIGHTING_IBL,
+	BINDING_LAYOUT_AMBIENT_LIGHTING_IBL_SKINNED,
+
+	//BINDING_LAYOUT_DRAW_SHADOWVOLUME, // TODO FIX or REMOVE?
+	//BINDING_LAYOUT_DRAW_SHADOWVOLUME_SKINNED,
+
+	BINDING_LAYOUT_DRAW_INTERACTION,
+	BINDING_LAYOUT_DRAW_INTERACTION_SKINNED,
+	BINDING_LAYOUT_DRAW_INTERACTION_SM,
+	BINDING_LAYOUT_DRAW_INTERACTION_SM_SKINNED,
+
+	BINDING_LAYOUT_FOG,
+	BINDING_LAYOUT_FOG_SKINNED,
+	BINDING_LAYOUT_BLENDLIGHT,
+	BINDING_LAYOUT_BLENDLIGHT_SKINNED,
+
+	BINDING_LAYOUT_NORMAL_CUBE,
+	BINDING_LAYOUT_NORMAL_CUBE_SKINNED,
+
+	// NO GPU SKINNING ANYMORE
+	BINDING_LAYOUT_POST_PROCESS_INGAME,
+	BINDING_LAYOUT_POST_PROCESS_FINAL,
+
 	BINDING_LAYOUT_BLIT,
 	BINDING_LAYOUT_DRAW_AO,
 	BINDING_LAYOUT_DRAW_AO1,
-	BINDING_LAYOUT_DRAW_SHADOWVOLUME,
-	BINDING_LAYOUT_DRAW_INTERACTION,
-	BINDING_LAYOUT_DRAW_INTERACTION_SM,
-	BINDING_LAYOUT_DRAW_FOG,
-	BINDING_LAYOUT_POST_PROCESS_INGAME,
-	BINDING_LAYOUT_POST_PROCESS_FINAL,
-	BINDING_LAYOUT_NORMAL_CUBE,
-	BINDING_LAYOUT_BLENDLIGHT,
+
 	BINDING_LAYOUT_BINK_VIDEO,
 
 	// NVRHI render passes specific
@@ -878,6 +900,8 @@ enum bindingLayoutType_t
 	BINDING_LAYOUT_TONEMAP,
 	BINDING_LAYOUT_HISTOGRAM,
 	BINDING_LAYOUT_EXPOSURE,
+
+	BINDING_LAYOUT_SKY,
 
 	NUM_BINDING_LAYOUTS
 };
@@ -1094,6 +1118,8 @@ public:
 
 	idList<NamedTrueTypeHandle, TAG_FONT>	fontFaces;
 	idList<NewFontData, TAG_FONT>			newFonts;
+
+	DynamicSky								dynamicSky;
 	// SP End
 
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
@@ -1104,6 +1130,7 @@ public:
 	srfTriangles_t* 		zeroOneCubeTriangles;
 	srfTriangles_t* 		zeroOneSphereTriangles;
 	srfTriangles_t* 		testImageTriangles;
+	srfTriangles_t*			skyTriangles;
 
 	// these are allocated at buffer swap time, but
 	// the back end should only use the ones in the backEnd stucture,
@@ -1112,6 +1139,7 @@ public:
 	drawSurf_t				zeroOneCubeSurface_;
 	drawSurf_t				zeroOneSphereSurface_;
 	drawSurf_t				testImageSurface_;
+	drawSurf_t				skySurface_;
 
 	idParallelJobList* 		frontEndJobList;
 
@@ -1222,6 +1250,7 @@ extern idCVar r_skipDiffuse;				// use black for diffuse
 extern idCVar r_skipDecals;					// skip decal surfaces
 extern idCVar r_skipOverlays;				// skip overlay surfaces
 extern idCVar r_skipShadows;				// disable shadows
+extern idCVar r_skipSky;					// disable sky rendering
 
 extern idCVar r_ignoreGLErrors;
 

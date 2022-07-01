@@ -2,8 +2,8 @@
 #define __GUI_RMLSHELL_H__
 
 #ifndef __TYPEINFOGEN__
-	#include "../../renderer/RenderCommon.h"
-	#include "RmlUi/Core.h"
+#include "../../renderer/RenderCommon.h"
+#include "RmlUi/Core.h"
 #endif
 
 #include <vector>
@@ -12,8 +12,8 @@ class RmlUserInterfaceLocal;
 
 namespace Rml
 {
-class EventListenerInstancer;
-class ElementDocument;
+	class EventListenerInstancer;
+	class ElementDocument;
 }
 
 enum class ShellState : int
@@ -45,90 +45,85 @@ enum class ShellScreen : int
 class UI_Shell
 {
 public:
-
 	UI_Shell();
 
 	~UI_Shell();
 
-	bool					Init( const char* filename, idSoundWorld* sw );
+	bool Init( const char* filename, idSoundWorld* sw );
 
 	// Called every frame.
-	void					Update( );
+	void Update();
 
-	void					HandleScreenChange( );
+	void HandleScreenChange();
 
-	void					HandleStateChange( );
+	void HandleStateChange();
 
-	void					SetState( ShellState _nextState );
+	void SetState( ShellState _nextState );
 
-	void					SetupDataBinding( );
+	void SetupDataBinding();
 
-	void					ActivateMenu( bool show );
+	void ActivateMenu( bool show );
 
-	void					SetNextScreen( ShellScreen _nextScreen );
+	void SetNextScreen( ShellScreen _nextScreen );
 
-	void					SetNextScreen( const char* nextScreen );
+	void SetNextScreen( const char* nextScreen );
 
-	void					ShowScreen( const char* screen );
+	void ShowScreen( const char* screen );
 
-	void					HideScreen( const char* screen );
+	void HideScreen( const char* screen );
 
-	void					UpdateSavedGames( );
+	void UpdateSavedGames();
 
-	int						FindVidModeIndex( int windowSizeIndex, int displayIndex ) const;
+	int FindVidModeIndex( int windowSizeIndex, int displayIndex ) const;
 
-	RmlUserInterface*		Ui()
+	RmlUserInterface* Ui()
 	{
 		return ui;
 	}
 
-	void					SetGameCompleted( bool completed )
+	void SetGameCompleted( bool completed )
 	{
 		gameComplete = completed;
 	}
 
-	bool					GetGameComplete( )
+	bool GetGameComplete()
 	{
 		return gameComplete;
 	}
 
-	void					SetInGame( bool _inGame )
+	void SetInGame( bool _inGame )
 	{
 		inGame = _inGame;
 	}
 
-	bool					InGame( )
+	bool InGame()
 	{
 		return inGame;
 	}
 
-	bool					IsPausingGame( );
+	bool IsPausingGame();
 
-	ShellState				State( ) const
+	ShellState State() const
 	{
 		return state;
 	}
 
 private:
-
 	// The container of the ui.
-	RmlUserInterface*			ui;
-	idSoundWorld*				soundWorld;
+	RmlUserInterface*		ui;
+	idSoundWorld*			soundWorld;
 
-	ShellState					nextState;
-	ShellState					state;
+	ShellState				nextState;
+	ShellState				state;
 
-	ShellScreen					activeScreen;
-	ShellScreen					nextScreen;
+	ShellScreen				activeScreen;
+	ShellScreen				nextScreen;
 
-	idStr						nextScreenName;
+	idStr					nextScreenName;
 
-	bool						isInitialized;
-	bool						gameComplete;
-	bool						inGame;
-
-	Rml::DataModelHandle		vidModeModel;
-	std::vector<vidMode_t>		modeList;
+	bool					isInitialized;
+	bool					gameComplete;
+	bool					inGame;
 };
 
 #endif

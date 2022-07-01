@@ -30,7 +30,6 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __LIST_H__
 #define __LIST_H__
 
-#include <new>
 #include <initializer_list>
 
 /*

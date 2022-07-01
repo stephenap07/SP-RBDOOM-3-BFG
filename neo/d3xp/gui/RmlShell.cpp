@@ -37,12 +37,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../Game_local.h"
 
 #include "rmlui/RmlUserInterfaceLocal.h"
-#include "rmlui/GlobalRmlEventListener.h"
 #include "rmlui/RmlEventHandler.h"
-
-#include "RmlUi/Core/EventListener.h"
-#include "RmlUi/Core/EventListenerInstancer.h"
-#include "RmlUi/Core/TransformPrimitive.h"
 
 // For some reason, rml relies on these container types. It uses value_type.
 
@@ -53,16 +48,16 @@ static RmlGameEventHandler* baseEventHandler = nullptr;
 
 // UI Code
 
-UI_Shell::UI_Shell( )
+UI_Shell::UI_Shell()
 	: ui( nullptr )
-	, soundWorld( nullptr )
-	, nextState( ShellState::WAITING )
-	, state( ShellState::WAITING )
-	, activeScreen( ShellScreen::START )
-	, nextScreen( ShellScreen::START )
-	, gameComplete( false )
-	, inGame( false )
-	, isInitialized( false )
+	  , soundWorld( nullptr )
+	  , nextState( ShellState::WAITING )
+	  , state( ShellState::WAITING )
+	  , activeScreen( ShellScreen::START )
+	  , nextScreen( ShellScreen::START )
+	  , isInitialized( false )
+	  , gameComplete( false )
+	  , inGame( false )
 {
 	if( !eventHandlerOptions )
 	{
@@ -116,33 +111,29 @@ bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 struct WindowSizePair
 {
 	int width, height;
-	bool operator==( const WindowSizePair& aRight ) const
-	{
-		return width == aRight.width && height == aRight.height;
-	}
 };
 
-struct ShellOptions
+inline bool operator==(const WindowSizePair& lhs, const WindowSizePair& rhs)
 {
-	idList<vidMode_t> vidModes;
-	idList<WindowSizePair> windowSizes;
-	idList<int> displayHzs;
+	return lhs.width == rhs.width && lhs.height == rhs.height;
+}
 
-	int windowMode;
+class ShellOptions
+{
+public:
 
 	void Init()
 	{
 		vidModes.Clear();
-		idList<vidMode_t> tempModeList;
-		R_GetModeListForDisplay( 0, tempModeList );
-		for( int i = 0; i < tempModeList.Num(); i++ )
+		R_GetModeListForDisplay( 0, vidModes );
+		for( int i = 0; i < vidModes.Num(); i++ )
 		{
-			vidModes.Append( tempModeList[i] );
-			windowSizes.AddUnique( { tempModeList[i].width, tempModeList[i].height } );
-			displayHzs.AddUnique( tempModeList[i].displayHz );
+			windowSizes.AddUnique( { vidModes[i].width, vidModes[i].height } );
+			displayHzs.AddUnique( vidModes[i].displayHz );
 		}
 
 		windowMode = r_fullscreen.GetInteger();
+		FindLocalIndexes( windowSize, displayHz );
 	}
 
 	int FindVidModeIndex( const int windowSizeIndex, const int displayIndex ) const
@@ -153,9 +144,7 @@ struct ShellOptions
 
 		for( int i = 0; i < vidModes.Num(); i++ )
 		{
-			if( vidModes[i].width == width &&
-					vidModes[i].height == height &&
-					vidModes[i].displayHz == di )
+			if( vidModes[i].width == width && vidModes[i].height == height && vidModes[i].displayHz == di )
 			{
 				return i;
 			}
@@ -164,15 +153,55 @@ struct ShellOptions
 		return -1;
 	}
 
-} shellOptions;
+	void FindLocalIndexes( int& windowSizeIndex, int& displayIndex ) const
+	{
+		const int vidModeNum = r_vidMode.GetInteger();
 
-void UI_Shell::Update( )
+		if( vidModeNum > vidModes.Num() || vidModeNum < 0 )
+		{
+			common->FatalError( "Invalid vidMode set %d", vidModeNum );
+			return;
+		}
+
+		const auto vidMode = vidModes[vidModeNum];
+		for( int i = 0; i < windowSizes.Num(); i++ )
+		{
+			if( vidMode.width == windowSizes[i].width &&
+				vidMode.height == windowSizes[i].height )
+			{
+				windowSizeIndex = i;
+				break;
+			}
+		}
+
+		for( int i = 0; i < displayHzs.Num(); i++ )
+		{
+			if( vidMode.displayHz == displayHzs[i] )
+			{
+				displayIndex = i;
+				break;
+			}
+		}
+	}
+
+	idList<vidMode_t>		vidModes;		//!< Available video modes queried from the system.
+	idList<WindowSizePair>	windowSizes;	//!< Locally indexed available window sizes.
+	idList<int>				displayHzs;		//!< Locally indexed available display hz.
+
+	int						windowMode;		//!< The current selected video mode (fullscreen, windowed, windowed borderless, etc..).
+	int						displayHz;		//!< The current selected display refresh rate.
+	int						windowSize;		//!< The current selected window size.
+};
+
+ShellOptions shellOptions;
+
+void UI_Shell::Update()
 {
-	HandleStateChange( );
+	HandleStateChange();
 
-	HandleScreenChange( );
+	HandleScreenChange();
 
-	ui->Redraw( Sys_Milliseconds( ) / 1000.0f );
+	ui->Redraw( Sys_Milliseconds() / 1000.0f );
 }
 
 void UI_Shell::HandleStateChange( )
@@ -238,7 +267,7 @@ void UI_Shell::SetState( ShellState _nextState )
 	nextState = _nextState;
 }
 
-void UI_Shell::SetupDataBinding( )
+void UI_Shell::SetupDataBinding()
 {
 	if( ui->IsDocumentOpen( "guis/rml/shell/options.rml" ) )
 	{
@@ -246,36 +275,37 @@ void UI_Shell::SetupDataBinding( )
 		return;
 	}
 
-	shellOptions.Init( );
+	shellOptions.Init();
 
-	Rml::DataModelConstructor constructor = ui->Context( )->CreateDataModel( "options" );
+	Rml::DataModelConstructor constructor = ui->Context()->CreateDataModel( "options" );
 
 	if( !constructor )
 	{
 		return;
 	}
 
-	if( auto vidModeHandle = constructor.RegisterStruct<WindowSizePair>( ) )
+	if( auto vidModeHandle = constructor.RegisterStruct<WindowSizePair>() )
 	{
 		vidModeHandle.RegisterMember( "width", &WindowSizePair::width );
 		vidModeHandle.RegisterMember( "height", &WindowSizePair::height );
 	}
 
-	constructor.RegisterArray<idList<WindowSizePair>>( );
+	constructor.RegisterArray<idList<WindowSizePair>>();
+	constructor.Bind( "currentWindowSize", &shellOptions.windowSize );
+	constructor.Bind( "currentDisplayHz", &shellOptions.displayHz );
 	constructor.Bind( "windowSizes", &shellOptions.windowSizes );
-	constructor.RegisterArray<idList<int>>();
+	constructor.RegisterArray<idList<int> >();
 	constructor.Bind( "displayHzs", &shellOptions.displayHzs );
-
-	vidModeModel = constructor.GetModelHandle( );
 }
 
-void UI_Shell::ActivateMenu( bool show )
+void UI_Shell::ActivateMenu( const bool show )
 {
 	if( show && ui && ui->IsActive( ) )
 	{
 		return;
 	}
-	else if( !show && ui && !ui->IsActive( ) )
+
+	if( !show && ui && !ui->IsActive( ) )
 	{
 		return;
 	}
@@ -303,7 +333,7 @@ void UI_Shell::ActivateMenu( bool show )
 	{
 		if( !inGame )
 		{
-			//PlaySound( GUI_SOUND_MUSIC );
+			//common->PlaySound( GUI_SOUND_MUSIC );
 		}
 	}
 	else
@@ -312,7 +342,7 @@ void UI_Shell::ActivateMenu( bool show )
 		activeScreen = ShellScreen::START;
 		nextState = ShellState::START;
 		state = ShellState::START;
-		common->Dialog( ).ClearDialog( GDM_LEAVE_LOBBY_RET_NEW_PARTY );
+		common->Dialog().ClearDialog( GDM_LEAVE_LOBBY_RET_NEW_PARTY );
 	}
 }
 
@@ -331,7 +361,7 @@ void UI_Shell::ShowScreen( const char* screen )
 	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", screen ) );
 	if( doc )
 	{
-		doc->Show( );
+		doc->Show();
 	}
 }
 
@@ -340,11 +370,11 @@ void UI_Shell::HideScreen( const char* screen )
 	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", screen ) );
 	if( doc )
 	{
-		doc->Hide( );
+		doc->Hide();
 	}
 }
 
-void UI_Shell::UpdateSavedGames( )
+void UI_Shell::UpdateSavedGames()
 {
 }
 
@@ -353,7 +383,7 @@ int UI_Shell::FindVidModeIndex( int windowSizeIndex, int displayIndex ) const
 	return shellOptions.FindVidModeIndex( windowSizeIndex, displayIndex );
 }
 
-bool UI_Shell::IsPausingGame( )
+bool UI_Shell::IsPausingGame()
 {
-	return ui->IsPausingGame( );
+	return ui->IsPausingGame();
 }

@@ -392,6 +392,7 @@ public:
 
 	static float				Pow( float x, float y );	// x raised to the power y with 32 bits precision
 	static float				Pow16( float x, float y );	// x raised to the power y with 16 bits precision
+	static float				Mod( float a, float b );
 
 	static float				Exp( float f );				// e raised to the power f with 32 bits precision
 	static float				Exp16( float f );			// e raised to the power f with 16 bits precision
@@ -1021,6 +1022,16 @@ idMath::Pow16
 ID_INLINE float idMath::Pow16( float x, float y )
 {
 	return Exp16( y * Log16( x ) );
+}
+
+/*
+========================
+idMath::Mod
+========================
+*/
+ID_INLINE float idMath::Mod(float a, float b)
+{
+	return a - b * Floor(a / b);
 }
 
 /*

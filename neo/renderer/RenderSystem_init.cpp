@@ -162,6 +162,7 @@ idCVar r_skipSubviews( "r_skipSubviews", "0", CVAR_RENDERER | CVAR_INTEGER, "1 =
 idCVar r_skipGuiShaders( "r_skipGuiShaders", "0", CVAR_RENDERER | CVAR_INTEGER, "1 = skip all gui elements on surfaces, 2 = skip drawing but still handle events, 3 = draw but skip events", 0, 3, idCmdSystem::ArgCompletion_Integer<0, 3> );
 idCVar r_skipParticles( "r_skipParticles", "0", CVAR_RENDERER | CVAR_INTEGER, "1 = skip all particle systems", 0, 1, idCmdSystem::ArgCompletion_Integer<0, 1> );
 idCVar r_skipShadows( "r_skipShadows", "0", CVAR_RENDERER | CVAR_BOOL  | CVAR_ARCHIVE, "disable shadows" );
+idCVar r_skipSky( "r_skipSky", "0", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "disable procedural sky" );
 
 idCVar r_useLightPortalCulling( "r_useLightPortalCulling", "1", CVAR_RENDERER | CVAR_INTEGER, "0 = none, 1 = cull frustum corners to plane, 2 = exact clip the frustum faces", 0, 2, idCmdSystem::ArgCompletion_Integer<0, 2> );
 idCVar r_useLightAreaCulling( "r_useLightAreaCulling", "1", CVAR_RENDERER | CVAR_BOOL, "0 = off, 1 = on" );
@@ -1773,6 +1774,11 @@ void idRenderSystemLocal::Clear()
 		testImageTriangles = NULL;
 	}
 
+	if( skyTriangles )
+	{
+		skyTriangles = nullptr;
+	}
+
 	frontEndJobList = NULL;
 
 	// RB
@@ -2154,8 +2160,15 @@ void idRenderSystemLocal::Init()
 		testImageTriangles = R_MakeTestImageTriangles();
 	}
 
+	dynamicSky.Init( deviceManager->GetDevice(), 32, 32 );
+
+	if( !skyTriangles )
+	{
+		skyTriangles = dynamicSky.Triangles();
+	}
+
 	frontEndJobList = parallelJobManager->AllocJobList( JOBLIST_RENDERER_FRONTEND, JOBLIST_PRIORITY_MEDIUM, 2048, 0, NULL );
-	envprobeJobList = parallelJobManager->AllocJobList( JOBLIST_UTILITY, JOBLIST_PRIORITY_MEDIUM, 16384, 0, NULL ); // RB
+	envprobeJobList = parallelJobManager->AllocJobList( JOBLIST_UTILITY, JOBLIST_PRIORITY_MEDIUM, 2048, 0, NULL ); // RB
 
 	bInitialized = true;
 

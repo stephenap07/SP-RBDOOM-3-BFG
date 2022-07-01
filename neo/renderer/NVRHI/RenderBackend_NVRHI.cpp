@@ -198,7 +198,9 @@ idRenderBackend::DrawElementsWithCounters
 */
 void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 {
-	// Get vertex buffer
+	//
+	// get vertex buffer
+	//
 	const vertCacheHandle_t vbHandle = surf->ambientCache;
 	idVertexBuffer* vertexBuffer;
 	if( vertexCache.CacheIsStatic( vbHandle ) )
@@ -230,7 +232,9 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		changeState = true;
 	}
 
-	// Get index buffer
+	//
+	// get index buffer
+	//
 	const vertCacheHandle_t ibHandle = surf->indexCache;
 	idIndexBuffer* indexBuffer;
 	if( vertexCache.CacheIsStatic( ibHandle ) )
@@ -260,9 +264,30 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		changeState = true;
 	}
 
+	//
+	// get GPU Skinning joint buffer
+	//
 	const vertCacheHandle_t jointHandle = surf->jointCache;
 	currentJointBuffer = nullptr;
 	currentJointOffset = 0;
+
+#if 0
+	if( jointHandle )
+	{
+		//if( !verify( renderProgManager.ShaderUsesJoints() ) )
+		if( !renderProgManager.ShaderUsesJoints() )
+		{
+			return;
+		}
+	}
+	else
+	{
+		if( !verify( !renderProgManager.ShaderUsesJoints() || renderProgManager.ShaderHasOptionalSkinning() ) )
+		{
+			return;
+		}
+	}
+#endif
 
 	if( jointHandle )
 	{
@@ -287,6 +312,9 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		currentJointOffset = static_cast<uint>( jointHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 	}
 
+	//
+	// set up matching binding layout
+	//
 	const int bindingLayoutType = renderProgManager.BindingLayoutType();
 
 	idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>* layouts
@@ -328,6 +356,9 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 
 	renderProgManager.CommitConstantBuffer( commandList );
 
+	//
+	// create new graphics state if necessary
+	//
 	if( changeState )
 	{
 		nvrhi::GraphicsState state;
@@ -367,13 +398,15 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		commandList->setGraphicsState( state );
 	}
 
+	//
+	// draw command
+	//
 	nvrhi::DrawArguments args;
 	args.startVertexLocation = currentVertexOffset / sizeof( idDrawVert );
 	args.startIndexLocation = currentIndexOffset / sizeof( triIndex_t );
 	args.vertexCount = surf->numIndexes;
 	commandList->drawIndexed( args );
 
-	// RB: added stats
 	pc.c_drawElements++;
 	pc.c_drawIndexes += surf->numIndexes;
 }
@@ -395,25 +428,35 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() )
 			};
 		}
 		else
 		{
 			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
-			desc[0].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
 		}
 
 		if( desc[1].bindings.empty() )
 		{
 			desc[1].bindings =
 			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
 				nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) )
 			};
 		}
 		else
 		{
-			desc[1].bindings[0].resourceHandle = ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache );
+			desc[2].bindings[0].resourceHandle = ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache );
 		}
 	}
 	else if( type == BINDING_LAYOUT_DEFAULT_SKINNED )
@@ -423,14 +466,7 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-				currentJointBuffer,
-				nvrhi::Format::UNKNOWN,
-				nvrhi::BufferRange(
-					currentJointOffset,
-					sizeof( idVec4 ) * numBoneMatrices ) ),
-				nvrhi::BindingSetItem::Texture_SRV(
-					0, static_cast<nvrhi::ITexture*>( GetImageAt( 0 )->GetTextureID() ) )
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
 			};
 		}
 		else
@@ -438,20 +474,31 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			auto& bindings = desc[0].bindings;
 			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
 			bindings[1].resourceHandle = currentJointBuffer;
-			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 ) * numBoneMatrices };
-			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
 		}
 
 		if( desc[1].bindings.empty() )
 		{
 			desc[1].bindings =
 			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
 				nvrhi::BindingSetItem::Sampler( 0, ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache ) )
 			};
 		}
 		else
 		{
-			desc[1].bindings[0].resourceHandle = ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache );
+			desc[2].bindings[0].resourceHandle = ( nvrhi::ISampler* )GetImageAt( 0 )->GetSampler( samplerCache );
 		}
 	}
 	else if( type == BINDING_LAYOUT_CONSTANT_BUFFER_ONLY )
@@ -461,12 +508,21 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-				currentJointBuffer,
-				nvrhi::Format::UNKNOWN,
-				nvrhi::BufferRange(
-					currentJointOffset,
-					sizeof( idVec4 ) * numBoneMatrices ) ),
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+		}
+	}
+	else if( type == BINDING_LAYOUT_CONSTANT_BUFFER_ONLY_SKINNED )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
 			};
 		}
 		else
@@ -474,9 +530,10 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			auto& bindings = desc[0].bindings;
 			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
 			bindings[1].resourceHandle = currentJointBuffer;
-			bindings[1].range = { currentJointOffset, sizeof( idVec4 ) * numBoneMatrices };
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
 		}
 	}
+	/*
 	else if( type == BINDING_LAYOUT_GBUFFER )
 	{
 		if( desc[0].bindings.empty() )
@@ -484,22 +541,14 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-				currentJointBuffer,
-				nvrhi::Format::UNKNOWN,
-				nvrhi::BufferRange(
-					currentJointOffset,
-					sizeof( idVec4 ) * numBoneMatrices ) ),
 			};
 		}
 		else
 		{
-			auto& bindings = desc[0].bindings;
-			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
-			bindings[1].resourceHandle = currentJointBuffer;
-			bindings[1].range = { currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
 		}
 	}
+	*/
 	else if( type == BINDING_LAYOUT_AMBIENT_LIGHTING_IBL )
 	{
 		if( desc[0].bindings.empty() )
@@ -507,12 +556,17 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-				currentJointBuffer,
-				nvrhi::Format::UNKNOWN,
-				nvrhi::BufferRange(
-					currentJointOffset,
-					sizeof( idVec4 ) * numBoneMatrices ) ),
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
 				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
@@ -520,18 +574,14 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			auto& bindings = desc[0].bindings;
-			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
-			bindings[1].resourceHandle = currentJointBuffer;
-			bindings[1].range = { currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
-			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
-			bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
-			bindings[4].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			desc[1].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			desc[1].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
 		}
 
-		if( desc[1].bindings.empty() )
+		if( desc[2].bindings.empty() )
 		{
-			desc[1].bindings =
+			desc[2].bindings =
 			{
 				nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() ),
@@ -543,17 +593,17 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
-			desc[1].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
-			desc[1].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID();
-			desc[1].bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID();
-			desc[1].bindings[4].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID();
-			desc[1].bindings[5].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID();
+			desc[2].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
+			desc[2].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
+			desc[2].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID();
+			desc[2].bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID();
+			desc[2].bindings[4].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID();
+			desc[2].bindings[5].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID();
 		}
 
-		if( desc[2].bindings.empty() )
+		if( desc[3].bindings.empty() )
 		{
-			desc[2].bindings =
+			desc[3].bindings =
 			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
 				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearClampSampler )
@@ -561,8 +611,78 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			desc[2].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
-			desc[2].bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
+			desc[3].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
+			desc[3].bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_AMBIENT_LIGHTING_IBL_SKINNED )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[0].bindings;
+			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			bindings[1].resourceHandle = currentJointBuffer;
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			desc[1].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			desc[1].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 7, ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 8, ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 9, ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 10, ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[2].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
+			desc[2].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
+			desc[2].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 7 )->GetTextureID();
+			desc[2].bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 8 )->GetTextureID();
+			desc[2].bindings[4].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 9 )->GetTextureID();
+			desc[2].bindings[5].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 10 )->GetTextureID();
+		}
+
+		if( desc[3].bindings.empty() )
+		{
+			desc[3].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
+				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearClampSampler )
+			};
+		}
+		else
+		{
+			desc[3].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
+			desc[3].bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
 		}
 	}
 	else if( type == BINDING_LAYOUT_DRAW_AO )
@@ -597,8 +717,9 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[1].bindings[0] = nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_PointWrapSampler );
 		}
 	}
-	else if( type == BINDING_LAYOUT_DRAW_SHADOWVOLUME )
+	else if( type == BINDING_LAYOUT_DRAW_INTERACTION )
 	{
+		// renderparms: 0
 		if( desc[0].bindings.empty() )
 		{
 			desc[0].bindings =
@@ -610,20 +731,12 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		{
 			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
 		}
-	}
-	else if( type == BINDING_LAYOUT_DRAW_INTERACTION )
-	{
-		if( desc[0].bindings.empty() )
+
+		// materials: 1
+		if( desc[1].bindings.empty() )
 		{
-			desc[0].bindings =
+			desc[1].bindings =
 			{
-				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-				currentJointBuffer,
-				nvrhi::Format::UNKNOWN,
-				nvrhi::BufferRange(
-					currentJointOffset,
-					sizeof( idVec4 ) * numBoneMatrices ) ),
 				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
@@ -631,18 +744,15 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			auto& bindings = desc[0].bindings;
-			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
-			bindings[1].resourceHandle = currentJointBuffer;
-			bindings[1].range = { currentJointOffset, sizeof( idVec4 ) * numBoneMatrices };
-			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
-			bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
-			bindings[4].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			desc[1].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			desc[1].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
 		}
 
-		if( desc[1].bindings.empty() )
+		// light projection: 2
+		if( desc[2].bindings.empty() )
 		{
-			desc[1].bindings =
+			desc[2].bindings =
 			{
 				nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() )
@@ -650,13 +760,14 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
-			desc[1].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
+			desc[2].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
+			desc[2].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
 		}
 
-		if( desc[2].bindings.empty() )
+		// samplers: 3
+		if( desc[3].bindings.empty() )
 		{
-			desc[2].bindings =
+			desc[3].bindings =
 			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
 				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearBorderSampler )
@@ -664,26 +775,19 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			desc[2].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
-			desc[2].bindings[1].resourceHandle = commonPasses.m_LinearBorderSampler;
+			desc[3].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
+			desc[3].bindings[1].resourceHandle = commonPasses.m_LinearBorderSampler;
 		}
 	}
-	else if( type == BINDING_LAYOUT_DRAW_INTERACTION_SM )
+	else if( type == BINDING_LAYOUT_DRAW_INTERACTION_SKINNED )
 	{
+		// renderparms / skinning joints: 0
 		if( desc[0].bindings.empty() )
 		{
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11,
-				currentJointBuffer,
-				nvrhi::Format::UNKNOWN,
-				nvrhi::BufferRange(
-					currentJointOffset,
-					sizeof( idVec4 ) * numBoneMatrices ) ),
-				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
-				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
-				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
 			};
 		}
 		else
@@ -691,15 +795,93 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			auto& bindings = desc[0].bindings;
 			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
 			bindings[1].resourceHandle = currentJointBuffer;
-			bindings[1].range = { currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
-			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
-			bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
-			bindings[4].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
 		}
 
+		// materials: 1
 		if( desc[1].bindings.empty() )
 		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[1].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			desc[1].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			desc[1].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+		}
+
+		// light projection: 2
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			desc[2].bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
+			desc[2].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
+		}
+
+		// samplers: 3
+		if( desc[3].bindings.empty() )
+		{
+			desc[3].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
+				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearBorderSampler )
+			};
+		}
+		else
+		{
+			desc[3].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
+			desc[3].bindings[1].resourceHandle = commonPasses.m_LinearBorderSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_DRAW_INTERACTION_SM )
+	{
+		// renderparms: 0
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+		}
+
+		// materials: 1
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
+			};
+		}
+		else
+		{
 			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+		}
+
+		// light projection: 2
+		if( desc[2].bindings.empty() )
+		{
+			auto& bindings = desc[2].bindings;
 			bindings =
 			{
 				nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ),
@@ -710,16 +892,17 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			auto& bindings = desc[1].bindings;
+			auto& bindings = desc[2].bindings;
 			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
 			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
 			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 5 )->GetTextureID();
 			bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 6 )->GetTextureID();
 		}
 
-		if( desc[2].bindings.empty() )
+		// samplers: 3
+		if( desc[3].bindings.empty() )
 		{
-			auto& bindings = desc[2].bindings;
+			auto& bindings = desc[3].bindings;
 			bindings =
 			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
@@ -730,34 +913,124 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			auto& bindings = desc[2].bindings;
+			auto& bindings = desc[3].bindings;
 			bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
 			bindings[1].resourceHandle = commonPasses.m_LinearBorderSampler;
 			bindings[2].resourceHandle = commonPasses.m_LinearClampCompareSampler;
 			bindings[3].resourceHandle = commonPasses.m_PointWrapSampler;
 		}
 	}
-	else if( type == BINDING_LAYOUT_DRAW_FOG )
+	else if( type == BINDING_LAYOUT_DRAW_INTERACTION_SM_SKINNED )
+	{
+		// renderparms: 0
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[0].bindings;
+			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			bindings[1].resourceHandle = currentJointBuffer;
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
+		}
+
+		// materials: 1
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 2, ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 2 )->GetTextureID();
+		}
+
+		// light projection: 2
+		if( desc[2].bindings.empty() )
+		{
+			auto& bindings = desc[2].bindings;
+			bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 3, ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 4, ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 5, ( nvrhi::ITexture* )GetImageAt( 5 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 6, ( nvrhi::ITexture* )GetImageAt( 6 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[2].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 3 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 4 )->GetTextureID();
+			bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 5 )->GetTextureID();
+			bindings[3].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 6 )->GetTextureID();
+		}
+
+		// samplers: 3
+		if( desc[3].bindings.empty() )
+		{
+			auto& bindings = desc[3].bindings;
+			bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_AnisotropicWrapSampler ),
+				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearBorderSampler ),
+				nvrhi::BindingSetItem::Sampler( 2, commonPasses.m_LinearClampCompareSampler ),
+				nvrhi::BindingSetItem::Sampler( 3, commonPasses.m_PointWrapSampler )  // blue noise
+			};
+		}
+		else
+		{
+			auto& bindings = desc[3].bindings;
+			bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
+			bindings[1].resourceHandle = commonPasses.m_LinearBorderSampler;
+			bindings[2].resourceHandle = commonPasses.m_LinearClampCompareSampler;
+			bindings[3].resourceHandle = commonPasses.m_PointWrapSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_FOG )
 	{
 		if( desc[0].bindings.empty() )
 		{
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
 				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
 				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
 			};
 		}
 		else
 		{
-			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
-			desc[0].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
-			desc[0].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
 		}
 
-		if( desc[1].bindings.empty() )
+		if( desc[2].bindings.empty() )
 		{
-			desc[1].bindings =
+			desc[2].bindings =
 			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearClampSampler ),
 				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearClampSampler )
@@ -765,8 +1038,57 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
-			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearClampSampler;
-			desc[1].bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
+			auto& bindings = desc[2].bindings;
+			bindings[0].resourceHandle = commonPasses.m_LinearClampSampler;
+			bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_FOG_SKINNED )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[0].bindings;
+			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			bindings[1].resourceHandle = currentJointBuffer;
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearClampSampler ),
+				nvrhi::BindingSetItem::Sampler( 1, commonPasses.m_LinearClampSampler )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[2].bindings;
+			bindings[0].resourceHandle = commonPasses.m_LinearClampSampler;
+			bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
 		}
 	}
 	else if( type == BINDING_LAYOUT_BLENDLIGHT )
@@ -776,27 +1098,83 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
-				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
 			};
 		}
 		else
 		{
 			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
-			desc[0].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
-			desc[0].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
 		}
 
 		if( desc[1].bindings.empty() )
 		{
 			desc[1].bindings =
 			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearBorderSampler )
 			};
 		}
 		else
 		{
-			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearBorderSampler;
+			desc[2].bindings[0].resourceHandle = commonPasses.m_LinearBorderSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_BLENDLIGHT_SKINNED )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[0].bindings;
+			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			bindings[1].resourceHandle = currentJointBuffer;
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearBorderSampler )
+			};
+		}
+		else
+		{
+			desc[2].bindings[0].resourceHandle = commonPasses.m_LinearBorderSampler;
 		}
 	}
 	else if( type == BINDING_LAYOUT_POST_PROCESS_INGAME )
@@ -870,27 +1248,84 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 			desc[0].bindings =
 			{
 				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
-				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
-				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
 			};
 		}
 		else
 		{
 			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
-			desc[0].bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
-			desc[0].bindings[2].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
 		}
 
 		if( desc[1].bindings.empty() )
 		{
 			desc[1].bindings =
 			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
 				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearWrapSampler )
 			};
 		}
 		else
 		{
-			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearWrapSampler;
+			desc[2].bindings[0].resourceHandle = commonPasses.m_LinearWrapSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_NORMAL_CUBE_SKINNED )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, renderProgManager.ConstantBuffer() ),
+				nvrhi::BindingSetItem::StructuredBuffer_SRV( 11, currentJointBuffer, nvrhi::Format::UNKNOWN, nvrhi::BufferRange( currentJointOffset, sizeof( idVec4 ) * numBoneMatrices ) )
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			auto& bindings = desc[0].bindings;
+			bindings[0].resourceHandle = renderProgManager.ConstantBuffer();
+			bindings[1].resourceHandle = currentJointBuffer;
+			bindings[1].range = nvrhi::BufferRange{ currentJointOffset, sizeof( idVec4 )* numBoneMatrices };
+		}
+
+		if( desc[1].bindings.empty() )
+		{
+			desc[1].bindings =
+			{
+				nvrhi::BindingSetItem::Texture_SRV( 0, ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID() ),
+				nvrhi::BindingSetItem::Texture_SRV( 1, ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID() )
+			};
+		}
+		else
+		{
+			auto& bindings = desc[1].bindings;
+			bindings[0].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 0 )->GetTextureID();
+			bindings[1].resourceHandle = ( nvrhi::ITexture* )GetImageAt( 1 )->GetTextureID();
+		}
+
+		if( desc[2].bindings.empty() )
+		{
+			desc[2].bindings =
+			{
+				nvrhi::BindingSetItem::Sampler( 0, commonPasses.m_LinearWrapSampler )
+			};
+		}
+		else
+		{
+			desc[2].bindings[0].resourceHandle = commonPasses.m_LinearWrapSampler;
 		}
 	}
 	else if( type == BINDING_LAYOUT_BINK_VIDEO )
@@ -953,6 +1388,20 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		else
 		{
 			desc[1].bindings[0].resourceHandle = commonPasses.m_LinearClampSampler;
+		}
+	}
+	else if( type == BINDING_LAYOUT_SKY )
+	{
+		if( desc[0].bindings.empty() )
+		{
+			desc[0].bindings =
+			{
+				nvrhi::BindingSetItem::ConstantBuffer( 0, tr.dynamicSky.Buffer() ),
+			};
+		}
+		else
+		{
+			desc[0].bindings[0].resourceHandle = tr.dynamicSky.Buffer();
 		}
 	}
 	else

@@ -5561,6 +5561,51 @@ void idRenderBackend::DrawMotionVectors()
 	renderLog.CloseBlock();
 }
 
+void idRenderBackend::SkyPass()
+{
+	if( viewDef->is2Dgui )
+	{
+		return;
+	}
+
+	if( r_skipSky.GetBool() )
+	{
+		return;
+	}
+
+	ResetViewportAndScissorToDefaultCamera( viewDef );
+
+	renderLog.OpenMainBlock( MRB_SKY );
+	renderLog.OpenBlock( "Render_SkyPass" );
+
+	renderProgManager.BindShader_Sky();
+	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_EQUAL | GLS_CULL_TWOSIDED );
+
+	static float s_flipMatrix[16] =
+	{
+		// convert from our coordinate system (looking down X)
+		// to NVRHI's coordinate system (looking down +Z)
+		0, 0, 1, 0,
+		-1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 0, 1
+	};
+
+	float mvp[16];
+	R_MatrixMultiply( viewDef->unprojectionToWorldMatrix, s_flipMatrix, mvp );
+
+	idRenderMatrix mvpMat;
+	idRenderMatrix::Transpose( *( idRenderMatrix* )mvp, mvpMat );
+
+	tr.dynamicSky.SetInvProjMatrix( mvpMat );
+	tr.dynamicSky.WriteParams( commandList );
+
+	DrawElementsWithCounters( &skySurface );
+
+	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
+}
+
 void idRenderBackend::TemporalAAPass( const viewDef_t* _viewDef )
 {
 	// if we are just doing 2D rendering, no need for HDR TAA
@@ -6955,6 +7000,8 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		renderLog.CloseMainBlock();
 	}
 
+	SkyPass();
+
 	//-------------------------------------------------
 	// render debug tools
 	//-------------------------------------------------
@@ -7212,6 +7259,8 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 	// if there aren't any drawsurfs, do nothing
 	if( !viewDef->numDrawSurfs )
 	{
+		// TODO(Stephen): Maybe I can pass the sky grid through the view?
+		SkyPass();
 		return;
 	}
 

@@ -109,6 +109,8 @@ public:
 	void			SetLightParms( float parm0, float parm1, float parm2, float parm3 );
 	void			SetRadiusXYZ( float x, float y, float z );
 	void			SetRadius( float radius );
+	idVec3			GetRadius() const;
+	void			SetCenter( const idVec3& center );
 	void			On();
 	void			Off();
 	void			Fade( const idVec4& to, float fadeTime );

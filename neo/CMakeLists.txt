@@ -903,6 +903,7 @@ set(GAMED3XP_INCLUDES
 	d3xp/Projectile.h
 	d3xp/Pvs.h
 	d3xp/SecurityCamera.h
+	d3xp/Sky.h
 	d3xp/SmokeParticles.h
 	d3xp/Sound.h
 	d3xp/Target.h
@@ -942,6 +943,7 @@ set(GAMED3XP_SOURCES
 	d3xp/Projectile.cpp
 	d3xp/Pvs.cpp
 	d3xp/SecurityCamera.cpp
+	d3xp/Sky.cpp
 	d3xp/SmokeParticles.cpp
 	d3xp/Sound.cpp
 	d3xp/Target.cpp

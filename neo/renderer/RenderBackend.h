@@ -343,6 +343,8 @@ private:
 	void				StencilShadowPass( const drawSurf_t* drawSurfs, const viewLight_t* vLight );
 	void				StencilSelectLight( const viewLight_t* vLight );
 
+	void				SkyPass();
+
 	void				DrawMotionVectors();
 	void				TemporalAAPass( const viewDef_t* _viewDef );
 
@@ -490,6 +492,7 @@ public:
 	drawSurf_t			zeroOneCubeSurface;
 	drawSurf_t			zeroOneSphereSurface; // RB
 	drawSurf_t			testImageSurface;
+	drawSurf_t			skySurface;			  //!< SP: Generated vertices for the sky pass.
 
 	float				slopeScaleBias;
 	float				depthBias;

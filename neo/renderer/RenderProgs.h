@@ -365,6 +365,7 @@ enum
 	BUILTIN_SHADOW_DEBUG_SKINNED,
 
 	BUILTIN_BLENDLIGHT,
+	BUILTIN_BLENDLIGHT_SKINNED,
 	BUILTIN_FOG,
 	BUILTIN_FOG_SKINNED,
 	BUILTIN_SKYBOX,
@@ -416,6 +417,7 @@ enum
 	BUILTIN_HISTOGRAM_CS,
 	BUILTIN_HISTOGRAM_TEX_ARRAY_CS,
 	BUILTIN_EXPOSURE_CS,
+	BUILTIN_SKY,
 	// SP End
 
 	MAX_BUILTINS
@@ -982,16 +984,19 @@ public:
 	}
 	// RB end
 
+	// SP begin
+	void	BindShader_Sky()
+	{
+		BindShader_Builtin( BUILTIN_SKY );
+	}
+	// SP end
+
 	// the joints buffer should only be bound for vertex programs that use joints
 	bool		ShaderUsesJoints() const
 	{
-#if defined( USE_NVRHI )
-		// FIXME
-		return false;
-#else
-		return renderProgs[current].usesJoints;
-#endif
+		return renderProgs[currentIndex].usesJoints;
 	}
+
 	// the rpEnableSkinning render parm should only be set for vertex programs that use it
 	bool		ShaderHasOptionalSkinning() const
 	{

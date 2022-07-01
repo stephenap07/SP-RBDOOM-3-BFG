@@ -167,6 +167,8 @@ private:
 	int							refs;
 };
 
+
+
 class idUserInterfaceManagerLocal : public idUserInterfaceManager
 {
 	friend class idUserInterfaceLocal;

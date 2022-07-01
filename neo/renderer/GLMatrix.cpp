@@ -238,11 +238,6 @@ void R_GlobalToNormalizedDeviceCoordinates( const idVec3& global, idVec3& ndc )
 	ndc[0] = clip[0] * invW;
 	ndc[1] = clip[1] * invW;
 	ndc[2] = clip[2] * invW;		// NOTE: in D3D this is in the range [0,1]
-
-#ifdef USE_NVRHI
-	// If nvrhi, then it's top left to bottom right instead of bottom left to top right.
-	ndc[1] = -ndc[1];
-#endif
 }
 
 /*

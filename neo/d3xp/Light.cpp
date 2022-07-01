@@ -675,6 +675,27 @@ void idLight::SetRadius( float radius )
 
 /*
 ================
+idLight::GetRadius
+================
+*/
+idVec3 idLight::GetRadius() const
+{
+	return renderLight.lightRadius;
+}
+
+/*
+================
+idLight::SetCenter
+================
+*/
+void idLight::SetCenter( const idVec3& center )
+{
+	renderLight.lightCenter = center;
+	PresentLightDefChange();
+}
+
+/*
+================
 idLight::On
 ================
 */

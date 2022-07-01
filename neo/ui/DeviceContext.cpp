@@ -599,7 +599,6 @@ void idDeviceContext::DrawCursor( float* x, float* y, float size, idVec2 bounds 
 	renderSystem->SetColor( colorWhite );
 	DrawStretchPic( *x, *y, size, size, 0, 0, 1, 1, cursorImages[cursor] );
 }
-
 /*
  =======================================================================================================================
  =======================================================================================================================

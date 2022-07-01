@@ -132,11 +132,6 @@ static void R_AddSingleLight( viewLight_t* vLight )
 		}
 	}
 
-	if( !light->world->interactionTable )
-	{
-		return;
-	}
-
 	// evaluate the light shader registers
 	float* lightRegs = ( float* )R_FrameAlloc( lightShader->GetNumRegisters() * sizeof( float ), FRAME_ALLOC_SHADER_REGISTER );
 	lightShader->EvaluateRegisters( lightRegs, light->parms.shaderParms, viewDef->renderView.shaderParms,

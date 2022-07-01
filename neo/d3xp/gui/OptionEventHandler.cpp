@@ -13,40 +13,28 @@
 class UI_Shell;
 
 
-void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idToken& _token )
+void EventHandlerOptions::ProcessEvent( Rml::Event& event, idLexer& src, idToken& token )
 {
-	if( !_token.Icmp( "restore" ) )
+	if( !token.Icmp( "restore" ) )
 	{
-		Rml::ElementDocument* optionsBody = _event.GetTargetElement( )->GetOwnerDocument( );
+		Rml::ElementDocument* optionsBody = event.GetTargetElement( )->GetOwnerDocument( );
 
 		if( !optionsBody )
 		{
 			return;
 		}
 
-		Rml::String windowModeId;
-		switch( r_fullscreen.GetInteger( ) )
-		{
-			case 0: // windowed
-				windowModeId = "windowed";
-				break;
-			case 1: // fullscreen on primary monitor
-				windowModeId = "fullscreen";
-				break;
-			case 2: // fullscreen on secondary monitor
-				windowModeId = "windowed_borderless";
-				break;
-		}
-
-		Rml::ElementFormControlInput* windowModeOption = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( windowModeId ) );
+		const Rml::String windowModeId = r_fullscreen.GetString();
+		auto* windowModeOption = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(
+			optionsBody->GetElementById( va( "option%s", windowModeId.c_str() ) ) );
 
 		if( windowModeOption )
 		{
 			windowModeOption->SetAttribute( "checked", "" );
 		}
 
-		Rml::ElementFormControlInput* accept = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "accept" ) );
-		Rml::ElementFormControlInput* apply = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "apply" ) );
+		const auto accept = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( optionsBody->GetElementById( "accept" ) );
+		const auto apply = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( optionsBody->GetElementById( "apply" ) );
 
 		if( accept )
 		{
@@ -61,51 +49,32 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 		return;
 	}
 
-	if( !_token.Icmp( "store" ) )
+	if( !token.Icmp( "store" ) )
 	{
-		const Rml::String subParm = _event.GetParameter<Rml::String>( "submit", "cancel" );
+		const auto subParm = event.GetParameter<Rml::String>( "submit", "cancel" );
 		if( subParm == "accept" || subParm == "apply" )
 		{
-			Rml::String windowMode = _event.GetParameter<Rml::String>( "window_mode", "fullscreen" );
-
-			if( windowMode == "fullscreen" )
-			{
-				r_fullscreen.SetInteger( 1 );
-			}
-			else if( windowMode == "windowed" )
-			{
-				r_fullscreen.SetInteger( 0 );
-			}
-			else if( windowMode == "windowed_borderless" )
-			{
-				r_fullscreen.SetInteger( 2 );
-			}
-
-			int windowIndex = _event.GetParameter<int>( "window_size", 0 );
-			int displayIndex = _event.GetParameter<int>( "display_hz", 0 );
-
-			int vidMode = shell->FindVidModeIndex( windowIndex, displayIndex );
-
-			idList<vidMode_t> modeList;
-			R_GetModeListForDisplay( 0, modeList );
+			const auto windowMode = event.GetParameter<Rml::String>( "window_mode", "1" );
+			const int windowIndex = event.GetParameter<int>( "window_size", 0 );
+			const int displayIndex = event.GetParameter<int>( "display_hz", 0 );
+			const int vidMode = shell->FindVidModeIndex( windowIndex, displayIndex );
 
 			if( vidMode > -1 )
 			{
-				if( modeList.Num() > vidMode )
-				{
-					r_windowWidth.SetInteger( modeList[vidMode].width );
-					r_windowHeight.SetInteger( modeList[vidMode].height );
-					r_displayRefresh.SetInteger( modeList[vidMode].displayHz );
-				}
-
+				idList<vidMode_t> modeList;
+				R_GetModeListForDisplay( 0, modeList );
+				r_fullscreen.SetString( windowMode.c_str() );
 				r_vidMode.SetInteger( vidMode );
+				r_windowWidth.SetInteger( modeList[vidMode].width );
+				r_windowHeight.SetInteger( modeList[vidMode].height );
+				cvarSystem->ClearModifiedFlags( CVAR_ARCHIVE );
 				cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "vid_restart\n" );
 			}
 		}
 
 		if( subParm == "cancel" || subParm == "accept" )
 		{
-			_event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
+			event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
 			shell->HideScreen( "options" );
 			if( shell->State( ) == ShellState::START )
 			{
@@ -117,12 +86,33 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 			}
 		}
 
+		Rml::ElementDocument* optionsBody = event.GetTargetElement()->GetOwnerDocument();
+
+		if (optionsBody == nullptr)
+		{
+			return;
+		}
+
+		// Enable the accept button when values are changed
+		const auto accept = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(optionsBody->GetElementById("accept"));
+		const auto apply = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(optionsBody->GetElementById("apply"));
+
+		if (accept)
+		{
+			accept->SetDisabled(true);
+		}
+
+		if (apply)
+		{
+			apply->SetDisabled(true);
+		}
+
 		return;
 	}
 
-	if( !_token.Icmp( "enable_accept" ) )
+	if( !token.Icmp( "enable_accept" ) )
 	{
-		Rml::ElementDocument* optionsBody = _event.GetTargetElement( )->GetOwnerDocument( );
+		Rml::ElementDocument* optionsBody = event.GetTargetElement( )->GetOwnerDocument( );
 
 		if( optionsBody == nullptr )
 		{
@@ -130,8 +120,8 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 		}
 
 		// Enable the accept button when values are changed
-		Rml::ElementFormControlInput* accept = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "accept" ) );
-		Rml::ElementFormControlInput* apply = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "apply" ) );
+		const auto accept = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "accept" ) );
+		const auto apply = rmlui_dynamic_cast< Rml::ElementFormControlInput* >( optionsBody->GetElementById( "apply" ) );
 
 		if( accept )
 		{
@@ -146,5 +136,5 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 		return;
 	}
 
-	RmlGameEventHandler::ProcessEvent( _event, _src, _token );
+	RmlGameEventHandler::ProcessEvent( event, src, token );
 }

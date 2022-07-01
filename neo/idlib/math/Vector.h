@@ -40,6 +40,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../containers/Array.h" // for idTupleSize
 
+#include <algorithm>
+#include <initializer_list>
+
 #define VECTOR_EPSILON		0.001f
 
 class idAngles;
@@ -389,6 +392,7 @@ public:
 		Set( xyz, xyz, xyz );
 	}
 	explicit idVec3( const float x, const float y, const float z );
+	constexpr idVec3(std::initializer_list<float> initializerList);
 
 	void 			Set( const float x, const float y, const float z );
 	void			Zero();
@@ -473,6 +477,13 @@ ID_INLINE idVec3::idVec3( const float x, const float y, const float z )
 	this->x = x;
 	this->y = y;
 	this->z = z;
+}
+
+constexpr idVec3::idVec3( std::initializer_list<float> initializerList )
+	: x(std::data(initializerList)[0])
+	, y(std::data(initializerList)[1])
+	, z(std::data(initializerList)[2])
+{
 }
 
 ID_INLINE float idVec3::operator[]( const int index ) const
