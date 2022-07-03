@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -38,18 +39,17 @@ public:
 	idSky();
 	~idSky() override;
 
-	void			Spawn();
+	void	Spawn();
 
-	void			Save( idSaveGame* saveFile ) const; //!< archives object for save game file
-	void			Restore( idRestoreGame* saveFile ); //!< unarchives object from save game file
+	void	Save( idSaveGame* saveFile ) const; //!< archives object for save game file
+	void	Restore( idRestoreGame* saveFile ); //!< unarchives object from save game file
 
-	void			Think() override;
-	void			ClientThink( int curTime, float fraction, bool predict ) override;
-	void			Present() override;
+	void	Think() override;
+	void	Present() override;
 
 private:
 
-	void			PostSpawn();
+	void	PostSpawn();
 
 	static const int	 version;
 
@@ -57,7 +57,11 @@ private:
 	float				 time;
 	float				 latitude;
 	float				 turbidity;
+	float				 sunSize;
+	float				 sunBloom;
+	float				 exposition;
 	idEntityPtr<idLight> light;
+	qhandle_t			 skyHandle;
 };
 
 #endif

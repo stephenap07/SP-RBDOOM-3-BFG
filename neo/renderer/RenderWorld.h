@@ -237,6 +237,16 @@ typedef struct
 } renderEnvironmentProbe_t;
 // RB end
 
+// SP begin
+struct SkyDef
+{
+	idVec4			sunDirection;
+	idVec4			skyLuminanceXYZ;
+	idVec4			parameters;			// x - sun size, y - sun bloom, z - exposition
+	idVec4			perezCoeff[5];
+	idRenderMatrix	invViewProj;
+};
+// SP end
 
 // RB: added back refdef flags from Quake 3
 const int RDF_NOSHADOWS		= BIT( 0 ); // force renderer to use faster lighting only path
@@ -359,6 +369,12 @@ public:
 	virtual	void			FreeEnvprobeDef( qhandle_t envprobeHandle ) = 0;
 	virtual const renderEnvironmentProbe_t* GetRenderEnvprobe( qhandle_t envprobeHandle ) const = 0;
 	// RB end
+
+	// SP
+	virtual qhandle_t		AddSkyDef( const SkyDef* def ) = 0;
+	virtual void			UpdateSkyDef( qhandle_t handle, const SkyDef* def ) = 0;
+	virtual	void			FreeSkyDef( qhandle_t handle ) = 0;
+	// SP end
 
 	// Force the generation of all light / surface interactions at the start of a level
 	// If this isn't called, they will all be dynamically generated

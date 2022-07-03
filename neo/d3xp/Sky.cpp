@@ -3,6 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -31,16 +32,18 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Game_local.h"
 
+#include <map>
+
 // HDTV rec. 709 matrix.
 static constexpr float M_XYZ2RGB[] =
 {
-	 3.240479f, -0.969256f,  0.055648f,
+	3.240479f, -0.969256f,  0.055648f,
 	-1.53715f,   1.875991f, -0.204043f,
 	-0.49853f,   0.041556f,  1.057311f,
 };
 
 // Converts color representation from CIE XYZ to RGB color-space.
-static Color xyzToRgb(const Color& xyz)
+static Color xyzToRgb( const Color& xyz )
 {
 	Color rgb;
 	rgb.x = M_XYZ2RGB[0] * xyz.x + M_XYZ2RGB[3] * xyz.y + M_XYZ2RGB[6] * xyz.z;
@@ -135,15 +138,15 @@ public:
 
 	~DynamicValueController();
 
-	void SetMap(const KeyMap& keymap);
+	void SetMap( const KeyMap& keymap );
 
-	ValueType GetValue(float time) const;
+	ValueType GetValue( float time ) const;
 
 	void Clear();
 
 private:
-	static ValueType Interpolate(float lowerTime, const ValueType& lowerVal, float upperTime,
-		const ValueType& upperVal, float time);
+	static ValueType Interpolate( float lowerTime, const ValueType& lowerVal, float upperTime,
+								  const ValueType& upperVal, float time );
 
 	KeyMap keyMap;
 };
@@ -171,7 +174,7 @@ public:
 
 	SunController();
 
-	void Update(float _time);
+	void Update( float _time );
 
 	idVec3	northDir;
 	idVec3	sunDir;
@@ -182,9 +185,9 @@ public:
 private:
 	void			CalculateSunOrbit();
 
-	void			UpdateSunPosition(float _hour);
+	void			UpdateSunPosition( float _hour );
 
-	static idQuat	FromAxisAngle(idVec3 axis, const float angle);
+	static idQuat	FromAxisAngle( idVec3 axis, const float angle );
 
 	float	eclipticObliquity;
 	float	delta;
@@ -198,23 +201,23 @@ DynamicValueController::~DynamicValueController()
 {
 }
 
-void DynamicValueController::SetMap(const KeyMap& keymap)
+void DynamicValueController::SetMap( const KeyMap& keymap )
 {
 	keyMap = keymap;
 }
 
-DynamicValueController::ValueType DynamicValueController::GetValue(float time) const
+DynamicValueController::ValueType DynamicValueController::GetValue( float time ) const
 {
-	auto itUpper = keyMap.upper_bound(time + 1e-6f);
+	auto itUpper = keyMap.upper_bound( time + 1e-6f );
 	auto itLower = itUpper;
 	--itLower;
 
-	if (itLower == keyMap.end())
+	if( itLower == keyMap.end() )
 	{
 		return itUpper->second;
 	}
 
-	if (itUpper == keyMap.end())
+	if( itUpper == keyMap.end() )
 	{
 		return itLower->second;
 	}
@@ -224,12 +227,12 @@ DynamicValueController::ValueType DynamicValueController::GetValue(float time) c
 	const float upperTime = itUpper->first;
 	const ValueType& upperVal = itUpper->second;
 
-	if (lowerTime == upperTime)
+	if( lowerTime == upperTime )
 	{
 		return lowerVal;
 	}
 
-	return Interpolate(lowerTime, lowerVal, upperTime, upperVal, time);
+	return Interpolate( lowerTime, lowerVal, upperTime, upperVal, time );
 }
 
 void DynamicValueController::Clear()
@@ -237,25 +240,25 @@ void DynamicValueController::Clear()
 	keyMap.clear();
 }
 
-DynamicValueController::ValueType DynamicValueController::Interpolate(float lowerTime, const ValueType& lowerVal,
-	float upperTime, const ValueType& upperVal, float time)
+DynamicValueController::ValueType DynamicValueController::Interpolate( float lowerTime, const ValueType& lowerVal,
+		float upperTime, const ValueType& upperVal, float time )
 {
-	const float tt = (time - lowerTime) / (upperTime - lowerTime);
-	const ValueType result = Lerp(lowerVal, upperVal, tt);
+	const float tt = ( time - lowerTime ) / ( upperTime - lowerTime );
+	const ValueType result = Lerp( lowerVal, upperVal, tt );
 	return result;
 }
 
 SunController::SunController() : northDir( 1.0f, 0.0f, 0.0f )
-								 , sunDir( 0.0f, -1.0f, 0.0f )
-								 , upDir( 0.0f, 1.0f, 0.0f )
-								 , latitude( 50.0f )
-								 , month( June )
-								 , eclipticObliquity( DEG2RAD( 23.4f ) )
-								 , delta( 0.0f )
+	, sunDir( 0.0f, -1.0f, 0.0f )
+	, upDir( 0.0f, 1.0f, 0.0f )
+	, latitude( 50.0f )
+	, month( June )
+	, eclipticObliquity( DEG2RAD( 23.4f ) )
+	, delta( 0.0f )
 {
 }
 
-void SunController::Update(float _time)
+void SunController::Update( float _time )
 {
 	CalculateSunOrbit();
 	UpdateSunPosition( _time - 12.0f );
@@ -263,43 +266,44 @@ void SunController::Update(float _time)
 
 void SunController::CalculateSunOrbit()
 {
-	const float day = 30.0f * static_cast<float>(month) + 15.0f;
+	const float day = 30.0f * static_cast<float>( month ) + 15.0f;
 	float lambda = 280.46f + 0.9856474f * day;
-	lambda = DEG2RAD(lambda);
-	delta = idMath::ASin(idMath::Sin(eclipticObliquity) * idMath::Sin(lambda));
+	lambda = DEG2RAD( lambda );
+	delta = idMath::ASin( idMath::Sin( eclipticObliquity ) * idMath::Sin( lambda ) );
 }
 
-void SunController::UpdateSunPosition(float hour)
+void SunController::UpdateSunPosition( float hour )
 {
-	const float latitudeRad = DEG2RAD(latitude);
+	const float latitudeRad = DEG2RAD( latitude );
 	const float hh = hour * idMath::PI / 12.0f;
 	const float azimuth = idMath::ATan(
-		idMath::Sin(hh)
-		, idMath::Cos(hh) * idMath::Sin(latitudeRad) - idMath::Tan(delta) * idMath::Cos(latitudeRad)
-	);
+							  idMath::Sin( hh )
+							  , idMath::Cos( hh ) * idMath::Sin( latitudeRad ) - idMath::Tan( delta ) * idMath::Cos( latitudeRad )
+						  );
 
 	const float altitude = idMath::ASin(
-		idMath::Sin(latitudeRad) * idMath::Sin(delta) + idMath::Cos(latitudeRad) * idMath::Cos(delta) * idMath::Cos(hh)
-	);
+							   idMath::Sin( latitudeRad ) * idMath::Sin( delta ) + idMath::Cos( latitudeRad ) * idMath::Cos( delta ) * idMath::Cos( hh )
+						   );
 
-	const idQuat rot0 = FromAxisAngle(upDir, -azimuth);
+	const idQuat rot0 = FromAxisAngle( upDir, -azimuth );
 	const idVec3 dir = northDir * rot0;
-	const idVec3 uxd = upDir.Cross(dir);
+	const idVec3 uxd = upDir.Cross( dir );
 
-	const idQuat rot1 = FromAxisAngle(uxd, altitude);
+	const idQuat rot1 = FromAxisAngle( uxd, altitude );
 	sunDir = dir * rot1;
 }
 
-idQuat SunController::FromAxisAngle(idVec3 axis, const float angle)
+idQuat SunController::FromAxisAngle( idVec3 axis, const float angle )
 {
 	const float ha = angle * 0.5f;
-	const float sa = idMath::Sin(ha);
+	const float sa = idMath::Sin( ha );
 
-	return {
+	return
+	{
 		axis.x * sa,
 		axis.y * sa,
 		axis.z * sa,
-		idMath::Cos(ha),
+		idMath::Cos( ha ),
 	};
 }
 
@@ -308,7 +312,7 @@ static void ComputePerezCoeff( const float turbidity, float* outPerezCoeff )
 {
 	for( uint32_t ii = 0; ii < 5; ++ii )
 	{
-		const idVec3 tmp = (ABCDE_t[ii] * turbidity) + ABCDE[ii];
+		const idVec3 tmp = ( ABCDE_t[ii] * turbidity ) + ABCDE[ii];
 		float* out = outPerezCoeff + 4 * ii;
 		std::memcpy( out, &tmp, sizeof( idVec3 ) );
 		out[3] = 0.0f;
@@ -316,7 +320,7 @@ static void ComputePerezCoeff( const float turbidity, float* outPerezCoeff )
 }
 
 CLASS_DECLARATION( idEntity, idSky )
-	EVENT( EV_PostSpawn, idSky::PostSpawn )
+EVENT( EV_PostSpawn, idSky::PostSpawn )
 END_CLASS
 
 static DynamicValueController	sunLuminanceXyz;
@@ -330,11 +334,15 @@ idSky::idSky()
 	, time( 12.0f )
 	, latitude( 50.0f )
 	, turbidity( 2.150f )
+	, sunSize( 0.2f )
+	, sunBloom( 3.0f )
+	, exposition( 0.1f )
 {
 }
 
 idSky::~idSky()
 {
+	gameRenderWorld->FreeSkyDef( skyHandle );
 }
 
 void idSky::Spawn()
@@ -343,9 +351,15 @@ void idSky::Spawn()
 	time = spawnArgs.GetFloat( "time", 12.5 );
 	latitude = spawnArgs.GetFloat( "latitude", 50.0f );
 	turbidity = spawnArgs.GetFloat( "turbidity", 2.150f );
+	sunSize = spawnArgs.GetFloat( "sunSize", .02f );
+	sunBloom = spawnArgs.GetFloat( "sunBloom", 3.0f );
+	exposition = spawnArgs.GetFloat( "exposition", 0.1f );
 
 	sunLuminanceXyz.SetMap( sunLuminanceXYZTable );
 	skyLuminanceXyz.SetMap( skyLuminanceXYZTable );
+
+	SkyDef params;
+	skyHandle = gameRenderWorld->AddSkyDef( &params );
 
 	PostEventMS( &EV_PostSpawn, 0 );
 }
@@ -373,44 +387,40 @@ void idSky::Restore( idRestoreGame* saveFile )
 
 void idSky::Think()
 {
+	//time = idMath::Mod( MS2SEC( gameLocal.GetTime() ), 24.0f );
+	time = idMath::Mod( time, 24.0f );
+	sun.Update( time );
+
+	const Color colorSunLuminanceXYZ = sunLuminanceXyz.GetValue( time );
+	const Color colorSunLuminanceRGB = xyzToRgb( colorSunLuminanceXYZ );
+
+	const Color colorSkyLuminanceXYZ = skyLuminanceXyz.GetValue( time );
+	//const Color skyLuminanceRgb = xyzToRgb(colorSkyLuminanceXYZ);
+	
+	SkyDef params;
+	params.skyLuminanceXYZ = idVec4( colorSkyLuminanceXYZ.x, colorSkyLuminanceXYZ.y, colorSkyLuminanceXYZ.z, 1.0f );
+	params.sunDirection = idVec4( sun.sunDir.x, sun.sunDir.y, sun.sunDir.z, 1.0f );
+	params.parameters = idVec4( sunSize, sunBloom, exposition, time );
+	ComputePerezCoeff( turbidity, &params.perezCoeff[0].x );
+
+	if( light.IsValid() )
+	{
+		idLight* l = light.GetEntity();
+		l->SetCenter( idVec3( -sun.sunDir.z, sun.sunDir.x, sun.sunDir.y ) );
+		l->SetColor( colorSunLuminanceRGB );
+	}
+
+	gameRenderWorld->UpdateSkyDef( skyHandle, &params );
+}
+
+void idSky::Present()
+{
 	if( r_skipSky.GetBool() )
 	{
 		return;
 	}
 
-	time = idMath::Mod( MS2SEC( gameLocal.GetTime() ), 24.0f );
-
-	sun.Update( time );
-
-	const Color colorSunLuminanceXYZ = sunLuminanceXyz.GetValue( time );
-	const Color colorSunLuminanceRGB = xyzToRgb(colorSunLuminanceXYZ);
-
-	const Color colorSkyLuminanceXYZ = skyLuminanceXyz.GetValue( time );
-	//const Color skyLuminanceRgb = xyzToRgb(colorSkyLuminanceXYZ);
-
-	SkyConstants params;
-	params.skyLuminanceXYZ = idVec4( colorSkyLuminanceXYZ.x, colorSkyLuminanceXYZ.y, colorSkyLuminanceXYZ.z, 1.0f );
-	params.sunDirection = idVec4( sun.sunDir.x, sun.sunDir.y, sun.sunDir.z, 1.0f );
-	params.parameters = idVec4( 0.02f, 3.0f, 0.1f, time );
-	ComputePerezCoeff( turbidity, &params.perezCoeff[0].x );
-
-	tr.dynamicSky.UpdateParams( params );
-
-	idLight* l = light.GetEntity();
-	if( l )
-	{
-		l->SetCenter( idVec3( -sun.sunDir.z, sun.sunDir.x, sun.sunDir.y ) );
-		l->SetColor( colorSunLuminanceRGB );
-	}
-}
-
-void idSky::ClientThink( const int curTime, const float fraction, const bool predict )
-{
-	idEntity::ClientThink( curTime, fraction, predict );
-}
-
-void idSky::Present()
-{
+	// Add to the refresh list
 	idEntity::Present();
 }
 

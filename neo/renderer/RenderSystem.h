@@ -141,6 +141,7 @@ struct performanceCounters_t
 	int		c_entityUpdates;
 	int		c_lightUpdates;
 	int		c_envprobeUpdates;
+	int		c_skyUpdates;		// SP
 	int		c_entityReferences;
 	int		c_lightReferences;
 	int		c_guiSurfs;

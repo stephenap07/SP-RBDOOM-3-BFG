@@ -73,7 +73,7 @@ public:
 		assert( index >= 0 && index < 4 );
 		return &m[index * 4];
 	}
-	bool					operator==(const idRenderMatrix& rhs) const;
+	bool					operator==( const idRenderMatrix& rhs ) const;
 
 	void					Zero()
 	{

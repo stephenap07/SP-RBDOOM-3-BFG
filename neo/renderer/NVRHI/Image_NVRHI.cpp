@@ -436,14 +436,14 @@ void idImage::AllocImage()
 	if( opts.isRenderTarget )
 	{
 		textureDesc.setInitialState( nvrhi::ResourceStates::RenderTarget )
-				   .setClearValue( nvrhi::Color( 0.f ) )
-				   .setIsRenderTarget( true )
-				   .setKeepInitialState( true );
+		.setClearValue( nvrhi::Color( 0.f ) )
+		.setIsRenderTarget( true )
+		.setKeepInitialState( true );
 
 		if( opts.format == FMT_DEPTH || opts.format == FMT_DEPTH_STENCIL || opts.format == FMT_SHADOW_ARRAY )
 		{
 			textureDesc.setInitialState( nvrhi::ResourceStates::DepthWrite )
-					   .setClearValue( nvrhi::Color( 1.f ) );
+			.setClearValue( nvrhi::Color( 1.f ) );
 		}
 
 		if( opts.isUAV )

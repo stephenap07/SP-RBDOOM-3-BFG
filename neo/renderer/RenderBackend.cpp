@@ -5563,6 +5563,11 @@ void idRenderBackend::DrawMotionVectors()
 
 void idRenderBackend::SkyPass()
 {
+	if( !viewDef->skyConstants )
+	{
+		return;
+	}
+
 	if( viewDef->is2Dgui )
 	{
 		return;
@@ -5572,6 +5577,8 @@ void idRenderBackend::SkyPass()
 	{
 		return;
 	}
+
+	pc.c_surfaces += 1;
 
 	ResetViewportAndScissorToDefaultCamera( viewDef );
 
@@ -5584,7 +5591,7 @@ void idRenderBackend::SkyPass()
 	static float s_flipMatrix[16] =
 	{
 		// convert from our coordinate system (looking down X)
-		// to NVRHI's coordinate system (looking down +Z)
+		// to NVRHI's coordinate system (looking down Z)
 		0, 0, 1, 0,
 		-1, 0, 0, 0,
 		0, 1, 0, 0,
@@ -5597,6 +5604,7 @@ void idRenderBackend::SkyPass()
 	idRenderMatrix mvpMat;
 	idRenderMatrix::Transpose( *( idRenderMatrix* )mvp, mvpMat );
 
+	tr.dynamicSky.UpdateParams( *viewDef->skyConstants );
 	tr.dynamicSky.SetInvProjMatrix( mvpMat );
 	tr.dynamicSky.WriteParams( commandList );
 
@@ -7257,10 +7265,8 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 	currentRenderCopied = false;
 
 	// if there aren't any drawsurfs, do nothing
-	if( !viewDef->numDrawSurfs )
+	if( !viewDef->numDrawSurfs && ( r_skipSky.GetBool() || !viewDef->skyConstants ) )
 	{
-		// TODO(Stephen): Maybe I can pass the sky grid through the view?
-		SkyPass();
 		return;
 	}
 

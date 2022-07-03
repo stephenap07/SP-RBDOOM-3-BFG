@@ -181,6 +181,12 @@ public:
 	virtual const renderEnvironmentProbe_t* GetRenderEnvprobe( qhandle_t envprobeHandle ) const;
 	// RB end
 
+	// SP
+	virtual qhandle_t		AddSkyDef( const SkyDef* def );
+	virtual void			UpdateSkyDef( qhandle_t handle, const SkyDef* def );
+	virtual void			FreeSkyDef( qhandle_t handle );
+	// SP end
+
 	virtual bool			CheckAreaForPortalSky( int areaNum );
 
 	virtual	void			GenerateAllInteractions();
@@ -248,6 +254,7 @@ public:
 	idList<idRenderEntityLocal*, TAG_ENTITY>		entityDefs;
 	idList<idRenderLightLocal*, TAG_LIGHT>			lightDefs;
 	idList<RenderEnvprobeLocal*, TAG_ENVPROBE>		envprobeDefs; // RB
+	idList<SkyDef*, TAG_ENTITY>				skyDefs; // SP
 
 	idBlockAlloc<areaReference_t, 1024> areaReferenceAllocator;
 	idBlockAlloc<idInteraction, 256>	interactionAllocator;

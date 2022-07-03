@@ -765,6 +765,75 @@ const renderEnvironmentProbe_t* idRenderWorldLocal::GetRenderEnvprobe( qhandle_t
 }
 // RB end
 
+// SP
+qhandle_t idRenderWorldLocal::AddSkyDef( const SkyDef* def )
+{
+	// try and reuse a free spot
+	int handle = skyDefs.FindNull();
+
+	if( handle == -1 )
+	{
+		handle = skyDefs.Append( NULL );
+	}
+
+	UpdateSkyDef( handle, def );
+
+	return handle;
+}
+
+void idRenderWorldLocal::UpdateSkyDef( qhandle_t handle, const SkyDef* def )
+{
+	if( r_skipUpdates.GetBool() )
+	{
+		return;
+	}
+
+	tr.pc.c_skyUpdates++;
+
+	// create new slots if needed
+	if( handle < 0 || handle > LUDICROUS_INDEX )
+	{
+		common->Error( "idRenderWorld::UpdateEnvprobeDef: index = %i", handle );
+	}
+
+	while( handle >= skyDefs.Num() )
+	{
+		skyDefs.Append( NULL );
+	}
+
+	bool justUpdate = false;
+	SkyDef* skyDef = skyDefs[handle];
+
+	if( !skyDef )
+	{
+		skyDef = new SkyDef( *def );
+		skyDefs[handle] = skyDef;
+	}
+
+	*skyDef = *def;
+}
+
+void idRenderWorldLocal::FreeSkyDef( qhandle_t handle )
+{
+	if( handle < 0 || handle >= skyDefs.Num() )
+	{
+		common->Printf( "idRenderWorld::FreeSkyDef: invalid handle %i [0, %i]\n", handle, skyDefs.Num() );
+		return;
+	}
+
+	SkyDef* skyConstants = skyDefs[handle];
+	if( !skyConstants )
+	{
+		common->Printf( "idRenderWorld::FreeSkyDef: handle %i is NULL\n", handle );
+		return;
+	}
+
+	delete skyConstants;
+
+	skyDefs[handle] = nullptr;
+}
+// SP end
+
 /*
 ================
 idRenderWorldLocal::ProjectDecalOntoWorld
@@ -1080,6 +1149,10 @@ void idRenderWorldLocal::RenderScene( const renderView_t* renderView )
 	viewDef_t* parms = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *parms ), FRAME_ALLOC_VIEW_DEF );
 	parms->renderView = *renderView;
 	parms->targetRender = nullptr;
+	if( skyDefs.Num() > 0 )
+	{
+		parms->skyConstants = skyDefs[0];
+	}
 
 	if( tr.takingScreenshot )
 	{

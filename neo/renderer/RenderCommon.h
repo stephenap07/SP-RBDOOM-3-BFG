@@ -692,7 +692,9 @@ struct viewDef_t
 	idImage* 			radianceImages[3];			// cubemap image used for specular IBL by backend
 	idVec4				radianceImageBlends;		// blending weights
 
-	Framebuffer*		targetRender;				// The framebuffer to render to
+	SkyDef*				skyConstants;				// SP
+
+	Framebuffer*		targetRender;				// SP: The framebuffer to render to
 };
 
 

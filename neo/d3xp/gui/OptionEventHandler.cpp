@@ -26,7 +26,7 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& event, idLexer& src, idToken
 
 		const Rml::String windowModeId = r_fullscreen.GetString();
 		auto* windowModeOption = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(
-			optionsBody->GetElementById( va( "option%s", windowModeId.c_str() ) ) );
+									 optionsBody->GetElementById( va( "option%s", windowModeId.c_str() ) ) );
 
 		if( windowModeOption )
 		{
@@ -88,23 +88,23 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& event, idLexer& src, idToken
 
 		Rml::ElementDocument* optionsBody = event.GetTargetElement()->GetOwnerDocument();
 
-		if (optionsBody == nullptr)
+		if( optionsBody == nullptr )
 		{
 			return;
 		}
 
 		// Enable the accept button when values are changed
-		const auto accept = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(optionsBody->GetElementById("accept"));
-		const auto apply = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(optionsBody->GetElementById("apply"));
+		const auto accept = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( optionsBody->GetElementById( "accept" ) );
+		const auto apply = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( optionsBody->GetElementById( "apply" ) );
 
-		if (accept)
+		if( accept )
 		{
-			accept->SetDisabled(true);
+			accept->SetDisabled( true );
 		}
 
-		if (apply)
+		if( apply )
 		{
-			apply->SetDisabled(true);
+			apply->SetDisabled( true );
 		}
 
 		return;

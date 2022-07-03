@@ -1029,9 +1029,9 @@ ID_INLINE float idMath::Pow16( float x, float y )
 idMath::Mod
 ========================
 */
-ID_INLINE float idMath::Mod(float a, float b)
+ID_INLINE float idMath::Mod( float a, float b )
 {
-	return a - b * Floor(a / b);
+	return a - b * Floor( a / b );
 }
 
 /*

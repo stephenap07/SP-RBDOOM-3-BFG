@@ -2,8 +2,8 @@
 #define __GUI_RMLSHELL_H__
 
 #ifndef __TYPEINFOGEN__
-#include "../../renderer/RenderCommon.h"
-#include "RmlUi/Core.h"
+	#include "../../renderer/RenderCommon.h"
+	#include "RmlUi/Core.h"
 #endif
 
 #include <vector>
@@ -12,8 +12,8 @@ class RmlUserInterfaceLocal;
 
 namespace Rml
 {
-	class EventListenerInstancer;
-	class ElementDocument;
+class EventListenerInstancer;
+class ElementDocument;
 }
 
 enum class ShellState : int

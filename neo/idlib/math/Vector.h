@@ -392,7 +392,7 @@ public:
 		Set( xyz, xyz, xyz );
 	}
 	explicit idVec3( const float x, const float y, const float z );
-	constexpr idVec3(std::initializer_list<float> initializerList);
+	constexpr idVec3( std::initializer_list<float> initializerList );
 
 	void 			Set( const float x, const float y, const float z );
 	void			Zero();
@@ -480,9 +480,9 @@ ID_INLINE idVec3::idVec3( const float x, const float y, const float z )
 }
 
 constexpr idVec3::idVec3( std::initializer_list<float> initializerList )
-	: x(std::data(initializerList)[0])
-	, y(std::data(initializerList)[1])
-	, z(std::data(initializerList)[2])
+	: x( std::data( initializerList )[0] )
+	, y( std::data( initializerList )[1] )
+	, z( std::data( initializerList )[2] )
 {
 }
 

@@ -50,14 +50,14 @@ static RmlGameEventHandler* baseEventHandler = nullptr;
 
 UI_Shell::UI_Shell()
 	: ui( nullptr )
-	  , soundWorld( nullptr )
-	  , nextState( ShellState::WAITING )
-	  , state( ShellState::WAITING )
-	  , activeScreen( ShellScreen::START )
-	  , nextScreen( ShellScreen::START )
-	  , isInitialized( false )
-	  , gameComplete( false )
-	  , inGame( false )
+	, soundWorld( nullptr )
+	, nextState( ShellState::WAITING )
+	, state( ShellState::WAITING )
+	, activeScreen( ShellScreen::START )
+	, nextScreen( ShellScreen::START )
+	, isInitialized( false )
+	, gameComplete( false )
+	, inGame( false )
 {
 	if( !eventHandlerOptions )
 	{
@@ -113,7 +113,7 @@ struct WindowSizePair
 	int width, height;
 };
 
-inline bool operator==(const WindowSizePair& lhs, const WindowSizePair& rhs)
+inline bool operator==( const WindowSizePair& lhs, const WindowSizePair& rhs )
 {
 	return lhs.width == rhs.width && lhs.height == rhs.height;
 }
@@ -167,7 +167,7 @@ public:
 		for( int i = 0; i < windowSizes.Num(); i++ )
 		{
 			if( vidMode.width == windowSizes[i].width &&
-				vidMode.height == windowSizes[i].height )
+					vidMode.height == windowSizes[i].height )
 			{
 				windowSizeIndex = i;
 				break;
