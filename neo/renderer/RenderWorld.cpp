@@ -793,7 +793,7 @@ void idRenderWorldLocal::UpdateSkyDef( qhandle_t handle, const SkyDef* def )
 	// create new slots if needed
 	if( handle < 0 || handle > LUDICROUS_INDEX )
 	{
-		common->Error( "idRenderWorld::UpdateEnvprobeDef: index = %i", handle );
+		common->Error( "idRenderWorld::UpdateSkyDef: index = %i", handle );
 	}
 
 	while( handle >= skyDefs.Num() )
@@ -801,7 +801,6 @@ void idRenderWorldLocal::UpdateSkyDef( qhandle_t handle, const SkyDef* def )
 		skyDefs.Append( NULL );
 	}
 
-	bool justUpdate = false;
 	SkyDef* skyDef = skyDefs[handle];
 
 	if( !skyDef )

@@ -371,6 +371,9 @@ void idSky::Save( idSaveGame* saveFile ) const
 	saveFile->WriteFloat( time );
 	saveFile->WriteFloat( latitude );
 	saveFile->WriteFloat( turbidity );
+	saveFile->WriteFloat( sunSize );
+	saveFile->WriteFloat( sunBloom );
+	saveFile->WriteFloat( exposition );
 	light.Save( saveFile );
 }
 
@@ -382,6 +385,9 @@ void idSky::Restore( idRestoreGame* saveFile )
 	saveFile->ReadFloat( time );
 	saveFile->ReadFloat( latitude );
 	saveFile->ReadFloat( turbidity );
+	saveFile->ReadFloat( sunSize );
+	saveFile->ReadFloat( sunBloom );
+	saveFile->ReadFloat( exposition );
 	light.Restore( saveFile );
 }
 
@@ -391,12 +397,9 @@ void idSky::Think()
 	time = idMath::Mod( time, 24.0f );
 	sun.Update( time );
 
-	const Color colorSunLuminanceXYZ = sunLuminanceXyz.GetValue( time );
-	const Color colorSunLuminanceRGB = xyzToRgb( colorSunLuminanceXYZ );
-
 	const Color colorSkyLuminanceXYZ = skyLuminanceXyz.GetValue( time );
 	//const Color skyLuminanceRgb = xyzToRgb(colorSkyLuminanceXYZ);
-	
+
 	SkyDef params;
 	params.skyLuminanceXYZ = idVec4( colorSkyLuminanceXYZ.x, colorSkyLuminanceXYZ.y, colorSkyLuminanceXYZ.z, 1.0f );
 	params.sunDirection = idVec4( sun.sunDir.x, sun.sunDir.y, sun.sunDir.z, 1.0f );
@@ -405,6 +408,9 @@ void idSky::Think()
 
 	if( light.IsValid() )
 	{
+		const Color colorSunLuminanceXYZ = sunLuminanceXyz.GetValue(time);
+		const Color colorSunLuminanceRGB = xyzToRgb(colorSunLuminanceXYZ);
+
 		idLight* l = light.GetEntity();
 		l->SetCenter( idVec3( -sun.sunDir.z, sun.sunDir.x, sun.sunDir.y ) );
 		l->SetColor( colorSunLuminanceRGB );

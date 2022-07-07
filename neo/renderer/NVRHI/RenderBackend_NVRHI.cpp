@@ -178,6 +178,10 @@ void idRenderBackend::Init()
 	prevMVP[1] = renderMatrix_identity;
 	prevViewsValid = false;
 
+	currentIndexBuffer = nullptr;
+	currentVertexBuffer = nullptr;
+	currentVertexOffset = -1;
+	currentIndexOffset = -1;
 	currentJointBuffer = nullptr;
 	currentJointOffset = 0;
 
@@ -1617,7 +1621,7 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 	if( color )
 	{
 		nvrhi::utils::ClearColorAttachment( commandList, globalFramebuffers.ldrFBO->GetApiObject(), 0, nvrhi::Color( 0.f ) );
-		nvrhi::utils::ClearColorAttachment( commandList, framebuffer, 0, nvrhi::Color( 0.f ) );
+		nvrhi::utils::ClearColorAttachment(commandList, framebuffer, 0, nvrhi::Color(0.f));
 	}
 
 	if( clearHDR )
@@ -1814,6 +1818,7 @@ void idRenderBackend::ClearCaches()
 
 	currentVertexBuffer = nullptr;
 	currentIndexBuffer = nullptr;
+	currentJointBuffer = nullptr;
 	currentIndexOffset = -1;
 	currentVertexOffset = -1;
 	currentBindingLayout = nullptr;

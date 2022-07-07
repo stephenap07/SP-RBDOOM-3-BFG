@@ -6775,6 +6775,14 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 	}
 
+	// Reset the graphics state.
+	currentVertexBuffer = nullptr;
+	currentIndexBuffer = nullptr;
+	currentJointBuffer = nullptr;
+	currentVertexOffset = 0;
+	currentIndexOffset = 0;
+	currentJointOffset = 0;
+
 	//-------------------------------------------------
 	// RB_BeginDrawingView
 	//

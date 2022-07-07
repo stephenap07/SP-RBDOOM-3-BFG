@@ -10,20 +10,19 @@ class spStateScript
 public:
 	spStateScript( idEntity* owner );
 
-	void SetName( const char* name );
+	virtual		~spStateScript() = default;
 
-	virtual ~spStateScript() = default;
+	void		Construct();
 
-	void Construct();
+	void		Destroy();
 
-	void Destroy();
+	void		Think();
 
-	void Think();
+	void		Reload();
 
-	void Reload();
+	void		SendEvent( int entityNumber, const char* eventName );
 
-	void SendEvent( int entityNumber, const char* eventName );
-
+	void		SetName( const char* name );
 	const char* GetName() const;
 
 private:

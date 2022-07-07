@@ -57,10 +57,10 @@ void main( in PS_IN fragment, out float4 outColor : SV_TARGET )
 	float sun = exp( -distance / gSkyParams.parameters.y / size2 ) + step( distance, size2 );
 	float sun2 = min( sun * sun, 1.0 );
 	float3 color = fragment.color.rgb + sun2;
-	
+
 	// Remove the banding
 	float r = n4rand_ss( fragment.screenPosition.xy );
-	color += float3(r, r, r) / 40.0;
+	color += float3( r, r, r ) / 40.0;
 
 	outColor = float4( color, 1.0 );
 }
