@@ -160,7 +160,7 @@ void idRenderBackend::Init()
 	commandList->close();
 	deviceManager->GetDevice()->executeCommandList( commandList );
 
-	fhImmediateMode::Init();
+	fhImmediateMode::Init( commandList );
 
 	// allocate the frame data, which may be more if smp is enabled
 	R_InitFrameData();
@@ -1621,7 +1621,7 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 	if( color )
 	{
 		nvrhi::utils::ClearColorAttachment( commandList, globalFramebuffers.ldrFBO->GetApiObject(), 0, nvrhi::Color( 0.f ) );
-		nvrhi::utils::ClearColorAttachment(commandList, framebuffer, 0, nvrhi::Color(0.f));
+		nvrhi::utils::ClearColorAttachment( commandList, framebuffer, 0, nvrhi::Color( 0.f ) );
 	}
 
 	if( clearHDR )

@@ -40,8 +40,8 @@ extern DeviceManager* deviceManager;
 
 namespace
 {
-const int c_drawVertsCapacity = ( 20000 * 4 );
-//const int c_drawIndexesCapacity = ( 20000 * 6 );
+const int c_drawVertsCapacity = ( 40000 * 4 );
+const int c_drawIndexesCapacity = ( 40000 * 6 );
 
 idDrawVert drawVerts[c_drawVertsCapacity];
 triIndex_t lineIndices[c_drawVertsCapacity * 2];
@@ -53,7 +53,10 @@ bool active = false;
 int fhImmediateMode::drawCallCount = 0;
 int fhImmediateMode::drawCallVertexSize = 0;
 
-void fhImmediateMode::Init()
+idVertexBuffer	fhImmediateMode::vertexBuffer;
+idIndexBuffer	fhImmediateMode::indexBuffer;
+
+void fhImmediateMode::Init( nvrhi::ICommandList* commandList )
 {
 	for( int i = 0; i < c_drawVertsCapacity * 2; ++i )
 	{
@@ -61,6 +64,7 @@ void fhImmediateMode::Init()
 	}
 
 	ResetStats();
+	InitBuffers( commandList );
 }
 
 void fhImmediateMode::ResetStats()
@@ -76,6 +80,15 @@ int fhImmediateMode::DrawCallCount()
 int fhImmediateMode::DrawCallVertexSize()
 {
 	return drawCallVertexSize;
+}
+
+void fhImmediateMode::InitBuffers( nvrhi::ICommandList* commandList )
+{
+	commandList->open();
+	vertexBuffer.AllocBufferObject( nullptr, c_drawVertsCapacity, bufferUsageType_t::BU_STATIC, commandList );
+	indexBuffer.AllocBufferObject( nullptr, c_drawIndexesCapacity, bufferUsageType_t::BU_STATIC, commandList );
+	commandList->close();
+	deviceManager->GetDevice()->executeCommandList( commandList );
 }
 
 
@@ -116,27 +129,8 @@ void fhImmediateMode::End()
 		return;
 	}
 
-	nvrhi::BufferDesc vertexBufferDesc;
-	vertexBufferDesc.byteSize = drawVertsUsed * sizeof( idDrawVert );
-	vertexBufferDesc.isVertexBuffer = true;
-	vertexBufferDesc.debugName = "VertexBuffer";
-	vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-	vertexBuffer = deviceManager->GetDevice()->createBuffer( vertexBufferDesc );
-
-	commandList->beginTrackingBufferState( vertexBuffer, nvrhi::ResourceStates::CopyDest );
-	commandList->writeBuffer( vertexBuffer, drawVerts, drawVertsUsed * sizeof( idDrawVert ) );
-	commandList->setPermanentBufferState( vertexBuffer, nvrhi::ResourceStates::VertexBuffer );
-
-	nvrhi::BufferDesc indexBufferDesc;
-	indexBufferDesc.byteSize = drawVertsUsed * sizeof( triIndex_t );
-	indexBufferDesc.isIndexBuffer = true;
-	indexBufferDesc.debugName = "IndexBuffer";
-	indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-	indexBuffer = deviceManager->GetDevice()->createBuffer( indexBufferDesc );
-
-	commandList->beginTrackingBufferState( indexBuffer, nvrhi::ResourceStates::CopyDest );
-	commandList->writeBuffer( indexBuffer, lineIndices, drawVertsUsed * sizeof( triIndex_t ) );
-	commandList->setPermanentBufferState( indexBuffer, nvrhi::ResourceStates::IndexBuffer );
+	vertexBuffer.Update( drawVerts, drawVertsUsed * sizeof( idDrawVert ), 0, false, commandList );
+	indexBuffer.Update( lineIndices, drawVertsUsed * sizeof( triIndex_t ), 0, false, commandList );
 
 	renderProgManager.CommitConstantBuffer( commandList );
 
@@ -167,8 +161,8 @@ void fhImmediateMode::End()
 			state.bindings.push_back( tr.backend.currentBindingSets[i] );
 		}
 
-		state.indexBuffer = { indexBuffer, nvrhi::Format::R16_UINT, 0 };
-		state.vertexBuffers = { { vertexBuffer, 0, 0 } };
+		state.indexBuffer = { indexBuffer.GetAPIObject(), nvrhi::Format::R16_UINT, 0};
+		state.vertexBuffers = { { vertexBuffer.GetAPIObject(), 0, 0}};
 		state.pipeline = pipeline;
 		state.framebuffer = tr.backend.currentFrameBuffer->GetApiObject();
 
