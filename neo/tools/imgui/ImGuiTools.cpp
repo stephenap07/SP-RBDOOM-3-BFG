@@ -32,6 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../imgui/BFGimgui.h"
 #include "../idlib/CmdArgs.h"
 
+#include "afeditor/AfEditor.h"
 #include "lighteditor/LightEditor.h"
 
 
@@ -85,6 +86,11 @@ void DrawToolWindows()
 		LightEditor::Draw();
 	}
 
+	if( AfEditor::Instance().IsShown() )
+	{
+		AfEditor::Instance().Draw();
+	}
+
 	// TODO: other editor windows..
 	//ImGui::End();
 }
@@ -106,6 +112,12 @@ void LightEditorInit( const idDict* dict, idEntity* ent )
 	impl::SetReleaseToolMouse( true );
 
 	LightEditor::ReInit( dict, ent );
+}
+
+void AfEditorInit()
+{
+	AfEditor::Instance().ShowIt( true );
+	impl::SetReleaseToolMouse( true );
 }
 
 } //namespace ImGuiTools

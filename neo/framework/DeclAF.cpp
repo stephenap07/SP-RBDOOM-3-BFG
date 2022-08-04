@@ -341,6 +341,13 @@ void idDeclAF_Constraint::SetDefault( const idDeclAF* file )
 		limitAngles[1] =
 			limitAngles[2] = 0.0f;
 	limitAxis.ToVec3().Set( 0.0f, 0.0f, -1.0f );
+
+	stretch = 0.f;
+	compress = 0.f;
+	damping = 0.f;
+	restLength = 0.f;
+	minLength = 0.f;
+	maxLength = 0.f;
 }
 
 /*

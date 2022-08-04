@@ -4255,6 +4255,7 @@ idDeclLocal::idDeclLocal()
 	everReferenced = false;
 	redefinedInReload = false;
 	nextInFile = NULL;
+	self = nullptr;
 }
 
 /*

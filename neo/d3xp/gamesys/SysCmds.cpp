@@ -32,6 +32,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../Game_local.h"
 
+#include "../tools/imgui/afeditor/AfEditor.h"
+
 /*
 ==================
 Cmd_GetFloatArg
@@ -2729,6 +2731,22 @@ void Cmd_TestId_f( const idCmdArgs& args )
 	gameLocal.mpGame.AddChatLine( idLocalization::GetString( id ), "<nothing>", "<nothing>", "<nothing>" );
 }
 
+void Cmd_ShowAfEditor_f( const idCmdArgs& args )
+{
+	if( g_editEntityMode.GetInteger() != 3 )
+	{
+		g_editEntityMode.SetInteger( 3 );
+		com_editors |= EDITOR_AF;
+		ImGuiTools::AfEditor::Instance().Init();
+		ImGuiTools::AfEditor::Instance().ShowIt( true );
+	}
+	else
+	{
+		g_editEntityMode.SetInteger( 0 );
+		com_editors &= ~EDITOR_AF;
+		ImGuiTools::AfEditor::Instance().ShowIt( false );
+	}
+}
 
 /*
 =================
@@ -2822,7 +2840,8 @@ void idGameLocal::InitConsoleCommands()
 	// RB end
 
 	// SP Begin
-	cmdSystem->AddCommand( "exportTsApi",			idClass::ExportTypeScriptEvents_f,	CMD_FL_GAME | CMD_FL_TOOL,	"update script/doom_events.script" );
+	cmdSystem->AddCommand( "editAFs",				Cmd_ShowAfEditor_f, CMD_FL_GAME | CMD_FL_TOOL, "launches the in-game Articulated Figure Editor" );
+	cmdSystem->AddCommand( "exportTsApi",			idClass::ExportTypeScriptEvents_f,	CMD_FL_GAME | CMD_FL_TOOL,	"update script/tech4-api.d.ts" );
 	// SP end
 
 	// multiplayer client commands ( replaces old impulses stuff )

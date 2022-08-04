@@ -146,6 +146,7 @@ public:
 
 	size_t				Size() const;
 	const char* 		c_str() const;
+	char*				c_str();
 	operator			const char* () const;
 	operator			const char* ();
 
@@ -654,6 +655,11 @@ ID_INLINE size_t idStr::Size() const
 }
 
 ID_INLINE const char* idStr::c_str() const
+{
+	return data;
+}
+
+ID_INLINE char* idStr::c_str()
 {
 	return data;
 }

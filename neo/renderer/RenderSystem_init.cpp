@@ -2411,7 +2411,7 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 	return newFont;
 }
 
-FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize, FontStyle fontStyle )
+FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int fontSize, FontStyle fontStyle )
 {
 	TrueTypeHandle ttfHandle;
 	for( int i = 0; i < fontFaces.Num(); i++ )
@@ -2432,12 +2432,12 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize, 
 
 	idStrStatic< MAX_OSPATH > baseFontName = fontName;
 	baseFontName.Replace( "fonts/", "" );
-	baseFontName.Append( aSize );
+	baseFontName.Append( fontSize );
 
 	for( int i = 0; i < newFonts.Num(); i++ )
 	{
 		if( idStr::Icmp( newFonts[i].name, baseFontName ) == 0 &&
-				newFonts[i].size == aSize &&
+				newFonts[i].size == fontSize &&
 				newFonts[i].ttfHandle == ttfHandle &&
 				newFonts[i].style == fontStyle )
 		{
@@ -2447,9 +2447,9 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int aSize, 
 
 	NewFontData data;
 	data.ttfHandle = ttfHandle;
-	data.fontHandle = fontManager->createFontByPixelSize( data.ttfHandle, 0, aSize );
+	data.fontHandle = fontManager->createFontByPixelSize( data.ttfHandle, 0, fontSize );
 	data.name = baseFontName;
-	data.size = aSize;
+	data.size = fontSize;
 	data.style = fontStyle;
 	newFonts.Append( data );
 
@@ -2505,12 +2505,11 @@ void idRenderSystemLocal::InitBackend()
 		}
 
 		commandList->open();
-
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		globalImages->ReloadImages( true, commandList );
-
 		commandList->close();
 		deviceManager->GetDevice()->executeCommandList( commandList );
+
 #else
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		//globalImages->ReloadImages( true );

@@ -128,7 +128,7 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	}
 
 	// copy the data
-	if( data != NULL )
+	if( data )
 	{
 		Update( data, allocSize, 0, true, commandList );
 	}

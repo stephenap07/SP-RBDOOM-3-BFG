@@ -1098,6 +1098,12 @@ file(GLOB IMGUI_EDITOR_SOURCES tools/imgui/*.cpp)
 file(GLOB IMGUI_EDITOR_LIGHT_INCLUDES tools/imgui/lighteditor/*.h)
 file(GLOB IMGUI_EDITOR_LIGHT_SOURCES tools/imgui/lighteditor/*.cpp)
 
+file(GLOB IMGUI_EDITOR_AF_INCLUDES tools/imgui/afeditor/*.h)
+file(GLOB IMGUI_EDITOR_AF_SOURCES tools/imgui/afeditor/*.cpp)
+
+file(GLOB IMGUI_EDITOR_UTIL_INCLUDES tools/imgui/util/*.h)
+file(GLOB IMGUI_EDITOR_UTIL_SOURCES tools/imgui/util/*.cpp)
+
 file(GLOB DOOMCLASSIC_INCLUDES ../doomclassic/doom/*.h)
 file(GLOB DOOMCLASSIC_SOURCES ../doomclassic/doom/*.cpp)
 
@@ -1473,6 +1479,11 @@ source_group("tools\\imgui" FILES ${IMGUI_EDITOR_SOURCES})
 source_group("tools\\imgui\\lighteditor" FILES ${IMGUI_EDITOR_LIGHT_INCLUDES})
 source_group("tools\\imgui\\lighteditor" FILES ${IMGUI_EDITOR_LIGHT_SOURCES})
 
+source_group("tools\\imgui\\afeditor" FILES ${IMGUI_EDITOR_AF_INCLUDES})
+source_group("tools\\imgui\\afeditor" FILES ${IMGUI_EDITOR_AF_SOURCES})
+
+source_group("tools\\imgui\\util" FILES ${IMGUI_EDITOR_UTIL_INCLUDES})
+source_group("tools\\imgui\\util" FILES ${IMGUI_EDITOR_UTIL_SOURCES})
 
 set(RBDOOM3_INCLUDES
 			${AAS_INCLUDES}
@@ -1531,6 +1542,8 @@ set(RBDOOM3_INCLUDES
 			${TOOLS_INCLUDES}
 			${IMGUI_EDITOR_INCLUDES}
 			${IMGUI_EDITOR_LIGHT_INCLUDES}
+			${IMGUI_EDITOR_AF_INCLUDES}
+			${IMGUI_EDITOR_UTIL_INCLUDES}
 			
 			${GAMED3XP_INCLUDES}
 			${GAMED3XP_AI_INCLUDES}
@@ -1580,6 +1593,8 @@ set(RBDOOM3_SOURCES
 			
 			${IMGUI_EDITOR_SOURCES}
 			${IMGUI_EDITOR_LIGHT_SOURCES}
+			${IMGUI_EDITOR_AF_SOURCES}
+			${IMGUI_EDITOR_UTIL_SOURCES}
 			
 			${GAMED3XP_SOURCES}
 			${GAMED3XP_AI_SOURCES}
