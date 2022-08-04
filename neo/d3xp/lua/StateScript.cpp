@@ -40,87 +40,21 @@ If you have questions concerning this license or the applicable additional terms
 #include <lua.hpp>
 
 // Lua Interface
-static const char* ModuleName = "EntitySystem";
-static const char* RegisterName = "Register";
-static const char* SendEventName = "SendEvent";
-static const char* ThinkName = "Think";
-
-
-/**
-* Entity registration and lifetime management.
-*/
-static void TS_New( lua_State* L, idEntity* ent )
-{
-	// Get the register table
-	lua_getglobal( L, ModuleName );
-	if( !lua_istable( L, -1 ) )
-	{
-		gameLocal.Warning( "Failed to find the %s table", ModuleName );
-		return;
-	}
-
-	lua_getfield( L, -1, RegisterName );
-	if( !lua_isfunction( L, -1 ) )
-	{
-		gameLocal.Warning( "Failed to find function %s", RegisterName );
-	}
-
-	gameLocal.scriptManager.ReturnEntity( ent );
-
-	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
-	{
-		gameLocal.Warning( "Something went wrong in the %s.%s: %s", ModuleName, RegisterName, lua_tostring( L, -1 ) );
-		lua_pop( L, 1 );
-	}
-}
-
-static void TS_SendEvent( lua_State* L, idEntity* ent, const char* eventName )
-{
-	// Get the register table
-	lua_getglobal( L, ModuleName );
-	if( !lua_istable( L, -1 ) )
-	{
-		gameLocal.Warning( "Failed to find the %s table", ModuleName );
-		return;
-	}
-
-	lua_getfield( L, -1, SendEventName );
-	gameLocal.scriptManager.ReturnEntity( ent );
-
-	lua_createtable( L, 0, 1 );
-	lua_pushstring( L, eventName );
-	lua_setfield( L, -2, "name" );
-
-	if( lua_pcall( L, 2, 0, 0 ) != LUA_OK )
-	{
-		gameLocal.Warning( "Something went wrong in the %s.%s: %s", ModuleName, SendEventName, lua_tostring( L, -1 ) );
-		lua_pop( L, 1 );
-	}
-}
-
-static void TS_Think( lua_State* L, idEntity* ent )
-{
-	// Get the register table
-	lua_getglobal( L, ModuleName );
-	if( !lua_istable( L, -1 ) )
-	{
-		gameLocal.Warning( "Failed to find the %s table", ModuleName );
-		return;
-	}
-
-	lua_getfield( L, -1, ThinkName );
-	gameLocal.scriptManager.ReturnEntity( ent );
-
-	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
-	{
-		gameLocal.Warning( "Something went wrong in the %s.%s: %s", ModuleName, ThinkName, lua_tostring( L, -1 ) );
-		lua_pop( L, 1 );
-	}
-}
+static const char* moduleName( "EntitySystem" );
+static const char* registerName( "Register" );
+static const char* thinkName( "Think" );
+static const char* sendEventName( "SendEvent" );
+static const char* updateVariableName( "UpdateVariable" );
+static const char* stateVariableName( "stateEntity" );
 
 spStateScript::spStateScript( idEntity* owner )
 	: owner( owner )
 {
+}
+
+spStateScript::~spStateScript()
+{
+	Destroy();
 }
 
 void spStateScript::SetName( const char* name )
@@ -132,23 +66,45 @@ void spStateScript::Construct()
 {
 	if( scriptName.IsEmpty() )
 	{
+		gameLocal.Warning( "Missing script name for state script for %s", owner->GetName() );
 		return;
 	}
 
 	gameLocal.scriptManager.AddReloadable( this );
 
 	lua_State* L = gameLocal.scriptManager.LuaState();
-	TS_New( L, owner );
+
+	// Get the register table
+	lua_getglobal( L, moduleName );
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find the %s table", moduleName );
+		return;
+	}
+
+	lua_getfield( L, -1, registerName );
+	if( !lua_isfunction( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find function %s", registerName );
+	}
+
+	gameLocal.scriptManager.ReturnEntity( owner );
+
+	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the %s.%s: %s", moduleName, registerName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
 }
 
 void spStateScript::Destroy()
 {
+	gameLocal.scriptManager.DestroyReloadable( this );
+
 	if( scriptName.IsEmpty() )
 	{
 		return;
 	}
-
-	gameLocal.scriptManager.DestroyReloadable( this );
 
 	lua_State* L = gameLocal.scriptManager.LuaState();
 
@@ -170,7 +126,22 @@ void spStateScript::Think()
 
 	lua_State* L = gameLocal.scriptManager.LuaState();
 
-	TS_Think( L, owner );
+	// Get the register table
+	lua_getglobal( L, moduleName );
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find the %s table", moduleName );
+		return;
+	}
+
+	lua_getfield( L, -1, thinkName );
+	gameLocal.scriptManager.ReturnEntity( owner );
+
+	if( lua_pcall( L, 1, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the %s.%s: %s", moduleName, thinkName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
 }
 
 void spStateScript::Reload()
@@ -183,7 +154,7 @@ void spStateScript::Reload()
 	Construct();
 }
 
-void spStateScript::SendEvent( int entityNumber, const char* eventName )
+void spStateScript::SendEvent( const char* eventName )
 {
 	if( scriptName.IsEmpty() )
 	{
@@ -192,10 +163,45 @@ void spStateScript::SendEvent( int entityNumber, const char* eventName )
 
 	lua_State* L = gameLocal.scriptManager.LuaState();
 
-	TS_SendEvent( L, owner, eventName );
+	// Get the register table
+	lua_getglobal( L, moduleName );
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "Failed to find the %s table", moduleName );
+		return;
+	}
+
+	lua_getfield( L, -1, sendEventName );
+	gameLocal.scriptManager.ReturnEntity( owner );
+
+	lua_createtable( L, 0, 1 );
+	lua_pushstring( L, eventName );
+	lua_setfield( L, -2, "name" );
+
+	if( lua_pcall( L, 2, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Something went wrong in the %s.%s: %s", moduleName, sendEventName, lua_tostring( L, -1 ) );
+		lua_pop( L, 1 );
+	}
+}
+
+void spStateScript::UpdateVariable( const char* varName, bool value ) const
+{
+	lua_State* L = gameLocal.scriptManager.LuaState();
+
+	lua_getglobal( L, owner->GetName() );
+	if( !lua_istable( L, -1 ) )
+	{
+		//gameLocal.Warning( "Failed to find registered entity %s", owner->GetName() );
+		return;
+	}
+	lua_getfield( L, -1, stateVariableName );
+	lua_pushboolean( L, value );
+	lua_setfield( L, -2, varName );
+	lua_pop( L, 2 );
 }
 
 const char* spStateScript::GetName() const
 {
-	return scriptName.c_str();
+	return scriptName;
 }

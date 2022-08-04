@@ -89,9 +89,10 @@ public:
 		return luaState;
 	}
 
-	void	Init( );
+	void	Init();
 	bool	LoadLuaScript( const char* luaScript, bool failIfFound = false ) const;
-	void	Restart( );
+	void	Restart();
+	void	Think();
 
 	void	Call( const idCmdArgs& args ) const;
 
@@ -211,6 +212,7 @@ public:
 	void		LoadScript( const char* script );
 	void		AddReloadable( spStateScript* stateScript );
 	void		DestroyReloadable( spStateScript* stateScript );
+	void		Think();
 
 	lua_State*	LuaState( )
 	{

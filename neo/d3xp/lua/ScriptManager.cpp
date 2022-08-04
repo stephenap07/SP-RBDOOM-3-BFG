@@ -222,9 +222,9 @@ void ScriptManager::Reload( )
 	}
 }
 
-void ScriptManager::Restart( )
+void ScriptManager::Restart()
 {
-	luaThread->Restart( );
+	luaThread->Restart();
 }
 
 void ScriptManager::LoadScript( const char* script )
@@ -240,6 +240,11 @@ void ScriptManager::AddReloadable( spStateScript* stateScript )
 void ScriptManager::DestroyReloadable( spStateScript* stateScript )
 {
 	reloadables.Remove( stateScript );
+}
+
+void ScriptManager::Think()
+{
+	luaThread->Think();
 }
 
 void ScriptManager::ReturnString( const char* text )
@@ -476,9 +481,38 @@ void idLuaThread::Restart( )
 	lua_pop( luaState, 1 );
 }
 
+void idLuaThread::Think()
+{
+	lua_State* L = luaState;
+
+	lua_getglobal( L, "tech4" );
+	if( !lua_istable( L, -1 ) )
+	{
+		gameLocal.Warning( "tech4 table is doesn't exist" );
+		return;
+	}
+
+	lua_getfield( L, -1, "mainThink" );
+	if( !lua_isfunction( L, -1 ) )
+	{
+		// no think defined
+		lua_pop( L, 1 );
+		return;
+	}
+
+	if( lua_pcall( L, 0, 0, 0 ) != LUA_OK )
+	{
+		gameLocal.Warning( "Error calling mainThink %s", lua_tostring( luaState, -1 ) );
+		lua_pop( L, 1 );
+		return;
+	}
+
+	lua_pop( L, 2 );
+}
+
 bool idLuaThread::LoadLuaScript( const char* luaScript, bool failIfNotFound ) const
 {
-	char* src;
+	char* src = nullptr;
 
 	const int length = fileSystem->ReadFile( luaScript, reinterpret_cast<void**>( &src ), nullptr );
 	if( length < 0 )
@@ -561,6 +595,7 @@ void idLuaThread::ReturnEntity( idEntity* ent ) const
 		return;
 	}
 
+	// Get the global if it already exists
 	lua_getglobal( L, ent->GetName() );
 	if( lua_istable( L, -1 ) )
 	{
@@ -568,7 +603,7 @@ void idLuaThread::ReturnEntity( idEntity* ent ) const
 	}
 	lua_pop( L, 1 );
 
-	// Create the instance table
+	// It doesn't exist. Create the instance table
 	lua_createtable( L, 0, 2 );
 	lua_pushlightuserdata( L, ( void* )ent );
 	lua_setfield( L, -2, "classPtr" );
