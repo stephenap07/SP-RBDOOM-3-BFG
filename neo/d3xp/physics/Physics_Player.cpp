@@ -125,7 +125,7 @@ Handles user intended acceleration
 */
 void idPhysics_Player::Accelerate( const idVec3& wishdir, const float wishspeed, const float accel )
 {
-#if 1
+#if 0
 	// q2 style
 	float addspeed, accelspeed, currentspeed;
 
