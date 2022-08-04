@@ -1785,7 +1785,8 @@ void idWeapon::Raise()
 {
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "RaiseWeapon" );
+		stateScript.UpdateVariable( "isRaiseWeapon", true );
+		stateScript.SendEvent( "RaiseWeapon" );
 	}
 }
 
@@ -1799,7 +1800,8 @@ void idWeapon::PutAway()
 	hasBloodSplat = false;
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "LowerWeapon" );
+		stateScript.UpdateVariable( "isRaiseWeapon", false );
+		stateScript.SendEvent( "LowerWeapon" );
 	}
 }
 
@@ -1813,7 +1815,7 @@ void idWeapon::Reload()
 {
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "Reload" );
+		stateScript.SendEvent( "Reload" );
 	}
 }
 
@@ -1933,7 +1935,7 @@ void idWeapon::OwnerDied()
 {
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "OwnerDied" );
+		stateScript.SendEvent( "OwnerDied" );
 
 		stateScript.Think();
 
@@ -1978,7 +1980,8 @@ void idWeapon::BeginAttack()
 		StopSound( SND_CHANNEL_BODY, false );
 	}
 
-	stateScript.SendEvent( entityNumber, "BeginAttack" );
+	stateScript.SendEvent( "BeginAttack" );
+	stateScript.UpdateVariable( "isAttacking", true );
 
 	isFiring = true;
 }
@@ -1992,7 +1995,8 @@ void idWeapon::EndAttack()
 {
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "EndAttack" );
+		stateScript.SendEvent( "EndAttack" );
+		stateScript.UpdateVariable( "isAttacking", false );
 	}
 }
 
@@ -2069,7 +2073,7 @@ void idWeapon::WeaponStolen()
 	{
 		if( isLinked )
 		{
-			stateScript.SendEvent( entityNumber, "WeaponStolen" );
+			stateScript.SendEvent( "WeaponStolen" );
 			stateScript.Think();
 		}
 		projectileEnt = NULL;
@@ -3138,7 +3142,7 @@ bool idWeapon::ClientReceiveEvent( int event, int time, const idBitMsg& msg )
 		{
 			if( isLinked )
 			{
-				stateScript.SendEvent( entityNumber, "Reload" );
+				stateScript.SendEvent( "Reload" );
 			}
 
 			// Local clients predict reloads, only process this event for remote clients.
@@ -3154,7 +3158,7 @@ bool idWeapon::ClientReceiveEvent( int event, int time, const idBitMsg& msg )
 		{
 			if( isLinked )
 			{
-				stateScript.SendEvent( entityNumber, "EndReload" );
+				stateScript.SendEvent( "EndReload" );
 			}
 			// Local clients predict reloads, only process this event for remote clients.
 			//if ( owner != NULL && !owner->IsLocallyControlled() && WEAPON_NETENDRELOAD.IsLinked() ) {
@@ -3249,7 +3253,7 @@ void idWeapon::Event_WeaponReady()
 	status = WP_READY;
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "RaiseWeapon" );
+		stateScript.SendEvent( "RaiseWeapon" );
 	}
 	if( sndHum )
 	{
@@ -3270,7 +3274,7 @@ void idWeapon::Event_WeaponOutOfAmmo()
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_OUTOFAMMO \n" );
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "LowerWeapon" );
+		stateScript.SendEvent( "LowerWeapon" );
 	}
 }
 
@@ -3307,7 +3311,7 @@ void idWeapon::Event_WeaponRising()
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_RISING \n" );
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "RaiseWeapon" );
+		stateScript.SendEvent( "RaiseWeapon" );
 	}
 	owner->WeaponRisingCallback();
 }
@@ -3323,7 +3327,7 @@ void idWeapon::Event_WeaponLowering()
 	idLib::PrintfIf( g_debugWeapon.GetBool(), "Weapon Status WP_LOWERING \n" );
 	if( isLinked )
 	{
-		stateScript.SendEvent( entityNumber, "LowerWeapon" );
+		stateScript.SendEvent( "LowerWeapon" );
 	}
 	owner->WeaponLoweringCallback();
 }

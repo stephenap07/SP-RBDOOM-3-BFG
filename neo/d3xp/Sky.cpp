@@ -408,8 +408,8 @@ void idSky::Think()
 
 	if( light.IsValid() )
 	{
-		const Color colorSunLuminanceXYZ = sunLuminanceXyz.GetValue(time);
-		const Color colorSunLuminanceRGB = xyzToRgb(colorSunLuminanceXYZ);
+		const Color colorSunLuminanceXYZ = sunLuminanceXyz.GetValue( time );
+		const Color colorSunLuminanceRGB = xyzToRgb( colorSunLuminanceXYZ );
 
 		idLight* l = light.GetEntity();
 		l->SetCenter( idVec3( -sun.sunDir.z, sun.sunDir.x, sun.sunDir.y ) );

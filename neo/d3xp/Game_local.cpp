@@ -1785,7 +1785,7 @@ void idGameLocal::MapShutdown()
 
 	// reset the script to the state it was before the map was started
 	program.Restart();
-	scriptManager.Reload( );
+	scriptManager.Reload();
 
 	if( smokeParticles )
 	{
@@ -2792,6 +2792,8 @@ void idGameLocal::RunFrame( idUserCmdMgr& cmdMgr, gameReturn_t& ret )
 			collisionModelManager->Simulate( ( time - previousTime ) / 1000.0f );
 			collisionModelManager->FetchResults( true );
 #endif
+
+			scriptManager.Think();
 
 			// let entities think
 			if( g_timeentities.GetFloat() )
