@@ -214,8 +214,8 @@ bool idRmlRender::LoadTexture( Rml::TextureHandle& textureHandle, Rml::Vector2i&
 		if( textureDimensions.x == 0 || textureDimensions.y == 0 )
 		{
 			image->FinalizeImage( false, nullptr );
-			textureDimensions.x = material->GetImageWidth( );
-			textureDimensions.y = material->GetImageHeight( );
+			textureDimensions.x = material->GetImageWidth();
+			textureDimensions.y = material->GetImageHeight();
 		}
 	}
 	else

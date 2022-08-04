@@ -84,28 +84,28 @@ public:
 
 	void						SetCursor( float x, float y ) override
 	{
-		_cursorX = x;
-		_cursorY = y;
+		cursorX = x;
+		cursorY = y;
 	}
 
 	float						CursorX() override
 	{
-		return _cursorX;
+		return cursorX;
 	}
 
 	float						CursorY() override
 	{
-		return _cursorY;
+		return cursorY;
 	}
 
 	bool						IsCursorEnabled() const override
 	{
-		return _cursorEnabled;
+		return cursorEnabled;
 	}
 
-	void						SetCursorEnabled( bool cursorEnabled ) override
+	void						SetCursorEnabled( bool newCursorEnabled ) override
 	{
-		_cursorEnabled = cursorEnabled;
+		cursorEnabled = newCursorEnabled;
 	}
 
 	// Activated the gui.
@@ -117,17 +117,17 @@ public:
 
 	bool						IsActive() override
 	{
-		return _isActive;
+		return isActive;
 	}
 
 	bool						IsPausingGame() override
 	{
-		return _isPausingGame;
+		return isPausingGame;
 	}
 
 	virtual void				SetIsPausingGame( bool pause ) override
 	{
-		_isPausingGame = pause;
+		isPausingGame = pause;
 	}
 
 	bool						InhibitsControl( ) override;
@@ -151,45 +151,46 @@ public:
 
 	const char*					GetName() const
 	{
-		return _name;
+		return name;
 	}
 
 	ID_TIME_T					GetTimeStamp() const
 	{
-		return _timeStamp;
+		return timeStamp;
 	}
 
 	void						ClearRefs()
 	{
-		_refs = 0;
+		refs = 0;
 	}
 
 	void						AddRef()
 	{
-		_refs++;
+		refs++;
 	}
 
 	int							GetRefs()
 	{
-		return _refs;
+		return refs;
 	}
 
 	Rml::Context*				Context()
 	{
-		return _context;
+		return context;
 	}
 
 	void						DrawCursor();
 
 	void						SetInhibitsControl( bool inhibit )
 	{
-		_inhibitsControl = inhibit;
+		inhibitsControl = inhibit;
 	}
 
 protected:
 
 
-	// Event handling
+	/// @name Events
+	/// @{
 	void						HandleCharEvent( const sysEvent_t* event, int keyModState );
 
 	void						HandleMouseWheelEvent( const sysEvent_t* event, int keyModState );
@@ -198,55 +199,54 @@ protected:
 
 	void						HandleAbsoluteMouseEvent( const sysEvent_t* event, int keyModState );
 
-	void BoundCursorToScreen();
+	void						BoundCursorToScreen();
 
 	void						HandleMouseEvent( const sysEvent_t* event, int keyModState );
+	/// @}
 
 	struct Document
 	{
-		// Does not own
-		Rml::ElementDocument* _doc = nullptr;
-		// Does not own.
-		RmlEventHandler* _eventHandler = nullptr;
-		ID_TIME_T _timeStamp = 0;
-		idStr _name;
+		Rml::ElementDocument*	doc = nullptr;			//!< @notowns
+		RmlEventHandler*		eventHandler = nullptr; //!< @notowns
+		ID_TIME_T				timeStamp = 0;			//!< @notowns
+		idStr					name;					//!< @notowns
 	};
 
 	Document*					GetInternalDocument( const char* name );
 
-	Rml::Context*				_context;
+	Rml::Context*					context;
 
-	idStr						_name;
-	ID_TIME_T					_timeStamp;
+	idStr							name;
+	ID_TIME_T						timeStamp;
 
-	bool						_useScreenResolution;
-	int							_width;
-	int							_height;
-	float						_cursorX;
-	float						_cursorY;
-	bool						_cursorEnabled;
-	bool						_isActive;
-	bool						_isPausingGame;
-	bool						_inhibitsControl;
+	bool							useScreenResolution;
+	int								width;
+	int								height;
+	float							cursorX;
+	float							cursorY;
+	bool							cursorEnabled;
+	bool							isActive;
+	bool							isPausingGame;
+	bool							inhibitsControl;
 
-	int							_refs;
+	int								refs;
 
-	idSoundWorld*				_soundWorld;
+	idSoundWorld*					soundWorld;
 
-	idStr						_cmds;
-	idStr						_pendingCmds;
+	idStr							cmds;
+	idStr							pendingCmds;
 
 	HandleManagerT<kMaxDocuments>	handleManager;
-	idList<Document>				_documents;
+	idList<Document>				documents;
 };
 
 struct RmlImage
 {
-	idImage* image = nullptr;
-	const idMaterial* material = nullptr;
-	const byte* data = nullptr;
-	idVec2 dimensions = idVec2( 0.0f, 0.0f );
-	bool referencedOutsideLevelLoad = false;
+	idImage*			image = nullptr;
+	const idMaterial*	material = nullptr;
+	const byte*			data = nullptr;
+	idVec2				dimensions = idVec2( 0.0f, 0.0f );
+	bool				referencedOutsideLevelLoad = false;
 
 	void Free();
 };
@@ -267,7 +267,7 @@ public:
 	void						EndLevelLoad( const char* mapName ) override;
 	bool						InLevelLoad() const override
 	{
-		return _inLevelLoad;
+		return inLevelLoad;
 	}
 
 	// Load all the materials.
@@ -283,27 +283,28 @@ public:
 
 private:
 
+	/// Keep track of loaded documents and its timestamp to reload when files change.
 	struct Document
 	{
-		Rml::ElementDocument* _doc = nullptr;
-		ID_TIME_T _timeStamp = 0;
-		idStr _name;
+		Rml::ElementDocument*	doc = nullptr;
+		ID_TIME_T				timeStamp = 0;
+		idStr					name;
 	};
 
-	idDeviceContextOptimized		_dc;
+	idDeviceContextOptimized		dc;
 
 	idList<RmlUserInterfaceLocal*>	guis;
-	idList<RmlImage>				_imagesToReload;
+	idList<RmlImage>				imagesToReload;
 
-	HandleManagerT<kMaxDocuments>	_docHandleManager;
-	idList<Document>				_documents;
-	idList<idStr>					_docNames;
+	HandleManagerT<kMaxDocuments>	docHandleManager;
+	idList<Document>				documents;
+	idList<idStr>					docNames;
 
-	idRmlSystem						_rmlSystem;
-	idRmlRender						_rmlRender;
-	RmlFileSystem					_rmlFileSystem;
-	RmlFontEngine					_rmlFontEngine;
-	bool							_inLevelLoad;
+	idRmlSystem						rmlSystem;
+	idRmlRender						rmlRender;
+	RmlFileSystem					rmlFileSystem;
+	RmlFontEngine					rmlFontEngine;
+	bool							inLevelLoad;
 };
 
 #endif  // !__RMLUSERINTERFACE_H__

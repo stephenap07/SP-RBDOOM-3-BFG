@@ -33,6 +33,14 @@ If you have questions concerning this license or the applicable additional terms
 #include "rmlui/Core/FontEngineInterface.h"
 #include "rmlui/Core/Texture.h"
 
+class FontEffect
+{
+public:
+
+private:
+
+};
+
 /**
 * IdTech 4 implementation for rendering font glyphs and using them in RML.
 *
@@ -52,7 +60,7 @@ public:
 	/// @param[in] fallback_face True to use this font face for unknown characters in other font faces.
 	/// @param[in] weight The weight to load when the font face contains multiple weights, otherwise the weight to register the font as.
 	/// @return True if the face was loaded successfully, false otherwise.
-	bool LoadFontFace( const Rml::String& file_name, bool fallback_face, Rml::Style::FontWeight weight ) override;
+	bool LoadFontFace( const Rml::String& fileName, bool fallback_face, Rml::Style::FontWeight weight ) override;
 
 	/// Called by RmlUi when it wants to load a font face from memory, registered using the provided family, style, and weight.
 	/// @param[in] data A pointer to the data.
@@ -63,7 +71,7 @@ public:
 	/// @param[in] fallback_face True to use this font face for unknown characters in other font faces.
 	/// @return True if the face was loaded successfully, false otherwise.
 	/// Note: The debugger plugin will load its embedded font faces through this method using the family name 'rmlui-debugger-font'.
-	bool LoadFontFace( const byte* data, int data_size, const Rml::String& family, Rml::Style::FontStyle style, Rml::Style::FontWeight weight, bool fallback_face ) override;
+	bool LoadFontFace( const byte* data, int dataSize, const Rml::String& family, Rml::Style::FontStyle style, Rml::Style::FontWeight weight, bool fallbackFace ) override;
 
 	/// Called by RmlUi when a font configuration is resolved for an element. Should return a handle that
 	/// can later be used to resolve properties of the face, and generate string geometry to be rendered.
@@ -111,7 +119,7 @@ public:
 	/// @param[in] string The string to measure.
 	/// @param[in] prior_character The optionally-specified character that immediately precedes the string. This may have an impact on the string width due to kerning.
 	/// @return The width, in pixels, this string will occupy if rendered with this handle.
-	int GetStringWidth( Rml::FontFaceHandle handle, const Rml::String& string, Rml::Character prior_character = Rml::Character::Null ) override;
+	int GetStringWidth( Rml::FontFaceHandle handle, const Rml::String& string, Rml::Character priorCharacter = Rml::Character::Null ) override;
 
 	/// Called by RmlUi when it wants to retrieve the geometry required to render a single line of text.
 	/// @param[in] faceHandle The font handle.
@@ -141,6 +149,7 @@ private:
 	Rml::Texture			texture;
 	idList<FontHandle>		fontHandles;
 	idList<TrueTypeHandle>	fontFaces;
+	idList<FontEffect*>		fontEffects;
 };
 
 #endif
