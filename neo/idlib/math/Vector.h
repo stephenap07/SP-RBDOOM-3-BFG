@@ -40,7 +40,6 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../containers/Array.h" // for idTupleSize
 
-#include <algorithm>
 #include <initializer_list>
 
 #define VECTOR_EPSILON		0.001f
@@ -480,9 +479,9 @@ ID_INLINE idVec3::idVec3( const float x, const float y, const float z )
 }
 
 constexpr idVec3::idVec3( std::initializer_list<float> initializerList )
-	: x( std::data( initializerList )[0] )
-	, y( std::data( initializerList )[1] )
-	, z( std::data( initializerList )[2] )
+	: x( *initializerList.begin() )
+	, y( *( initializerList.begin() + 1 ) )
+	, z( *( initializerList.begin() + 2 ) )
 {
 }
 

@@ -542,10 +542,19 @@ saveGameHandle_t idSessionLocal::EnumerateSaveGamesAsync()
 	return handle;
 }
 
-int idSort_EnumeratedSavegames( const idSaveGameDetails* a, const idSaveGameDetails* b )
+/*
+========================
+idSort_EnumeratedSavegames Quick Sort
+========================
+*/
+class idSort_EnumeratedSavegames : public idSort_Quick< idSaveGameDetails, idSort_EnumeratedSavegames >
 {
-	return b->date - a->date;
-}
+public:
+	int Compare( const idSaveGameDetails& a, const idSaveGameDetails& b ) const
+	{
+		return b.date - a.date;
+	}
+};
 
 /*
 ========================
@@ -554,10 +563,7 @@ idSessionLocal::OnEnumerationCompleted
 */
 void idSessionLocal::OnEnumerationCompleted( idSaveLoadParms* parms )
 {
-	// idTech4 idList::sort is just a qsort wrapper, which doesn't deal with
-	// idStrStatic properly!
-	// parms->detailList.Sort( idSort_EnumeratedSavegames );
-	std::sort( parms->detailList.Ptr(), parms->detailList.Ptr() + parms->detailList.Num() );
+	parms->detailList.Sort( idSort_EnumeratedSavegames() );
 
 	if( parms->GetError() == SAVEGAME_E_NONE )
 	{
