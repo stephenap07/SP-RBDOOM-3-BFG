@@ -2748,6 +2748,18 @@ void Cmd_ShowAfEditor_f( const idCmdArgs& args )
 	}
 }
 
+void Cmd_ShowGuiEditor_f( const idCmdArgs& args )
+{
+	if( com_editors & EDITOR_GUI )
+	{
+		com_editors &= ~EDITOR_GUI;
+	}
+	else
+	{
+		com_editors |= EDITOR_GUI;
+	}
+}
+
 /*
 =================
 idGameLocal::InitConsoleCommands
@@ -2841,7 +2853,9 @@ void idGameLocal::InitConsoleCommands()
 
 	// SP Begin
 	cmdSystem->AddCommand( "editAFs",				Cmd_ShowAfEditor_f, CMD_FL_GAME | CMD_FL_TOOL, "launches the in-game Articulated Figure Editor" );
+	cmdSystem->AddCommand( "editGUI",				Cmd_ShowGuiEditor_f, CMD_FL_GAME | CMD_FL_TOOL, "launches the in-game GUI Editor" );
 	cmdSystem->AddCommand( "exportTsApi",			idClass::ExportTypeScriptEvents_f,	CMD_FL_GAME | CMD_FL_TOOL,	"update script/tech4-api.d.ts" );
+
 	// SP end
 
 	// multiplayer client commands ( replaces old impulses stuff )

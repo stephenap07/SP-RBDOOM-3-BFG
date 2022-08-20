@@ -896,7 +896,7 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	}
 
 	// RB: general GUI system path to treat ImGui surfaces in the renderer frontend like SWF
-	// this calls io.RenderDrawListsFn
+// this calls io.RenderDrawListsFn
 #if IMGUI_BFGUI
 	ImGuiHook::Render();
 #endif

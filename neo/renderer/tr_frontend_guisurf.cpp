@@ -239,7 +239,7 @@ static void R_RenderRmlSurf( RmlUserInterface* gui, const drawSurf_t* drawSurf )
 			gui->SetSize( stage->texture.width, stage->texture.height );
 			//tr.viewDef->targetRender = globalFramebuffers.glowFBO[0];
 			gui->Redraw( tr.viewDef->renderView.time[0] / 1000 );
-			tr.guiModel->EmitFullScreen( &stage->texture );
+			tr.guiModel->EmitFullScreen();
 			tr.guiModel->Clear();
 			//tr.UnCrop();
 

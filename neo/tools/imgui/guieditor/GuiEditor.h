@@ -27,95 +27,52 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#ifndef EDITOR_TOOLS_AFEDITOR_H_
-#define EDITOR_TOOLS_AFEDITOR_H_
+#ifndef EDITOR_TOOLS_GUIEDITOR_H_
+#define EDITOR_TOOLS_GUIEDITOR_H_
 
 #include "../../edit_public.h"
-
-#include "AfBodyEditor.h"
-#include "AfConstraintEditor.h"
-#include "AfPropertyEditor.h"
 
 namespace ImGuiTools
 {
 
+struct MouseCmd
+{
+	short x;
+	short y;
+	bool pressed;
+};
+
 /**
-* Articulated figure imgui editor.
+* Gui imgui editor.
 */
-class AfEditor
+class GuiEditor
 {
 public:
-	virtual	~AfEditor();
+	virtual				~GuiEditor();
 
 	void				Init();
 
-	void				ShowIt( bool show );
-
-	bool				IsShown() const;
-
 	void				Draw();
 
-public:
-
-	static AfEditor&	Instance();
-	static void			Enable( const idCmdArgs& args );
-
-public:
-
-	AfEditor( AfEditor const& ) = delete;
-	void operator=( AfEditor const& ) = delete;
+	static GuiEditor&	Instance();
 
 private:
 
-	struct AfList
-	{
-		AfList() : names(), shouldPopulate( false ) {}
-		void populate();
+	GuiEditor();
 
-		idList<idStr>	names;
-		bool			shouldPopulate;
-	};
+	void				Browse();
 
-	AfEditor();
+	void				HandleEvent();
 
-	void					OnNewDecl( idDeclAF* newDecl );
+	bool				isInitialized;
+	int					openGui;
+	idVec2				imgSize;
+	idUserInterface*	gui;
+	const idMaterial*	mat;
 
-	bool					isShown;
-	int						fileSelection;
-	int						currentAf;
-	int						currentConstraint;
-	int						currentBodySelection;
-	int						currentEntity;
-	idDeclAF*				decl;
-	idDeclAF_Body*			body;
-	idDeclAF_Constraint*	constraint;
-
-	// Editor dialogs
-	AfPropertyEditor*			propertyEditor;
-	idList<AfBodyEditor*>		bodyEditors;
-	idList<AfConstraintEditor*> constraintEditors;
-
-	AfList					afList; // list with idDeclAF names
-	idList<idStr>			afFiles;
-	idStr					fileName;
-
-	struct IndexEntityDef
-	{
-		int index;
-		idStr name;
-	};
-	idList<IndexEntityDef>	entities;
+	idStrList			guiFiles;
+	idStr				selectedGui;
 };
-
-inline void AfEditor::ShowIt( bool show )
-{
-	isShown = show;
-}
-
-inline bool AfEditor::IsShown() const
-{
-	return isShown;
-}
 
 }
 

@@ -30,12 +30,9 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 
 #include "TextBufferManager.h"
-
-#include <stddef.h> // offsetof
-#include <wchar.h>  // wcslen
-
 #include "CubeAtlas.h"
-#include "GuiModel.h"
+
+#include "renderer/RenderCommon.h"
 
 #define MAX_BUFFERED_CHARACTERS (8192 - 5)
 

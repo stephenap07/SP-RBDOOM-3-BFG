@@ -32,9 +32,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "D3RmlRender.h"
 
-#include "renderer/GuiModel.h"
-#include "renderer/GLState.h"
-#include "renderer/Image.h"
+#include "renderer/RenderCommon.h"
 
 #include "rmlui/RmlUserInterfaceLocal.h"
 

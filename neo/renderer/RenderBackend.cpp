@@ -6813,6 +6813,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	else if( viewDef->targetRender )
 	{
 		viewDef->targetRender->Bind();
+		GL_Clear( true, false, false, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
 	}
 	else
 	{

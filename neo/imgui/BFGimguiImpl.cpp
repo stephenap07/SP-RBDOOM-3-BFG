@@ -505,8 +505,6 @@ void Render()
 			ImGui::ShowDemoWindow();
 		}
 
-		//ImGui::End();
-
 		ImGui::Render();
 		idRenderBackend::ImGui_RenderDrawLists( ImGui::GetDrawData() );
 		g_haveNewFrame = false;

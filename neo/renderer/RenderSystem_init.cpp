@@ -2183,7 +2183,7 @@ void idRenderSystemLocal::Init()
 	fontManager->init();
 	textBufferManager = new TextBufferManager( fontManager );
 	defaultTtf = RegisterFontFace( "fonts/Merriweather/Merriweather-Regular.ttf" );
-	defaultFont = RegisterFont2( "merriweather", 24 );
+	defaultFont = RegisterFont2( "merriweather", 14 );
 }
 
 /*

@@ -77,6 +77,8 @@ option(USE_NVRHI_VULKAN
 option(USE_PHYSX
                 "Use PhysX" OFF)
 
+set(NVRHI_INSTALL off)
+
 set(CPU_TYPE "" CACHE STRING "When set, passes this string as CPU-ID which will be embedded into the binary.")
 
 # SRS - Turn on optimization when cross-compiling from Apple arm64 to x86_64
@@ -1098,9 +1100,6 @@ file(GLOB IMGUI_EDITOR_SOURCES tools/imgui/*.cpp)
 file(GLOB IMGUI_EDITOR_LIGHT_INCLUDES tools/imgui/lighteditor/*.h)
 file(GLOB IMGUI_EDITOR_LIGHT_SOURCES tools/imgui/lighteditor/*.cpp)
 
-file(GLOB IMGUI_EDITOR_AF_INCLUDES tools/imgui/afeditor/*.h)
-file(GLOB IMGUI_EDITOR_AF_SOURCES tools/imgui/afeditor/*.cpp)
-
 file(GLOB IMGUI_EDITOR_UTIL_INCLUDES tools/imgui/util/*.h)
 file(GLOB IMGUI_EDITOR_UTIL_SOURCES tools/imgui/util/*.cpp)
 
@@ -1479,9 +1478,6 @@ source_group("tools\\imgui" FILES ${IMGUI_EDITOR_SOURCES})
 source_group("tools\\imgui\\lighteditor" FILES ${IMGUI_EDITOR_LIGHT_INCLUDES})
 source_group("tools\\imgui\\lighteditor" FILES ${IMGUI_EDITOR_LIGHT_SOURCES})
 
-source_group("tools\\imgui\\afeditor" FILES ${IMGUI_EDITOR_AF_INCLUDES})
-source_group("tools\\imgui\\afeditor" FILES ${IMGUI_EDITOR_AF_SOURCES})
-
 source_group("tools\\imgui\\util" FILES ${IMGUI_EDITOR_UTIL_INCLUDES})
 source_group("tools\\imgui\\util" FILES ${IMGUI_EDITOR_UTIL_SOURCES})
 
@@ -1542,7 +1538,6 @@ set(RBDOOM3_INCLUDES
 			${TOOLS_INCLUDES}
 			${IMGUI_EDITOR_INCLUDES}
 			${IMGUI_EDITOR_LIGHT_INCLUDES}
-			${IMGUI_EDITOR_AF_INCLUDES}
 			${IMGUI_EDITOR_UTIL_INCLUDES}
 			
 			${GAMED3XP_INCLUDES}
@@ -1593,7 +1588,6 @@ set(RBDOOM3_SOURCES
 			
 			${IMGUI_EDITOR_SOURCES}
 			${IMGUI_EDITOR_LIGHT_SOURCES}
-			${IMGUI_EDITOR_AF_SOURCES}
 			${IMGUI_EDITOR_UTIL_SOURCES}
 			
 			${GAMED3XP_SOURCES}
@@ -1607,6 +1601,20 @@ set(RBDOOM3_SOURCES
 			${GAMED3XP_LUA_SOURCES}
 			${GAMED3XP_GUI_SOURCES}
 			)
+
+macro(AddSubdirectory dirName)
+	file(GLOB DIR_INCLUDES ${dirName}/*.h)
+	file(GLOB DIR_SOURCES ${dirName}/*.cpp)
+
+	source_group(${dirName} FILES ${DIR_INCLUDES})
+	source_group(${dirName} FILES ${DIR_SOURCES})
+
+	list(APPEND RBDOOM3_INCLUDES ${DIR_INCLUDES})
+	list(APPEND RBDOOM3_SOURCES ${DIR_SOURCES})
+endmacro()
+
+AddSubdirectory( tools/imgui/guieditor )
+AddSubdirectory( tools/imgui/afeditor )
 
 if(DOOM_CLASSIC)
 	add_definitions(-DUSE_DOOMCLASSIC)
@@ -2114,3 +2122,10 @@ target_link_libraries(RBDoom3BFG nvrhi)
 
 add_subdirectory(shaders)
 add_dependencies(RBDoom3BFG Shaders)
+
+set(CPACK_PACKAGE_NAME "sprbdoom3bfg")
+set(CPACK_PACKAGE_VENDOR "stephen")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "Stephen/TestGame")
+set(CPACK_GENERATOR "WIX")
+
+include(CPack)

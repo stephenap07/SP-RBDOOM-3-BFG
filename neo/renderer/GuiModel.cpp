@@ -165,6 +165,10 @@ void idGuiModel::EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16],
 		drawSurf->material = shader;
 		drawSurf->extraGLState = guiSurf.glState;
 		drawSurf->scissorRect = tr.viewDef->scissor;
+		if( !guiSurf.clipRect.IsEmpty() )
+		{
+			drawSurf->scissorRect.Intersect( guiSurf.clipRect );
+		}
 		drawSurf->sort = shader->GetSort();
 		drawSurf->renderZFail = 0;
 		// process the shader expressions for conditionals / color / texcoords
@@ -234,7 +238,7 @@ idGuiModel::EmitFullScreen
 Creates a view that covers the screen and emit the surfaces
 ================
 */
-void idGuiModel::EmitFullScreen( textureStage_t* textureStage )
+void idGuiModel::EmitFullScreen( Framebuffer* renderTarget )
 {
 	if( surfaces[0].numIndexes == 0 )
 	{
@@ -246,13 +250,13 @@ void idGuiModel::EmitFullScreen( textureStage_t* textureStage )
 	viewDef_t* viewDef = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *viewDef ), FRAME_ALLOC_VIEW_DEF );
 	viewDef->is2Dgui = true;
 
-	if( textureStage )
+	if( renderTarget )
 	{
-		viewDef->targetRender = globalFramebuffers.glowFBO[0];
+		viewDef->targetRender = renderTarget;
 		viewDef->viewport.x1 = 0;
 		viewDef->viewport.y1 = 0;
-		viewDef->viewport.x2 = textureStage->width;
-		viewDef->viewport.y2 = textureStage->height;
+		viewDef->viewport.x2 = renderTarget->GetWidth();
+		viewDef->viewport.y2 = renderTarget->GetHeight();
 	}
 	else
 	{
@@ -277,10 +281,10 @@ void idGuiModel::EmitFullScreen( textureStage_t* textureStage )
 
 	idVec2 screenSize( renderSystem->GetVirtualWidth(), renderSystem->GetVirtualHeight() );
 
-	if( textureStage )
+	if( renderTarget )
 	{
-		screenSize.x = textureStage->width;
-		screenSize.y = textureStage->height;
+		screenSize.x = renderTarget->GetWidth();
+		screenSize.y = renderTarget->GetHeight();
 	}
 
 	float xScale = 1.0f / screenSize.x;
@@ -361,18 +365,6 @@ void idGuiModel::EmitFullScreen( textureStage_t* textureStage )
 
 	tr.viewDef = oldViewDef;
 
-	// add the command to draw this view
-	if( textureStage )
-	{
-		textureStage->dynamicFrameCount = tr.frameCount;
-
-		viewDef->targetRender = globalFramebuffers.glowFBO[0];
-		//if (textureStage->image == NULL)
-		//{
-		//	textureStage->image = globalImages->glowImage[0];
-		//}
-	}
-
 	R_AddDrawViewCmd( viewDef, true );
 }
 
@@ -384,9 +376,6 @@ idGuiModel::ImGui_RenderDrawLists
 */
 void idGuiModel::EmitImGui( ImDrawData* drawData )
 {
-	// NOTE: this implementation does not support scissor clipping for the indivudal draw commands
-	// but it is sufficient for things like com_showFPS
-
 	const float sysWidth = renderSystem->GetWidth();
 	const float sysHeight = renderSystem->GetHeight();
 
@@ -412,7 +401,9 @@ void idGuiModel::EmitImGui( ImDrawData* drawData )
 				mat = ( const idMaterial* )pcmd->TextureId;
 			}
 
-			idDrawVert* verts = renderSystem->AllocTris( numVerts, indexBufferOffset, numIndexes, mat, STEREO_DEPTH_TYPE_NONE );
+			idScreenRect clipRect = { pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w };
+
+			idDrawVert* verts = AllocTris( numVerts, indexBufferOffset, numIndexes, mat, tr.currentGLState, STEREO_DEPTH_TYPE_NONE, clipRect );
 			if( verts == NULL )
 			{
 				continue;
@@ -481,7 +472,19 @@ void idGuiModel::AdvanceSurf()
 AllocTris
 =============
 */
-idDrawVert* idGuiModel::AllocTris( int vertCount, const triIndex_t* tempIndexes, int indexCount, const idMaterial* material, const uint64 glState, const stereoDepthType_t stereoType )
+idDrawVert* idGuiModel::AllocTris( int numVerts, const triIndex_t* indexes, int numIndexes, const idMaterial* material, const uint64 glState, const stereoDepthType_t stereoType )
+{
+	idScreenRect clipRect;
+	clipRect.Clear();
+	return AllocTris( numVerts, indexes, numIndexes, material, glState, stereoType, clipRect );
+}
+
+/*
+=============
+AllocTris
+=============
+*/
+idDrawVert* idGuiModel::AllocTris( int vertCount, const triIndex_t* tempIndexes, int indexCount, const idMaterial* material, const uint64 glState, const stereoDepthType_t stereoType, const idScreenRect& clipRect )
 {
 	if( material == NULL )
 	{
@@ -510,7 +513,7 @@ idDrawVert* idGuiModel::AllocTris( int vertCount, const triIndex_t* tempIndexes,
 
 	// break the current surface if we are changing to a new material or we can't
 	// fit the data into our allocated block
-	if( material != surf->material || glState != surf->glState || stereoType != surf->stereoType )
+	if( material != surf->material || glState != surf->glState || stereoType != surf->stereoType || !clipRect.Equals( surf->clipRect ) )
 	{
 		if( surf->numIndexes )
 		{
@@ -519,6 +522,7 @@ idDrawVert* idGuiModel::AllocTris( int vertCount, const triIndex_t* tempIndexes,
 		surf->material = material;
 		surf->glState = glState;
 		surf->stereoType = stereoType;
+		surf->clipRect = clipRect;
 	}
 
 	int startVert = numVerts;

@@ -194,7 +194,7 @@ void AfEditor::Draw()
 	bool showTool = isShown;
 	static char buff[256];
 
-	if( ImGui::Begin( "AfEditor", &showTool, ImGuiWindowFlags_MenuBar ) )
+	if( ImGui::Begin( "AF Editor", &showTool, ImGuiWindowFlags_MenuBar ) )
 	{
 		impl::SetReleaseToolMouse( true );
 
@@ -662,15 +662,6 @@ bool ConstraintItemGetter( void* data, int index, const char** items )
 
 	*items = constraint->name.c_str();
 
-	return true;
-}
-
-bool StringListItemGetter( void* data, int index, const char** outText )
-{
-	idStrList* list = reinterpret_cast<idStrList*>( data );
-	assert( index < list->Num() );
-
-	*outText = ( *list )[index];
 	return true;
 }
 

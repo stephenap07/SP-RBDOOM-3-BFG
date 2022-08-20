@@ -34,6 +34,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "afeditor/AfEditor.h"
 #include "lighteditor/LightEditor.h"
+#include "guieditor/GuiEditor.h"
 
 
 extern idCVar g_editEntityMode;
@@ -63,7 +64,7 @@ void SetReleaseToolMouse( bool doRelease )
 bool AreEditorsActive()
 {
 	// FIXME: this is not exactly clean and must be changed if we ever support game dlls
-	return g_editEntityMode.GetInteger() > 0;
+	return g_editEntityMode.GetInteger() > 0 || com_editors != 0;
 }
 
 bool ReleaseMouseForTools()
@@ -89,6 +90,11 @@ void DrawToolWindows()
 	if( AfEditor::Instance().IsShown() )
 	{
 		AfEditor::Instance().Draw();
+	}
+
+	if( com_editors & EDITOR_GUI )
+	{
+		GuiEditor::Instance().Draw();
 	}
 
 	// TODO: other editor windows..
