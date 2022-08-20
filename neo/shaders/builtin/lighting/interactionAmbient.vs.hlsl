@@ -46,7 +46,7 @@ struct VS_IN
 struct VS_OUT
 {
 	float4 position		: SV_Position;
-		//float4 texcoord0	: TEXCOORD0_centroid;
+	//float4 texcoord0	: TEXCOORD0_centroid;
 	float4 texcoord1	: TEXCOORD1_centroid;
 	float4 texcoord2	: TEXCOORD2_centroid;
 	float4 texcoord3	: TEXCOORD3_centroid;

@@ -861,11 +861,9 @@ bool DeviceManager_VK::createWindowSurface()
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 	VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
 	surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	surfaceCreateInfo.pNext = nullptr;
-	surfaceCreateInfo.flags = 0;
-	surfaceCreateInfo.hinstance = static_cast<HINSTANCE>( windowInstance );
-	surfaceCreateInfo.hwnd = static_cast<HWND>( windowHandle );
-	err = vkCreateWin32SurfaceKHR( m_VulkanInstance, &surfaceCreateInfo, nullptr, reinterpret_cast<VkSurfaceKHR*>( &m_WindowSurface ) );
+	surfaceCreateInfo.hinstance = ( HINSTANCE )windowInstance;
+	surfaceCreateInfo.hwnd = ( HWND )windowHandle;
+	err = vkCreateWin32SurfaceKHR( m_VulkanInstance, &surfaceCreateInfo, nullptr, ( VkSurfaceKHR* )&m_WindowSurface );
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 	VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
 	surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;

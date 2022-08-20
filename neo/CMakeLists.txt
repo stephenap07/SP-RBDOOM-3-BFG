@@ -504,6 +504,37 @@ elseif(USE_NVRHI_VULKAN)
 	elseif(WIN32)
 		add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 	endif()
+	# Use FindVulkan module added with CMAKE 3.7
+	if(NOT CMAKE_VERSION VERSION_LESS 3.7.0)
+		message( STATUS "Using module to find Vulkan" )
+		find_package(Vulkan)
+	endif()
+
+	if(NOT Vulkan_FOUND)
+		message(FATAL_ERROR "Could not find Vulkan library!")
+	else()
+        include_directories($ENV{VULKAN_SDK}/include)
+
+		if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+            # SRS - Enable Beta extensions for VULKAN_SDK portability subset features on OSX
+            add_definitions(-DVK_ENABLE_BETA_EXTENSIONS)
+            # SRS - Optionally use MoltenVK headers/library for runtime config functions on OSX
+            if(USE_MoltenVK)
+                add_definitions(-DUSE_MoltenVK)
+                include_directories($ENV{VULKAN_SDK}/../MoltenVK/include)
+                set(Vulkan_LIBRARY $ENV{VULKAN_SDK}/../MoltenVK/dylib/macOS/libMoltenVK.dylib CACHE FILEPATH "Path to MoltenVK library." FORCE)
+            endif()
+		endif()
+		message(STATUS "Using Vulkan: " ${Vulkan_LIBRARY})
+	endif()
+	
+	# Eric: For use with SDL2/Vulkan
+	if(UNIX)
+        # SRS - For UNIX-like target OSs use the generic SDL Vulkan platform
+        add_definitions(-DVULKAN_USE_PLATFORM_SDL)
+	elseif(WIN32)
+		add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
+	endif()
 else()
 
 	if(USE_SYSTEM_LIBGLEW)
@@ -552,7 +583,7 @@ if(USE_NVRHI)
         find_package(DXCspirv REQUIRED)
     endif()
 
-    include_directories(${NVRHI_DIR}/include)
+	include_directories(${NVRHI_DIR}/include)
 endif(USE_NVRHI)
 
 if(USE_SYSTEM_RAPIDJSON)
@@ -1208,13 +1239,6 @@ set(WIN32_RESOURCES
 
 
 
-#if(USE_MFC_TOOLS)
-	list(APPEND WIN32_RESOURCES sys/win32/rc/doom.rc)
-#else()
-#	list(APPEND WIN32_RESOURCES sys/win32/rc/doom_nomfc.rc)
-#endif()
-
-
 file(GLOB POSIX_INCLUDES sys/posix/*.h)
 file(GLOB POSIX_SOURCES sys/posix/*.cpp)
 
@@ -1778,9 +1802,9 @@ if(MSVC)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES d3xp/gamesys/Class.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/framework/precompiled.cpp)
 	
-		foreach( src_file ${RBDOOM3_PRECOMPILED_SOURCES} )
-			message(STATUS "-include precompiled.h for ${src_file}")
-		endforeach()
+		#foreach( src_file ${RBDOOM3_PRECOMPILED_SOURCES} )
+		#	message(STATUS "-include precompiled.h for ${src_file}")
+		#endforeach()
 	
 		set_source_files_properties(
 			${RBDOOM3_PRECOMPILED_SOURCES}

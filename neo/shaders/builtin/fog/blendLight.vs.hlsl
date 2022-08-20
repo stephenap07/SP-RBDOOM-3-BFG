@@ -40,6 +40,7 @@ struct VS_IN
 	float2 texcoord : TEXCOORD0;
 	float4 normal : NORMAL;
 	float4 tangent : TANGENT;
+	float4 binormal : BINORMAL;
 	float4 color : COLOR0;
 #if USE_GPU_SKINNING
 	float4 color2 : COLOR1;

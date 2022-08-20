@@ -340,7 +340,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 
 			D3D12_INFO_QUEUE_FILTER filter = {};
 			filter.DenyList.pIDList = disableMessageIDs;
-			filter.DenyList.NumIDs = std::size( disableMessageIDs );
+			filter.DenyList.NumIDs = sizeof( disableMessageIDs ) / sizeof( disableMessageIDs[0] );
 			pInfoQueue->AddStorageFilterEntries( &filter );
 		}
 	}

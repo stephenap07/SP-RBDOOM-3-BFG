@@ -35,6 +35,7 @@ cbuffer CB : register( b1 VK_DESCRIPTOR_SET( 0 )) {
 };
 #endif
 
+// *INDENT-OFF*
 struct VS_IN {
 	float4 position : POSITION;
 	float2 texcoord : TEXCOORD0;

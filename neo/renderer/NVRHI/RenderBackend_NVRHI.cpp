@@ -213,7 +213,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 	else
 	{
-		const uint64 frameNum = static_cast<uint64>( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		const uint64 frameNum = ( int )( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
 		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
 		{
 			idLib::Warning( "RB_DrawElementsWithCounters, vertexBuffer == NULL" );
@@ -221,7 +221,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		}
 		vertexBuffer = &vertexCache.frameData[vertexCache.drawListNum].vertexBuffer;
 	}
-	const uint vertOffset = static_cast<uint>( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint vertOffset = ( uint )( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 
 	bool changeState = false;
 
@@ -255,7 +255,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		}
 		indexBuffer = &vertexCache.frameData[vertexCache.drawListNum].indexBuffer;
 	}
-	const uint indexOffset = static_cast<uint>( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint indexOffset = ( uint )( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 
 	if( currentIndexOffset != indexOffset )
 	{
@@ -377,10 +377,10 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		state.pipeline = pipeline;
 		state.framebuffer = currentFrameBuffer->GetApiObject();
 
-		nvrhi::Viewport viewport{ static_cast<float>( currentViewport.x1 ),
-								  static_cast<float>( currentViewport.x2 ),
-								  static_cast<float>( currentViewport.y1 ),
-								  static_cast<float>( currentViewport.y2 ),
+		nvrhi::Viewport viewport{ ( float )currentViewport.x1,
+								  ( float )currentViewport.x2,
+								  ( float )currentViewport.y1,
+								  ( float )currentViewport.y2,
 								  currentViewport.zmin,
 								  currentViewport.zmax };
 		state.viewport.addViewport( viewport );
@@ -411,6 +411,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	args.vertexCount = surf->numIndexes;
 	commandList->drawIndexed( args );
 
+	// RB: added stats
 	pc.c_drawElements++;
 	pc.c_drawIndexes += surf->numIndexes;
 }
@@ -1406,7 +1407,7 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		else
 		{
 			desc[0].bindings[0].resourceHandle = tr.dynamicSky.Buffer();
-		}
+	}
 	}
 	else
 	{
