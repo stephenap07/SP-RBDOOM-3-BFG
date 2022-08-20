@@ -59,3 +59,15 @@ textures/concrete
 
     stone
 }
+
+textures/walls/prefab_gray1
+{
+    diffusemap textures/editor/prefab_gray1
+    specularmap textures/editor/prefab_spec
+}
+
+textures/walls/prefab_blue1
+{
+    diffusemap textures/editor/prefab_blue1
+    specularmap textures/editor/prefab_spec
+}

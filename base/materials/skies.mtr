@@ -8,6 +8,7 @@ textures/skies/cloudy_sky
 	forceOpaque  // so transparent windows can draw on top of it
     {
         blend         add
+        uncompressedCubeMap
         cubeMapSingle env/skybox_texture
         cubeMapSize   512
         texgen        skybox

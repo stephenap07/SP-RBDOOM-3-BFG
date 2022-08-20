@@ -45,6 +45,5 @@
 	</style>
 </head>
 <body onshow="inhibitControl=false; pauseGame=false; enableCursor=true">
-	<div id="menu_content">+</div>
 </body>
 </rml>

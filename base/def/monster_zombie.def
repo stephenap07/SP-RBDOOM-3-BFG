@@ -1,0 +1,73 @@
+
+model worldwar_zombie
+{
+    mesh models/md5/characters/worldwar_zombie/worldwar_zombie.md5mesh
+    anim idle models/md5/characters/worldwar_zombie/idle.md5anim
+    anim crawl models/md5/characters/worldwar_zombie/crawl.md5anim
+    anim walk models/md5/characters/worldwar_zombie/walk.md5anim {
+        frame 13 leftfoot
+        frame 69 rightfoot
+    }
+    anim run models/md5/characters/worldwar_zombie/run.md5anim
+    anim bite models/md5/characters/worldwar_zombie/bite.md5anim
+    anim af_pose models/md5/characters/worldwar_zombie/af.md5anim
+
+    channel torso ( "Spine" "Spine1" "Spine2" "Neck" "Head" "HeadTop_End"
+                    "LeftShoulder" "LeftArm" "LeftForeArm" "LeftHand"
+                    "LeftHandMiddle1" "LeftHandMiddle2" "LeftHandMiddle3" "LeftHandMiddle4"
+                    "LeftHandThumb1" "LeftHandThumb2" "LeftHandThumb3" "LeftHandThumb4"
+                    "LeftHandIndex1" "LeftHandIndex2" "LeftHandIndex3" "LeftHandIndex4"
+                    "LeftHandRing1" "LeftHandRing2" "LeftHandRing3" "LeftHandRing4"
+                    "LeftHandPinky1" "LeftHandPinky2" "LeftHandPinky3" "LeftHandPinky4"
+                    "RightShoulder" "RightArm" "RightForeArm" "RightHand"
+                    "RightHandThumb1" "RightHandThumb2" "RightHandThumb3" "RightHandThumb4"
+                    "RightHandIndex1" "RightHandIndex2" "RightHandIndex3" "RightHandIndex4"
+                    "RightHandMiddle1" "RightHandMiddle2" "RightHandMiddle3" "RightHandMiddle4"
+                    "RightHandRing1" "RightHandRing2" "RightHandRing3" "RightHandRing4"
+                    "RightHandPinky1" "RightHandPinky2" "RightHandPinky3" "RightHandPinky4" )
+                    
+    channel legs ( "Hips" "Origin"
+                   "LeftUpLeg" "LeftLeg" "LeftFoot" "LeftToeBase" "LeftToe_End"
+                   "RightUpLeg" "RightLeg" "RightFoot" "RightToeBase" "RightToe_End")
+}
+
+entityDef monster_zombie
+{
+    "inherit"                   "monster_default"
+    "model"                     "worldwar_zombie"
+    //"luaObject"                 "MonsterZombie"
+	"size"			            "48 48 68"
+	"use_aas"		            "aas48"
+	"team"						"1"
+	"rank"						"0"
+	"health"					"100"
+	"melee_range"				"32"
+	"walk_on_sight"				"1"
+	"mass"						"80"
+
+    "blockedRadius"				"10"
+	"blockedMoveTime"			"1200"
+	"blockedAttackTime"			"1200"
+
+    "blink_min"					"2.0s"
+	"blink_max"					"8.0"
+
+	//"head_look"				"1"	
+}
+
+model env_ragdoll_monster_zombie {
+	mesh models/md5/characters/worldwar_zombie/worldwar_zombie.md5mesh
+	anim af_pose models/md5/characters/worldwar_zombie/idle.md5anim
+}
+
+entityDef env_ragdoll_monster_zombie {
+  "editor_color"          "1 .5 0"
+  "editor_mins"           "-8 -8 -8"
+  "editor_maxs"           "8 8 8"
+  "editor_usage"          "Ragdoll for monster_zombie\n"
+  "spawnclass"            "idAFEntity_Generic"
+  "bleed"                 "1"
+  "sleep"                 "1"
+  "model"                 "env_ragdoll_monster_zombie"
+  "articulatedFigure"     "char_zombie"
+}

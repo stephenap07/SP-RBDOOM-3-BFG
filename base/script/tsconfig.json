@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+      "sourceMap": true,
+      "target": "esnext",
+      "lib": ["esnext"],
+      "moduleResolution": "node",
+      "types": ["lua-types/jit"],
+      "strict": true,
+    },
+    "tstl": {
+      "luaTarget": "JIT",
+      "noResolvePaths": ["lldebugger"] // Required so TSTL ignores the missing dependency
+    },
+    "exclude": ["node_modules", "**/*.spec.ts"],
+}

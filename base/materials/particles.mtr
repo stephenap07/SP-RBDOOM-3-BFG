@@ -84,7 +84,6 @@ textures/particles/barrelpoof
 }
 
 textures/particles/boomboom
-
 {
     noselfShadow
     noshadows   
@@ -97,6 +96,40 @@ textures/particles/boomboom
       
         blend add
         map textures/particles/boomboom
+        vertexcolor                   
+    }
+}
+
+textures/particles/spark1
+{
+    noselfShadow
+    noshadows   
+    translucent
+    discrete
+    nonsolid
+    noimpact
+
+    { 
+      
+        blend add
+        map textures/particles/spark_01
+        vertexcolor                   
+    }
+}
+
+textures/particles/spark2
+{
+    noselfShadow
+    noshadows   
+    translucent
+    discrete
+    nonsolid
+    noimpact
+
+    { 
+      
+        blend add
+        map textures/particles/spark_02
         vertexcolor                   
     }
 }

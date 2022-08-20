@@ -57,8 +57,6 @@
 	</style>
 </head>
 <body onshow="inhibitControl=false; pauseGame=false; enableCursor=false" onkeydown="goto pause">
-	<img src="/guis/assets/hud/reticle" id="crosshair" class="center" />
-	<div id="lowerleft">
-	</div>
+
 </body>
 </rml>

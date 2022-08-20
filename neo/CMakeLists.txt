@@ -2146,10 +2146,3 @@ target_link_libraries(RBDoom3BFG nvrhi)
 
 add_subdirectory(shaders)
 add_dependencies(RBDoom3BFG Shaders)
-
-set(CPACK_PACKAGE_NAME "sprbdoom3bfg")
-set(CPACK_PACKAGE_VENDOR "stephen")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "Stephen/TestGame")
-set(CPACK_GENERATOR "WIX")
-
-include(CPack)

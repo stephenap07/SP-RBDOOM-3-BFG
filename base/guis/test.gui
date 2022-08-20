@@ -11,7 +11,7 @@ windowDef Desktop {
     }
 
     windowDef Inventory {
-        rect        100, 100, 600, 800
+        rect        0, 0, 640 - 1, 480 - 1
         backcolor   .29, 0.29, 0.28, .8
         bordercolor 0.5, 0.6, 0.6, 1
         bordersize  1

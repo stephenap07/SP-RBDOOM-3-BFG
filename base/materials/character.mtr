@@ -1,0 +1,11 @@
+
+
+WorldWar_zombie_material
+{
+    diffusemap textures/worldwar_zombie/basecolor.png
+    normalmap textures/worldwar_zombie/normal.png
+    {
+        blend specularmap
+        map  invertColor(textures/worldwar_zombie/specular.png)
+    }
+}

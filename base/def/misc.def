@@ -82,6 +82,10 @@ entityDef light {
 	// jmarshall end
 }
 
+entityDef sky {
+	"spawnClass" "idSky"
+}
+
 entityDef speaker {
 	"editor_color"					"0 1 0"
 	"editor_mins"					"-8 -8 -8"

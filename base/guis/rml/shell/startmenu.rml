@@ -4,8 +4,7 @@
 	<link type="text/css" href="icon.rcss"/>
 	<title>Start Menu</title>
 	<style>
-		body
-		{
+		body {
 			width: 100%;
 			height: 100%;
 
@@ -13,49 +12,43 @@
 		}
 		
 		/* Hide the window icon. */
-        div#title_bar div#icon
-        {
+        div#title_bar div#icon {
             display: none;
         }
 
-		div#menu_content
-		{
+		div#menu_content {
 			z-index: 2;
     		/* background-color: green; */
     		width: 800px; 
     		height: 200px;
     		position: absolute;
-    		top: 50%; margin-top:-100px;
+    		top: 50%; margin-top:-200px;
     		left: 50%; margin-left:-400px;
     		font-weight: bold;
     		text-transform: uppercase;
     		color: #ccc; text-align:center; vertical-align:middle
 		}
 
-		.container
-		{
+		.container {
 			width: 100%;
 			height: 100%;
 
 			z-index: -1;
 		}
 
-		.container_img
-		{
+		.container_img {
 			height: 100%;
 			width: 100%;
-			image-color: rgba(131, 112, 55, 255);
+			image-color: "#2256b7"
 		}
 
-		@decorator render : render-decorator
-		{
+		@decorator render : render-decorator {
 			model-name: "models/static/shotgun.ase";
 			model-rotate: "0, 90, 0";
 			model-origin: "0, 0, 0";
 		}
 
-		model
-		{
+		model {
 			display: block;
 			width: 400px;
 			height: 200px;
@@ -63,14 +56,20 @@
 
 			decorator: render;
 		}
+
+		h1 {
+			font-size: 96px;
+			text-align: center;
+			margin-bottom: 200px;
+			font-effect: shadow( 2px 2px black );
+		}
 	</style>
 </head>
 <body onShow="inhibitControl=true; pauseGame=true; enableCursor=true">
-
-	<img src="/guis/assets/mainmenu/title" class="container_img" />
-
+	<img src="/_white" class="container_img" />
 	<div id="menu_content">
 		<!-- <model/> -->
+		<h1><i>Game Name</i></h1>
 
 		<button id="start_game" onclick="map netmap; goto game" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Start</button><br />
 		<button id="options" onclick="goto options" onmousedown="playsound gui_btn_pda_advance" onmouseover="playsound gui_btn_roll_over">Options</button><br />

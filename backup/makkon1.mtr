@@ -1,0 +1,11 @@
+textures/makkon/stone_blck_1
+{
+	qer_editorimage textures/makkon1/textures/stone_blck_1
+
+	metal
+
+	{
+		blend diffusemap
+		map "textures/makkon1/textures/stone_blck_1"
+	}
+}

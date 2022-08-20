@@ -1,0 +1,36 @@
+/***********************************************************************
+
+	weapon_unarmed.def
+
+***********************************************************************/
+
+entityDef weapon_unarmed {
+	//"model_view" 				"viewmodel_fists"
+
+	"inv_name"					"Unarmed"
+	"inv_weapon"				"weapon_unarmed"
+	"icon"						"guis/assets/hud/wpn_12"
+
+	"zoomFov"					"30"
+	//"weapon_class"			"idWeaponUnarmed"
+
+	//"def_melee"				"damage_fists"
+	"melee_distance"			"48"
+	"ammoType"					""
+	"ammoRequired"				"0"
+	"clipSize"					"0"
+	"mtr_flashShader"			""
+	"flashColor"				""
+	"flashRadius"				"0"
+	"silent_fire"				"1"
+
+	"hide_time"					"0.3"								// time to hide weapon when talking to npcs or looking at guis
+	"hide_distance"				"-15"								// distance to offset weapon when talking to npcs or looking at guis
+
+	"impact_damage_effect"		"1"
+
+	"snd_acquire"				"guisounds_weapon"
+	//"skin_invisible"			"skins/fists_invis"
+	
+	"stealing"					"1"									// this weapon steals other player weapon
+}

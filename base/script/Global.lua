@@ -1,0 +1,37 @@
+--[[ Generated with https://github.com/TypeScriptToLua/TypeScriptToLua ]]
+local ____exports = {}
+____exports.AnimChannel = AnimChannel or ({})
+____exports.AnimChannel.All = 0
+____exports.AnimChannel[____exports.AnimChannel.All] = "All"
+____exports.AnimChannel.Torso = 1
+____exports.AnimChannel[____exports.AnimChannel.Torso] = "Torso"
+____exports.AnimChannel.Legs = 2
+____exports.AnimChannel[____exports.AnimChannel.Legs] = "Legs"
+____exports.AnimChannel.Head = 3
+____exports.AnimChannel[____exports.AnimChannel.Head] = "Head"
+____exports.AnimChannel.Eyelids = 4
+____exports.AnimChannel[____exports.AnimChannel.Eyelids] = "Eyelids"
+____exports.SoundChannel = SoundChannel or ({})
+____exports.SoundChannel.Any = 0
+____exports.SoundChannel[____exports.SoundChannel.Any] = "Any"
+____exports.SoundChannel.Voice = 1
+____exports.SoundChannel[____exports.SoundChannel.Voice] = "Voice"
+____exports.SoundChannel.Voice2 = 2
+____exports.SoundChannel[____exports.SoundChannel.Voice2] = "Voice2"
+____exports.SoundChannel.Body = 3
+____exports.SoundChannel[____exports.SoundChannel.Body] = "Body"
+____exports.SoundChannel.Body2 = 4
+____exports.SoundChannel[____exports.SoundChannel.Body2] = "Body2"
+____exports.SoundChannel.Body3 = 5
+____exports.SoundChannel[____exports.SoundChannel.Body3] = "Body3"
+____exports.SoundChannel.Weapon = 6
+____exports.SoundChannel[____exports.SoundChannel.Weapon] = "Weapon"
+____exports.SoundChannel.Item = 7
+____exports.SoundChannel[____exports.SoundChannel.Item] = "Item"
+____exports.SoundChannel.Heart = 8
+____exports.SoundChannel[____exports.SoundChannel.Heart] = "Heart"
+____exports.SoundChannel.Pda = 9
+____exports.SoundChannel[____exports.SoundChannel.Pda] = "Pda"
+____exports.SoundChannel.Demonic = 10
+____exports.SoundChannel[____exports.SoundChannel.Demonic] = "Demonic"
+return ____exports

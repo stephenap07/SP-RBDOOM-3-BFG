@@ -27,7 +27,8 @@ entityDef weapon_shotgun {
 	"inv_item"					"5"
 	"icon"						"guis/assets/hud/wpn_2"
 
-	"weapon_class"				"idWeaponShotgun"
+	"stateScript"				"WeaponShotgun"
+	//"weapon_class"				"idWeaponShotgun"
 	"def_projectile"			"projectile_bullet_shotgun"
 	"ammoType"					"ammo_shells"
 	"ammoRequired"				"1"
