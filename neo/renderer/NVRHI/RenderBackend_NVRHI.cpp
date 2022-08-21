@@ -1407,7 +1407,7 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		else
 		{
 			desc[0].bindings[0].resourceHandle = tr.dynamicSky.Buffer();
-	}
+		}
 	}
 	else
 	{

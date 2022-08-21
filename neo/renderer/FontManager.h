@@ -111,16 +111,6 @@ struct GlyphInfo
 	uint16_t regionIndex;
 };
 
-struct Handle
-{
-	uint16_t id = kInvalidHandle;
-};
-
-inline bool operator==( Handle lhs, Handle rhs )
-{
-	return lhs.id == rhs.id;
-}
-
 using TrueTypeHandle = Handle;
 using FontHandle = Handle;
 

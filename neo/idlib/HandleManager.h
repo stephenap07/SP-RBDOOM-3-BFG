@@ -148,3 +148,38 @@ public:
 private:
 	uint16_t m_padding[2 * MaxHandlesT];
 };
+
+struct Handle
+{
+	uint16_t id = kInvalidHandle;
+};
+
+inline bool operator==( Handle lhs, Handle rhs )
+{
+	return lhs.id == rhs.id;
+}
+
+inline bool operator!=( Handle lhs, Handle rhs )
+{
+	return lhs.id != rhs.id;
+}
+
+inline bool operator<( Handle lhs, Handle rhs )
+{
+	return lhs.id < rhs.id;
+}
+
+inline bool operator<=( Handle lhs, Handle rhs )
+{
+	return lhs.id <= rhs.id;
+}
+
+inline bool operator>( Handle lhs, Handle rhs )
+{
+	return lhs.id > rhs.id;
+}
+
+inline bool operator>=( Handle lhs, Handle rhs )
+{
+	return lhs.id >= rhs.id;
+}

@@ -29,6 +29,6 @@ void RmlGameEventHandler::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 
 		_event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
 
-		shell->ShowScreen( _token.c_str( ) );
+		shell->SetNextScreen( _token.c_str( ) );
 	}
 }

@@ -69,8 +69,6 @@ public:
 	// Repaints the ui
 	virtual void					Redraw( int time ) = 0;
 
-	virtual Rml::ElementDocument*	LoadDocument( const char* filePath, RmlEventHandler* _eventHandler = nullptr ) = 0;
-
 	virtual RmlDocHandle			LoadDocumentHandle( const char* filePath, RmlEventHandler* eventHandler = nullptr ) = 0;
 
 	virtual Rml::ElementDocument*	GetDocumentFromHandle( RmlDocHandle handle ) = 0;

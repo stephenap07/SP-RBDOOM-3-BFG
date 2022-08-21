@@ -53,8 +53,8 @@ UI_Shell::UI_Shell()
 	, soundWorld( nullptr )
 	, nextState( ShellState::WAITING )
 	, state( ShellState::WAITING )
-	, activeScreen( ShellScreen::START )
-	, nextScreen( ShellScreen::START )
+	, activeDoc()
+	, nextDoc()
 	, isInitialized( false )
 	, gameComplete( false )
 	, inGame( false )
@@ -74,6 +74,9 @@ UI_Shell::~UI_Shell()
 {
 	delete eventHandlerOptions;
 	delete baseEventHandler;
+
+	eventHandlerOptions = nullptr;
+	baseEventHandler = nullptr;
 }
 
 bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
@@ -95,12 +98,10 @@ bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 	ui->SetIsPausingGame( false );
 
 	// Load up all the documents.
-	ui->LoadDocument( "guis/rml/shell/options.rml", eventHandlerOptions );
-	ui->LoadDocument( "guis/rml/shell/startmenu.rml", baseEventHandler );
-	ui->LoadDocument( "guis/rml/shell/loading.rml", baseEventHandler );
-	ui->LoadDocument( "guis/rml/shell/test.rml", baseEventHandler );
-	ui->LoadDocument( "guis/rml/shell/pause.rml", baseEventHandler );
-	ui->LoadDocument( "guis/rml/shell/game.rml", baseEventHandler );
+	optionsDoc = ui->LoadDocumentHandle( "guis/rml/shell/options.rml", eventHandlerOptions );
+	startDoc = ui->LoadDocumentHandle( "guis/rml/shell/startmenu.rml", baseEventHandler );
+	loadingDoc = ui->LoadDocumentHandle( "guis/rml/shell/loading.rml", baseEventHandler );
+	pauseDoc = ui->LoadDocumentHandle( "guis/rml/shell/pause.rml", baseEventHandler );
 
 	// Preload all the materials.
 	rmlManager->Preload( "" );
@@ -209,11 +210,16 @@ void UI_Shell::HandleStateChange( )
 	// State Machine
 	if( nextState != state )
 	{
+		if( state == ShellState::START )
+		{
+			ShowScreen( startDoc, false );
+		}
+
 		if( nextState == ShellState::START )
 		{
-			nextScreen = ShellScreen::START;
+			nextDoc = startDoc;
 
-			ShowScreen( "startmenu" );
+			ShowScreen( startDoc, true );
 
 			state = nextState;
 		}
@@ -221,12 +227,12 @@ void UI_Shell::HandleStateChange( )
 		{
 			if( state == ShellState::LOADING )
 			{
-				HideScreen( "loading" );
+				ShowScreen( loadingDoc, false );
 			}
 
 			if( state == ShellState::START )
 			{
-				HideScreen( "startmenu" );
+				ShowScreen( startDoc, false );
 			}
 
 			if( gameComplete )
@@ -235,13 +241,13 @@ void UI_Shell::HandleStateChange( )
 			}
 			else
 			{
-				ShowScreen( "game" );
+				//ShowScreen( "game" );
 				state = nextState;
 			}
 		}
 		else if( nextState == ShellState::LOADING )
 		{
-			ShowScreen( "loading" );
+			ShowScreen( loadingDoc, true );
 			state = nextState;
 		}
 	}
@@ -250,15 +256,15 @@ void UI_Shell::HandleStateChange( )
 
 void UI_Shell::HandleScreenChange( )
 {
-	if( activeScreen != nextScreen )
+	if( activeDoc != nextDoc )
 	{
-		activeScreen = nextScreen;
+		activeDoc = nextDoc;
 	}
 
-	if( !nextScreenName.IsEmpty( ) )
+	if( nextDoc.id != kInvalidHandle )
 	{
-		ShowScreen( nextScreenName.c_str( ) );
-		nextScreenName.Clear( );
+		ShowScreen( nextDoc, true );
+		nextDoc.id = kInvalidHandle;
 	}
 }
 
@@ -338,39 +344,45 @@ void UI_Shell::ActivateMenu( const bool show )
 	}
 	else
 	{
-		nextScreen = ShellScreen::START;
-		activeScreen = ShellScreen::START;
+		nextDoc = startDoc;
+		activeDoc = startDoc;
 		nextState = ShellState::START;
 		state = ShellState::START;
 		common->Dialog().ClearDialog( GDM_LEAVE_LOBBY_RET_NEW_PARTY );
 	}
 }
 
-void UI_Shell::SetNextScreen( ShellScreen _nextScreen )
-{
-	nextScreen = _nextScreen;
-}
-
 void UI_Shell::SetNextScreen( const char* nextScreen )
 {
-	nextScreenName = nextScreen;
-}
-
-void UI_Shell::ShowScreen( const char* screen )
-{
-	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", screen ) );
-	if( doc )
+	if( idStr::Icmp( "options", nextScreen ) == 0 )
 	{
-		doc->Show();
+		nextDoc = optionsDoc;
+	}
+	else if( idStr::Icmp( "startmenu", nextScreen ) == 0 )
+	{
+		nextDoc = startDoc;
+	}
+	else if( idStr::Icmp( "loading", nextScreen ) == 0 )
+	{
+		nextDoc = loadingDoc;
+	}
+	else if( idStr::Icmp( "pause", nextScreen ) == 0 )
+	{
+		nextDoc = pauseDoc;
+	}
+	else
+	{
+		common->Error( "Attempted to set bad next shell screen %s", nextScreen );
+		ui->Activate( false );
 	}
 }
 
-void UI_Shell::HideScreen( const char* screen )
+void UI_Shell::ShowScreen( RmlDocHandle handle, bool show )
 {
-	auto doc = ui->LoadDocument( va( "guis/rml/shell/%s.rml", screen ) );
-	if( doc )
+	auto docPtr = ui->GetDocumentFromHandle( handle );
+	if( docPtr )
 	{
-		doc->Hide();
+		show ? docPtr->Show() : docPtr->Hide();
 	}
 }
 

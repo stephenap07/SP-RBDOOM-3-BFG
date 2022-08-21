@@ -6003,7 +6003,7 @@ void idGameLocal::Shell_ClosePause()
 			return;
 		}
 
-		//rmlShell->SetNextScreen( SHELL_AREA_INVALID );
+		//rmlShell->SetNextScreen( SHELL_AREA_INVALID, MENU_TRANSITION_SIMPLE );
 	}
 }
 
@@ -6118,17 +6118,17 @@ idGameLocal::Shell_ResetMenu
 */
 void idGameLocal::Shell_ResetMenu()
 {
-	//if( rmlShell )
-	//{
-	//	delete rmlShell;
-	//	rmlShell = new UI_Shell( );
-	//}
+	if( rmlShell )
+	{
+		delete rmlShell;
+		rmlShell = new UI_Shell( );
+	}
 
-	//if( shellHandler != NULL )
-	//{
-	//	delete shellHandler;
-	//	shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
-	//}
+	if( shellHandler != NULL )
+	{
+		delete shellHandler;
+		shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
+	}
 }
 
 /*
@@ -6162,28 +6162,40 @@ void idGameLocal::Shell_SyncWithSession()
 			{
 				shellHandler->SetShellState( SHELL_STATE_IDLE );
 			}
-			rmlShell->SetState( ShellState::SHELL_ERROR );
+			else
+			{
+				rmlShell->SetState( ShellState::IDLE );
+			}
 			break;
 		case idSession::PARTY_LOBBY:
 			if( shellHandler )
 			{
 				shellHandler->SetShellState( SHELL_STATE_PARTY_LOBBY );
 			}
-			rmlShell->SetState( ShellState::SHELL_ERROR );
+			else
+			{
+				rmlShell->SetState( ShellState::SHELL_ERROR );
+			}
 			break;
 		case idSession::GAME_LOBBY:
 			if( shellHandler )
 			{
 				shellHandler->SetShellState( SHELL_STATE_GAME_LOBBY );
 			}
-			rmlShell->SetState( ShellState::SHELL_ERROR );
+			else
+			{
+				rmlShell->SetState( ShellState::SHELL_ERROR );
+			}
 			break;
 		case idSession::SEARCHING:
 			if( shellHandler )
 			{
 				shellHandler->SetShellState( SHELL_STATE_SEARCHING );
 			}
-			rmlShell->SetState( ShellState::SHELL_ERROR );
+			else
+			{
+				rmlShell->SetState( ShellState::SHELL_ERROR );
+			}
 			break;
 		case idSession::LOADING:
 			if( shellHandler )

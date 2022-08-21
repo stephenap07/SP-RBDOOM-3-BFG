@@ -94,7 +94,7 @@ UI to represent a context. Handles events and contains rml file loading.
 ===============
 */
 
-RmlUserInterfaceLocal::RmlUserInterfaceLocal( )
+RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 	: context( nullptr )
 	, timeStamp( 0 )
 	, useScreenResolution( true )
@@ -111,12 +111,12 @@ RmlUserInterfaceLocal::RmlUserInterfaceLocal( )
 {
 }
 
-RmlUserInterfaceLocal::~RmlUserInterfaceLocal( )
+RmlUserInterfaceLocal::~RmlUserInterfaceLocal()
 {
 	handleManager.reset();
-	documents.Clear( );
-	context->UnloadAllDocuments( );
-	Rml::RemoveContext( name.c_str( ) );
+	documents.Clear();
+	context->UnloadAllDocuments();
+	Rml::RemoveContext( name.c_str() );
 }
 
 bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
@@ -124,11 +124,11 @@ bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
 	context = Rml::GetContext( name );
 	soundWorld = soundWorld;
 	name = name;
-	cmds.Clear( );
+	cmds.Clear();
 
 	if( !context )
 	{
-		const auto dim = GetScreenSize( );
+		const auto dim = GetScreenSize();
 		context = Rml::CreateContext( name, Rml::Vector2i( dim.x, dim.y ) );
 	}
 
@@ -150,65 +150,49 @@ const char* RmlUserInterfaceLocal::HandleEvent( const sysEvent_t* event, int tim
 	}
 
 	// Clear this command buffer out to populate them with new commands from the event handlers.
-	cmds.Clear( );
+	cmds.Clear();
 
-	const int keyModState = idRmlSystem::GetKeyModifier( );
+	const int keyModState = idRmlSystem::GetKeyModifier();
 
-	//bool isVisible = false;
-	//for (int i = 0; i < documents.Num(); i++)
-	//{
-	//	if (!documents[i].doc)
-	//	{
-	//		continue;
-	//	}
-	//	if (documents[i].doc->IsVisible())
-	//	{
-	//		isVisible = true;
-	//	}
-	//}
-
-	//if( isVisible && cursorEnabled )
+	if( event->IsMouseEvent() )
 	{
-		if( event->IsMouseEvent() )
-		{
-			HandleMouseEvent( event, keyModState );
-		}
-		else if( event->IsMouseAbsoluteEvent() )
-		{
-			HandleAbsoluteMouseEvent( event, keyModState );
-		}
-		else if( event->evValue >= K_MOUSE1 && event->evValue <= K_MOUSE16 )
-		{
-			HandleMouseButtonEvent( event, keyModState );
-		}
-		else if( event->evValue == K_MWHEELDOWN || event->evValue == K_MWHEELUP )
-		{
-			HandleMouseWheelEvent( event, keyModState );
-		}
+		HandleMouseEvent( event, keyModState );
+	}
+	else if( event->IsMouseAbsoluteEvent() )
+	{
+		HandleAbsoluteMouseEvent( event, keyModState );
+	}
+	else if( event->evValue >= K_MOUSE1 && event->evValue <= K_MOUSE16 )
+	{
+		HandleMouseButtonEvent( event, keyModState );
+	}
+	else if( event->evValue == K_MWHEELDOWN || event->evValue == K_MWHEELUP )
+	{
+		HandleMouseWheelEvent( event, keyModState );
 	}
 
 	if( event->IsKeyEvent() )
 	{
 		const Rml::Input::KeyIdentifier key = idRmlSystem::TranslateKey( event->evValue );
 
-		if( event->IsKeyDown( ) )
+		if( event->IsKeyDown() )
 		{
 			context->ProcessKeyDown( key, keyModState );
 		}
-		else if( event->IsKeyUp( ) )
+		else if( event->IsKeyUp() )
 		{
 			context->ProcessKeyUp( key, keyModState );
 		}
 	}
 
-	if( event->IsCharEvent( ) )
+	if( event->IsCharEvent() )
 	{
 		HandleCharEvent( event, keyModState );
 	}
 
 	if( cmds.Length() > 0 )
 	{
-		return cmds.c_str( );
+		return cmds.c_str();
 	}
 
 	return nullptr;
@@ -343,66 +327,6 @@ void RmlUserInterfaceLocal::Redraw( int time )
 	renderer->PostRender();
 }
 
-Rml::ElementDocument* RmlUserInterfaceLocal::LoadDocument( const char* filePath, RmlEventHandler* eventHandler )
-{
-	if( !context )
-	{
-		return nullptr;
-	}
-
-	// Set up the event listener to point to this document and the global event
-	// handler.
-	eventListenerInstancer.SetUi( this );
-	eventListenerInstancer.SetEventHandler( eventHandler );
-
-	// This touches the filesystem, not sure if this really should be doing this sort
-	// of thing in the middle of the game. Need to preload as much as possible.
-	ID_TIME_T timeStamp( 0 );
-	fileSystem->ReadFile( filePath, nullptr, &timeStamp );
-
-	//Document* foundDoc( GetInternalDocument( filePath ) );
-	Document* foundDoc = nullptr;
-	for( int i = 0; i < handleManager.getNumHandles(); i++ )
-	{
-		const auto id = handleManager.getHandleAt( i );
-		if( context == documents[id].doc->GetContext() &&
-				!idStr::Icmp( documents[id].name, filePath ) )
-		{
-			foundDoc = &documents[id];
-		}
-	}
-
-	if( foundDoc && timeStamp <= foundDoc->timeStamp )
-	{
-		// The already loaded document doesn't need an update.
-		return foundDoc->doc;
-	}
-
-	Rml::ElementDocument* document = nullptr;
-	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
-	{
-		document = context->LoadDocument( filePath );
-
-		if( document )
-		{
-			if( foundDoc )
-			{
-				foundDoc->doc->Close();
-				foundDoc->doc = document;
-				foundDoc->eventHandler = eventHandler;
-				foundDoc->timeStamp = timeStamp;
-			}
-			else
-			{
-				const auto id = handleManager.alloc();
-				documents[id] = { document, eventHandler, timeStamp, filePath };
-			}
-		}
-	}
-
-	return document;
-}
-
 RmlDocHandle RmlUserInterfaceLocal::LoadDocumentHandle( const char* filePath, RmlEventHandler* eventHandler )
 {
 	if( !context )
@@ -449,7 +373,8 @@ RmlDocHandle RmlUserInterfaceLocal::LoadDocumentHandle( const char* filePath, Rm
 
 	if( timeStamp != FILE_NOT_FOUND_TIMESTAMP )
 	{
-		if( Rml::ElementDocument* document = context->LoadDocument( filePath ) )
+		Rml::ElementDocument* document = context->LoadDocument( filePath );
+		if( document )
 		{
 			if( foundDoc )
 			{
@@ -537,7 +462,7 @@ void RmlUserInterfaceLocal::Reload()
 			// File needs a reload.
 			common->DPrintf( "Reloading RML Doc %s\n", doc.name.c_str() );
 
-			LoadDocument( doc.name, doc.eventHandler );
+			LoadDocumentHandle( doc.name, doc.eventHandler );
 
 			if( isShown )
 			{
@@ -547,7 +472,7 @@ void RmlUserInterfaceLocal::Reload()
 	}
 }
 
-void RmlUserInterfaceLocal::ReloadStyleSheet( )
+void RmlUserInterfaceLocal::ReloadStyleSheet()
 {
 	for( int i = 0; i < handleManager.getNumHandles(); i++ )
 	{
@@ -570,12 +495,13 @@ const char* RmlUserInterfaceLocal::Activate( bool activate )
 
 Rml::ElementDocument* RmlUserInterfaceLocal::SetNextScreen( const char* _nextScreen, RmlEventHandler* _eventHandler )
 {
-	auto doc = LoadDocument( _nextScreen, _eventHandler );
-	if( doc )
+	auto doc = LoadDocumentHandle( _nextScreen, _eventHandler );
+	auto docPtr = GetDocumentFromHandle( doc );
+	if( docPtr )
 	{
-		doc->Show();
+		docPtr->Show();
 	}
-	return doc;
+	return docPtr;
 }
 
 void RmlUserInterfaceLocal::HideAllDocuments()
@@ -589,7 +515,7 @@ void RmlUserInterfaceLocal::HideAllDocuments()
 
 void RmlUserInterfaceLocal::AddCommand( const char* _cmd )
 {
-	if( !cmds.IsEmpty( ) )
+	if( !cmds.IsEmpty() )
 	{
 		cmds.Append( ";" );
 	}
@@ -612,9 +538,9 @@ void RmlUserInterfaceLocal::DrawCursor()
 	renderer->DrawCursor( cursorX, cursorY, context->GetDimensions().x, context->GetDimensions().y );
 }
 
-bool RmlUserInterfaceLocal::InhibitsControl( )
+bool RmlUserInterfaceLocal::InhibitsControl()
 {
-	if( !IsActive( ) )
+	if( !IsActive() )
 	{
 		return false;
 	}
@@ -738,7 +664,7 @@ void RmlUserInterfaceManagerLocal::Init()
 	// Register event handlers and decorators.
 	Rml::Factory::RegisterEventListenerInstancer( &eventListenerInstancer );
 
-	decoratorInstancer.Init( );
+	decoratorInstancer.Init();
 	Rml::Factory::RegisterDecoratorInstancer( "render-decorator", &decoratorInstancer );
 
 	dc.Init();
@@ -765,12 +691,12 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const char* name, bool aut
 	{
 		if( !idStr::Icmp( guis[i]->GetName(), name ) )
 		{
-			if( guis[i]->GetRefs( ) == 0 )
+			if( guis[i]->GetRefs() == 0 )
 			{
-				guis[i]->Reload( );
+				guis[i]->Reload();
 			}
 
-			guis[i]->AddRef( );
+			guis[i]->AddRef();
 
 			return guis[i];
 		}
@@ -795,6 +721,8 @@ RmlUserInterface* RmlUserInterfaceManagerLocal::Find( const Rml::Context* contex
 	{
 		if( guis[i]->Context() == context )
 		{
+			guis[i]->AddRef();
+
 			return guis[i];
 		}
 	}
@@ -823,9 +751,9 @@ void RmlUserInterfaceManagerLocal::BeginLevelLoad()
 {
 	inLevelLoad = true;
 
-	for( int i = 0; i < guis.Num( ); i++ )
+	for( int i = 0; i < guis.Num(); i++ )
 	{
-		guis[i]->ClearRefs( );
+		guis[i]->ClearRefs();
 	}
 }
 
@@ -833,10 +761,10 @@ void RmlUserInterfaceManagerLocal::EndLevelLoad( const char* mapName )
 {
 	inLevelLoad = false;
 
-	int c = guis.Num( );
+	int c = guis.Num();
 	for( int i = 0; i < c; i++ )
 	{
-		if( guis[i]->GetRefs( ) == 0 )
+		if( guis[i]->GetRefs() == 0 )
 		{
 			delete guis[i];
 			guis.RemoveIndex( i );
@@ -844,7 +772,7 @@ void RmlUserInterfaceManagerLocal::EndLevelLoad( const char* mapName )
 			c--;
 		}
 
-		common->UpdateLevelLoadPacifier( );
+		common->UpdateLevelLoadPacifier();
 	}
 
 	if( cvarSystem->GetCVarBool( "fs_buildresources" ) && mapName != NULL && mapName[0] != '\0' )

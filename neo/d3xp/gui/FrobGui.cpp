@@ -64,6 +64,11 @@ void FrobGui::Init( idSoundWorld* soundWorld )
 
 void FrobGui::Redraw() const
 {
+	if( mode == MODE_NONE )
+	{
+		return;
+	}
+
 	ui->Redraw( gameLocal.GetTime() );
 }
 

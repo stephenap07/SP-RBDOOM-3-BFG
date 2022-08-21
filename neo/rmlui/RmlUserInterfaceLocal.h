@@ -69,8 +69,6 @@ public:
 	void						Redraw( int time ) override;
 
 	// Loads the document and sets up the event listeners.
-	Rml::ElementDocument*		LoadDocument( const char* filePath, RmlEventHandler* eventHandler = nullptr ) override;
-
 	RmlDocHandle				LoadDocumentHandle( const char* filePath, RmlEventHandler* eventHandler = nullptr ) override;
 
 	Rml::ElementDocument*		GetDocumentFromHandle( RmlDocHandle handle ) override;

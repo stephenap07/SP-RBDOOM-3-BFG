@@ -6,8 +6,6 @@
 	#include "RmlUi/Core.h"
 #endif
 
-#include <vector>
-
 class RmlUserInterfaceLocal;
 
 namespace Rml
@@ -20,6 +18,7 @@ enum class ShellState : int
 {
 	// Got through waiting screen and in start menu
 	SHELL_ERROR,
+	IDLE,
 	WAITING,
 	START,
 	LOADING,
@@ -64,13 +63,9 @@ public:
 
 	void ActivateMenu( bool show );
 
-	void SetNextScreen( ShellScreen _nextScreen );
-
 	void SetNextScreen( const char* nextScreen );
 
-	void ShowScreen( const char* screen );
-
-	void HideScreen( const char* screen );
+	void ShowScreen( RmlDocHandle handle, bool show );
 
 	void UpdateSavedGames();
 
@@ -116,14 +111,21 @@ private:
 	ShellState				nextState;
 	ShellState				state;
 
-	ShellScreen				activeScreen;
-	ShellScreen				nextScreen;
-
-	idStr					nextScreenName;
+	RmlDocHandle			activeDoc;
+	RmlDocHandle			nextDoc;
 
 	bool					isInitialized;
 	bool					gameComplete;
 	bool					inGame;
+
+	RmlDocHandle			errorDoc;
+	RmlDocHandle			waitingDoc;
+	RmlDocHandle			startDoc;
+	RmlDocHandle			loadingDoc;
+	RmlDocHandle			optionsDoc;
+	RmlDocHandle			pauseDoc;
+	RmlDocHandle			creditsDoc;
+	RmlDocHandle			quitDoc;
 };
 
 #endif

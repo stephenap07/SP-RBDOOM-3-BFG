@@ -75,14 +75,10 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& event, idLexer& src, idToken
 		if( subParm == "cancel" || subParm == "accept" )
 		{
 			event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
-			shell->HideScreen( "options" );
+
 			if( shell->State( ) == ShellState::START )
 			{
-				shell->ShowScreen( "startmenu" );
-			}
-			else if( shell->State( ) == ShellState::GAME )
-			{
-				shell->ShowScreen( "game" );
+				shell->SetNextScreen( "startmenu" );
 			}
 		}
 
