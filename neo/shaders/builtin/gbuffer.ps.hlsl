@@ -28,7 +28,7 @@ If you have questions concerning this license or the applicable additional terms
 */
 
 #include "global_inc.hlsl"
-#include "vulkan.hlsli"
+
 
 // *INDENT-OFF*
 Texture2D	 t_NormalMap	: register( t0 VK_DESCRIPTOR_SET( 0 ) );

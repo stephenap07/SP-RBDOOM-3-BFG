@@ -1869,7 +1869,7 @@ static void RB_DrawText( const char* text, const idVec3& origin, float scale, co
 					}
 				}
 				line++;
-}
+			}
 
 			charIndex = text[i] - 32;
 			if( charIndex < 0 || charIndex > NUM_SIMPLEX_CHARS )
@@ -1957,7 +1957,7 @@ void idRenderBackend::DBG_ShowDebugText()
 			GL_Color( text->color.ToVec3() );
 			RB_DrawText( text->text, text->origin, text->scale, text->color, text->viewAxis, text->align );
 		}
-}
+	}
 
 	if( !r_debugLineDepthTest.GetBool() )
 	{
@@ -2046,7 +2046,7 @@ void idRenderBackend::DBG_ShowDebugLines()
 	if( !rb_numDebugLines )
 	{
 		return;
-}
+	}
 
 	// all lines are expressed in world coordinates
 	DBG_SimpleWorldSetup();
@@ -2054,20 +2054,20 @@ void idRenderBackend::DBG_ShowDebugLines()
 	renderProgManager.BindShader_VertexColor();
 	renderProgManager.CommitUniforms( glStateBits );
 
-/*
-	int width = r_debugLineWidth.GetInteger();
-	if( width < 1 )
-	{
-		width = 1;
-	}
-	else if( width > 10 )
-	{
-		width = 10;
-	}
+	/*
+		int width = r_debugLineWidth.GetInteger();
+		if( width < 1 )
+		{
+			width = 1;
+		}
+		else if( width > 10 )
+		{
+			width = 10;
+		}
 
-	// draw lines
-	glLineWidth( width );
-	*/
+		// draw lines
+		glLineWidth( width );
+		*/
 
 	if( !r_debugLineDepthTest.GetBool() )
 	{

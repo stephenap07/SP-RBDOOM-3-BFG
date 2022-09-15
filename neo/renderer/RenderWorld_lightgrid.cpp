@@ -1275,29 +1275,41 @@ CONSOLE_COMMAND( bakeLightGrids, "Bake irradiance/vis light grid data", NULL )
 							// discard anything currently on the list (this triggers SwapBuffers)
 							tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
-							int pix = captureSize * captureSize;
-							const int bufferSize = pix * 3 * 2;
-
-							byte* floatRGB16F = ( byte* )R_StaticAlloc( bufferSize );
-
 #if defined( USE_VULKAN )
 							// TODO
 #elif defined( USE_NVRHI )
 							// make sure that all frames have finished rendering
 							//deviceManager->GetDevice()->waitForIdle();
 
-							R_ReadPixelsRGB16F( deviceManager->GetDevice(), &tr.backend.GetCommonPasses(), globalImages->envprobeHDRImage->GetTextureHandle() , nvrhi::ResourceStates::RenderTarget, floatRGB16F, captureSize, captureSize );
+							byte* floatRGB16F = NULL;
+
+#if 0
+							// this probe fails in game/admin.map
+							if( a == 5 && tr.lightGridJobs.Num() == 17 && side == 4 )
+							{
+								idLib::Printf( "debugging shitty capture\n" );
+							}
+#endif
+							//bool validCapture =
+							R_ReadPixelsRGB16F( deviceManager->GetDevice(), &tr.backend.GetCommonPasses(), globalImages->envprobeHDRImage->GetTextureHandle() , nvrhi::ResourceStates::RenderTarget, &floatRGB16F, captureSize, captureSize );
 
 							// release all in-flight references to the render targets
 							//deviceManager->GetDevice()->runGarbageCollection();
-
 #if 0
-							idStr testName;
-							testName.Format( "env/test/area%i_envprobe_%i_side_%i.exr", a, tr.lightGridJobs.Num(), side );
-							R_WriteEXR( testName, floatRGB16F, 3, captureSize, captureSize, "fs_basepath" );
+							if( !validCapture )
+							{
+								idStr testName;
+								testName.Format( "env/test/area%i_envprobe_%i_side_%i.exr", a, tr.lightGridJobs.Num(), side );
+								R_WriteEXR( testName, floatRGB16F, 3, captureSize, captureSize, "fs_basepath" );
+							}
 #endif
 
 #else
+							int pix = captureSize * captureSize;
+							const int bufferSize = pix * 3 * 2;
+
+							byte* floatRGB16F = ( byte* )R_StaticAlloc( bufferSize );
+
 							glFinish();
 
 							glReadBuffer( GL_BACK );
