@@ -358,7 +358,7 @@ void main( PS_IN fragment, out PS_OUT result )
 
 	visibility = 0.0;
 
-#if 0
+#if 1
 	float3 n_C = sampleNormal( t_NormalRoughness, ssP, 0 );
 
 	if( length( n_C ) < 0.01 )
