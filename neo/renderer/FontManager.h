@@ -49,6 +49,13 @@ enum FontStyle
 	FONT_STYLE_CONDENSED
 };
 
+enum class FontWeight : uint16_t
+{
+	Auto = 0,
+	Normal = 400,
+	Bold = 700
+};
+
 struct FontInfo
 {
 	/// The font height in pixel.
@@ -179,6 +186,10 @@ public:
 
 	const char* getFamilyName( TrueTypeHandle _handle ) const;
 
+	FontWeight getFontWeight( TrueTypeHandle handle ) const;
+
+	FontStyle getFontStyle( TrueTypeHandle handle ) const;
+
 private:
 	struct CachedFont;
 	struct CachedFile
@@ -186,6 +197,8 @@ private:
 		uint8_t*	buffer;
 		uint32_t	bufferSize;
 		idStr		familyName;
+		FontWeight	fontWeight;
+		FontStyle	fontStyle;
 	};
 
 	bool addBitmap( GlyphInfo& _glyphInfo, const uint8_t* _data );

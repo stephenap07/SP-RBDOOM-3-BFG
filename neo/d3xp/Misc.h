@@ -818,6 +818,8 @@ public:
 
 private:
 	void				Event_Activate( idEntity* activator );
+	void				Event_Throw();
+	void				Event_ShakeObject( idEntity* object, int starttime );
 
 	int					end_time;
 	float				throw_time;

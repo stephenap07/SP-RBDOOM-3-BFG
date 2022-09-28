@@ -46,6 +46,9 @@ If you have questions concerning this license or the applicable additional terms
 
 // id lib
 #include "../idlib/Lib.h"
+#include "../idlib/gltfProperties.h"
+#include "../idlib/gltfParser.h"
+
 
 #include "sys/sys_filesystem.h"
 
@@ -158,10 +161,8 @@ const int MAX_EXPRESSION_REGISTERS = 4096;
 
 // The editor entry points are always declared, but may just be
 // stubbed out on non-windows platforms.
-//#if defined(USE_MFC_TOOLS) || defined(USE_QT_TOOLS) || defined(USE_GTK_TOOLS)
 #include "../imgui/ImGui_Hooks.h"
 #include "../tools/edit_public.h"
-//#endif
 
 #include "../tools/compilers/compiler_public.h"
 

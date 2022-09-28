@@ -30,8 +30,6 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef SYS_DEVICE_MANAGER_H_
 #define SYS_DEVICE_MANAGER_H_
 
-#include <d3dcommon.h>
-
 #include "renderer/RenderCommon.h"
 
 struct DeviceCreationParameters

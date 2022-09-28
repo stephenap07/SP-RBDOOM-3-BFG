@@ -2055,19 +2055,19 @@ void idRenderBackend::DBG_ShowDebugLines()
 	renderProgManager.CommitUniforms( glStateBits );
 
 	/*
-		int width = r_debugLineWidth.GetInteger();
-		if( width < 1 )
-		{
-			width = 1;
-		}
-		else if( width > 10 )
-		{
-			width = 10;
-		}
+	int width = r_debugLineWidth.GetInteger();
+	if( width < 1 )
+	{
+		width = 1;
+	}
+	else if( width > 10 )
+	{
+		width = 10;
+	}
 
-		// draw lines
-		glLineWidth( width );
-		*/
+	// draw lines
+	glLineWidth( width );
+	*/
 
 	if( !r_debugLineDepthTest.GetBool() )
 	{

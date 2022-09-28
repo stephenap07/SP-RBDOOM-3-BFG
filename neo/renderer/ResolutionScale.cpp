@@ -93,8 +93,8 @@ idResolutionScale::GetCurrentResolutionScale
 */
 void idResolutionScale::GetCurrentResolutionScale( float& x, float& y )
 {
-	assert( currentResolution >= MINIMUM_RESOLUTION_SCALE );
-	assert( currentResolution <= MAXIMUM_RESOLUTION_SCALE );
+	assert( ( currentResolution + FLT_EPSILON ) >= MINIMUM_RESOLUTION_SCALE );
+	assert( ( currentResolution - FLT_EPSILON ) <= MAXIMUM_RESOLUTION_SCALE );
 
 	x = MAXIMUM_RESOLUTION_SCALE;
 	y = MAXIMUM_RESOLUTION_SCALE;

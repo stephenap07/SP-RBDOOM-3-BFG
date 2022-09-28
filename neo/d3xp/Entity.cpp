@@ -314,7 +314,15 @@ void idGameEdit::ParseSpawnArgsToRenderEntity( const idDict* args, renderEntity_
 
 	if( renderEntity->hModel )
 	{
-		renderEntity->bounds = renderEntity->hModel->Bounds( renderEntity );
+		// RB: glTF2 models can be static and cached
+		if( renderEntity->hModel->IsDynamicModel() == DM_STATIC )
+		{
+			renderEntity->bounds = renderEntity->hModel->Bounds( NULL );
+		}
+		else
+		{
+			renderEntity->bounds = renderEntity->hModel->Bounds( renderEntity );
+		}
 	}
 	else
 	{
@@ -5941,6 +5949,7 @@ void idEntity::Event_GuiNamedEvent( int guiNum, const char* event )
 		renderEntity.gui[guiNum - 1]->HandleNamedEvent( event );
 	}
 }
+
 
 /***********************************************************************
 

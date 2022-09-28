@@ -674,7 +674,7 @@ void R_RenderView( viewDef_t* parms )
 	// RB: find closest environment probes so we can interpolate between them in the ambient shaders
 	R_FindClosestEnvironmentProbes();
 
-	tr.primaryWorld->DebugDrawSubmitToCurrentView( );
+	tr.primaryWorld->DebugDrawSubmitToCurrentView();
 
 	// write everything needed to the demo file
 	if( common->WriteDemo() )

@@ -65,9 +65,13 @@ glconfig_t	glConfig;
 
 idCVar r_requestStereoPixelFormat( "r_requestStereoPixelFormat", "1", CVAR_RENDERER, "Ask for a stereo GL pixel format on startup" );
 idCVar r_debugContext( "r_debugContext", "0", CVAR_RENDERER, "Enable various levels of context debug." );
-idCVar r_glDriver( "r_glDriver", "", CVAR_RENDERER, "\"opengl32\", etc." );
-#if defined(USE_NVRHI)
-	idCVar r_gapi( "r_gapi", "dx12", CVAR_RENDERER, "Specifies the graphics api to use (dx12, vulkan)" );
+#if defined( USE_NVRHI )
+	#if defined( _WIN32 )
+		idCVar r_graphicsAPI( "r_graphicsAPI", "dx12", CVAR_RENDERER, "Specifies the graphics api to use (dx12, vulkan)" );
+	#else
+		idCVar r_graphicsAPI( "r_graphicsAPI", "vulkan", CVAR_RENDERER, "Specifies the graphics api to use (vulkan)" );
+	#endif
+
 	idCVar r_useValidationLayers( "r_useValidationLayers", "1", CVAR_INTEGER | CVAR_INIT, "1 is just the NVRHI and 2 will turn on additional DX12, VK validation layers" );
 #endif
 // SRS - Added workaround for AMD OSX driver bugs caused by GL_EXT_timer_query when shadow mapping enabled; Intel bugs not present on OSX
@@ -514,11 +518,11 @@ void R_SetNewMode( const bool fullInit )
 
 #if defined( USE_NVRHI )
 			nvrhi::GraphicsAPI api = nvrhi::GraphicsAPI::D3D12;
-			if( !idStr::Icmp( r_gapi.GetString(), "vulkan" ) )
+			if( !idStr::Icmp( r_graphicsAPI.GetString(), "vulkan" ) )
 			{
 				api = nvrhi::GraphicsAPI::VULKAN;
 			}
-			else if( !idStr::Icmp( r_gapi.GetString(), "dx12" ) )
+			else if( !idStr::Icmp( r_graphicsAPI.GetString(), "dx12" ) )
 			{
 				api = nvrhi::GraphicsAPI::D3D12;
 			}
@@ -886,9 +890,19 @@ bool R_ReadPixelsRGB8( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrh
 		pData = newData;
 	}
 
-	// fix alpha
 	byte* data = static_cast<byte*>( pData );
 
+#if 0
+	// fill with red for debugging
+	for( int i = 0; i < ( desc.width * desc.height ); i++ )
+	{
+		data[ i * 4 + 0 ] = 255;
+		data[ i * 4 + 1 ] = 0;
+		data[ i * 4 + 2 ] = 0;
+	}
+#endif
+
+	// fix alpha
 	for( int i = 0; i < ( desc.width * desc.height ); i++ )
 	{
 		data[ i * 4 + 3 ] = 0xff;
@@ -907,16 +921,18 @@ bool R_ReadPixelsRGB8( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrh
 	return true;
 }
 
-bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, void* pic, int picWidth, int picHeight )
+bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, byte** pic, int picWidth, int picHeight )
 {
 	nvrhi::TextureDesc desc = texture->getDesc();
 	nvrhi::TextureHandle tempTexture;
 	nvrhi::FramebufferHandle tempFramebuffer;
 
+#if 0
 	if( desc.width != picWidth || desc.height != picHeight )
 	{
 		return false;
 	}
+#endif
 
 	nvrhi::CommandListHandle commandList = device->createCommandList();
 	commandList->open();
@@ -977,15 +993,69 @@ bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nv
 		pData = newData;
 	}
 
+	int pix = picWidth * picHeight;
+	const int bufferSize = pix * 3 * 2;
+
+	void* floatRGB16F = R_StaticAlloc( bufferSize );
+	*pic = ( byte* ) floatRGB16F;
+
 	// copy from RGBA16F to RGB16F
 	uint16_t* data = static_cast<uint16_t*>( pData );
-	uint16_t* outData = static_cast<uint16_t*>( pic );
+	uint16_t* outData = static_cast<uint16_t*>( floatRGB16F );
+
+#if 0
+	for( int i = 0; i < ( desc.width * desc.height ); i++ )
+	{
+		outData[ i * 3 + 0 ] = F32toF16( 1 );
+		outData[ i * 3 + 1 ] = F32toF16( 0 );
+		outData[ i * 3 + 2 ] = F32toF16( 0 );
+	}
+#endif
 
 	for( int i = 0; i < ( desc.width * desc.height ); i++ )
 	{
 		outData[ i * 3 + 0 ] = data[ i * 4 + 0 ];
 		outData[ i * 3 + 1 ] = data[ i * 4 + 1 ];
 		outData[ i * 3 + 2 ] = data[ i * 4 + 2 ];
+	}
+
+	// RB: filter out garbage and reset it to black
+	// this is a rare case but with a high visual impact
+	bool isCorrupted = false;
+
+	const idVec3 LUMINANCE_LINEAR( 0.299f, 0.587f, 0.144f );
+	idVec3 rgb;
+
+	for( int i = 0; i < ( desc.width * desc.height ); i++ )
+	{
+		rgb.x = F16toF32( outData[ i * 3 + 0 ] );
+		rgb.y = F16toF32( outData[ i * 3 + 1 ] );
+		rgb.z = F16toF32( outData[ i * 3 + 2 ] );
+
+		if( IsNAN( rgb.x ) || IsNAN( rgb.y ) || IsNAN( rgb.z ) )
+		{
+			isCorrupted = true;
+			break;
+		}
+
+		// captures within the Doom 3 main campaign usually have a luminance of ~ 0.5 - 4.0
+		// the threshold is a bit higher and might need to be adapted for total conversion content
+		float luminance = rgb * LUMINANCE_LINEAR;
+		if( luminance > 20.0f )
+		{
+			isCorrupted = true;
+			break;
+		}
+	}
+
+	if( isCorrupted )
+	{
+		for( int i = 0; i < ( desc.width * desc.height ); i++ )
+		{
+			outData[ i * 3 + 0 ] = F32toF16( 0 );
+			outData[ i * 3 + 1 ] = F32toF16( 0 );
+			outData[ i * 3 + 2 ] = F32toF16( 0 );
+		}
 	}
 
 	if( newData )
@@ -996,7 +1066,7 @@ bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nv
 
 	device->unmapStagingTexture( stagingTexture );
 
-	return true;
+	return ( !isCorrupted );
 }
 
 /*
@@ -2182,8 +2252,7 @@ void idRenderSystemLocal::Init()
 	fontManager = new FontManager( 1024 );
 	fontManager->init();
 	textBufferManager = new TextBufferManager( fontManager );
-	defaultTtf = RegisterFontFace( "fonts/Merriweather/Merriweather-Regular.ttf" );
-	defaultFont = RegisterFont2( "merriweather", 14 );
+	defaultFont = RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 14 );
 }
 
 /*
@@ -2383,6 +2452,8 @@ TrueTypeHandle idRenderSystemLocal::RegisterFontFace( const char* fontName, bool
 	data.ttfHandle = fontManager->createTtf( buffer.Ptr(), len );
 	data.name = static_cast<idStr>( baseFontName );
 	data.family = fontManager->getFamilyName( data.ttfHandle );
+	data.fontWeight = fontManager->getFontWeight( data.ttfHandle );
+	data.fontStyle = fontManager->getFontStyle( data.ttfHandle );
 	fontFaces.Append( data );
 
 	return data.ttfHandle;
@@ -2411,12 +2482,31 @@ idFont* idRenderSystemLocal::RegisterFont( const char* fontName )
 	return newFont;
 }
 
-FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int fontSize, FontStyle fontStyle )
+FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int fontSize, FontStyle fontStyle, FontWeight fontWeight )
 {
+	idStrStatic< MAX_OSPATH > baseFontName = fontName;
+	baseFontName.Replace( "fonts/", "" );
+	baseFontName.StripFileExtension();
+	baseFontName.Append( fontSize );
+
+	for( int i = 0; i < newFonts.Num(); i++ )
+	{
+		if( idStr::Icmp( newFonts[i].name, fontName ) == 0 &&
+				newFonts[i].size == fontSize &&
+				newFonts[i].style == fontStyle &&
+				newFonts[i].weight == fontWeight )
+		{
+			return newFonts[i].fontHandle;
+		}
+	}
+
+	// First find the font face handle.
 	TrueTypeHandle ttfHandle;
 	for( int i = 0; i < fontFaces.Num(); i++ )
 	{
-		if( idStr::Icmp( fontFaces[i].family, fontName ) == 0 )
+		if( idStr::Icmp( fontFaces[i].family, fontName ) == 0 &&
+				fontFaces[i].fontStyle == fontStyle &&
+				fontFaces[i].fontWeight == fontWeight )
 		{
 			// Found one. Return it.
 			ttfHandle = fontFaces[i].ttfHandle;
@@ -2424,33 +2514,25 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int fontSiz
 		}
 	}
 
+	// Load it if it's not already loaded.
 	if( ttfHandle.id == kInvalidHandle )
 	{
-		common->Warning( "Unable to find font family %s", fontName );
-		return FontHandle{ kInvalidHandle };
+		ttfHandle = RegisterFontFace( fontName );
 	}
 
-	idStrStatic< MAX_OSPATH > baseFontName = fontName;
-	baseFontName.Replace( "fonts/", "" );
-	baseFontName.Append( fontSize );
-
-	for( int i = 0; i < newFonts.Num(); i++ )
+	if( ttfHandle.id == kInvalidHandle )
 	{
-		if( idStr::Icmp( newFonts[i].name, baseFontName ) == 0 &&
-				newFonts[i].size == fontSize &&
-				newFonts[i].ttfHandle == ttfHandle &&
-				newFonts[i].style == fontStyle )
-		{
-			return newFonts[i].fontHandle;
-		}
+		common->Warning( "Failed to load font %s", fontName );
+		return { kInvalidHandle };
 	}
 
 	NewFontData data;
 	data.ttfHandle = ttfHandle;
 	data.fontHandle = fontManager->createFontByPixelSize( data.ttfHandle, 0, fontSize );
-	data.name = baseFontName;
+	data.name = fontManager->getFamilyName( data.ttfHandle );
 	data.size = fontSize;
 	data.style = fontStyle;
+	data.weight = fontManager->getFontWeight( data.ttfHandle );
 	newFonts.Append( data );
 
 	fontManager->preloadGlyph( data.fontHandle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n" );
@@ -2505,11 +2587,12 @@ void idRenderSystemLocal::InitBackend()
 		}
 
 		commandList->open();
+
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		globalImages->ReloadImages( true, commandList );
+
 		commandList->close();
 		deviceManager->GetDevice()->executeCommandList( commandList );
-
 #else
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		//globalImages->ReloadImages( true );

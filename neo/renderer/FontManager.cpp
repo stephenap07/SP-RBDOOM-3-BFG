@@ -90,6 +90,12 @@ public:
 	/// Return family name.
 	const char* getFamilyName() const;
 
+	/// Return the font weight.
+	FontWeight getFontWeight() const;
+
+	/// Return the font style.
+	FontStyle getFontStyle() const;
+
 	/// raster a glyph as 8bit alpha to a memory buffer
 	/// update the GlyphInfo according to the raster strategy
 	/// @ remark buffer min size: glyphInfo.m_width * glyphInfo * height * sizeof(char)
@@ -294,6 +300,28 @@ FontInfo TrueTypeFont::getFontInfo()
 const char* TrueTypeFont::getFamilyName() const
 {
 	return m_font->face->family_name;
+}
+
+FontWeight TrueTypeFont::getFontWeight() const
+{
+	FontWeight weight = FontWeight::Normal;
+	auto style = m_font->face->style_flags;
+	if( style & FT_STYLE_FLAG_BOLD )
+	{
+		weight = FontWeight::Bold;
+	}
+	return weight;
+}
+
+FontStyle TrueTypeFont::getFontStyle() const
+{
+	FontStyle fontStyle = FontStyle::FONT_STYLE_NORMAL;
+	auto style = m_font->face->style_flags;
+	if( style & FT_STYLE_FLAG_ITALIC )
+	{
+		fontStyle = FontStyle::FONT_STYLE_ITALIC;
+	}
+	return fontStyle;
 }
 
 static void glyphInfoInit( GlyphInfo& _glyphInfo, FT_BitmapGlyph _bitmap, FT_GlyphSlot _slot, uint8_t* _dst, uint32_t _bpp )
@@ -552,6 +580,8 @@ TrueTypeHandle FontManager::createTtf( const uint8_t* _buffer, uint32_t _size )
 	TrueTypeFont fontObj;
 	fontObj.init( _buffer, _size, 0 );
 	m_cachedFiles[id].familyName = fontObj.getFamilyName();
+	m_cachedFiles[id].fontWeight = fontObj.getFontWeight();
+	m_cachedFiles[id].fontStyle = fontObj.getFontStyle();
 
 	TrueTypeHandle ret = { id };
 	return ret;
@@ -564,6 +594,7 @@ void FontManager::destroyTtf( TrueTypeHandle _handle )
 	m_cachedFiles[_handle.id].bufferSize = 0;
 	m_cachedFiles[_handle.id].buffer = NULL;
 	m_cachedFiles[_handle.id].familyName.Clear();
+	m_cachedFiles[_handle.id].fontWeight = FontWeight::Normal;
 	m_filesHandles.free( _handle.id );
 }
 
@@ -760,6 +791,18 @@ const char* FontManager::getFamilyName( TrueTypeHandle _handle ) const
 {
 	assert( _handle.id != kInvalidHandle && "Invalid handle used" );
 	return m_cachedFiles[_handle.id].familyName.c_str();
+}
+
+FontWeight FontManager::getFontWeight( TrueTypeHandle handle ) const
+{
+	assert( handle.id != kInvalidHandle && "Invalid handle used" );
+	return m_cachedFiles[handle.id].fontWeight;
+}
+
+FontStyle FontManager::getFontStyle( TrueTypeHandle handle ) const
+{
+	assert( handle.id != kInvalidHandle && "Invalid handle used" );
+	return m_cachedFiles[handle.id].fontStyle;
 }
 
 bool FontManager::addBitmap( GlyphInfo& _glyphInfo, const uint8_t* _data )

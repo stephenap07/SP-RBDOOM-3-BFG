@@ -178,11 +178,11 @@ void idRenderBackend::Init()
 	prevMVP[1] = renderMatrix_identity;
 	prevViewsValid = false;
 
-	currentIndexBuffer = nullptr;
 	currentVertexBuffer = nullptr;
-	currentVertexOffset = -1;
-	currentIndexOffset = -1;
+	currentIndexBuffer = nullptr;
 	currentJointBuffer = nullptr;
+	currentVertexOffset = 0;
+	currentIndexOffset = 0;
 	currentJointOffset = 0;
 
 	// RB: prepare ImGui system
@@ -213,7 +213,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 	else
 	{
-		const uint64 frameNum = ( int )( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+		const uint64 frameNum = static_cast<uint64>( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
 		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
 		{
 			idLib::Warning( "RB_DrawElementsWithCounters, vertexBuffer == NULL" );
@@ -221,7 +221,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		}
 		vertexBuffer = &vertexCache.frameData[vertexCache.drawListNum].vertexBuffer;
 	}
-	const uint vertOffset = ( uint )( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint vertOffset = static_cast<uint>( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 
 	bool changeState = false;
 
@@ -247,7 +247,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	}
 	else
 	{
-		const uint64 frameNum = ibHandle >> VERTCACHE_FRAME_SHIFT & VERTCACHE_FRAME_MASK;
+		const uint64 frameNum = static_cast<uint64>( ibHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
 		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
 		{
 			idLib::Warning( "RB_DrawElementsWithCounters, indexBuffer == NULL" );
@@ -255,7 +255,7 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		}
 		indexBuffer = &vertexCache.frameData[vertexCache.drawListNum].indexBuffer;
 	}
-	const uint indexOffset = ( uint )( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint indexOffset = static_cast<uint>( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
 
 	if( currentIndexOffset != indexOffset )
 	{
@@ -337,7 +337,8 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 
 	const uint64_t stateBits = glStateBits;
 
-	const PipelineKey key{ stateBits, renderProgManager.CurrentProgram(), depthBias, slopeScaleBias, currentFrameBuffer };
+	const int program = renderProgManager.CurrentProgram();
+	const PipelineKey key{ stateBits, program, depthBias, slopeScaleBias, currentFrameBuffer };
 	const auto pipeline = pipelineCache.GetOrCreatePipeline( key );
 
 	if( currentPipeline != pipeline )
@@ -411,7 +412,6 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	args.vertexCount = surf->numIndexes;
 	commandList->drawIndexed( args );
 
-	// RB: added stats
 	pc.c_drawElements++;
 	pc.c_drawIndexes += surf->numIndexes;
 }

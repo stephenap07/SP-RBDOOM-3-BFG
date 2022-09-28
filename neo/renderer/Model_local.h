@@ -130,6 +130,7 @@ public:
 	bool						ConvertASEToModelSurfaces( const struct aseModel_s* ase );
 	bool						ConvertLWOToModelSurfaces( const struct st_lwObject* lwo );
 	bool						ConvertMAToModelSurfaces( const struct maModel_s* ma );
+	bool						ConvertGltfMeshToModelsurfaces( const gltfMesh* mesh );
 
 	struct aseModel_s* 			ConvertLWOToASE( const struct st_lwObject* obj, const char* fileName );
 
@@ -180,6 +181,7 @@ protected:
 class idMD5Mesh
 {
 	friend class				idRenderModelMD5;
+	friend class				idRenderModelGLTF;
 
 public:
 	idMD5Mesh();
@@ -214,6 +216,7 @@ private:
 
 class idRenderModelMD5 : public idRenderModelStatic
 {
+	friend class				idRenderModelGLTF;
 public:
 	void				InitFromFile( const char* fileName ) override;
 	bool				LoadBinaryModel( idFile* file, const ID_TIME_T sourceTimeStamp ) override;

@@ -549,6 +549,8 @@ void idRenderBackend::ResetViewportAndScissorToDefaultCamera( const viewDef_t* _
 				viewDef->viewport.y1 + _viewDef->scissor.y1,
 				_viewDef->scissor.x2 + 1 - _viewDef->scissor.x1,
 				_viewDef->scissor.y2 + 1 - _viewDef->scissor.y1 );
+
+	currentScissor = viewDef->scissor;
 }
 // RB end
 
@@ -1525,12 +1527,14 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	}
 
 	// change the scissor if needed, it will be constant across all the surfaces lit by the light
-	if( r_useScissor.GetBool() )
+	if( !currentScissor.Equals( vLight->scissorRect ) && r_useScissor.GetBool() )
 	{
 		GL_Scissor( viewDef->viewport.x1 + vLight->scissorRect.x1,
 					viewDef->viewport.y1 + vLight->scissorRect.y1,
 					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
 					vLight->scissorRect.y2 + 1 - vLight->scissorRect.y1 );
+
+		currentScissor = vLight->scissorRect;
 	}
 
 	// perform setup here that will be constant for all interactions
@@ -2627,13 +2631,15 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 			continue;	// a job may have created an empty shadow volume
 		}
 
-		if( r_useScissor.GetBool() )
+		if( !currentScissor.Equals( drawSurf->scissorRect ) && r_useScissor.GetBool() )
 		{
 			// change the scissor
 			GL_Scissor( viewDef->viewport.x1 + drawSurf->scissorRect.x1,
 						viewDef->viewport.y1 + drawSurf->scissorRect.y1,
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
+
+			currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )
@@ -2730,12 +2736,14 @@ void idRenderBackend::StencilSelectLight( const viewLight_t* vLight )
 	renderLog.OpenBlock( "Stencil Select", colorPink );
 
 	// enable the light scissor
-	if( r_useScissor.GetBool() )
+	if( !currentScissor.Equals( vLight->scissorRect ) && r_useScissor.GetBool() )
 	{
 		GL_Scissor( viewDef->viewport.x1 + vLight->scissorRect.x1,
 					viewDef->viewport.y1 + vLight->scissorRect.y1,
 					vLight->scissorRect.x2 + 1 - vLight->scissorRect.x1,
 					vLight->scissorRect.y2 + 1 - vLight->scissorRect.y1 );
+
+		currentScissor = vLight->scissorRect;
 	}
 
 	// clear stencil buffer to 0 (not drawable)
@@ -4416,12 +4424,14 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 					rect.x2 = ( vLight->scissorRect.x2 + 15 ) & ~15;
 					rect.y2 = ( vLight->scissorRect.y2 + 15 ) & ~15;
 
-					if( r_useScissor.GetBool() )
+					if( !currentScissor.Equals( rect ) && r_useScissor.GetBool() )
 					{
 						GL_Scissor( viewDef->viewport.x1 + rect.x1,
 									viewDef->viewport.y1 + rect.y1,
 									rect.x2 + 1 - rect.x1,
 									rect.y2 + 1 - rect.y1 );
+
+						currentScissor = rect;
 					}
 					GL_State( GLS_DEFAULT );	// make sure stencil mask passes for the clear
 					GL_Clear( false, false, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
@@ -4631,12 +4641,14 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 		}
 
 		// change the scissor if needed
-		if( r_useScissor.GetBool() )
+		if( !currentScissor.Equals( surf->scissorRect ) && r_useScissor.GetBool() )
 		{
 			GL_Scissor( viewDef->viewport.x1 + surf->scissorRect.x1,
 						viewDef->viewport.y1 + surf->scissorRect.y1,
 						surf->scissorRect.x2 + 1 - surf->scissorRect.x1,
 						surf->scissorRect.y2 + 1 - surf->scissorRect.y1 );
+
+			currentScissor = surf->scissorRect;
 		}
 
 		// get the expressions for conditionals / color / texcoords
@@ -4986,13 +4998,15 @@ void idRenderBackend::T_BlendLight( const drawSurf_t* drawSurfs, const viewLight
 			// temporarily jump over the scissor and draw so the gl error callback doesn't get hit
 		}
 
-		if( r_useScissor.GetBool() )
+		if( !currentScissor.Equals( drawSurf->scissorRect ) && r_useScissor.GetBool() )
 		{
 			// change the scissor
 			GL_Scissor( viewDef->viewport.x1 + drawSurf->scissorRect.x1,
 						viewDef->viewport.y1 + drawSurf->scissorRect.y1,
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
+
+			currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )
@@ -5113,13 +5127,15 @@ void idRenderBackend::T_BasicFog( const drawSurf_t* drawSurfs, const idPlane fog
 			// temporarily jump over the scissor and draw so the gl error callback doesn't get hit
 		}
 
-		if( r_useScissor.GetBool() )
+		if( !currentScissor.Equals( drawSurf->scissorRect ) && r_useScissor.GetBool() )
 		{
 			// change the scissor
 			GL_Scissor( viewDef->viewport.x1 + drawSurf->scissorRect.x1,
 						viewDef->viewport.y1 + drawSurf->scissorRect.y1,
 						drawSurf->scissorRect.x2 + 1 - drawSurf->scissorRect.x1,
 						drawSurf->scissorRect.y2 + 1 - drawSurf->scissorRect.y1 );
+
+			currentScissor = drawSurf->scissorRect;
 		}
 
 		if( drawSurf->space != currentSpace )
@@ -6775,13 +6791,15 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 	}
 
-	// Reset the graphics state.
+#if defined( USE_NVRHI )
+	// SP: reset the graphics state for validation layers
 	currentVertexBuffer = nullptr;
 	currentIndexBuffer = nullptr;
 	currentJointBuffer = nullptr;
 	currentVertexOffset = 0;
 	currentIndexOffset = 0;
 	currentJointOffset = 0;
+#endif
 
 	//-------------------------------------------------
 	// RB_BeginDrawingView
@@ -6798,17 +6816,15 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 
 	bool useHDR = r_useHDR.GetBool() && !_viewDef->is2Dgui;
 	bool clearColor = false;
-	if( useHDR )
+
+	if( _viewDef->renderView.rdflags & RDF_IRRADIANCE )
 	{
-		if( _viewDef->renderView.rdflags & RDF_IRRADIANCE )
-		{
-			globalFramebuffers.envprobeFBO->Bind();
-			clearColor = true;
-		}
-		else
-		{
-			globalFramebuffers.hdrFBO->Bind();
-		}
+		globalFramebuffers.envprobeFBO->Bind();
+		clearColor = true;
+	}
+	else if( useHDR )
+	{
+		globalFramebuffers.hdrFBO->Bind();
 	}
 	else if( viewDef->targetRender )
 	{
@@ -7276,6 +7292,11 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 	// if there aren't any drawsurfs, do nothing
 	if( !viewDef->numDrawSurfs && ( r_skipSky.GetBool() || !viewDef->skyConstants ) )
 	{
+		if( viewDef->renderView.rdflags & RDF_IRRADIANCE )
+		{
+			nvrhi::utils::ClearColorAttachment( commandList, globalFramebuffers.envprobeFBO->GetApiObject(), 0, nvrhi::Color( 0.f ) );
+		}
+
 		return;
 	}
 
@@ -7499,8 +7520,7 @@ void idRenderBackend::PostProcess( const void* data )
 		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
 		blitParms.targetFramebuffer = globalFramebuffers.smaaBlendFBO->GetApiObject();
 
-		// RB: add + 1 to dimensions so filtering works
-		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth() + 1, renderSystem->GetHeight() + 1 );
+		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
 		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
 
 		GL_SelectTexture( 0 );

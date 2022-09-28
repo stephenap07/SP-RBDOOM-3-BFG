@@ -34,8 +34,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "Game_local.h"
 
 #include "../imgui/BFGimgui.h"
-#include "rmlui/RmlUserInterface.h"
-#include "gui/RmlShell.h"
 
 #ifdef USE_PHYSX
 	#include "PxPhysicsApi.h"
@@ -364,6 +362,7 @@ void idGameLocal::Init()
 	{
 		shellHandler = new( TAG_SWF ) idMenuHandler_Shell();
 	}
+	else
 	{
 		rmlShell = new UI_Shell();
 	}
@@ -2657,7 +2656,7 @@ idCVar g_recordTrace( "g_recordTrace", "0", CVAR_BOOL, "" );
 idGameLocal::RunSharedThink
 ================
 */
-void idGameLocal::RunSharedThink( void )
+void idGameLocal::RunSharedThink()
 {
 	idEntity* ent;
 	for( ent = activeEntities.Next(); ent != NULL; ent = ent->activeNode.Next() )
@@ -5100,7 +5099,7 @@ idCamera* idGameLocal::GetCamera() const
 idGameLocal::SkipCinematic
 =============
 */
-bool idGameLocal::SkipCinematic( void )
+bool idGameLocal::SkipCinematic()
 {
 	if( camera )
 	{
@@ -6003,7 +6002,7 @@ void idGameLocal::Shell_ClosePause()
 			return;
 		}
 
-		//rmlShell->SetNextScreen( SHELL_AREA_INVALID, MENU_TRANSITION_SIMPLE );
+		rmlShell->SetNextScreen( nullptr );
 	}
 }
 
@@ -6155,7 +6154,7 @@ void idGameLocal::Shell_SyncWithSession()
 			{
 				shellHandler->SetShellState( SHELL_STATE_PAUSED );
 			}
-			rmlShell->SetState( ShellState::GAME );
+			rmlShell->SetState( ShellState::PAUSED );
 			break;
 		case idSession::IDLE:
 			if( shellHandler )

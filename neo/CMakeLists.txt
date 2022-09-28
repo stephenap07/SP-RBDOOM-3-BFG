@@ -77,7 +77,7 @@ option(USE_NVRHI_VULKAN
 option(USE_PHYSX
                 "Use PhysX" OFF)
 
-set(NVRHI_INSTALL off)
+set(NVRHI_INSTALL OFF)
 
 set(CPU_TYPE "" CACHE STRING "When set, passes this string as CPU-ID which will be embedded into the binary.")
 
@@ -583,7 +583,7 @@ if(USE_NVRHI)
         find_package(DXCspirv REQUIRED)
     endif()
 
-	include_directories(${NVRHI_DIR}/include)
+    include_directories(${NVRHI_DIR}/include)
 endif(USE_NVRHI)
 
 if(USE_SYSTEM_RAPIDJSON)
@@ -602,6 +602,8 @@ add_subdirectory(libs/LuaJIT-cmake)
 
 set(Lua_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/LuaJIT-cmake/src)
 
+file(GLOB NATVIS_SOURCES .natvis)
+
 file(GLOB AAS_INCLUDES aas/*.h)
 file(GLOB AAS_SOURCES aas/*.cpp)
 
@@ -612,7 +614,7 @@ file(GLOB FRAMEWORK_INCLUDES framework/*.h)
 file(GLOB FRAMEWORK_SOURCES framework/*.cpp)
 
 file(GLOB FRAMEWORK_IMGUI_INCLUDES imgui/*.h)
-file(GLOB FRAMEWORK_IMGUI_SOURCES imgui/*.cpp imgui/*.c)
+file(GLOB FRAMEWORK_IMGUI_SOURCES imgui/*.cpp)
 
 file(GLOB RENDERER_INCLUDES renderer/*.h)
 file(GLOB RENDERER_SOURCES renderer/*.cpp)
@@ -1210,6 +1212,7 @@ set(WIN32_RESOURCES
 	# sys/win32/rc/res/dbg_open.bmp
 	# sys/win32/rc/res/dbg_toolbar.bmp
 	sys/win32/rc/res/doom.ico
+	sys/win32/rc/doom.rc
 	# sys/win32/rc/res/fpoint.cur
 	# sys/win32/rc/res/fxed_link.ico
 	# sys/win32/rc/res/fxed_toolbar.bmp
@@ -1577,6 +1580,7 @@ set(RBDOOM3_INCLUDES
 			)
 			
 set(RBDOOM3_SOURCES
+			${NATVIS_SOURCES}
 			${AAS_SOURCES}
 			${CM_SOURCES}
 			${FRAMEWORK_SOURCES}

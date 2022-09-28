@@ -961,7 +961,7 @@ public:
 
 	virtual TrueTypeHandle	RegisterFontFace( const char* fontName, bool useFallback = false ) override;
 	virtual idFont* 		RegisterFont( const char* fontName );
-	virtual FontHandle      RegisterFont2( const char* aFontName, int aSize, FontStyle fontStyle = FONT_STYLE_NORMAL );
+	virtual FontHandle      RegisterFont2( const char* fontName, int size, FontStyle fontStyle = FONT_STYLE_NORMAL, FontWeight fontWeight = FontWeight::Normal );
 	virtual void			FreeFontFace( TrueTypeHandle aHandle );
 	virtual void            FreeFont( FontHandle aHandle );
 
@@ -1075,7 +1075,6 @@ public:
 	const idMaterial* 		defaultMaterial;
 	FontManager*            fontManager;
 	TextBufferManager*      textBufferManager;
-	TrueTypeHandle			defaultTtf;
 	FontHandle              defaultFont;
 	idImage* 				testImage;
 	idCinematic* 			testVideo;
@@ -1107,6 +1106,7 @@ public:
 		FontHandle fontHandle;
 		int size;
 		FontStyle style;
+		FontWeight weight;
 		idStr name;
 	};
 
@@ -1116,6 +1116,7 @@ public:
 		idStr			name;
 		idStr			family;
 		FontStyle		fontStyle;
+		FontWeight		fontWeight;
 	};
 
 	idList<NamedTrueTypeHandle, TAG_FONT>	fontFaces;
@@ -1168,7 +1169,6 @@ extern idCVar r_windowWidth;
 extern idCVar r_windowHeight;
 
 extern idCVar r_debugContext;				// enable various levels of context debug
-extern idCVar r_glDriver;					// "opengl32", etc
 #if defined(USE_NVRHI)
 	extern idCVar r_useValidationLayers;
 #endif
@@ -1410,7 +1410,7 @@ NVRHI helpers
 ====================================================================
 */
 bool R_ReadPixelsRGB8( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, const char* fullname );
-bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, void* pic, int picWidth, int picHeight );
+bool R_ReadPixelsRGB16F( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrhi::ITexture* texture, nvrhi::ResourceStates textureState, byte** pic, int picWidth, int picHeight );
 
 /*
 ====================================================================
