@@ -17,7 +17,7 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& event, idLexer& src, idToken
 {
 	if( !token.Icmp( "restore" ) )
 	{
-		Rml::ElementDocument* optionsBody = event.GetTargetElement( )->GetOwnerDocument( );
+		Rml::ElementDocument* optionsBody = event.GetTargetElement()->GetOwnerDocument();
 
 		if( !optionsBody )
 		{
@@ -74,11 +74,16 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& event, idLexer& src, idToken
 
 		if( subParm == "cancel" || subParm == "accept" )
 		{
-			event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
+			event.GetTargetElement()->GetOwnerDocument()->Hide();
 
-			if( shell->State( ) == ShellState::START )
+			if( shell->State() == ShellState::START )
 			{
 				shell->SetNextScreen( "startmenu" );
+			}
+			else
+			{
+				// TODO(Stephen): Probably better to implement some stack-based interface instead.
+				shell->SetNextScreen( "pause" );
 			}
 		}
 
@@ -108,7 +113,7 @@ void EventHandlerOptions::ProcessEvent( Rml::Event& event, idLexer& src, idToken
 
 	if( !token.Icmp( "enable_accept" ) )
 	{
-		Rml::ElementDocument* optionsBody = event.GetTargetElement( )->GetOwnerDocument( );
+		Rml::ElementDocument* optionsBody = event.GetTargetElement()->GetOwnerDocument();
 
 		if( optionsBody == nullptr )
 		{

@@ -217,8 +217,8 @@ idRmlRenderDecoratorInstancer::~idRmlRenderDecoratorInstancer()
 void idRmlRenderDecoratorInstancer::Init()
 {
 	modelName = RegisterProperty( "model-name", "models/static/Computer.ase" ).AddParser( "string" ).GetId();
-	modelRotate = RegisterProperty( "model-rotate", "0, 0, 0" ).AddParser( "string" ).GetId();
-	modelOrigin = RegisterProperty( "model-origin", "0, 0, 0" ).AddParser( "string" ).GetId();
+	modelRotate = RegisterProperty( "model-rotate", "( 0 0 0 )" ).AddParser( "string" ).GetId();
+	modelOrigin = RegisterProperty( "model-origin", "( 0 0 0 )" ).AddParser( "string" ).GetId();
 }
 
 Rml::SharedPtr<Rml::Decorator> idRmlRenderDecoratorInstancer::InstanceDecorator( const Rml::String& name, const Rml::PropertyDictionary& properties, const Rml::DecoratorInstancerInterface& instancer_interface )
@@ -227,29 +227,20 @@ Rml::SharedPtr<Rml::Decorator> idRmlRenderDecoratorInstancer::InstanceDecorator(
 	idStr modelRotateStr( properties.GetProperty( modelRotate )->ToString().c_str() );
 	idStr modelOriginStr( properties.GetProperty( modelOrigin )->ToString().c_str() );
 
-	idParser srcRot;
-	srcRot.LoadMemory( modelRotateStr.c_str(), modelRotateStr.Length(), "" );
 	idVec3 modelRotVec;
-	ParseVec3( srcRot, modelRotVec );
+	{
+		idParser srcRot;
+		srcRot.LoadMemory( modelRotateStr.c_str(), modelRotateStr.Length(), "" );
+		srcRot.Parse1DMatrix( 3, &modelRotVec[0] );
+	}
 
-	idParser srcOrig;
-	srcOrig.LoadMemory( modelOriginStr.c_str(), modelRotateStr.Length(), "" );
 	idVec3 modelOriginVec;
-	ParseVec3( srcOrig, modelOriginVec );
+	{
+		idParser srcRot;
+		srcRot.LoadMemory( modelOriginStr.c_str(), modelRotateStr.Length(), "" );
+		srcRot.Parse1DMatrix( 3, &modelOriginVec[0] );
+	}
 
 	auto decorator = Rml::MakeShared<idRmlRenderDecorator>( modelNameStr.c_str(), modelRotVec, modelOriginVec );
 	return decorator;
-}
-
-void idRmlRenderDecoratorInstancer::ParseVec3( idParser& src, idVec3& out )
-{
-	idToken tok;
-	src.ReadToken( &tok );
-	out.x = atof( tok );
-	src.ExpectTokenString( "," );
-	src.ReadToken( &tok );
-	out.y = atof( tok );
-	src.ExpectTokenString( "," );
-	src.ReadToken( &tok );
-	out.z = atof( tok );
 }

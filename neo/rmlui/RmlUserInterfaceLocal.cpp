@@ -36,8 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "GlobalRmlEventListener.h"
 
 #include "RmlRenderDecorator.h"
-#include "d3xp/anim/Anim.h"
-#include "sys/DeviceManager.h"
+#include "renderer/RenderCommon.h"
 
 RmlUserInterfaceManagerLocal rmlManagerLocal;
 RmlUserInterfaceManager* rmlManager = &rmlManagerLocal;
@@ -45,8 +44,6 @@ RmlUserInterfaceManager* rmlManager = &rmlManagerLocal;
 idDeviceContext* rmlDc;
 
 extern idCVar sys_lang;
-
-extern DeviceManager* deviceManager;
 
 class GlobalRmlEventListenerInstancer : public Rml::EventListenerInstancer
 {
@@ -93,7 +90,6 @@ RmlUserInterfaceLocal
 UI to represent a context. Handles events and contains rml file loading.
 ===============
 */
-
 RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 	: context( nullptr )
 	, timeStamp( 0 )
@@ -119,10 +115,10 @@ RmlUserInterfaceLocal::~RmlUserInterfaceLocal()
 	Rml::RemoveContext( name.c_str() );
 }
 
-bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* soundWorld )
+bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* newSoundWorld )
 {
 	context = Rml::GetContext( name );
-	soundWorld = soundWorld;
+	soundWorld = newSoundWorld;
 	name = name;
 	cmds.Clear();
 
@@ -350,7 +346,7 @@ RmlDocHandle RmlUserInterfaceLocal::LoadDocumentHandle( const char* filePath, Rm
 
 	for( int i = 0; i < handleManager.getNumHandles(); i++ )
 	{
-		const auto& id = handleManager.getHandleAt( i );
+		uint16_t id = handleManager.getHandleAt( i );
 		if( context == documents[id].doc->GetContext() &&
 				!idStr::Icmp( documents[id].name, filePath ) )
 		{
@@ -413,6 +409,20 @@ bool RmlUserInterfaceLocal::IsDocumentOpen( const char* name )
 	return false;
 }
 
+bool RmlUserInterfaceLocal::IsDocumentOpen( RmlDocHandle handle ) const
+{
+	if( handleManager.isValid( handle.id ) )
+	{
+		uint16_t id = handleManager.getHandleAt( handle.id );
+		if( context == documents[ id ].doc->GetContext() )
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void RmlUserInterfaceLocal::CloseDocument( const char* name )
 {
 	const int numHandles = handleManager.getNumHandles();
@@ -450,8 +460,13 @@ void RmlUserInterfaceLocal::Reload()
 {
 	for( int i = 0; i < handleManager.getNumHandles(); i++ )
 	{
-		const auto id = handleManager.getHandleAt( i );
+		uint16_t id = handleManager.getHandleAt( i );
 		auto& doc = documents[id];
+
+		if( !doc.doc )
+		{
+			continue;
+		}
 
 		const bool isShown = doc.doc->IsVisible();
 
@@ -476,14 +491,21 @@ void RmlUserInterfaceLocal::ReloadStyleSheet()
 {
 	for( int i = 0; i < handleManager.getNumHandles(); i++ )
 	{
-		const auto id = handleManager.getHandleAt( i );
-		documents[id].doc->ReloadStyleSheet();
+		uint16_t id = handleManager.getHandleAt( i );
+		auto& doc = documents[id];
+
+		if( !doc.doc )
+		{
+			continue;
+		}
+
+		doc.doc->ReloadStyleSheet();
 	}
 }
 
 const char* RmlUserInterfaceLocal::Activate( bool activate )
 {
-	if( !isActive && activate )
+	if( !activate )
 	{
 		SetInhibitsControl( false );
 	}
@@ -508,8 +530,12 @@ void RmlUserInterfaceLocal::HideAllDocuments()
 {
 	for( int i = 0; i < handleManager.getNumHandles(); i++ )
 	{
-		const auto id = handleManager.getHandleAt( i );
-		documents[id].doc->Hide();
+		uint16_t id = handleManager.getHandleAt( i );
+		auto& doc = documents[id];
+		if( doc.doc )
+		{
+			documents[id].doc->Hide();
+		}
 	}
 }
 
@@ -593,7 +619,7 @@ void RmlUserInterfaceLocal::StopSound( int channel )
 {
 	if( soundWorld )
 	{
-		soundWorld->PlayShaderDirectly( NULL, channel );
+		soundWorld->PlayShaderDirectly( nullptr, channel );
 	}
 	else
 	{
@@ -605,7 +631,7 @@ RmlUserInterfaceLocal::Document* RmlUserInterfaceLocal::GetInternalDocument( con
 {
 	for( int i = 0; i < handleManager.getNumHandles(); i++ )
 	{
-		const auto id = handleManager.getHandleAt( i );
+		uint16_t id = handleManager.getHandleAt( i );
 		if( context == documents[id].doc->GetContext() &&
 				!idStr::Icmp( documents[id].name, name ) )
 		{

@@ -30,21 +30,16 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #pragma hdrstop
 
-#include "RmlShell.h"
-
-#include "EventHandlers.h"
-
 #include "../Game_local.h"
 
 #include "rmlui/RmlUserInterfaceLocal.h"
 #include "rmlui/RmlEventHandler.h"
 
+#include "RmlShell.h"
+
 // For some reason, rml relies on these container types. It uses value_type.
 
 class UI_Shell;
-
-static EventHandlerOptions* eventHandlerOptions = nullptr;
-static RmlGameEventHandler* baseEventHandler = nullptr;
 
 // UI Code
 
@@ -58,35 +53,28 @@ UI_Shell::UI_Shell()
 	, isInitialized( false )
 	, gameComplete( false )
 	, inGame( false )
+	, eventHandlerOptions( this )
+	, baseEventHandler( this )
 {
-	if( !eventHandlerOptions )
-	{
-		eventHandlerOptions = new EventHandlerOptions( this );
-	}
-
-	if( !baseEventHandler )
-	{
-		baseEventHandler = new RmlGameEventHandler( this );
-	}
 }
 
 UI_Shell::~UI_Shell()
 {
-	delete eventHandlerOptions;
-	delete baseEventHandler;
-
-	eventHandlerOptions = nullptr;
-	baseEventHandler = nullptr;
+	rmlManager->Remove( ui );
 }
 
 bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 {
-	ui = rmlManager->Find( "shell", true );
+	ui = rmlManager->Find( "shell", false );
+
+	docStack.AssureSize( 4 );
 
 	if( !ui )
 	{
 		return false;
 	}
+
+	ui->Init( "shell", sw );
 
 	isInitialized = true;
 
@@ -98,16 +86,29 @@ bool UI_Shell::Init( const char* filename,  idSoundWorld* sw )
 	ui->SetIsPausingGame( false );
 
 	// Load up all the documents.
-	optionsDoc = ui->LoadDocumentHandle( "guis/rml/shell/options.rml", eventHandlerOptions );
-	startDoc = ui->LoadDocumentHandle( "guis/rml/shell/startmenu.rml", baseEventHandler );
-	loadingDoc = ui->LoadDocumentHandle( "guis/rml/shell/loading.rml", baseEventHandler );
-	pauseDoc = ui->LoadDocumentHandle( "guis/rml/shell/pause.rml", baseEventHandler );
+	optionsDoc = ui->LoadDocumentHandle( "guis/rml/shell/options.rml", &eventHandlerOptions );
+	startDoc = ui->LoadDocumentHandle( "guis/rml/shell/startmenu.rml", &baseEventHandler );
+	loadingDoc = ui->LoadDocumentHandle( "guis/rml/shell/loading.rml", &baseEventHandler );
+	pauseDoc = ui->LoadDocumentHandle( "guis/rml/shell/pause.rml", &baseEventHandler );
 
 	// Preload all the materials.
 	rmlManager->Preload( "" );
 
 	return true;
 }
+
+/*
+* Provides the size method to use for the standard c++ container type.
+*/
+template< typename T >
+class RmlCompatibleIdList : public idList< T >
+{
+public:
+	int size() const
+	{
+		return Num();
+	}
+};
 
 struct WindowSizePair
 {
@@ -185,13 +186,15 @@ public:
 		}
 	}
 
-	idList<vidMode_t>		vidModes;		//!< Available video modes queried from the system.
-	idList<WindowSizePair>	windowSizes;	//!< Locally indexed available window sizes.
-	idList<int>				displayHzs;		//!< Locally indexed available display hz.
+	RmlCompatibleIdList<vidMode_t>		vidModes;		//!< Available video modes queried from the system.
+	RmlCompatibleIdList<WindowSizePair>	windowSizes;	//!< Locally indexed available window sizes.
+	RmlCompatibleIdList<int>			displayHzs;		//!< Locally indexed available display hz.
 
 	int						windowMode;		//!< The current selected video mode (fullscreen, windowed, windowed borderless, etc..).
 	int						displayHz;		//!< The current selected display refresh rate.
 	int						windowSize;		//!< The current selected window size.
+
+	Rml::DataModelHandle	modelHandle;
 };
 
 ShellOptions shellOptions;
@@ -210,62 +213,70 @@ void UI_Shell::HandleStateChange( )
 	// State Machine
 	if( nextState != state )
 	{
+		nextDoc.id = kInvalidHandle;
+
 		if( state == ShellState::START )
 		{
-			ShowScreen( startDoc, false );
+			nextDoc = startDoc;
+		}
+
+		if( nextState == ShellState::PAUSED )
+		{
+			if( gameComplete )
+			{
+				// show credits
+				nextState = ShellState::CREDITS;
+			}
+			else
+			{
+				nextDoc = pauseDoc;
+				state = nextState;
+			}
 		}
 
 		if( nextState == ShellState::START )
 		{
 			nextDoc = startDoc;
-
-			ShowScreen( startDoc, true );
-
 			state = nextState;
 		}
 		else if( nextState == ShellState::GAME )
 		{
-			if( state == ShellState::LOADING )
-			{
-				ShowScreen( loadingDoc, false );
-			}
-
-			if( state == ShellState::START )
-			{
-				ShowScreen( startDoc, false );
-			}
-
 			if( gameComplete )
 			{
-				state = ShellState::CREDITS;
+				nextState = ShellState::CREDITS;
 			}
 			else
 			{
-				//ShowScreen( "game" );
 				state = nextState;
 			}
 		}
 		else if( nextState == ShellState::LOADING )
 		{
-			ShowScreen( loadingDoc, true );
+			nextDoc = loadingDoc;
 			state = nextState;
 		}
 	}
 }
 
 
-void UI_Shell::HandleScreenChange( )
+void UI_Shell::HandleScreenChange()
 {
-	if( activeDoc != nextDoc )
+	if( activeDoc == nextDoc )
 	{
-		activeDoc = nextDoc;
+		return;
+	}
+
+	if( activeDoc.id != kInvalidHandle )
+	{
+		ShowScreen( activeDoc, false );
 	}
 
 	if( nextDoc.id != kInvalidHandle )
 	{
 		ShowScreen( nextDoc, true );
-		nextDoc.id = kInvalidHandle;
 	}
+
+	activeDoc = nextDoc;
 }
 
 void UI_Shell::SetState( ShellState _nextState )
@@ -275,12 +286,6 @@ void UI_Shell::SetState( ShellState _nextState )
 
 void UI_Shell::SetupDataBinding()
 {
-	if( ui->IsDocumentOpen( "guis/rml/shell/options.rml" ) )
-	{
-		// Already loaded the document. Don't set up data binding.
-		return;
-	}
-
 	shellOptions.Init();
 
 	Rml::DataModelConstructor constructor = ui->Context()->CreateDataModel( "options" );
@@ -290,28 +295,32 @@ void UI_Shell::SetupDataBinding()
 		return;
 	}
 
+	// Register the types first
 	if( auto vidModeHandle = constructor.RegisterStruct<WindowSizePair>() )
 	{
 		vidModeHandle.RegisterMember( "width", &WindowSizePair::width );
 		vidModeHandle.RegisterMember( "height", &WindowSizePair::height );
 	}
+	constructor.RegisterArray<RmlCompatibleIdList<WindowSizePair>>();
+	constructor.RegisterArray<RmlCompatibleIdList<int>>();
 
-	constructor.RegisterArray<idList<WindowSizePair>>();
+	// Bind variables to the data model
 	constructor.Bind( "currentWindowSize", &shellOptions.windowSize );
 	constructor.Bind( "currentDisplayHz", &shellOptions.displayHz );
 	constructor.Bind( "windowSizes", &shellOptions.windowSizes );
-	constructor.RegisterArray<idList<int> >();
 	constructor.Bind( "displayHzs", &shellOptions.displayHzs );
+
+	shellOptions.modelHandle = constructor.GetModelHandle();
 }
 
 void UI_Shell::ActivateMenu( const bool show )
 {
-	if( show && ui && ui->IsActive( ) )
+	if( show && ui && ui->IsActive() )
 	{
 		return;
 	}
 
-	if( !show && ui && !ui->IsActive( ) )
+	if( !show && ui && !ui->IsActive() )
 	{
 		return;
 	}
@@ -354,6 +363,13 @@ void UI_Shell::ActivateMenu( const bool show )
 
 void UI_Shell::SetNextScreen( const char* nextScreen )
 {
+	if( !nextScreen )
+	{
+		ui->Activate( false );
+		ui->SetIsPausingGame( false );
+		return;
+	}
+
 	if( idStr::Icmp( "options", nextScreen ) == 0 )
 	{
 		nextDoc = optionsDoc;
@@ -372,7 +388,7 @@ void UI_Shell::SetNextScreen( const char* nextScreen )
 	}
 	else
 	{
-		common->Error( "Attempted to set bad next shell screen %s", nextScreen );
+		common->Warning( "Setting the next screen in the shell to an invalid screen %s", nextScreen );
 		ui->Activate( false );
 	}
 }

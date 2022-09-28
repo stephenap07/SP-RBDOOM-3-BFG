@@ -23,6 +23,7 @@ enum class ShellState : int
 	START,
 	LOADING,
 	GAME,
+	PAUSED,
 	CREDITS,
 	QUIT,
 	TOTAL
@@ -111,12 +112,16 @@ private:
 	ShellState				nextState;
 	ShellState				state;
 
+	idList<RmlDocHandle>	docStack;
 	RmlDocHandle			activeDoc;
 	RmlDocHandle			nextDoc;
 
 	bool					isInitialized;
 	bool					gameComplete;
 	bool					inGame;
+
+	EventHandlerOptions		eventHandlerOptions;
+	RmlGameEventHandler		baseEventHandler;
 
 	RmlDocHandle			errorDoc;
 	RmlDocHandle			waitingDoc;

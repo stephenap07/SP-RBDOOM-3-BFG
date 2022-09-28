@@ -75,6 +75,8 @@ public:
 
 	bool						IsDocumentOpen( const char* name ) override;
 
+	bool						IsDocumentOpen( RmlDocHandle handle ) const override;
+
 	void						CloseDocument( const char* name ) override;
 
 	Rml::ElementDocument*		GetDocument( const char* _path ) override;

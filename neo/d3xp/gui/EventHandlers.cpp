@@ -6,20 +6,31 @@
 
 #include "../Game_local.h"
 
-void RmlGameEventHandler::ProcessEvent( Rml::Event& _event, idLexer& _src, idToken& _token )
+static void DeactivateShell( UI_Shell* shell )
 {
-	if( _event == Rml::EventId::Keydown )
+	shell->Ui()->Activate( false );
+	shell->Ui()->SetIsPausingGame( false );
+}
+
+void RmlGameEventHandler::ProcessEvent( Rml::Event& event, idLexer& _src, idToken& _token )
+{
+	if( event == Rml::EventId::Keydown )
 	{
-		Rml::Input::KeyIdentifier keyId = ( Rml::Input::KeyIdentifier )_event.GetParameter< int >( "key_identifier", 0 );
-		if( keyId == Rml::Input::KI_ESCAPE && _event.GetTargetElement( )->GetOwnerDocument( )->IsVisible( ) )
+		Rml::Input::KeyIdentifier keyId = ( Rml::Input::KeyIdentifier )event.GetParameter< int >( "key_identifier", 0 );
+		if( keyId == Rml::Input::KI_ESCAPE && event.GetTargetElement( )->GetOwnerDocument( )->IsVisible( ) )
 		{
 			if( !_token.Icmp( "goto" ) )
 			{
 				_src.ReadToken( &_token );
 
-				_event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
+				event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
 
 				shell->SetNextScreen( _token.c_str( ) );
+			}
+
+			if( !_token.Icmp( "deactivate" ) )
+			{
+				DeactivateShell( shell );
 			}
 		}
 	}
@@ -27,8 +38,12 @@ void RmlGameEventHandler::ProcessEvent( Rml::Event& _event, idLexer& _src, idTok
 	{
 		_src.ReadToken( &_token );
 
-		_event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
+		event.GetTargetElement( )->GetOwnerDocument( )->Hide( );
 
 		shell->SetNextScreen( _token.c_str( ) );
+	}
+	else if( !_token.Icmp( "deactivate" ) )
+	{
+		DeactivateShell( shell );
 	}
 }

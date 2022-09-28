@@ -57,7 +57,7 @@ constexpr int kMaxInitialTris = kMaxInitialQuads * 6;
 constexpr uint64_t kRmlStencilRef = 128;
 constexpr int kRmlStencilMask = 255;
 
-idCVar rmlShowStencilMasks( "rml_show_stencil_masks", "0", CVAR_INTEGER, "Draw a red rectangles around the stencil masks" );
+idCVar rmlShowStencilMasks( "rml_showStencilMasks", "0", CVAR_INTEGER, "Draw a red rectangles around the stencil masks" );
 
 // Helper function to get the scaling vector for the guis.
 inline idVec2 GetScaleToVirtual()

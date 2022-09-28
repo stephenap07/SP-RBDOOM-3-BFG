@@ -92,7 +92,6 @@ void idMenuScreen_Shell_Dev::SetupDevOptions()
 
 	devOptions.Clear();
 
-	devOptions.Append( devOption_t( "level1", "Steve's Level" ) );
 	devOptions.Append( devOption_t( "game/mars_city1", "Mars City 1" ) );
 	devOptions.Append( devOption_t( "game/mc_underground", "MC Underground" ) );
 	devOptions.Append( devOption_t( "game/mars_city2", "Mars City 2" ) );

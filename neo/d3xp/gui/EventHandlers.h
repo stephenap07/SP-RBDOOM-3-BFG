@@ -14,7 +14,7 @@ public:
 
 	virtual ~RmlGameEventHandler( ) = default;
 
-	void ProcessEvent( Rml::Event& _event, idLexer& src, idToken& token ) override;
+	void ProcessEvent( Rml::Event& event, idLexer& src, idToken& token ) override;
 
 protected:
 

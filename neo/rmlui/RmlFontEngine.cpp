@@ -75,7 +75,13 @@ Rml::FontFaceHandle RmlFontEngine::GetFontFaceHandle( const Rml::String& family,
 		fontStyle = FONT_STYLE_ITALIC;
 	}
 
-	const FontHandle handle{ renderSystem->RegisterFont2( family.c_str(), size, fontStyle ) };
+	FontWeight fontWeight = FontWeight::Normal;
+	if( weight == Rml::Style::FontWeight::Bold )
+	{
+		fontWeight = FontWeight::Bold;
+	}
+
+	const FontHandle handle{ renderSystem->RegisterFont2( family.c_str(), size, fontStyle, fontWeight ) };
 
 	if( handle.id == kInvalidHandle )
 	{

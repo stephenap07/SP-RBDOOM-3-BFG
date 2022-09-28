@@ -323,7 +323,6 @@ public:
 	static void					ExportLuaFunctions( lua_State* luaState );
 
 	static idClass* 			CreateInstance( const char* name );
-
 	static int					GetNumTypes()
 	{
 		return types.Num();

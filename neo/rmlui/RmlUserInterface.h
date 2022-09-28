@@ -75,6 +75,8 @@ public:
 
 	virtual bool					IsDocumentOpen( const char* name ) = 0;
 
+	virtual bool					IsDocumentOpen( RmlDocHandle handle ) const = 0;
+
 	virtual void					CloseDocument( const char* name ) = 0;
 
 	// Cursor

@@ -47,8 +47,6 @@ public:
 
 private:
 
-	void ParseVec3( idParser& src, idVec3& out );
-
 	Rml::PropertyId modelName;
 	Rml::PropertyId modelRotate;
 	Rml::PropertyId modelOrigin;
