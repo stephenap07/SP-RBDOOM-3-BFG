@@ -20,19 +20,18 @@ def addBone():
     
     # Scale up the bone so we can see it. The head should remain at (0,0,0)
     newBone.select_tail = True
-    bpy.ops.transform.translate(value=(0, 0, 10))
+    bpy.ops.transform.translate(value=(0, 0, 1))
     
     
 def copyKeyframes():
     """Copies keyframes of Hip bone to the Origin bone"""
     
     print("Copy keyframes")
-    
-    # select the origin bone
+
     newBone = bpy.context.selected_objects[0].data.edit_bones['Origin']
     
     if not newBone:
-        print("Could not find the hip bone")
+        print("Could not find the origin bone")
         return
     
     newBone.select = True
@@ -46,27 +45,37 @@ def copyKeyframes():
     for action in bpy.data.actions:
         print('analyzing action %s with %d fcurves' % (action, len(action.fcurves)))
         
+        modifiedCurves = False
+        
+        # Copy the Hips location data.
         fd = [[], [], []]
         for fcurve in action.fcurves:
             if 'Hips' not in fcurve.data_path or 'location' not in fcurve.data_path:
                 continue
+            
             for k in fcurve.keyframe_points:
                 fd[fcurve.array_index].append(k.co)
+                modifiedCurves = True
+                
+            # Clear the Hips location data since the Origin should be taking care of that now.
+            fcurve.keyframe_points.clear()
             
         obj.animation_data.action = action
         
-        # create the keyframes
+        # Create the keyframes for the Origin bone
         for index in range(len(fd[0])):
             frame = fd[0][index][0]
             vec = (fd[0][index][1], fd[1][index][1], fd[2][index][1])
             print("Vec = ", vec)
-            bone.location = (vec[0], 0, vec[2])
+            bone.location = (vec[0], vec[1], vec[2])
             bone.keyframe_insert(data_path="location", frame=frame)
-            #print("vec = ", vec, ", frame = ", frame)
+            
+        if not modifiedCurves:
+            print("Failed to modify curves for the hip bone")
     
 
 class MixamoOriginBoneFixup(bpy.types.Operator):
-    """Tooltip"""
+    """Adds the origin bone and copies the keyframes of the hip bone"""
     bl_idname = "object.simple_operator"
     bl_label = "Mixamo Origin Bone Fixup"
 
