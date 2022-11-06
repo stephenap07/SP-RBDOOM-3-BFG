@@ -294,7 +294,7 @@ void idGuiModel::EmitFullScreen( Framebuffer* renderTarget )
 #else
 	float yScale = 1.0f / screenSize.y;
 #endif
-	float zScale = -1.0f;
+	float zScale = -10000.0f;
 
 	viewDef->scissor.x1 = 0;
 	viewDef->scissor.y1 = 0;
@@ -328,7 +328,7 @@ void idGuiModel::EmitFullScreen( Framebuffer* renderTarget )
 	viewDef->projectionMatrix[3 * 4 + 1] = 1.0f;
 #endif
 #endif
-	viewDef->projectionMatrix[3 * 4 + 2] = 0.0f;
+	viewDef->projectionMatrix[3 * 4 + 2] = -1.0f * zScale;
 	viewDef->projectionMatrix[3 * 4 + 3] = 1.0f;
 
 	// make a tech5 renderMatrix for faster culling
