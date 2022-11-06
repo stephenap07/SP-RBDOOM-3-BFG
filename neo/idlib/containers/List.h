@@ -30,7 +30,9 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __LIST_H__
 #define __LIST_H__
 
+#include <new>
 #include <initializer_list>
+#include <algorithm>	// SRS - Needed for clang 14 so std::copy() is defined
 
 /*
 ===============================================================================
@@ -97,7 +99,8 @@ ID_INLINE void* idListArrayResize( void* voldptr, int oldNum, int newNum, bool z
 		int overlap = Min( oldNum, newNum );
 		for( int i = 0; i < overlap; i++ )
 		{
-			newptr[i] = oldptr[i];
+			//newptr[i] = oldptr[i];
+			newptr[i] = std::move( oldptr[i] );
 		}
 	}
 	idListArrayDelete<_type_>( voldptr, oldNum );
@@ -126,6 +129,7 @@ public:
 	typedef _type_	new_t();
 
 	idList( int newgranularity = 16 );
+	idList( idList&& other );
 	idList( const idList& other );
 	idList( std::initializer_list<_type_> initializerList );
 	~idList();
@@ -140,6 +144,7 @@ public:
 	size_t			Size() const;										// returns total size of allocated memory including size of list _type_
 	size_t			MemoryUsed() const;									// returns size of the used elements in the list
 
+	idList<_type_, _tag_>& 		operator=( idList<_type_, _tag_>&& other );
 	idList<_type_, _tag_>& 		operator=( const idList<_type_, _tag_>& other );
 	const _type_& 	operator[]( int index ) const;
 	_type_& 		operator[]( int index );
@@ -204,53 +209,23 @@ public:
 		memTag = ( byte )tag_;
 	};
 
-	// Begin/End methods for range-based for loops.
-	_type_* begin()
+	auto begin() const
 	{
-		if( num > 0 )
-		{
-			return &list[0];
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-	_type_* end()
+		return list;
+	};
+	auto end() const
 	{
-		if( num > 0 )
-		{
-			return &list[num - 1];
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
+		return list + Num();
+	};
 
-	const _type_* begin() const
+	auto begin()
 	{
-		if( num > 0 )
-		{
-			return &list[0];
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-	const _type_* end() const
+		return list;
+	};
+	auto end()
 	{
-		if( num > 0 )
-		{
-			return &list[num - 1];
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-
+		return list + Num();
+	};
 
 private:
 	int				num;
@@ -278,6 +253,18 @@ ID_INLINE idList<_type_, _tag_>::idList( int newgranularity )
 
 /*
 ================
+idList<_type_,_tag_>::idList( idList< _type_, _tag_ >&& other )
+================
+*/
+template< typename _type_, memTag_t _tag_ >
+ID_INLINE idList<_type_, _tag_>::idList( idList&& other )
+{
+	list = NULL;
+	*this = std::move( other );
+}
+
+/*
+================
 idList<_type_,_tag_>::idList( const idList< _type_, _tag_ > &other )
 ================
 */
@@ -288,11 +275,6 @@ ID_INLINE idList<_type_, _tag_>::idList( const idList& other )
 	*this = other;
 }
 
-/*
-================
-idList<_type_,_tag_>::idList( std::initializer_list< _type_ > initializerList )
-================
-*/
 template< typename _type_, memTag_t _tag_ >
 ID_INLINE idList<_type_, _tag_>::idList( std::initializer_list<_type_> initializerList )
 	: idList( 16 )
@@ -672,6 +654,30 @@ ID_INLINE void idList<_type_, _tag_>::AssureSizeAlloc( int newSize, new_t* alloc
 	}
 
 	num = newNum;
+}
+
+/*
+================
+idList<_type_,_tag_>::operator=
+
+Moves the contents and size attributes of another list, effectively emptying the other list.
+================
+*/
+template< typename _type_, memTag_t _tag_ >
+ID_INLINE idList<_type_, _tag_>& idList<_type_, _tag_>::operator=( idList<_type_, _tag_>&& other )
+{
+	Clear();
+
+	num			= other.num;
+	size		= other.size;
+	granularity = other.granularity;
+	memTag		= other.memTag;
+	list		= other.list;
+
+	other.list = nullptr;
+	other.Clear();
+
+	return *this;
 }
 
 /*

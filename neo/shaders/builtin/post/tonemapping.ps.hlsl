@@ -139,11 +139,11 @@ void main(
 	{
 		o_rgba.rgb = ApplyColorLUT( o_rgba.rgb );
 	}
-	else
-	{
-		// Tonemapping curve is applied after exposure.
-		o_rgba.rgb = ACESFilm( o_rgba.rgb );
-	}
+	//else
+	//{
+	//	// Tonemapping curve is applied after exposure.
+	//	o_rgba.rgb = ACESFilm( o_rgba.rgb );
+	//}
 
 	// Gamma correction since we are not rendering to an sRGB render target.
 	const float hdrGamma = 2.2;

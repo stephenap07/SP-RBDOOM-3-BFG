@@ -1023,6 +1023,16 @@ public:
 		bInitialized = true;
 	}
 
+	void					InvalidateSwapBuffers()
+	{
+		omitSwapBuffers = true;
+	}
+
+	void					SetReadyToPresent()
+	{
+		omitSwapBuffers = false;
+	}
+
 public:
 	// internal functions
 	idRenderSystemLocal();
@@ -1155,6 +1165,7 @@ public:
 
 private:
 	bool					bInitialized;
+	bool					omitSwapBuffers;
 };
 
 extern idRenderSystemLocal	tr;

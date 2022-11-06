@@ -67,9 +67,9 @@ idCVar r_requestStereoPixelFormat( "r_requestStereoPixelFormat", "1", CVAR_RENDE
 idCVar r_debugContext( "r_debugContext", "0", CVAR_RENDERER, "Enable various levels of context debug." );
 #if defined( USE_NVRHI )
 	#if defined( _WIN32 )
-		idCVar r_graphicsAPI( "r_graphicsAPI", "dx12", CVAR_RENDERER, "Specifies the graphics api to use (dx12, vulkan)" );
+		idCVar r_graphicsAPI( "r_graphicsAPI", "dx12", CVAR_RENDERER | CVAR_INIT | CVAR_ARCHIVE, "Specifies the graphics api to use (dx12, vulkan)" );
 	#else
-		idCVar r_graphicsAPI( "r_graphicsAPI", "vulkan", CVAR_RENDERER, "Specifies the graphics api to use (vulkan)" );
+		idCVar r_graphicsAPI( "r_graphicsAPI", "vulkan", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC, "Specifies the graphics api to use (vulkan)" );
 	#endif
 
 	idCVar r_useValidationLayers( "r_useValidationLayers", "1", CVAR_INTEGER | CVAR_INIT, "1 is just the NVRHI and 2 will turn on additional DX12, VK validation layers" );
@@ -2232,6 +2232,12 @@ void idRenderSystemLocal::Init()
 
 	dynamicSky.Init( deviceManager->GetDevice(), 32, 32 );
 
+	if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
+	{
+		// avoid GL_BlockingSwapBuffers
+		omitSwapBuffers = true;
+	}
+	
 	if( !skyTriangles )
 	{
 		skyTriangles = dynamicSky.Triangles();
@@ -2249,7 +2255,7 @@ void idRenderSystemLocal::Init()
 	common->Printf( "--------------------------------------\n" );
 
 	// Initialize new font code
-	fontManager = new FontManager( 1024 );
+	fontManager = new FontManager( 1024 * 2 );
 	fontManager->init();
 	textBufferManager = new TextBufferManager( fontManager );
 	defaultFont = RegisterFont2( "fonts/Merriweather/Merriweather-Regular.ttf", 14 );
@@ -2306,6 +2312,8 @@ void idRenderSystemLocal::Shutdown()
 	delete guiModel;
 	delete textBufferManager;
 	delete fontManager;
+
+	dynamicSky.Shutdown();
 
 	parallelJobManager->FreeJobList( envprobeJobList );
 	parallelJobManager->FreeJobList( frontEndJobList );
@@ -2423,7 +2431,8 @@ TrueTypeHandle idRenderSystemLocal::RegisterFontFace( const char* fontName, bool
 
 	for( int i = 0; i < fontFaces.Num(); i++ )
 	{
-		if( idStr::Icmp( fontFaces[i].name, baseFontName ) == 0 )
+		if( idStr::Icmp( fontFaces[i].name, baseFontName ) == 0 ||
+			idStr::Icmp( fontFaces[i].family, baseFontName ) == 0 )
 		{
 			// Found one. Return it.
 			return fontFaces[i].ttfHandle;
@@ -2434,7 +2443,7 @@ TrueTypeHandle idRenderSystemLocal::RegisterFontFace( const char* fontName, bool
 	if( fd == nullptr )
 	{
 		// TODO(Stephen): Use fallback font face handle.
-		common->Error( "Failed to load font %s", fontName );
+		common->Warning( "Failed to load font %s", fontName );
 		return TrueTypeHandle();
 	}
 
@@ -2504,13 +2513,14 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int fontSiz
 	TrueTypeHandle ttfHandle;
 	for( int i = 0; i < fontFaces.Num(); i++ )
 	{
-		if( idStr::Icmp( fontFaces[i].family, fontName ) == 0 &&
-				fontFaces[i].fontStyle == fontStyle &&
-				fontFaces[i].fontWeight == fontWeight )
+		if( idStr::Icmp( fontFaces[i].family, fontName ) == 0 && fontFaces[i].fontStyle == fontStyle )
 		{
 			// Found one. Return it.
 			ttfHandle = fontFaces[i].ttfHandle;
-			break;
+			if( fontFaces[i].fontWeight == fontWeight )
+			{
+				break;
+			}
 		}
 	}
 
@@ -2532,7 +2542,7 @@ FontHandle idRenderSystemLocal::RegisterFont2( const char* fontName, int fontSiz
 	data.name = fontManager->getFamilyName( data.ttfHandle );
 	data.size = fontSize;
 	data.style = fontStyle;
-	data.weight = fontManager->getFontWeight( data.ttfHandle );
+	data.weight = fontWeight;
 	newFonts.Append( data );
 
 	fontManager->preloadGlyph( data.fontHandle, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n" );

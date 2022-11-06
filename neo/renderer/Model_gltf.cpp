@@ -45,11 +45,11 @@ idCVar gltf_ModelSceneName( "gltf_ModelSceneName", "models", CVAR_SYSTEM , "Scen
 idCVar gltf_AnimSampleRate( "gltf_AnimSampleRate", "24", CVAR_SYSTEM | CVAR_INTEGER , "The frame rate of the converted md5anim" );
 
 
-static const byte GLMB_VERSION = 100;
+static const byte GLMB_VERSION = 101;
 static const unsigned int GLMB_MAGIC = ( 'M' << 24 ) | ( 'L' << 16 ) | ( 'G' << 8 ) | GLMB_VERSION;
 static const char* GLTF_SnapshotName = "_GLTF_Snapshot_";
-static const idAngles axisTransformAngels = idAngles( 0.0f, 0.0f, 90 );
-static const idMat4 axisTransform( axisTransformAngels.ToMat3(), vec3_origin );
+static const idMat4 blenderToDoomTransform( idAngles( 0.0f, 0.0f, 90 ).ToMat3(), vec3_origin );
+//static const idMat4 blenderToDoomTransform = mat4_identity;
 static idRenderModelGLTF* lastMeshFromFile = nullptr;
 
 bool idRenderModelStatic::ConvertGltfMeshToModelsurfaces( const gltfMesh* mesh )
@@ -57,34 +57,23 @@ bool idRenderModelStatic::ConvertGltfMeshToModelsurfaces( const gltfMesh* mesh )
 	return false;
 }
 
-void idRenderModelGLTF::ProcessNode( gltfNode* modelNode, idMat4 trans, gltfData* data )
+void idRenderModelGLTF::ProcessNode_r( gltfNode* modelNode, idMat4 parentTransform, gltfData* data )
 {
 	auto& meshList = data->MeshList();
 	auto& nodeList = data->NodeList();
 
 	gltfData::ResolveNodeMatrix( modelNode );
 
-	idMat4 curTrans = trans * modelNode->matrix;
+	idMat4 nodeToWorldTransform = parentTransform * modelNode->matrix;
 
 	if( modelNode->mesh >= 0 )
 	{
 		gltfMesh* targetMesh = meshList[modelNode->mesh];
 
-		idMat4 newTrans;
-
-		if( !animIds.Num() )
-		{
-			newTrans = curTrans;
-		}
-		else
-		{
-			newTrans =  mat4_identity;
-		}
-
 		for( auto prim : targetMesh->primitives )
 		{
 			//ConvertFromMeshGltf should only be used for the map, ConvertGltfMeshToModelsurfaces should be used.
-			auto* mesh = MapPolygonMesh::ConvertFromMeshGltf( prim, data, newTrans );
+			auto* mesh = MapPolygonMesh::ConvertFromMeshGltf( prim, data,  blenderToDoomTransform * nodeToWorldTransform );
 			modelSurface_t	surf;
 
 			gltfMaterial* mat = NULL;
@@ -137,7 +126,7 @@ void idRenderModelGLTF::ProcessNode( gltfNode* modelNode, idMat4 trans, gltfData
 
 	for( auto& child : modelNode->children )
 	{
-		ProcessNode( nodeList[child], curTrans, data );
+		ProcessNode_r( nodeList[child], nodeToWorldTransform, data );
 	}
 }
 
@@ -242,7 +231,7 @@ void idRenderModelGLTF::InitFromFile( const char* fileName )
 	hasAnimations = totalAnims > 0;
 	model_state = hasAnimations ? DM_CACHED : DM_STATIC;
 
-	ProcessNode( root, mat4_identity, data );
+	ProcessNode_r( root, mat4_identity, data );
 
 	if( surfaces.Num() <= 0 )
 	{
@@ -533,11 +522,11 @@ idList<idJointQuat> GetPose( idList<gltfNode>& bones, idJointMat* poseMat )
 
 		if( node->parent == nullptr )
 		{
-			node->matrix *= axisTransform;
+			node->matrix *= blenderToDoomTransform;
 		}
 
 		idJointQuat& pose = ret[i];
-		pose.q = ( trans.ToMat3().Transpose().ToQuat() );
+		pose.q = ( trans.ToMat3().ToQuat() );
 		pose.t = idVec3( trans[0][3], trans[1][3], trans[2][3] );
 		pose.w = pose.q.CalcW();
 	}
@@ -743,7 +732,7 @@ idFile_Memory* idRenderModelGLTF::GetAnimBin( idStr animName ,  const ID_TIME_T 
 		skin->joints.AssureSize( 1, data->GetNodeIndex( root ) );
 		idMat4 trans = mat4_identity;
 		data->ResolveNodeMatrix( root, &trans );
-		trans *= axisTransform.Inverse();
+		trans *= blenderToDoomTransform.Inverse();
 		acc = new gltfAccessor();
 		acc->matView = new idList<idMat4>( 1 );
 		acc->matView->AssureSize( 1, trans.Inverse().Transpose() );
@@ -817,22 +806,26 @@ idFile_Memory* idRenderModelGLTF::GetAnimBin( idStr animName ,  const ID_TIME_T 
 			{
 				if( node->parent == nullptr )
 				{
-					t = axisTransform * t;
+					t = blenderToDoomTransform * t;
 				}
 
 				componentFrames[componentFrameIndex++] = t.x;
 				componentFrames[componentFrameIndex++] = t.y;
 				componentFrames[componentFrameIndex++] = t.z;
 			}
+
 			if( joint->animBits & ( ANIM_QX | ANIM_QY | ANIM_QZ ) )
 			{
-
 				if( node->parent == nullptr )
 				{
-					q = axisTransformAngels.ToQuat() * animBones[i][b].rotation;
+					//q = blenderToDoomAngels.ToQuat() * animBones[i][b].rotation;
+
+					q = blenderToDoomTransform.ToMat3().ToQuat() * animBones[i][b].rotation;
+
 					if( animBones[i].Num() == 1 )
 					{
-						q = -animBones[i][b].rotation;
+						// this is only hit for single bone or boneless (root is generated!) animations
+						q =  blenderToDoomTransform.ToMat3().ToQuat() * -animBones[i][b].rotation;
 					}
 				}
 				else
@@ -863,7 +856,7 @@ idFile_Memory* idRenderModelGLTF::GetAnimBin( idStr animName ,  const ID_TIME_T 
 		{
 			if( animBones[i][b].parent == nullptr )
 			{
-				animBones[i][b].translation = axisTransform * animBones[i][b].translation;
+				animBones[i][b].translation = blenderToDoomTransform * animBones[i][b].translation;
 			}
 		}
 

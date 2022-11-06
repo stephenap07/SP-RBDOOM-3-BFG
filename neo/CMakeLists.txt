@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(RBDoom3BFG)
+project(SPSPRBDoom3BFG)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -8,7 +8,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 if(CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER_EQUAL 6)
 	# set MSVC startup project
-	set_property (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT RBDoom3BFG)
+	set_property (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT SPRBDoom3BFG)
 endif()
 	
 option(STANDALONE
@@ -124,7 +124,7 @@ if(UNIX)
         endif()
 	endif()
 
-	target_compile_options(RBDoom3BFG PRIVATE
+	target_compile_options(SPRBDoom3BFG PRIVATE
 		-Wno-register
 		-Wno-inconsistent-missing-override
 	)
@@ -165,15 +165,15 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 	add_definitions(-Werror=format-security)
 	add_definitions(-Werror=format)
 
-	# Compiler check (needs -std=c++11 flag)
+	# Compiler check (needs -std=c++14 flag)
 	include(CheckCXXCompilerFlag)
-	CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
-	if(COMPILER_SUPPORTS_CXX17)
-		set(CMAKE_CXX_STANDARD 17)
+	CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
+	if(COMPILER_SUPPORTS_CXX14)
+		set(CMAKE_CXX_STANDARD 14)
 		set(CMAKE_CXX_STANDARD_REQUIRED ON)
 		set(CMAKE_CXX_EXTENSIONS OFF)
 	else()
-		message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++17 support. Please use a different C++ compiler.")
+		message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
 	endif()
 
 	if(CPU_TYPE)
@@ -370,7 +370,6 @@ else (JPEG_FOUND)
     set(JPEG_LIBRARY "" )
 endif (JPEG_FOUND)
 
-include_directories("libs/cgltf")
 
 macro(SET_OPTION option value)
   set(${option} ${value} CACHE "" INTERNAL FORCE)
@@ -825,6 +824,7 @@ set(SOUND_INCLUDES
 	sound/CinematicAudio.h)
 	
 set(SOUND_SOURCES
+	sound/snd_decoder.cpp
 	sound/snd_emitter.cpp
 	sound/snd_shader.cpp
 	sound/snd_system.cpp
@@ -1552,7 +1552,7 @@ set(RBDOOM3_INCLUDES
 			#${FREETYPE_SOURCES}
 			${FREETYPE_AMALGAMATION_INCLUDE}
 			${SOUND_INCLUDES}
-			#${OGGVORBIS_INCLUDES}
+			${OGGVORBIS_INCLUDES}
 			${UI_INCLUDES}
 			${SWF_INCLUDES}
 			${RML_INCLUDES}
@@ -1605,7 +1605,7 @@ set(RBDOOM3_SOURCES
 			${GLEW_SOURCES}
 			#${FREETYPE_SOURCES}
 			${SOUND_SOURCES}
-			#${OGGVORBIS_INCLUDES} ${OGGVORBIS_SOURCES}
+			${OGGVORBIS_SOURCES}
 			${UI_SOURCES}
 			${SWF_SOURCES}
 			${RML_SOURCES}
@@ -1792,7 +1792,7 @@ if(MSVC)
 	
 	if(USE_PRECOMPILED_HEADERS) 
 		set(RBDOOM3_PRECOMPILED_SOURCES ${RBDOOM3_SOURCES})
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES})
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES})
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib/minizip/ioapi.c)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTDecoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder.cpp)
@@ -1838,35 +1838,35 @@ if(MSVC)
 	
 	list(APPEND RBDOOM3_SOURCES ${WIN32_RESOURCES})
 	
-	add_executable(RBDoom3BFG WIN32 ${RBDOOM3_INCLUDES} ${RBDOOM3_SOURCES})
+	add_executable(SPRBDoom3BFG WIN32 ${RBDOOM3_INCLUDES} ${RBDOOM3_SOURCES})
 
-	add_dependencies(RBDoom3BFG idlib)
-	#add_dependencies(RBDoom3BFG lua_static)
-	add_dependencies(RBDoom3BFG  liblua-static)
+	add_dependencies(SPRBDoom3BFG idlib)
+	#add_dependencies(SPRBDoom3BFG lua_static)
+	add_dependencies(SPRBDoom3BFG  liblua-static)
 
 	if(USE_DX12)
-		add_dependencies(RBDoom3BFG nvrhi_d3d12)
+		add_dependencies(SPRBDoom3BFG nvrhi_d3d12)
 	endif()
 	
 	if(USE_DX11)
-		add_dependencies(RBDoom3BFG nvrhi_d3d11)
+		add_dependencies(SPRBDoom3BFG nvrhi_d3d11)
 	endif()
 	
 	if(USE_NVRHI_VULKAN)
-		add_dependencies(RBDoom3BFG nvrhi_vk)
+		add_dependencies(SPRBDoom3BFG nvrhi_vk)
 	endif()
 
-	target_include_directories(RBDoom3BFG PRIVATE
+	target_include_directories(SPRBDoom3BFG PRIVATE
 		${RMLUI_INCLUDE}
 		${Lua_INCLUDE_DIR}
 		)
 
     if(USE_PHYSX)
-        target_include_directories(RBDoom3BFG PRIVATE
+        target_include_directories(SPRBDoom3BFG PRIVATE
             ${PhysX_INCLUDE_DIR})
     endif()
 
-	target_link_libraries(RBDoom3BFG
+	target_link_libraries(SPRBDoom3BFG
 		idlib
 		liblua-static
 		${DirectX_LIBRARIES}
@@ -1888,7 +1888,7 @@ if(MSVC)
 		)
 
     if(USE_PHYSX)
-        target_link_libraries(RBDoom3BFG
+        target_link_libraries(SPRBDoom3BFG
             PhysX::PhysXExtensions
             PhysX::PhysXCommon
             PhysX::PhysXCooking
@@ -1897,15 +1897,15 @@ if(MSVC)
 		
 	# set MSVC default debug directory on executable	
 	if(CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER_EQUAL 8)
-		set_target_properties(RBDoom3BFG PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/..")
+		set_target_properties(SPRBDoom3BFG PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/..")
 	endif()
 	
 	#CMAKE_BINARY_DIR
 	if(CMAKE_CL_64)
-		install(TARGETS RBDoom3BFG
+		install(TARGETS SPRBDoom3BFG
 			RUNTIME DESTINATION .)
 	else()
-		install(TARGETS RBDoom3BFG
+		install(TARGETS SPRBDoom3BFG
 			RUNTIME DESTINATION .)
 	endif()	
 
@@ -2040,13 +2040,13 @@ else()
 	SEPARATE_ARGUMENTS(_compiler_FLAGS)
 	
 	if(USE_PRECOMPILED_HEADERS)
-		# we need to recreate the precompiled header for RBDoom3BFG 
+		# we need to recreate the precompiled header for SPRBDoom3BFG 
 		# (i.e. can't use the one created for idlib before)
 		# because some definitions (e.g. -D__IDLIB__ -D__DOOM_DLL__) differ
-		add_custom_target(precomp_header_rbdoom3bfg ALL
+		add_custom_target(precomp_header_SPRBDoom3BFG ALL
 				COMMAND ${CMAKE_CXX_COMPILER} ${_compiler_FLAGS} -x c++-header idlib/precompiled.h -o idlib/precompiled.h.gch
 				WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-				COMMENT "Creating idlib/precompiled.h.gch for RBDoom3BFG"
+				COMMENT "Creating idlib/precompiled.h.gch for SPRBDoom3BFG"
 				)
 	endif()
 	
@@ -2067,36 +2067,36 @@ else()
 				)
 				
 		# make sure this is run after creating idlib
-		add_dependencies(precomp_header_rbdoom3bfg idlib)
+		add_dependencies(precomp_header_SPRBDoom3BFG idlib)
 	endif()
 
-	add_executable(RBDoom3BFG WIN32 ${RBDOOM3_SOURCES})
+	add_executable(SPRBDoom3BFG WIN32 ${RBDOOM3_SOURCES})
 
-    add_dependencies(RBDoom3BFG idlib)
-    add_dependencies(RBDoom3BFG lua_static)
+    add_dependencies(SPRBDoom3BFG idlib)
+    add_dependencies(SPRBDoom3BFG lua_static)
 
     if(USE_DX12)
-        add_dependencies(RBDoom3BFG nvrhi_d3d12)
+        add_dependencies(SPRBDoom3BFG nvrhi_d3d12)
     endif()
     
     if(USE_DX11)
-        add_dependencies(RBDoom3BFG nvrhi_d3d11)
+        add_dependencies(SPRBDoom3BFG nvrhi_d3d11)
     endif()
     
     if(USE_NVRHI_VULKAN)
-        add_dependencies(RBDoom3BFG nvrhi_vk)
+        add_dependencies(SPRBDoom3BFG nvrhi_vk)
     endif()
 
 	if (USE_PRECOMPILED_HEADERS)
 		# make sure precompiled header is created before executable is compiled
-		add_dependencies(RBDoom3BFG precomp_header_rbdoom3bfg)
+		add_dependencies(SPRBDoom3BFG precomp_header_SPRBDoom3BFG)
 		
 		# make sure precompiled header is deleted after executable is compiled
-		add_dependencies(rm_precomp_header RBDoom3BFG)
+		add_dependencies(rm_precomp_header SPRBDoom3BFG)
 	endif()
 
     if(USE_PHYSX)
-        target_include_directories(RBDoom3BFG PRIVATE
+        target_include_directories(SPRBDoom3BFG PRIVATE
             ${PhysX_INCLUDE_DIR})
     endif()
 
@@ -2105,7 +2105,7 @@ else()
 			set(RT_LIBRARY rt)
 		endif()
 
-		target_link_libraries(RBDoom3BFG
+		target_link_libraries(SPRBDoom3BFG
 			idlib
 			liblua-static
 			${Vulkan_LIBRARIES}
@@ -2125,28 +2125,28 @@ else()
 	endif()
 endif()
 
-#target_compile_definitions(RBDoom3BFG PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1 CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1)
+#target_compile_definitions(SPRBDoom3BFG PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1 CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1)
 
 if(USE_DX11)
-	target_compile_definitions(RBDoom3BFG PUBLIC USE_DX11=1)
-	target_link_libraries(RBDoom3BFG nvrhi_d3d11)
+	target_compile_definitions(SPRBDoom3BFG PUBLIC USE_DX11=1)
+	target_link_libraries(SPRBDoom3BFG nvrhi_d3d11)
 endif()
 
 if(USE_DX12)
-	target_compile_definitions(RBDoom3BFG PUBLIC USE_DX12=1)
-	target_link_libraries(RBDoom3BFG nvrhi_d3d12)
+	target_compile_definitions(SPRBDoom3BFG PUBLIC USE_DX12=1)
+	target_link_libraries(SPRBDoom3BFG nvrhi_d3d12)
 endif()
 
 if(USE_DXIL_ON_DX12)
-	target_compile_definitions(RBDoom3BFG PRIVATE USE_DXIL_ON_DX12=1)
+	target_compile_definitions(SPRBDoom3BFG PRIVATE USE_DXIL_ON_DX12=1)
 endif()
 
 if(USE_NVRHI_VULKAN)
-	target_compile_definitions(RBDoom3BFG PUBLIC USE_VK=1)
-	target_link_libraries(RBDoom3BFG nvrhi_vk)
+	target_compile_definitions(SPRBDoom3BFG PUBLIC USE_VK=1)
+	target_link_libraries(SPRBDoom3BFG nvrhi_vk)
 endif()
 
-target_link_libraries(RBDoom3BFG nvrhi)
+target_link_libraries(SPRBDoom3BFG nvrhi)
 
 add_subdirectory(shaders)
-add_dependencies(RBDoom3BFG Shaders)
+add_dependencies(SPRBDoom3BFG Shaders)

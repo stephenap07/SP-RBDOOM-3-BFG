@@ -104,6 +104,16 @@ private:
 			memcpy( data, other.data, other.dataSize );
 			return *this;
 		}
+		idBinaryImageData& operator=(idBinaryImageData&& other)
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
+			data = other.data;
+			return *this;
+		}
 		void Free()
 		{
 			if( data != NULL )

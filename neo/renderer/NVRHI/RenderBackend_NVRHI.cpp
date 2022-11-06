@@ -40,6 +40,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "nvrhi/utils.h"
 #include <sys/DeviceManager.h>
+extern DeviceManager* deviceManager;
 
 idCVar r_drawFlickerBox( "r_drawFlickerBox", "0", CVAR_RENDERER | CVAR_BOOL, "visual test for dropping frames" );
 idCVar stereoRender_warp( "stereoRender_warp", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use the optical warping renderprog instead of stereoDeGhost" );
@@ -69,8 +70,6 @@ public:
 };
 
 static NvrhiContext context;
-
-extern DeviceManager* deviceManager;
 
 
 
@@ -1448,11 +1447,19 @@ idRenderBackend::GL_EndFrame
 */
 void idRenderBackend::GL_EndFrame()
 {
+	if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
+	{
+		tr.SetReadyToPresent();
+	}
+
 	renderLog.CloseMainBlock( MRB_GPU_TIME );
 
 	commandList->close();
 
 	deviceManager->GetDevice()->executeCommandList( commandList );
+
+	// required for Vulkan: transition our swap image to present
+	deviceManager->EndFrame();
 
 	// update jitter for perspective matrix
 	taaPass->AdvanceFrame();
@@ -1467,11 +1474,6 @@ We want to exit this with the GPU idle, right at vsync
 */
 void idRenderBackend::GL_BlockingSwapBuffers()
 {
-	if( !deviceManager->GetDevice() )
-	{
-		return;
-	}
-
 	// Make sure that all frames have finished rendering
 	deviceManager->GetDevice()->waitForIdle();
 
@@ -1482,6 +1484,11 @@ void idRenderBackend::GL_BlockingSwapBuffers()
 	deviceManager->Present();
 
 	renderLog.EndFrame();
+
+	if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
+	{
+		tr.InvalidateSwapBuffers();
+	}
 }
 
 /*
@@ -2160,10 +2167,14 @@ void idRenderBackend::ResizeImages()
 
 void idRenderBackend::SetCurrentImage( idImage* image )
 {
-	// load the image if necessary (FIXME: not SMP safe!)
-	// RB: don't try again if last time failed
+	if( !image )
+	{
+		image = globalImages->defaultImage;
+	}
 	if( !image->IsLoaded() && !image->IsDefaulted() )
 	{
+		// load the image if necessary (FIXME: not SMP safe!)
+		// RB: don't try again if last time failed
 		// TODO(Stephen): Fix me.
 		image->FinalizeImage( true, commandList );
 	}
