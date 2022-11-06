@@ -38,6 +38,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "RmlRenderDecorator.h"
 #include "renderer/RenderCommon.h"
 
+#include "RmlUi/Debugger.h"
+
 RmlUserInterfaceManagerLocal rmlManagerLocal;
 RmlUserInterfaceManager* rmlManager = &rmlManagerLocal;
 
@@ -109,6 +111,8 @@ RmlUserInterfaceLocal::RmlUserInterfaceLocal()
 
 RmlUserInterfaceLocal::~RmlUserInterfaceLocal()
 {
+	// NOTE(Stephen): Need to shutdown the debugger before freeing any documents. Seems like an oversight of 
+	Rml::Debugger::Shutdown();
 	handleManager.reset();
 	documents.Clear();
 	context->UnloadAllDocuments();
@@ -132,6 +136,8 @@ bool RmlUserInterfaceLocal::Init( const char* name, idSoundWorld* newSoundWorld 
 	{
 		context->EnableMouseCursor( true );
 	}
+
+	Rml::Debugger::Initialise( context );
 
 	documents.SetNum( kMaxGuis );
 
@@ -602,8 +608,6 @@ int RmlUserInterfaceLocal::PlaySound( const char* sound, int channel, bool block
 		return -1;
 	}
 
-	AddCommand( va( "play %s", sound ) );
-
 	if( soundWorld )
 	{
 		return soundWorld->PlayShaderDirectly( sound, channel );
@@ -679,6 +683,7 @@ void RmlUserInterfaceManagerLocal::Init()
 		{ "LatoLatin-Italic.ttf",     false },
 		{ "LatoLatin-Bold.ttf",       false },
 		{ "LatoLatin-BoldItalic.ttf", false },
+		{ "silent_hell/SLNTHLN.ttf",  false },
 		{ "NotoEmoji-Regular.ttf",    true  },
 	};
 
@@ -704,7 +709,6 @@ void RmlUserInterfaceManagerLocal::Shutdown()
 {
 	// The guis destructor is responsible for closing the documents within each gui context.
 	guis.DeleteContents( true );
-
 	Rml::Shutdown();
 	rmlFontEngine.ReleaseFontResources();
 
@@ -846,4 +850,9 @@ CONSOLE_COMMAND( reloadRml, "Reload updated rml gui files", NULL )
 CONSOLE_COMMAND( reloadRcss, "Reload updated RCSS", NULL )
 {
 	rmlManagerLocal.ReloadStyleSheets( true );
+}
+
+CONSOLE_COMMAND( rmlDebug, "Toggle rml debugger", NULL )
+{
+	Rml::Debugger::SetVisible( !Rml::Debugger::IsVisible() );
 }

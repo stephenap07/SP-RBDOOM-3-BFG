@@ -64,6 +64,11 @@ bool RmlFontEngine::LoadFontFace( const Rml::String& fileName, bool fallbackFace
 
 bool RmlFontEngine::LoadFontFace( const byte* data, int dataSize, const Rml::String& family, Rml::Style::FontStyle style, Rml::Style::FontWeight weight, bool fallbackFace )
 {
+	// We return 'true' here to allow the debugger to continue loading, but we will use our own fonts when it asks for a handle.
+	// The debugger might look a bit off with our own fonts, but hey it works.
+	if( family == "rmlui-debugger-font" )
+		return true;
+
 	return false;
 }
 
@@ -85,7 +90,7 @@ Rml::FontFaceHandle RmlFontEngine::GetFontFaceHandle( const Rml::String& family,
 
 	if( handle.id == kInvalidHandle )
 	{
-		return reinterpret_cast<Rml::FontFaceHandle>( nullptr );
+		return static_cast<Rml::FontFaceHandle>( renderSystem->GetDefaultFontHandle().id ) + 1;
 	}
 
 	fontHandles.AddUnique( handle );
@@ -157,8 +162,10 @@ int RmlFontEngine::GenerateString( Rml::FontFaceHandle faceHandle, Rml::FontEffe
 	const auto textBufferManager = renderSystem->GetTextBufferManager();
 	const TextBufferHandle textHandle = textBufferManager->createTextBuffer( 1, BufferType::Transient );
 
-	textBufferManager->setPenPosition( textHandle, position.x, position.y );
-	textBufferManager->setTextColor( textHandle, VectorUtil::Vec4ToColorInt( idVec4( colour.red, colour.green, colour.blue, opacity * colour.alpha ) / 255.f ) );
+	auto textColor = VectorUtil::Vec4ToColorInt( idVec4( colour.red, colour.green, colour.blue, opacity * colour.alpha ) / 255.f );
+	textBufferManager->setTextColor( textHandle, textColor );
+	textBufferManager->setPenPosition(textHandle, position.x, position.y);
+
 	FontHandle fontHandle{ static_cast<uint16_t>( faceHandle - 1 ) };
 	textBufferManager->appendText( textHandle, fontHandle, string.c_str() );
 
