@@ -7,6 +7,7 @@
 #endif
 
 class RmlUserInterfaceLocal;
+class StartMenu_ParallaxEffect_Listener;
 
 namespace Rml
 {
@@ -45,6 +46,7 @@ enum class ShellScreen : int
 class UI_Shell
 {
 public:
+
 	UI_Shell();
 
 	~UI_Shell();
@@ -104,7 +106,15 @@ public:
 		return state;
 	}
 
+	void TransitionMenu(const idStr& command);
+
+	void TransitionMenuOption(const idStr& command, bool useOptionBackButton);
+
+	void ChangeSettingsMenu(const char* setting);
+
 private:
+
+
 	// The container of the ui.
 	RmlUserInterface*		ui;
 	idSoundWorld*			soundWorld;
@@ -131,6 +141,15 @@ private:
 	RmlDocHandle			pauseDoc;
 	RmlDocHandle			creditsDoc;
 	RmlDocHandle			quitDoc;
+
+	StartMenu_ParallaxEffect_Listener* startMenuParallaxEffectListener;
+
+	float					prevFadeTime;
+	idStr					currentSetting;
+	float					animationTime;
+	idStr					lastBack;
+	idStr					currentMenu;
+	idStr					lastMenu;
 };
 
 #endif
