@@ -139,6 +139,18 @@ void idRmlSystem::SetMouseCursor( const Rml::String& cursorName )
 	}
 }
 
+int idRmlSystem::TranslateString(Rml::String& translated, const Rml::String& input)
+{
+	const char* str = idLocalization::GetString( input.c_str() );
+	if( str )
+	{
+		translated = str;
+		return 1;
+	}
+
+	return 0;
+}
+
 Rml::Input::KeyIdentifier idRmlSystem::TranslateKey( int key )
 {
 	using namespace Rml::Input;
