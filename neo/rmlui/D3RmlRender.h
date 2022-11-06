@@ -121,7 +121,7 @@ private:
 	int					numMasks;
 	idDrawVert*			drawVerts;
 	triIndex_t*			drawTris;
-	idMat3				mat;
+	idMat4				transformMat;
 	idVec3				origin;
 
 	int					texGen;

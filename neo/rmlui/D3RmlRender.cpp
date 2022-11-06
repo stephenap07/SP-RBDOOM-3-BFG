@@ -96,7 +96,7 @@ void idRmlRender::Init()
 	drawTris = new triIndex_t[kMaxInitialTris];
 
 	origin.Zero();
-	mat.Identity();
+	transformMat.Identity();
 
 	guiSolid = declManager->FindMaterial( "_white", false );
 }
@@ -127,13 +127,12 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVertices, int* i
 	{
 		const auto& [position, rmlColor, texCoord] = vertices[i];
 
+		// transform
 		pos.x = position.x + translation.x;
 		pos.y = position.y + translation.y;
-		pos.z = 0;
+		pos.z = 0.f;
 
-		// Transform
-		pos *= mat;
-		pos += origin;
+		pos = transformMat * pos;
 
 		pos.x *= scaleToVirtual.x;
 		pos.y *= scaleToVirtual.y;
@@ -167,26 +166,24 @@ void idRmlRender::RenderGeometry( Rml::Vertex* vertices, int numVertices, int* i
 
 void idRmlRender::SetTransform( const Rml::Matrix4f* transform )
 {
-	origin.Zero();
-	mat.Identity();
+	transformMat.Identity();
 
 	if( !transform )
 	{
 		return;
 	}
 
-	const auto rmlVec1 = transform->GetColumn( 0 );
-	const auto rmlVec2 = transform->GetColumn( 1 );
-	const auto rmlVec3 = transform->GetColumn( 2 );
-	const auto rmlVec4 = transform->GetColumn( 3 );
+	auto srcX = transform->GetColumn(0);
+	auto srcY = transform->GetColumn(1);
+	auto srcZ = transform->GetColumn(2);
+	auto srcW = transform->GetColumn(3);
 
-	origin.Set( rmlVec4.x, rmlVec4.y, rmlVec4.z );
-
-	const idVec3 vecX( rmlVec1.x, rmlVec1.y, rmlVec1.z );
-	const idVec3 vecY( rmlVec2.x, rmlVec2.y, rmlVec2.z );
-	const idVec3 vecZ( rmlVec3.x, rmlVec3.y, rmlVec3.z );
-
-	mat = idMat3( vecX, vecY, vecZ );
+	transformMat = idMat4(
+		idVec4(srcX.x, srcX.y, srcX.z, srcX.w),
+		idVec4(srcY.x, srcY.y, srcY.z, srcY.w),
+		idVec4(srcZ.x, srcZ.y, srcZ.z, srcZ.w),
+		idVec4(srcW.x, srcW.y, srcW.z, srcW.w));
+	transformMat.TransposeSelf();
 }
 
 static triIndex_t quadPicIndexes[6] = { 3, 0, 2, 2, 0, 1 };
@@ -342,8 +339,8 @@ void idRmlRender::RenderClipMask()
 	localVerts[0].xyz[1] = clipRects.y;
 	localVerts[0].xyz[2] = 0.0f;
 
-	localVerts[0].xyz *= mat;
-	localVerts[0].xyz += origin;
+	localVerts[0].xyz *= transformMat;
+	//localVerts[0].xyz += origin;
 
 	localVerts[0].xyz.x *= scaleToVirtual.x;
 	localVerts[0].xyz.y *= scaleToVirtual.y;
@@ -357,8 +354,8 @@ void idRmlRender::RenderClipMask()
 	localVerts[1].xyz[1] = clipRects.y;
 	localVerts[1].xyz[2] = 0.0f;
 
-	localVerts[1].xyz *= mat;
-	localVerts[1].xyz += origin;
+	localVerts[1].xyz *= transformMat;
+	//localVerts[1].xyz += origin;
 
 	localVerts[1].xyz.x *= scaleToVirtual.x;
 	localVerts[1].xyz.y *= scaleToVirtual.y;
@@ -371,9 +368,9 @@ void idRmlRender::RenderClipMask()
 	localVerts[2].xyz[0] = ( clipRects.x + clipRects.w );
 	localVerts[2].xyz[1] = ( clipRects.y + clipRects.h );
 	localVerts[2].xyz[2] = 0.0f;
-	localVerts[2].xyz -= origin;
-	localVerts[2].xyz *= mat;
-	localVerts[2].xyz += origin;
+	//localVerts[2].xyz -= origin;
+	localVerts[2].xyz *= transformMat;
+	//localVerts[2].xyz += origin;
 	localVerts[2].xyz.x *= scaleToVirtual.x;
 	localVerts[2].xyz.y *= scaleToVirtual.y;
 	localVerts[2].SetTexCoord( 1.0f, 0.0f );
@@ -384,8 +381,8 @@ void idRmlRender::RenderClipMask()
 	localVerts[3].xyz[0] = clipRects.x;
 	localVerts[3].xyz[1] = ( clipRects.y + clipRects.h );
 	localVerts[3].xyz[2] = 0.0f;
-	localVerts[3].xyz *= mat;
-	localVerts[3].xyz += origin;
+	localVerts[3].xyz *= transformMat;
+	//localVerts[3].xyz += origin;
 	localVerts[3].xyz.x *= scaleToVirtual.x;
 	localVerts[3].xyz.y *= scaleToVirtual.y;
 	localVerts[3].SetTexCoord( 0.0f, 0.0f );
