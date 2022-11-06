@@ -76,6 +76,13 @@ void DynamicSky::Init( nvrhi::IDevice* newDevice, const int verticalCount, const
 							  c_MaxRenderPassConstantBufferVersions ) );
 }
 
+void DynamicSky::Shutdown()
+{
+	Mem_Free( tri );
+	paramBuffer.Reset();
+	device = nullptr;
+}
+
 void DynamicSky::SetInvProjMatrix( const idRenderMatrix& mat )
 {
 	params.invViewProj = mat;

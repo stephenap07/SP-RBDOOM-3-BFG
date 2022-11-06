@@ -16,6 +16,8 @@ public:
 
 	void				Init( nvrhi::IDevice* newDevice, int verticalCount, int horizontalCount );
 
+	void				Shutdown();
+
 	void				SetInvProjMatrix( const idRenderMatrix& mat );
 
 	void				UpdateParams( SkyDef newParams );
