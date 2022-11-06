@@ -73,6 +73,8 @@ public:
 	/// @param[in] cursor_name Cursor name to activate.
 	void SetMouseCursor( const Rml::String& cursorName ) override;
 
+	int TranslateString(Rml::String& translated, const Rml::String& input) override;
+
 	static Rml::Input::KeyIdentifier TranslateKey( int key );
 
 	static int GetKeyModifier();
