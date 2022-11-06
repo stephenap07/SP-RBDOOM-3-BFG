@@ -5908,7 +5908,7 @@ void idGameLocal::Shell_Cleanup()
 	//	shellHandler = NULL;
 	//}
 
-	//mpGame.CleanupScoreboard();
+	mpGame.CleanupScoreboard();
 
 	if( rmlShell != NULL )
 	{
@@ -5949,13 +5949,14 @@ void idGameLocal::Shell_CreateMenu( bool inGame )
 
 	if( rmlShell )
 	{
-		rmlShell->SetInGame( inGame );
 		if( !inGame )
 		{
+			rmlShell->SetInGame( false );
 			Shell_Init( "shell", common->MenuSW() );
 		}
 		else
 		{
+			rmlShell->SetInGame( true );
 			if( common->IsMultiplayer() )
 			{
 				Shell_Init( "pause", common->SW() );
@@ -6120,7 +6121,7 @@ void idGameLocal::Shell_ResetMenu()
 	if( rmlShell )
 	{
 		delete rmlShell;
-		rmlShell = new UI_Shell( );
+		rmlShell = new UI_Shell();
 	}
 
 	if( shellHandler != NULL )
@@ -6248,7 +6249,7 @@ void idGameLocal::Shell_UpdateSavedGames()
 	//}
 	if( rmlShell )
 	{
-		rmlShell->UpdateSavedGames( );
+		rmlShell->UpdateSavedGames();
 	}
 }
 
