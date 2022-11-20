@@ -40,7 +40,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "imgui/ImGui_Hooks.h"
 
 #if defined( USE_NVRHI )
-	#include "RenderPass.h"
 	#include <sys/DeviceManager.h>
 	#include <nvrhi/utils.h>
 

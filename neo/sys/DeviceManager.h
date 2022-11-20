@@ -189,8 +189,6 @@ public:
 	nvrhi::IFramebuffer* GetCurrentFramebuffer();
 	nvrhi::IFramebuffer* GetFramebuffer( uint32_t index );
 
-	void AddRenderPassToBack( IRenderPass* pRenderPass );
-
 	void Shutdown();
 	virtual ~DeviceManager() = default;
 

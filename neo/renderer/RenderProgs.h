@@ -1021,11 +1021,7 @@ public:
 
 	ID_INLINE nvrhi::IBuffer*				ConstantBuffer()
 	{
-		return constantBuffer[BindingLayoutType()];
-	}
-	ID_INLINE idUniformBuffer&				BindingParamUbo()
-	{
-		return bindingParmUbo[ BindingLayoutType() ];
+		return constantBuffer;
 	}
 	ID_INLINE nvrhi::InputLayoutHandle		InputLayout()
 	{
@@ -1041,7 +1037,6 @@ public:
 	}
 
 	idUniformBuffer									renderParmUbo;
-	idArray<idUniformBuffer, NUM_BINDING_LAYOUTS>	bindingParmUbo;
 	idArray<idVec4*, NUM_BINDING_LAYOUTS>			mappedRenderParms;
 #elif defined(USE_VULKAN)
 	void		PrintPipelines();
@@ -1146,13 +1141,12 @@ private:
 	idStaticList< idVec4, RENDERPARM_TOTAL >	uniforms;
 	bool										uniformsChanged;
 	nvrhi::IDevice*								device;
+	nvrhi::BufferHandle							constantBuffer;
 
 	using VertexAttribDescList = idList< nvrhi::VertexAttributeDesc >;
 	idStaticList< VertexAttribDescList, NUM_VERTEX_LAYOUTS > vertexLayoutDescs;
 
 	idStaticList< idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>, NUM_BINDING_LAYOUTS > bindingLayouts;
-
-	idArray<nvrhi::BufferHandle, NUM_BINDING_LAYOUTS>	constantBuffer;
 
 #elif defined(USE_VULKAN)
 	struct shader_t

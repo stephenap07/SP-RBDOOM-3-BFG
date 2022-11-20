@@ -3,9 +3,6 @@
 
 #include "DeviceManager.h"
 
-// Either move RenderPass to sys or move window resizing logic
-#include "renderer/RenderPass.h"
-
 DeviceManager* DeviceManager::Create( nvrhi::GraphicsAPI api )
 {
 	switch( api )
@@ -65,18 +62,6 @@ nvrhi::IFramebuffer* DeviceManager::GetFramebuffer( uint32_t index )
 	}
 
 	return nullptr;
-}
-
-void DeviceManager::AddRenderPassToBack( IRenderPass* pRenderPass )
-{
-	renderPasses.Remove( pRenderPass );
-	renderPasses.Append( pRenderPass );
-
-	pRenderPass->BackBufferResizing();
-	pRenderPass->BackBufferResized(
-		deviceParms.backBufferWidth,
-		deviceParms.backBufferHeight,
-		deviceParms.swapChainSampleCount );
 }
 
 DeviceManager* DeviceManager::CreateD3D11()
