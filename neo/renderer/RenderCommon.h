@@ -134,6 +134,7 @@ struct drawSurf_t
 	vertCacheHandle_t		ambientCache;		// idDrawVert
 	vertCacheHandle_t		shadowCache;		// idShadowVert / idShadowVertSkinned
 	vertCacheHandle_t		jointCache;			// idJointMat
+	vertCacheHandle_t		instanceCache;
 	const viewEntity_t* 	space;
 	const idMaterial* 		material;			// may be NULL for shadow volumes
 	uint64					extraGLState;		// Extra GL state |'d with material->stage[].drawStateBits
@@ -846,7 +847,26 @@ enum vertexLayoutType_t
 	LAYOUT_DRAW_SHADOW_VERT,
 	LAYOUT_DRAW_SHADOW_VERT_SKINNED,
 	LAYOUT_DRAW_IMGUI_VERT,
+	LAYOUT_DRAW_DEPTH,
 	NUM_VERTEX_LAYOUTS
+};
+
+enum vertexAttribute_t
+{
+	VERTEXATTRIBUTE_POSITION,
+	VERTEXATTRIBUTE_PREVPOSITION,
+	VERTEXATTRIBUTE_TEXCOORD1,
+	VERTEXATTRIBUTE_TEXCOORD2,
+	VERTEXATTRIBUTE_NORMAL,
+	VERTEXATTRIBUTE_TANGENT,
+	VERTEXATTRIBUTE_COLOR1,
+	VERTEXATTRIBUTE_COLOR2,
+	VERTEXATTRIBUTE_TRANSFORM,
+	VERTEXATTRIBUTE_PREVTRANSFORM,
+	VERTEXATTRIBUTE_JOINTINDICES,
+	VERTEXATTRIBUTE_JOINTWEIGHTS,
+
+	VERTEXATTRIBUTE_COUNT
 };
 
 enum bindingLayoutType_t
@@ -857,6 +877,8 @@ enum bindingLayoutType_t
 
 	BINDING_LAYOUT_CONSTANT_BUFFER_ONLY,
 	BINDING_LAYOUT_CONSTANT_BUFFER_ONLY_SKINNED,
+
+	BINDING_LAYOUT_DEPTH,
 
 	//BINDING_LAYOUT_GBUFFER,
 	//BINDING_LAYOUT_GBUFFER_SKINNED,

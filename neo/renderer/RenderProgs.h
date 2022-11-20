@@ -422,6 +422,10 @@ enum
 	MAX_BUILTINS
 };
 
+#if defined( USE_NVRHI )
+	nvrhi::VertexAttributeDesc GetVertexAttributeDesc( vertexAttribute_t attribute, const char* name, uint32_t bufferIndex );
+#endif
+
 /*
 ================================================================================================
 idRenderProgManager

@@ -91,7 +91,9 @@ enum cacheType_t
 {
 	CACHE_VERTEX,
 	CACHE_INDEX,
-	CACHE_JOINT
+	CACHE_JOINT,
+	CACHE_NEWVERTEX,
+	CACHE_INSTANCE
 };
 
 struct geoBufferSet_t
@@ -99,12 +101,15 @@ struct geoBufferSet_t
 	idIndexBuffer			indexBuffer;
 	idVertexBuffer			vertexBuffer;
 	idUniformBuffer			jointBuffer;
+	idVertexBuffer			instanceBuffer;
 	byte* 					mappedVertexBase;
 	byte* 					mappedIndexBase;
 	byte* 					mappedJointBase;
+	byte*					mappedInstanceBase;
 	idSysInterlockedInteger	indexMemUsed;
 	idSysInterlockedInteger	vertexMemUsed;
 	idSysInterlockedInteger	jointMemUsed;
+	idSysInterlockedInteger	instanceMemUsed;
 	int						allocations;	// number of index and vertex allocations combined
 };
 
@@ -122,10 +127,12 @@ public:
 	vertCacheHandle_t	AllocVertex( const void* data, int num, size_t size = sizeof( idDrawVert ), nvrhi::ICommandList* commandList = nullptr );
 	vertCacheHandle_t	AllocIndex( const void* data, int num, size_t size = sizeof( triIndex_t ), nvrhi::ICommandList* commandList = nullptr );
 	vertCacheHandle_t	AllocJoint( const void* data, int num, size_t size = sizeof( idJointMat ), nvrhi::ICommandList* commandList = nullptr );
+	vertCacheHandle_t	AllocInstance( const void* data, int num, size_t size = sizeof( idInstanceData ), nvrhi::ICommandList* commandList = nullptr );
 
 	// this data is valid until the next map load
 	vertCacheHandle_t	AllocStaticVertex( const void* data, int bytes, nvrhi::ICommandList* commandList );
 	vertCacheHandle_t	AllocStaticIndex( const void* data, int bytes, nvrhi::ICommandList* commandList );
+	vertCacheHandle_t	AllocStaticInstance( const void* data, int bytes, nvrhi::ICommandList* commandList );
 
 	byte* 			MappedVertexBuffer( vertCacheHandle_t handle );
 	byte* 			MappedIndexBuffer( vertCacheHandle_t handle );
@@ -143,6 +150,7 @@ public:
 	bool			GetVertexBuffer( vertCacheHandle_t handle, idVertexBuffer* vb );
 	bool			GetIndexBuffer( vertCacheHandle_t handle, idIndexBuffer* ib );
 	bool			GetJointBuffer( vertCacheHandle_t handle, idUniformBuffer* jb );
+	bool			GetInstanceBuffer( vertCacheHandle_t handnle, idVertexBuffer* vb );
 
 	void			BeginBackEnd();
 

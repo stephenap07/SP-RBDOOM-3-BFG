@@ -59,6 +59,8 @@ idCVar r_syncEveryFrame( "r_syncEveryFrame", "1", CVAR_BOOL, "Don't let the GPU 
 //void GLimp_SwapBuffers();
 void RB_SetMVP( const idRenderMatrix& mvp );
 
+#define MAX_IMAGE_PARMS 16
+
 class NvrhiContext
 {
 public:

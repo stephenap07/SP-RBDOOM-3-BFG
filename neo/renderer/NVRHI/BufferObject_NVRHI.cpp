@@ -106,6 +106,8 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	nvrhi::BufferDesc vertexBufferDesc;
 	vertexBufferDesc.byteSize = numBytes;
 	vertexBufferDesc.isVertexBuffer = true;
+	vertexBufferDesc.canHaveTypedViews = true;
+	vertexBufferDesc.canHaveRawViews = true;
 
 	if( usage == BU_DYNAMIC )
 	{

@@ -173,6 +173,13 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		.setOffset( offsetof( idShadowVertSkinned, color ) )
 		.setElementStride( sizeof( idShadowVertSkinned ) ) );
 
+	vertexLayoutDescs[LAYOUT_DRAW_DEPTH] =
+	{
+		GetVertexAttributeDesc( VERTEXATTRIBUTE_POSITION, "POSITION", 0 ),
+		GetVertexAttributeDesc( VERTEXATTRIBUTE_TEXCOORD1, "TEXCOORD", 1 ),
+		GetVertexAttributeDesc( VERTEXATTRIBUTE_TRANSFORM, "TRANSFORM", 2 )
+	};
+
 	bindingLayouts.SetNum( NUM_BINDING_LAYOUTS );
 
 	auto renderParmLayoutItem = nvrhi::BindingLayoutItem::VolatileConstantBuffer( 0 );
@@ -206,6 +213,12 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 
 	bindingLayouts[BINDING_LAYOUT_CONSTANT_BUFFER_ONLY] = { uniformsLayout };
 	bindingLayouts[BINDING_LAYOUT_CONSTANT_BUFFER_ONLY_SKINNED] = { skinningLayout };
+
+	// new stuff!
+	auto depthLayoutDesc = nvrhi::BindingLayoutDesc()
+						   .setVisibility( nvrhi::ShaderType::Vertex )
+						   .addItem( nvrhi::BindingLayoutItem::ConstantBuffer( 0 ) );
+	bindingLayouts[BINDING_LAYOUT_DEPTH] = { device->createBindingLayout( depthLayoutDesc ) };
 
 	auto defaultMaterialLayoutDesc = nvrhi::BindingLayoutDesc()
 									 .setVisibility( nvrhi::ShaderType::Pixel )

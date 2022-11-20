@@ -52,6 +52,7 @@ static void ClearGeoBufferSet( geoBufferSet_t& gbs )
 	gbs.indexMemUsed.SetValue( 0 );
 	gbs.vertexMemUsed.SetValue( 0 );
 	gbs.jointMemUsed.SetValue( 0 );
+	gbs.instanceMemUsed.SetValue( 0 );
 	gbs.allocations = 0;
 }
 
@@ -75,6 +76,11 @@ static void MapGeoBufferSet( geoBufferSet_t& gbs )
 	if( gbs.mappedJointBase == NULL && gbs.jointBuffer.GetAllocedSize() != 0 )
 	{
 		gbs.mappedJointBase = ( byte* )gbs.jointBuffer.MapBuffer( BM_WRITE );
+	}
+
+	if( gbs.mappedInstanceBase == NULL && gbs.instanceBuffer.GetAllocedSize() != 0 )
+	{
+		gbs.mappedInstanceBase = ( byte* )gbs.instanceBuffer.MapBuffer( BM_WRITE );
 	}
 }
 
@@ -117,6 +123,9 @@ static void AllocGeoBufferSet( geoBufferSet_t& gbs, const int vertexBytes, const
 	{
 		gbs.jointBuffer.AllocBufferObject( NULL, jointBytes, usage, commandList );
 	}
+
+	int num = vertexBytes / sizeof( idDrawVert );
+	gbs.instanceBuffer.AllocBufferObject( NULL, num * sizeof( idInstanceData ), usage, commandList );
 
 	ClearGeoBufferSet( gbs );
 }
@@ -165,12 +174,14 @@ void idVertexCache::Shutdown()
 		frameData[i].vertexBuffer.FreeBufferObject();
 		frameData[i].indexBuffer.FreeBufferObject();
 		frameData[i].jointBuffer.FreeBufferObject();
+		frameData[i].instanceBuffer.FreeBufferObject();
 	}
 
 	// SRS - free static buffers to avoid Vulkan validation layer errors on shutdown
 	staticData.vertexBuffer.FreeBufferObject();
 	staticData.indexBuffer.FreeBufferObject();
 	staticData.jointBuffer.FreeBufferObject();
+	staticData.instanceBuffer.FreeBufferObject();
 }
 
 /*
@@ -285,6 +296,26 @@ vertCacheHandle_t idVertexCache::ActuallyAlloc( geoBufferSet_t& vcs, const void*
 
 			break;
 		}
+		case CACHE_INSTANCE:
+		{
+			endPos = vcs.instanceMemUsed.Add( bytes );
+			if( endPos > vcs.instanceBuffer.GetAllocedSize() )
+			{
+				idLib::Error( "Out of instance cache" );
+			}
+
+			offset = endPos - bytes;
+
+			if( data != NULL )
+			{
+				if( vcs.instanceBuffer.GetUsage() == BU_DYNAMIC )
+				{
+					MapGeoBufferSet( vcs );
+				}
+				vcs.instanceBuffer.Update( data, bytes, offset, false, commandList );
+			}
+			break;
+		}
 		default:
 			assert( false );
 	}
@@ -333,6 +364,16 @@ vertCacheHandle_t idVertexCache::AllocJoint( const void* data, int num, size_t s
 
 /*
 ==============
+idVertexCache::AllocInstance
+==============
+*/
+vertCacheHandle_t idVertexCache::AllocInstance( const void* data, int num, size_t size, nvrhi::ICommandList* commandList )
+{
+	return ActuallyAlloc( frameData[listNum], data, ALIGN( num * size, VERTEX_CACHE_ALIGN ), CACHE_INSTANCE, commandList );
+}
+
+/*
+==============
 idVertexCache::AllocStaticVertex
 ==============
 */
@@ -357,6 +398,20 @@ vertCacheHandle_t idVertexCache::AllocStaticIndex( const void* data, int bytes, 
 		idLib::FatalError( "AllocStaticIndex failed, increase STATIC_INDEX_MEMORY" );
 	}
 	return ActuallyAlloc( staticData, data, bytes, CACHE_INDEX, commandList );
+}
+
+/*
+==============
+idVertexCache::AllocStaticInstance
+==============
+*/
+vertCacheHandle_t idVertexCache::AllocStaticInstance( const void* data, int bytes, nvrhi::ICommandList* commandList )
+{
+	if( staticData.instanceMemUsed.GetValue() + bytes > STATIC_VERTEX_MEMORY )
+	{
+		idLib::FatalError( "AllocStaticInstance failed, increase STATIC_VERTEX_MEMORY" );
+	}
+	return ActuallyAlloc( staticData, data, bytes, CACHE_INSTANCE, commandList );
 }
 
 /*
@@ -476,6 +531,25 @@ bool idVertexCache::GetJointBuffer( vertCacheHandle_t handle, idUniformBuffer* j
 		return false;
 	}
 	jb->Reference( frameData[ drawListNum ].jointBuffer, jointOffset, numBytes );
+	return true;
+}
+
+bool idVertexCache::GetInstanceBuffer( vertCacheHandle_t handle, idVertexBuffer* vb )
+{
+	const int isStatic = handle & VERTCACHE_STATIC;
+	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+	const uint64 offset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+	if( isStatic )
+	{
+		vb->Reference( staticData.instanceBuffer, offset, numBytes );
+		return true;
+	}
+	if( frameNum != ( ( currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
+	{
+		return false;
+	}
+	vb->Reference( frameData[drawListNum].instanceBuffer, offset, numBytes );
 	return true;
 }
 

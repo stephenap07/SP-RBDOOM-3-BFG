@@ -322,3 +322,64 @@ bool idRenderProgManager::CommitConstantBuffer( nvrhi::ICommandList* commandList
 
 	return false;
 }
+
+nvrhi::VertexAttributeDesc GetVertexAttributeDesc( vertexAttribute_t attribute, const char* name, uint32_t bufferIndex )
+{
+	nvrhi::VertexAttributeDesc result = {};
+	result.name = name;
+	result.bufferIndex = bufferIndex;
+	result.arraySize = 1;
+
+	switch( attribute )
+	{
+		case VERTEXATTRIBUTE_POSITION:
+		case VERTEXATTRIBUTE_PREVPOSITION:
+			result.format = nvrhi::Format::RGB32_FLOAT;
+			result.elementStride = sizeof( idDrawVert );
+			break;
+		case VERTEXATTRIBUTE_TEXCOORD1:
+			result.format = nvrhi::Format::RG16_FLOAT;
+			result.offset = offsetof( idDrawVert, st );
+			result.elementStride = sizeof( idDrawVert );
+			break;
+		case VERTEXATTRIBUTE_NORMAL:
+			result.format = nvrhi::Format::RGBA8_UNORM;
+			result.offset = offsetof( idDrawVert, normal );
+			result.elementStride = sizeof( idDrawVert );
+			break;
+		case VERTEXATTRIBUTE_TANGENT:
+			result.format = nvrhi::Format::RGBA8_UNORM;
+			result.offset = offsetof( idDrawVert, tangent );
+			result.elementStride = sizeof( idDrawVert );
+			break;
+		case VERTEXATTRIBUTE_COLOR1:
+			result.format = nvrhi::Format::RGBA8_UNORM;
+			result.offset = offsetof( idDrawVert, color );
+			result.elementStride = sizeof( idDrawVert );
+			break;
+		case VERTEXATTRIBUTE_COLOR2:
+			result.format = nvrhi::Format::RGBA8_UNORM;
+			result.offset = offsetof( idDrawVert, color2 );
+			result.elementStride = sizeof( idDrawVert );
+			break;
+		case VERTEXATTRIBUTE_TRANSFORM:
+			result.format = nvrhi::Format::RGBA32_FLOAT;
+			result.arraySize = 3;
+			result.offset = offsetof( idInstanceData, transform );
+			result.elementStride = sizeof( idInstanceData );
+			result.isInstanced = true;
+			break;
+		case VERTEXATTRIBUTE_PREVTRANSFORM:
+			result.format = nvrhi::Format::RGBA32_FLOAT;
+			result.arraySize = 3;
+			result.offset = offsetof( idInstanceData, prevTransform );
+			result.elementStride = sizeof( idInstanceData );
+			result.isInstanced = true;
+			break;
+
+		default:
+			assert( !"unknown attribute" );
+	}
+
+	return result;
+}
