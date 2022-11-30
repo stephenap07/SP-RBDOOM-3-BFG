@@ -113,13 +113,14 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	{
 		vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
 		vertexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
-		vertexBufferDesc.debugName = "Mapped idDrawVert vertex buffer";
+		vertexBufferDesc.debugName = ( debugName.IsEmpty() ) ? "Mapped vertex buffer" : debugName.c_str();
 	}
 	else
 	{
+		vertexBufferDesc.canHaveUAVs = true;
 		vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
 		vertexBufferDesc.keepInitialState = true;
-		vertexBufferDesc.debugName = "Static idDrawVert vertex buffer";
+		vertexBufferDesc.debugName = ( debugName.IsEmpty() ) ? "Static vertex buffer" : debugName.c_str();
 	}
 
 	bufferHandle = deviceManager->GetDevice()->createBuffer( vertexBufferDesc );
@@ -225,7 +226,7 @@ void* idVertexBuffer::MapBuffer( bufferMapType_t mapType )
 		accessMode = nvrhi::CpuAccessMode::Read;
 	}
 
-	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode, { ( uint64 )GetOffset(), ( uint64 )GetAllocedSize() } );
+	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
 
 	SetMapped();
 
@@ -319,12 +320,12 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 	if( _usage == BU_STATIC )
 	{
 		indexBufferDesc.keepInitialState = true;
-		indexBufferDesc.debugName = "VertexCache Static Index Buffer";
+		indexBufferDesc.debugName = ( debugName.IsEmpty() ) ? "VertexCache Static Index Buffer" : debugName.c_str();
 	}
 	else if( _usage == BU_DYNAMIC )
 	{
 		indexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
-		indexBufferDesc.debugName = "VertexCache Mapped Index Buffer";
+		indexBufferDesc.debugName = ( debugName.IsEmpty() ) ? "VertexCache Mapped Index Buffer" : debugName.c_str();
 	}
 
 	bufferHandle  = deviceManager->GetDevice()->createBuffer( indexBufferDesc );
@@ -425,7 +426,7 @@ void* idIndexBuffer::MapBuffer( bufferMapType_t mapType )
 		accessMode = nvrhi::CpuAccessMode::Read;
 	}
 
-	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode, { ( uint64 )GetOffset(), ( uint64 )GetAllocedSize() } );
+	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
 
 	SetMapped();
 
@@ -494,14 +495,14 @@ idUniformBuffer::idUniformBuffer()
 idUniformBuffer::AllocBufferObject
 ========================
 */
-bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t allocatedUsage, nvrhi::ICommandList* commandList )
+bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, int stride, bufferUsageType_t allocatedUsage, nvrhi::ICommandList* commandList )
 {
 	assert( !bufferHandle );
 	assert_16_byte_aligned( data );
 
 	if( allocSize <= 0 )
 	{
-		idLib::Error( "idIndexBuffer::AllocBufferObject: allocSize = %i", allocSize );
+		idLib::Error( "idUniformBuffer::AllocBufferObject: allocSize = %i", allocSize );
 	}
 
 	size = allocSize;
@@ -517,19 +518,14 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, buffer
 	bufferDesc.canHaveTypedViews = true;
 	bufferDesc.canHaveRawViews = true;
 	bufferDesc.byteSize = numBytes;
-	bufferDesc.structStride = sizeof( idVec4 );
+	bufferDesc.structStride = stride;
 	bufferDesc.isConstantBuffer = true;
+	bufferDesc.debugName = debugName.c_str();
 
 	if( usage == BU_DYNAMIC )
 	{
-		bufferDesc.debugName = debugName.c_str();
-		bufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+		//bufferDesc.initialState = nvrhi::ResourceStates::ShaderResource;
 		bufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
-	}
-	else
-	{
-		bufferDesc.debugName = debugName.c_str();
-		bufferDesc.keepInitialState = true;
 	}
 
 	bufferHandle = deviceManager->GetDevice()->createBuffer( bufferDesc );
@@ -635,7 +631,7 @@ void* idUniformBuffer::MapBuffer( bufferMapType_t mapType )
 		accessMode = nvrhi::CpuAccessMode::Read;
 	}
 
-	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode, { ( uint64 )GetOffset(), ( uint64 )GetSize() } );
+	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
 
 	SetMapped();
 

@@ -134,6 +134,7 @@ struct modelSurface_t
 	int							id;
 	const idMaterial* 			shader;
 	srfTriangles_t* 			geometry;
+	vertCacheHandle_t			skinnedCache = 0;
 };
 
 enum dynamicModel_t

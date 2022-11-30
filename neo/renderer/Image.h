@@ -462,7 +462,7 @@ public:
 	}
 	// DG end
 
-	nvrhi::TextureHandle GetTextureHandle()
+	nvrhi::TextureHandle GetTextureHandle() const
 	{
 		return texture;
 	}

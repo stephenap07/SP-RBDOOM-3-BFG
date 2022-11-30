@@ -29,20 +29,28 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef RENDERER_PASSES_GEOMETRYPASSES_H_
 #define RENDERER_PASSES_GEOMETRYPASSES_H_
 
-#include "renderer/RenderCommon.h"
+class idGeometryPassContext
+{
+};
 
 class idGeometryPass
 {
 public:
-	class GeometryPassContext
-	{
-	};
 
-	virtual void SetupView( GeometryPassContext& abstractContext, nvrhi::ICommandList* commandList, const viewDef_t* view, const viewDef_t* viewPrev ) = 0;
-	virtual bool SetupMaterial( GeometryPassContext& abstractContext, drawSurf_t* drawSurf, nvrhi::RasterCullMode cullMode, nvrhi::GraphicsState& state ) = 0;
-	virtual void SetupInputBuffers( GeometryPassContext& abstractContext, drawSurf_t* drawSurf, nvrhi::GraphicsState& state ) = 0;
-	virtual void SetPushConstants( GeometryPassContext& abstractContext, nvrhi::ICommandList* commandList, nvrhi::GraphicsState& state, nvrhi::DrawArguments& args ) = 0;
+	virtual void SetupView( idGeometryPassContext& abstractContext, nvrhi::ICommandList* commandList, const viewDef_t* view, const viewDef_t* viewPrev ) = 0;
+	virtual bool SetupMaterial( idGeometryPassContext& abstractContext, drawSurf_t* drawSurf, nvrhi::RasterCullMode cullMode, nvrhi::GraphicsState& state ) = 0;
+	virtual void SetupInputBuffers( idGeometryPassContext& abstractContext, drawSurf_t* drawSurf, nvrhi::GraphicsState& state ) = 0;
+	virtual void SetPushConstants( idGeometryPassContext& abstractContext, nvrhi::ICommandList* commandList, nvrhi::GraphicsState& state, nvrhi::DrawArguments& args ) = 0;
 	virtual ~idGeometryPass() = default;
 };
+
+void RenderView(
+	nvrhi::ICommandList* commandList,
+	const viewDef_t* view,
+	const viewDef_t* prevView,
+	nvrhi::IFramebuffer* framebuffer,
+	idGeometryPass& pass,
+	idGeometryPassContext& passContext,
+	bool materialEvents = false );
 
 #endif

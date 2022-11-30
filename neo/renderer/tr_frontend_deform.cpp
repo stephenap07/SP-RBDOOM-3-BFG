@@ -57,6 +57,7 @@ static drawSurf_t* R_FinishDeform( drawSurf_t* surf, srfTriangles_t* newTri, con
 	surf->indexCache = newTri->indexCache;
 	surf->shadowCache = 0;
 	surf->jointCache = 0;
+	surf->skinnedCache = 0;
 	surf->nextOnLight = NULL;
 
 	return surf;
@@ -1105,6 +1106,7 @@ static drawSurf_t* R_ParticleDeform( drawSurf_t* surf, bool useArea, nvrhi::ICom
 		drawSurf->ambientCache = newTri->ambientCache;
 		drawSurf->indexCache = newTri->indexCache;
 		drawSurf->shadowCache = 0;
+		drawSurf->skinnedCache = 0;
 		drawSurf->jointCache = 0;
 		drawSurf->space = surf->space;
 		drawSurf->scissorRect = surf->scissorRect;

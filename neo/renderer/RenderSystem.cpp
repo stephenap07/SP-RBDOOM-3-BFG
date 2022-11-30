@@ -929,6 +929,7 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles, commandList );
 
 	// Reset render crop to be the full screen
+	renderCrops[ 0 ].Clear();
 	renderCrops[0].x1 = 0;
 	renderCrops[0].y1 = 0;
 	renderCrops[0].x2 = GetWidth() - 1;
@@ -1075,6 +1076,8 @@ void idRenderSystemLocal::CropRenderSize( int width, int height )
 	current.x2 = previous.x1 + width - 1;
 	current.y1 = previous.y2 - height + 1;
 	current.y2 = previous.y2;
+	current.zmin = previous.zmin;
+	current.zmax = previous.zmax;
 }
 
 /*
@@ -1124,6 +1127,8 @@ void idRenderSystemLocal::CropRenderSize( int x, int y, int width, int height, b
 		current.x2 = width - 1;
 		current.y1 = y;
 		current.y2 = height - 1;
+		current.zmin = previous.zmin;
+		current.zmax = previous.zmax;
 	}
 	else
 	{
@@ -1131,6 +1136,8 @@ void idRenderSystemLocal::CropRenderSize( int x, int y, int width, int height, b
 		current.x2 = previous.x1 + width - 1;
 		current.y1 = y;
 		current.y2 = previous.y2;
+		current.zmin = previous.zmin;
+		current.zmax = previous.zmax;
 	}
 }
 

@@ -3857,3 +3857,123 @@ fail:
 	fastPathDiffuseImage = NULL;
 	fastPathSpecularImage = NULL;
 }
+
+void idMaterial::FillConstantBuffer( MaterialConstants& constants, const float* reg ) const
+{
+	// flags
+
+	constants.flags = 0;
+	idVec4 alphaTestValue( 0 );
+	bool useSpecularGlossModel = false;
+	bool baseOrDiffuseTexture = false;
+	bool enableBaseOrDiffuseTexture = false;
+	bool metalRoughOrSpecularTexture = false;
+	bool enableMetalRoughOrSpecularTexture = false;
+	bool emissiveTexture = false;
+	bool enableEmissiveTexture = false;
+	bool normalTexture = false;
+
+	for( int i = 0; i < numStages; i++ )
+	{
+		shaderStage_t& stage = stages[ i ];
+
+		if( stage.hasAlphaTest )
+		{
+			idVec4 alphaTestValue( reg[ stage.alphaTestRegister ] );
+		}
+
+		switch( stage.lighting )
+		{
+			case SL_AMBIENT:
+				emissiveTexture = true;
+				break;
+			case SL_BUMP:
+				normalTexture = true;
+				break;
+			case SL_DIFFUSE:
+				baseOrDiffuseTexture = true;
+				break;
+			case SL_SPECULAR:
+				useSpecularGlossModel = true;
+				break;
+		}
+	}
+
+	if( useSpecularGlossModel )
+	{
+		constants.flags |= MaterialFlags_UseSpecularGlossModel;
+	}
+
+	if( baseOrDiffuseTexture )
+	{
+		constants.flags |= MaterialFlags_UseBaseOrDiffuseTexture;
+	}
+
+	if( metalRoughOrSpecularTexture )
+	{
+		constants.flags |= MaterialFlags_UseMetalRoughOrSpecularTexture;
+	}
+
+	if( emissiveTexture )
+	{
+		constants.flags |= MaterialFlags_UseEmissiveTexture;
+	}
+
+	if( normalTexture )
+	{
+		constants.flags |= MaterialFlags_UseNormalTexture;
+	}
+
+	// free parameters
+
+	constants.domain = coverage;
+	constants.baseOrDiffuseColor = idVec3( 0 );
+	constants.specularColor = idVec3( 0 );
+	constants.emissiveColor = idVec3( 0 );
+	constants.roughness = 0;
+	constants.metalness = 0;
+	constants.normalTextureScale = 1;
+	constants.materialID = Index();
+	constants.occlusionStrength = 0;
+	constants.transmissionFactor = 0;
+
+	// Controls overall opacity. Not per-texture stage.
+	switch( coverage )  // NOLINT(clang-diagnostic-switch-enum)
+	{
+		case MC_OPAQUE:
+		case MC_TRANSLUCENT:
+			constants.opacity = 1.f;
+			break;
+		case MC_PERFORATED:
+			constants.opacity = 1.f;
+			break;
+		default:
+			break;
+	}
+
+	switch( coverage )  // NOLINT(clang-diagnostic-switch-enum)
+	{
+		case MC_OPAQUE:
+		case MC_TRANSLUCENT:
+			constants.alphaCutoff = -1.f;
+			break;
+		case MC_PERFORATED:
+			constants.alphaCutoff = *alphaTestValue.ToFloatPtr();
+			break;
+		default:
+			break;
+	}
+
+	// bindless textures
+
+	//constants.baseOrDiffuseTextureIndex = GetBindlessTextureIndex( baseOrDiffuseTexture );
+	//constants.metalRoughOrSpecularTextureIndex = GetBindlessTextureIndex( metalRoughOrSpecularTexture );
+	//constants.normalTextureIndex = GetBindlessTextureIndex( normalTexture );
+	//constants.emissiveTextureIndex = GetBindlessTextureIndex( emissiveTexture );
+	//constants.occlusionTextureIndex = GetBindlessTextureIndex( occlusionTexture );
+	//constants.transmissionTextureIndex = GetBindlessTextureIndex( transmissionTexture );
+
+	constants.padding1 = 0;
+	constants.padding2 = 0;
+	constants.padding3 = 0;
+}

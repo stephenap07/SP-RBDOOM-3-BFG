@@ -248,7 +248,7 @@ public:
 	~idUniformBuffer();
 
 	// Allocate or free the buffer.
-	bool				AllocBufferObject( const void* data, int allocSize, bufferUsageType_t usage, nvrhi::ICommandList* commandList );
+	bool				AllocBufferObject( const void* data, int allocSize, int stride, bufferUsageType_t usage, nvrhi::ICommandList* commandList );
 	void				FreeBufferObject();
 
 	// Make this buffer a reference to another buffer.

@@ -871,12 +871,14 @@ struct idGeometryData
 class idInstanceData
 {
 public:
-	uint padding[2];
+	// 128 bytes
+	uint padding[ 30 ];
 	uint firstGeometryIndex;
 	uint numGeometries;
 
-	idVec4 transform[3];
-	idVec4 prevTransform[3];
+	// 128 bytes
+	idVec4 transform[ 4 ];
+	idVec4 prevTransform[ 4 ];
 };
 
 #endif /* !__DRAWVERT_H__ */

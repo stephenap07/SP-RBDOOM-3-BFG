@@ -73,6 +73,7 @@ idRenderModelStatic::idRenderModelStatic()
 	numInvertedJoints = 0;
 	jointsInverted = NULL;
 	jointsInvertedBuffer = 0;
+	skinnedCache = 0;
 }
 
 /*

@@ -875,6 +875,7 @@ drawSurf_t* idRenderModelDecal::CreateDecalDrawSurf( const viewEntity_t* space, 
 	drawSurf->indexCache = newTri->indexCache;
 	drawSurf->shadowCache = 0;
 	drawSurf->jointCache = 0;
+	drawSurf->skinnedCache = 0;
 	drawSurf->space = space;
 	drawSurf->scissorRect = space->scissorRect;
 	drawSurf->extraGLState = 0;

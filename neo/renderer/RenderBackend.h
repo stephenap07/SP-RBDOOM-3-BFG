@@ -36,12 +36,14 @@ If you have questions concerning this license or the applicable additional terms
 
 #if defined(USE_NVRHI)
 	#include "Passes/CommonPasses.h"
+	#include "Passes/DepthPass.h"
 	#include "Passes/MipMapGenPass.h"
 	#include "Passes/FowardShadingPass.h"
 	#include "Passes/SsaoPass.h"
 	#include "Passes/TonemapPass.h"
 	#include "Passes/TemporalAntiAliasingPass.h"
 
+	#include "MaterialBindingCache.h"
 	#include "PipelineCache.h"
 
 #endif
@@ -113,6 +115,28 @@ struct debugPolygon_t
 	idWinding	winding;
 	bool		depthTest;
 	int			lifeTime;
+};
+
+struct SkinningConstants
+{
+	uint numVertices;
+	uint flags;
+	uint inputPositionOffset;
+	uint inputNormalOffset;
+
+	uint inputTangentOffset;
+	uint inputTexCoord1Offset;
+	uint inputTexCoord2Offset;
+	uint inputJointIndexOffset;
+
+	uint inputJointWeightOffset;
+	uint outputPositionOffset;
+	uint outputPrevPositionOffset;
+	uint outputNormalOffset;
+
+	uint outputTangentOffset;
+	uint outputTexCoord1Offset;
+	uint outputTexCoord2Offset;
 };
 
 void RB_SetMVP( const idRenderMatrix& mvp );
@@ -346,6 +370,9 @@ private:
 	void				DrawMotionVectors();
 	void				TemporalAAPass( const viewDef_t* _viewDef );
 
+	void				UpdateSkinnedMeshes( const viewDef_t* _viewDef );
+	void				UpdateMaterialConstants( const viewDef_t* _viewDef );
+
 	// RB: HDR stuff
 
 	// TODO optimize and replace with compute shader
@@ -544,6 +571,7 @@ private:
 	MipMapGenPass*					hiZGenPass;
 	TonemapPass*					toneMapPass;
 	TemporalAntiAliasingPass*		taaPass;
+	DepthPass						depthPass;
 
 	BindingCache					bindingCache;
 	SamplerCache					samplerCache;
@@ -555,6 +583,12 @@ private:
 	nvrhi::ShaderHandle             pixelShader;
 
 	int								prevBindingLayoutType;
+
+	nvrhi::BindingLayoutHandle		skinningBindingLayout;
+	nvrhi::ComputePipelineHandle	skinningPipeline;
+	nvrhi::ShaderHandle				skinningShader;
+
+	idList<int>						materialVersions;
 
 public:
 

@@ -83,6 +83,7 @@ viewEntity_t* R_SortViewEntities( viewEntity_t* vEntities )
 			vEntity->next = others;
 			others = vEntity;
 		}
+
 		vEntity = next;
 	}
 
@@ -325,6 +326,15 @@ void R_SetupDrawSurfShader( drawSurf_t* drawSurf, const idMaterial* shader, cons
 		shader->EvaluateRegisters( regs, shaderParms, tr.viewDef->renderView.shaderParms,
 								   tr.viewDef->renderView.time[renderEntity->timeGroup] * 0.001f, renderEntity->referenceSound );
 	}
+
+	MaterialConstants constants;
+	shader->FillConstantBuffer( constants, drawSurf->shaderRegisters );
+
+	// push it to the gpu frame cache
+	if( !vertexCache.CacheIsCurrent( drawSurf->matRegisterCache ) )
+	{
+		drawSurf->matRegisterCache = vertexCache.AllocMaterial( &constants, 1, sizeof( MaterialConstants ) );
+	}
 }
 
 /*
@@ -332,12 +342,13 @@ void R_SetupDrawSurfShader( drawSurf_t* drawSurf, const idMaterial* shader, cons
 R_SetupDrawSurfJoints
 ===================
 */
-void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, const idMaterial* shader, nvrhi::ICommandList* commandList )
+void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, const idMaterial* shader )
 {
 	// RB: added check whether GPU skinning is available at all
 	if( tri->staticModelWithJoints == NULL || !r_useGPUSkinning.GetBool() || !glConfig.gpuSkinningAvailable )
 	{
 		drawSurf->jointCache = 0;
+		drawSurf->skinnedCache = 0;
 		return;
 	}
 	// RB end
@@ -347,7 +358,7 @@ void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, con
 
 	if( !vertexCache.CacheIsCurrent( model->jointsInvertedBuffer ) )
 	{
-		model->jointsInvertedBuffer = vertexCache.AllocJoint( model->jointsInverted, model->numInvertedJoints, sizeof( idJointMat ), commandList );
+		model->jointsInvertedBuffer = vertexCache.AllocJoint( model->jointsInverted, model->numInvertedJoints, sizeof( idJointMat ) );
 	}
 	drawSurf->jointCache = model->jointsInvertedBuffer;
 }
@@ -600,6 +611,18 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 		idRenderMatrix::ApplyModelDepthHack( vEntity->mvp, renderEntity->modelDepthHack );
 	}
 
+	// Transform modelView into 3x4 matrix.
+	// We're not really using these bindless geometries at the moment.
+	idInstanceData instanceData;
+	instanceData.firstGeometryIndex = 0;
+	instanceData.numGeometries = 1;
+	SIMDProcessor->Memcpy( &instanceData.transform, &vEntity->mvp, sizeof( idRenderMatrix ) );
+	SIMDProcessor->Memcpy( &instanceData.prevTransform, &instanceData.transform, sizeof( idRenderMatrix ) );
+	if( !vertexCache.CacheIsCurrent( vEntity->instanceCache ) )
+	{
+		vEntity->instanceCache = vertexCache.AllocInstance( &instanceData, 1, sizeof( idInstanceData ) );
+	}
+
 	// local light and view origins are used to determine if the view is definitely outside
 	// an extruded shadow volume, which means we can skip drawing the end caps
 	idVec3 localViewOrigin;
@@ -610,7 +633,7 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 	//---------------------------
 	for( int surfaceNum = 0; surfaceNum < model->NumSurfaces(); surfaceNum++ )
 	{
-		const modelSurface_t* surf = model->Surface( surfaceNum );
+		modelSurface_t* surf = const_cast<modelSurface_t*>( model->Surface( surfaceNum ) );
 
 		// for debugging, only show a single surface at a time
 		if( r_singleSurface.GetInteger() >= 0 && surfaceNum != r_singleSurface.GetInteger() )
@@ -815,6 +838,16 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 
 					R_SetupDrawSurfJoints( baseDrawSurf, tri, shader );
 
+					if( vertexCache.CacheIsCurrent( baseDrawSurf->jointCache ) )
+					{
+						if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
+						{
+							surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
+						}
+
+						baseDrawSurf->skinnedCache = surf->skinnedCache;
+					}
+
 					baseDrawSurf->numIndexes = tri->numIndexes;
 					baseDrawSurf->ambientCache = tri->ambientCache;
 					baseDrawSurf->indexCache = tri->indexCache;
@@ -968,6 +1001,16 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 						lightDrawSurf->shaderRegisters = shaderRegisters;
 
 						R_SetupDrawSurfJoints( lightDrawSurf, tri, shader );
+
+						if( vertexCache.CacheIsCurrent( lightDrawSurf->jointCache ) )
+						{
+							if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
+							{
+								surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
+							}
+
+							lightDrawSurf->skinnedCache = surf->skinnedCache;
+						}
 
 						// Determine which linked list to add the light surface to.
 						// There will only be localSurfaces if the light casts shadows and
@@ -1135,6 +1178,16 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 						}
 
 						R_SetupDrawSurfJoints( shadowDrawSurf, tri, shader );
+
+						if( vertexCache.CacheIsCurrent( shadowDrawSurf->jointCache ) )
+						{
+							if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
+							{
+								surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
+							}
+
+							shadowDrawSurf->skinnedCache = surf->skinnedCache;
+						}
 
 						// determine which linked list to add the shadow surface to
 
@@ -1306,6 +1359,16 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 			shadowDrawSurf->shaderRegisters = NULL;
 
 			R_SetupDrawSurfJoints( shadowDrawSurf, tri, NULL );
+
+			if( vertexCache.CacheIsCurrent( shadowDrawSurf->jointCache ) )
+			{
+				if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
+				{
+					surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
+				}
+
+				shadowDrawSurf->skinnedCache = surf->skinnedCache;
+			}
 
 			// determine which linked list to add the shadow surface to
 			shadowDrawSurf->linkChain = shader->TestMaterialFlag( MF_NOSELFSHADOW ) ? &vLight->localShadows : &vLight->globalShadows;

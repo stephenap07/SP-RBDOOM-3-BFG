@@ -38,11 +38,15 @@ If you have questions concerning this license or the applicable additional terms
 	const int VERTCACHE_INDEX_MEMORY_PER_FRAME = 31 * 1024 * 1024;
 	const int VERTCACHE_VERTEX_MEMORY_PER_FRAME = 31 * 1024 * 1024;
 	const int VERTCACHE_JOINT_MEMORY_PER_FRAME = 256 * 1024;
+	const int VERTCACHE_INSTANCE_MEMORY_PER_FRAME = 256 * 1024;
+	const int VERTCACHE_SKINNED_VERTEX_MEMORY_PER_FRAME = 31 * 1024 * 1024;
+	const int VERTCACHE_MATERIAL_MEMORY_PER_FRAME = 31 * 1024 * 1024;
 
 	// there are a lot more static indexes than vertexes, because interactions are just new
 	// index lists that reference existing vertexes
 	const int STATIC_INDEX_MEMORY = 4 * 31 * 1024 * 1024;
 	const int STATIC_VERTEX_MEMORY = 4 * 31 * 1024 * 1024;	// make sure it fits in VERTCACHE_OFFSET_MASK!
+	const int STATIC_SKINNED_VERTEX_MEMORY = 4 * 31 * 1024 * 1024;
 
 	// vertCacheHandle_t packs size, offset, and frame number into 64 bits
 	typedef uint64 vertCacheHandle_t;
@@ -86,14 +90,16 @@ If you have questions concerning this license or the applicable additional terms
 const int VERTEX_CACHE_ALIGN		= 32;
 const int INDEX_CACHE_ALIGN			= 16;
 const int JOINT_CACHE_ALIGN			= 16;
+const int MATERIAL_CACHE_ALIGN		= 16;
 
 enum cacheType_t
 {
 	CACHE_VERTEX,
 	CACHE_INDEX,
 	CACHE_JOINT,
-	CACHE_NEWVERTEX,
-	CACHE_INSTANCE
+	CACHE_INSTANCE,
+	CACHE_SKINNED_VERTEX,
+	CACHE_MATERIAL
 };
 
 struct geoBufferSet_t
@@ -102,14 +108,20 @@ struct geoBufferSet_t
 	idVertexBuffer			vertexBuffer;
 	idUniformBuffer			jointBuffer;
 	idVertexBuffer			instanceBuffer;
+	idVertexBuffer			skinnedBuffer;
+	idUniformBuffer			materialBuffer;
 	byte* 					mappedVertexBase;
 	byte* 					mappedIndexBase;
 	byte* 					mappedJointBase;
 	byte*					mappedInstanceBase;
+	byte*					mappedSkinnedBase;
+	byte*					mappedMaterialBase;
 	idSysInterlockedInteger	indexMemUsed;
 	idSysInterlockedInteger	vertexMemUsed;
 	idSysInterlockedInteger	jointMemUsed;
 	idSysInterlockedInteger	instanceMemUsed;
+	idSysInterlockedInteger	skinnedMemUsed;
+	idSysInterlockedInteger materialMemUsed;
 	int						allocations;	// number of index and vertex allocations combined
 };
 
@@ -128,14 +140,18 @@ public:
 	vertCacheHandle_t	AllocIndex( const void* data, int num, size_t size = sizeof( triIndex_t ), nvrhi::ICommandList* commandList = nullptr );
 	vertCacheHandle_t	AllocJoint( const void* data, int num, size_t size = sizeof( idJointMat ), nvrhi::ICommandList* commandList = nullptr );
 	vertCacheHandle_t	AllocInstance( const void* data, int num, size_t size = sizeof( idInstanceData ), nvrhi::ICommandList* commandList = nullptr );
+	vertCacheHandle_t	AllocSkinnedVertex( const void* data, int num, size_t size = sizeof( idDrawVert ), nvrhi::ICommandList* commandList = nullptr );
+	vertCacheHandle_t	AllocMaterial( const void* data, int num, size_t size = sizeof( MaterialConstants ), nvrhi::ICommandList* commandList = nullptr );
 
 	// this data is valid until the next map load
 	vertCacheHandle_t	AllocStaticVertex( const void* data, int bytes, nvrhi::ICommandList* commandList );
 	vertCacheHandle_t	AllocStaticIndex( const void* data, int bytes, nvrhi::ICommandList* commandList );
 	vertCacheHandle_t	AllocStaticInstance( const void* data, int bytes, nvrhi::ICommandList* commandList );
+	vertCacheHandle_t	AllocStaticSkinnedVertex( const void* data, int bytes, nvrhi::ICommandList* commandList );
 
 	byte* 			MappedVertexBuffer( vertCacheHandle_t handle );
 	byte* 			MappedIndexBuffer( vertCacheHandle_t handle );
+	byte*			MappedSkinnedVertexBuffer( vertCacheHandle_t handle );
 
 	// Returns false if it's been purged
 	// This can only be called by the front end, the back end should only be looking at
@@ -150,7 +166,9 @@ public:
 	bool			GetVertexBuffer( vertCacheHandle_t handle, idVertexBuffer* vb );
 	bool			GetIndexBuffer( vertCacheHandle_t handle, idIndexBuffer* ib );
 	bool			GetJointBuffer( vertCacheHandle_t handle, idUniformBuffer* jb );
-	bool			GetInstanceBuffer( vertCacheHandle_t handnle, idVertexBuffer* vb );
+	bool			GetInstanceBuffer( vertCacheHandle_t handle, idVertexBuffer* vb );
+	bool			GetSkinnedVertexBuffer( vertCacheHandle_t handle, idVertexBuffer* vb );
+	bool			GetMaterialBuffer( vertCacheHandle_t handle, idUniformBuffer* mb );
 
 	void			BeginBackEnd();
 
@@ -168,6 +186,7 @@ public:
 	int				mostUsedVertex;
 	int				mostUsedIndex;
 	int				mostUsedJoint;
+	int				mostUsedInstance;
 
 	// Try to make room for <bytes> bytes
 	vertCacheHandle_t	ActuallyAlloc( geoBufferSet_t& vcs, const void* data, int bytes, cacheType_t type, nvrhi::ICommandList* commandList );

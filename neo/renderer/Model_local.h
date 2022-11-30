@@ -147,6 +147,7 @@ public:
 	int							numInvertedJoints;
 	idJointMat* 				jointsInverted;
 	vertCacheHandle_t			jointsInvertedBuffer;
+	vertCacheHandle_t			skinnedCache;
 
 protected:
 	int							lastModifiedFrame;

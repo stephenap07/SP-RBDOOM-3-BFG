@@ -66,7 +66,8 @@ const char* renderLogMainBlockLabels[] =
 	ASSERT_ENUM_STRING( MRB_TAA,							14 ),
 	ASSERT_ENUM_STRING( MRB_POSTPROCESS,					15 ),
 	ASSERT_ENUM_STRING( MRB_DRAW_GUI,                       16 ),
-	ASSERT_ENUM_STRING( MRB_TOTAL,							17 )
+	ASSERT_ENUM_STRING( MRB_UPDATE_BUFFERS,                 17 ),
+	ASSERT_ENUM_STRING( MRB_TOTAL,							18 )
 };
 
 #if defined( USE_VULKAN )

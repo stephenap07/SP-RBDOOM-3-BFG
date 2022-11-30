@@ -364,14 +364,14 @@ nvrhi::VertexAttributeDesc GetVertexAttributeDesc( vertexAttribute_t attribute, 
 			break;
 		case VERTEXATTRIBUTE_TRANSFORM:
 			result.format = nvrhi::Format::RGBA32_FLOAT;
-			result.arraySize = 3;
+			result.arraySize = 4;
 			result.offset = offsetof( idInstanceData, transform );
 			result.elementStride = sizeof( idInstanceData );
 			result.isInstanced = true;
 			break;
 		case VERTEXATTRIBUTE_PREVTRANSFORM:
 			result.format = nvrhi::Format::RGBA32_FLOAT;
-			result.arraySize = 3;
+			result.arraySize = 4;
 			result.offset = offsetof( idInstanceData, prevTransform );
 			result.elementStride = sizeof( idInstanceData );
 			result.isInstanced = true;

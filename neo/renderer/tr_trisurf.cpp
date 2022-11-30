@@ -2231,6 +2231,7 @@ void R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri, nvrhi::ICommand
 	ds.indexCache = tri.indexCache;
 	ds.shadowCache = tri.shadowCache;
 	ds.jointCache = 0;
+	ds.skinnedCache = 0;
 }
 
 /*

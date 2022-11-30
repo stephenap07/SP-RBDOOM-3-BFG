@@ -1553,6 +1553,7 @@ idRenderModel* idRenderModelGLTF::InstantiateDynamicModel( const struct renderEn
 		staticModel->numInvertedJoints = numInvertedJoints;
 		staticModel->jointsInverted = ( idJointMat* ) Mem_ClearedAlloc( numInvertedJoints * sizeof( idJointMat ), TAG_JOINTMAT );
 		staticModel->jointsInvertedBuffer = 0;
+		staticModel->skinnedCache = 0;
 	}
 	else
 	{

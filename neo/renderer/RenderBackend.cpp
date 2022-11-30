@@ -58,7 +58,6 @@ idCVar r_useLightStencilSelect( "r_useLightStencilSelect", "0", CVAR_RENDERER | 
 
 extern idCVar stereoRender_swapEyes;
 
-
 /*
 ================
 SetVertexParm
@@ -803,6 +802,14 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 
 	renderLog.OpenMainBlock( MRB_FILL_DEPTH_BUFFER );
 	renderLog.OpenBlock( "Render_FillDepthBufferFast", colorBlue );
+
+	DepthPass::Context context;
+	RenderView( commandList, viewDef, nullptr, currentFrameBuffer->GetApiObject(), depthPass, context, true );
+
+	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
+
+	return;
 
 	// force MVP change on first surface
 	currentSpace = NULL;
@@ -6756,6 +6763,9 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	currentJointOffset = 0;
 #endif
 
+	UpdateSkinnedMeshes( _viewDef );
+	UpdateMaterialConstants( _viewDef );
+
 	//-------------------------------------------------
 	// RB_BeginDrawingView
 	//
@@ -7532,6 +7542,122 @@ void idRenderBackend::PostProcess( const void* data )
 	GL_SelectTexture( 0 );
 	globalImages->currentRenderImage->Bind();
 #endif
+
+	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
+}
+
+#define SkinningFlag_FirstFrame     0x01
+#define SkinningFlag_Normals        0x02
+#define SkinningFlag_Tangents       0x04
+#define SkinningFlag_TexCoord1      0x08
+#define SkinningFlag_TexCoord2      0x10
+
+void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
+{
+	renderLog.OpenMainBlock( MRB_UPDATE_BUFFERS );
+	renderLog.OpenBlock( "UpdatedSkinnedMeshes" );
+
+	int surfNum = 0;
+	for( ; surfNum < _viewDef->numDrawSurfs; surfNum++ )
+	{
+		const drawSurf_t* surf = _viewDef->drawSurfs[surfNum];
+
+		if( !surf->skinnedCache || !surf->jointCache || !surf->ambientCache )
+		{
+			continue;
+		}
+
+		renderLog.OpenBlock( surf->material->GetName() );
+
+		idVertexBuffer vb;
+		idUniformBuffer jb;
+		idVertexBuffer sb;
+		vertexCache.GetVertexBuffer( surf->ambientCache, &vb );
+		vertexCache.GetJointBuffer( surf->jointCache, &jb );
+		vertexCache.GetSkinnedVertexBuffer( surf->skinnedCache, &sb );
+
+		// todo: Store these binding sets with a cross-product of frame num for the respective buffer pointers.
+		nvrhi::BindingSetDesc setDesc;
+		setDesc.bindings =
+		{
+			nvrhi::BindingSetItem::PushConstants( 0, sizeof( SkinningConstants ) ),
+			nvrhi::BindingSetItem::RawBuffer_SRV( 0, vb.GetAPIObject() ),
+			nvrhi::BindingSetItem::StructuredBuffer_SRV( 1, jb.GetAPIObject(), nvrhi::Format::UNKNOWN, nvrhi::BufferRange( jb.GetOffset(), sizeof( idVec4 ) * 480 ) ),
+			nvrhi::BindingSetItem::RawBuffer_UAV( 0, sb.GetAPIObject() )
+		};
+
+		nvrhi::BindingSetHandle bindingSet = deviceManager->GetDevice()->createBindingSet( setDesc, skinningBindingLayout );
+
+		nvrhi::ComputeState state;
+		state.pipeline = skinningPipeline;
+		state.bindings = { bindingSet };
+		commandList->setComputeState( state );
+
+		// byte offsets for the buffers.
+		uint32 vertexOffset = vb.GetOffset();
+		uint32 outOffset = sb.GetOffset();
+		SkinningConstants constants{};
+		constants.numVertices = vb.GetSize() / sizeof( idDrawVert );
+		constants.flags = SkinningFlag_Normals | SkinningFlag_Tangents | SkinningFlag_TexCoord1;
+		constants.inputPositionOffset = vertexOffset;
+		constants.inputNormalOffset = vertexOffset + offsetof( idDrawVert, normal );
+		constants.inputTangentOffset = vertexOffset + offsetof( idDrawVert, tangent );
+		constants.inputTexCoord1Offset = vertexOffset + offsetof( idDrawVert, st );
+		constants.inputTexCoord2Offset = 0;
+		constants.inputJointIndexOffset = vertexOffset + offsetof( idDrawVert, color );
+		constants.inputJointWeightOffset = vertexOffset + offsetof( idDrawVert, color2 );
+		constants.outputPositionOffset = outOffset;
+		constants.outputPrevPositionOffset = 0;
+		constants.outputNormalOffset = outOffset + offsetof( idDrawVert, normal );
+		constants.outputTangentOffset = outOffset + offsetof( idDrawVert, tangent );
+		constants.outputTexCoord1Offset = outOffset + offsetof( idDrawVert, st );
+		commandList->setPushConstants( &constants, sizeof( constants ) );
+
+		commandList->dispatch( idMath::Ceil( ( float )constants.numVertices / 256.0f ) );
+
+		renderLog.CloseBlock();
+	}
+
+	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
+}
+
+void idRenderBackend::UpdateMaterialConstants( const viewDef_t* _viewDef )
+{
+	renderLog.OpenMainBlock( MRB_UPDATE_BUFFERS );
+	renderLog.OpenBlock( "UpdateMaterialConstants" );
+
+	int surfNum = 0;
+	for( ; surfNum < _viewDef->numDrawSurfs; surfNum++ )
+	{
+		drawSurf_t* surf = _viewDef->drawSurfs[ surfNum ];
+		if( !surf->material )
+		{
+			continue;
+		}
+
+		nvrhi::IBuffer* buffer = surf->material->GetConstantBuffer();
+
+		if( !buffer )
+		{
+			nvrhi::BufferDesc bufferDesc;
+			bufferDesc.byteSize = sizeof( MaterialConstants );
+			bufferDesc.debugName = va( "Constants for %s", surf->material->GetName() );
+			bufferDesc.isConstantBuffer = true;
+			bufferDesc.initialState = nvrhi::ResourceStates::ConstantBuffer;
+			bufferDesc.keepInitialState = true;
+
+			nvrhi::BufferHandle handle = deviceManager->GetDevice()->createBuffer( bufferDesc );
+			const_cast< idMaterial* >( surf->material )->SetConstantBuffer( handle );
+			buffer = handle;
+		}
+
+		MaterialConstants constants;
+		surf->material->FillConstantBuffer( constants, surf->shaderRegisters );
+
+		commandList->writeBuffer( buffer, &constants, sizeof( MaterialConstants ) );
+	}
 
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();

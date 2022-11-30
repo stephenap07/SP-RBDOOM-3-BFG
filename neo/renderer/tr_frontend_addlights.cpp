@@ -532,6 +532,7 @@ static void R_AddSingleLight( viewLight_t* vLight )
 		shadowDrawSurf->indexCache = tri->indexCache;
 		shadowDrawSurf->shadowCache = tri->shadowCache;
 		shadowDrawSurf->jointCache = 0;
+		shadowDrawSurf->skinnedCache = 0;
 		shadowDrawSurf->numIndexes = 0;
 		shadowDrawSurf->space = &viewDef->worldSpace;
 		shadowDrawSurf->material = NULL;

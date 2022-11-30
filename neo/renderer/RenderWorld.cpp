@@ -1080,6 +1080,7 @@ void idRenderWorldLocal::RenderScene( const renderView_t* renderView )
 	viewDef_t* parms = ( viewDef_t* )R_ClearedFrameAlloc( sizeof( *parms ), FRAME_ALLOC_VIEW_DEF );
 	parms->renderView = *renderView;
 	parms->targetRender = nullptr;
+	parms->viewport.Clear();
 
 	if( tr.takingScreenshot )
 	{

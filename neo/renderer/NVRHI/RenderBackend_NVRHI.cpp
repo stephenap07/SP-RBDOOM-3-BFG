@@ -199,6 +199,37 @@ void idRenderBackend::Init()
 	hiZGenPass = nullptr;
 	ssaoPass = nullptr;
 
+	{
+		idList<shaderMacro_t> macros;
+		int skinningShaderIndex = renderProgManager.FindShader( "builtin/skinning", SHADER_STAGE_COMPUTE, "", macros, true, LAYOUT_DRAW_VERT );
+		skinningShader = renderProgManager.GetShader( skinningShaderIndex );
+		{
+			nvrhi::BindingLayoutDesc layoutDesc;
+			layoutDesc.visibility = nvrhi::ShaderType::Compute;
+			layoutDesc.bindings =
+			{
+				nvrhi::BindingLayoutItem::PushConstants( 0, sizeof( SkinningConstants ) ),
+				nvrhi::BindingLayoutItem::RawBuffer_SRV( 0 ),
+				nvrhi::BindingLayoutItem::StructuredBuffer_SRV( 1 ),
+				nvrhi::BindingLayoutItem::RawBuffer_UAV( 0 )
+			};
+
+			skinningBindingLayout = deviceManager->GetDevice()->createBindingLayout( layoutDesc );
+		}
+
+		{
+			nvrhi::ComputePipelineDesc pipelineDesc;
+			pipelineDesc.bindingLayouts = { skinningBindingLayout };
+			pipelineDesc.CS = skinningShader;
+			skinningPipeline = deviceManager->GetDevice()->createComputePipeline( pipelineDesc );
+		}
+	}
+
+	DepthPass::CreateParameters shadowDepthParams;
+	//shadowDepthParams.slopeScaledDepthBias = 0;
+	//shadowDepthParams.depthBias = 0;
+	depthPass.Init( deviceManager->GetDevice(), &commonPasses, renderProgManager, shadowDepthParams );
+
 	// Maximum resolution of one tile within tiled shadow map. Resolution must be power of two and
 	// square, since quad-tree for managing tiles will not work correctly otherwise. Furthermore
 	// resolution must be at least 16.
@@ -259,6 +290,9 @@ void idRenderBackend::Init()
 
 	deviceManager->GetDevice()->waitForIdle();
 	deviceManager->GetDevice()->runGarbageCollection();
+
+	materialVersions.SetNum( declManager->GetNumDecls( DECL_MATERIAL ) );
+	SIMDProcessor->Memset( &materialVersions[ 0 ], 0, materialVersions.Num() );
 }
 
 void idRenderBackend::Shutdown()
@@ -304,124 +338,37 @@ idRenderBackend::DrawElementsWithCounters
 */
 void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 {
-	//
-	// get vertex buffer
-	//
-	const vertCacheHandle_t vbHandle = surf->ambientCache;
-	idVertexBuffer* vertexBuffer;
-	if( vertexCache.CacheIsStatic( vbHandle ) )
-	{
-		vertexBuffer = &vertexCache.staticData.vertexBuffer;
-	}
-	else
-	{
-		const uint64 frameNum = static_cast<uint64>( vbHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
-		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
-		{
-			idLib::Warning( "RB_DrawElementsWithCounters, vertexBuffer == NULL" );
-			return;
-		}
-		vertexBuffer = &vertexCache.frameData[vertexCache.drawListNum].vertexBuffer;
-	}
-	const uint vertOffset = static_cast<uint>( vbHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
-
 	bool changeState = false;
 
-	if( currentVertexOffset != vertOffset )
-	{
-		currentVertexOffset = vertOffset;
-	}
+	idVertexBuffer vertexBuffer;
+	vertexCache.GetVertexBuffer( surf->ambientCache, &vertexBuffer );
+	idIndexBuffer indexBuffer;
+	vertexCache.GetIndexBuffer( surf->indexCache, &indexBuffer );
+	idUniformBuffer jointBuffer;
+	vertexCache.GetJointBuffer( surf->jointCache, &jointBuffer );
 
-	if( currentVertexBuffer != vertexBuffer->GetAPIObject() || !r_useStateCaching.GetBool() )
+	if( currentVertexBuffer.Get() != vertexBuffer.GetAPIObject() ||
+			currentVertexOffset != vertexBuffer.GetOffset() )
 	{
-		currentVertexBuffer = vertexBuffer->GetAPIObject();
+		currentVertexBuffer = vertexBuffer.GetAPIObject();
+		currentVertexOffset = vertexBuffer.GetOffset();
 		changeState = true;
 	}
 
-	//
-	// get index buffer
-	//
-	const vertCacheHandle_t ibHandle = surf->indexCache;
-	idIndexBuffer* indexBuffer;
-	if( vertexCache.CacheIsStatic( ibHandle ) )
+	if( currentIndexBuffer.Get() != indexBuffer.GetAPIObject() ||
+			currentIndexOffset != indexBuffer.GetOffset() )
 	{
-		indexBuffer = &vertexCache.staticData.indexBuffer;
-	}
-	else
-	{
-		const uint64 frameNum = static_cast<uint64>( ibHandle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
-		if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
-		{
-			idLib::Warning( "RB_DrawElementsWithCounters, indexBuffer == NULL" );
-			return;
-		}
-		indexBuffer = &vertexCache.frameData[vertexCache.drawListNum].indexBuffer;
-	}
-	const uint indexOffset = static_cast<uint>( ibHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
-
-	if( currentIndexOffset != indexOffset )
-	{
-		currentIndexOffset = indexOffset;
-	}
-
-	if( currentIndexBuffer != indexBuffer->GetAPIObject() || !r_useStateCaching.GetBool() )
-	{
-		currentIndexBuffer = indexBuffer->GetAPIObject();
+		currentIndexBuffer = indexBuffer.GetAPIObject();
+		currentIndexOffset = indexBuffer.GetOffset();
 		changeState = true;
 	}
 
-	//
-	// get GPU Skinning joint buffer
-	//
-	const vertCacheHandle_t jointHandle = surf->jointCache;
-	currentJointBuffer = nullptr;
-	currentJointOffset = 0;
-
-#if 0
-	if( jointHandle )
+	if( currentJointBuffer != jointBuffer.GetAPIObject() ||
+			currentJointOffset != jointBuffer.GetOffset() )
 	{
-		//if( !verify( renderProgManager.ShaderUsesJoints() ) )
-		if( !renderProgManager.ShaderUsesJoints() )
-		{
-			return;
-		}
-	}
-	else
-	{
-		if( !verify( !renderProgManager.ShaderUsesJoints() || renderProgManager.ShaderHasOptionalSkinning() ) )
-		{
-			return;
-		}
-	}
-#endif
-
-	if( jointHandle )
-	{
-		const idUniformBuffer* jointBuffer = nullptr;
-
-		if( vertexCache.CacheIsStatic( jointHandle ) )
-		{
-			jointBuffer = &vertexCache.staticData.jointBuffer;
-		}
-		else
-		{
-			const uint64 frameNum = jointHandle >> VERTCACHE_FRAME_SHIFT & VERTCACHE_FRAME_MASK;
-			if( frameNum != ( ( vertexCache.currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
-			{
-				idLib::Warning( "RB_DrawElementsWithCounters, jointBuffer == NULL" );
-				return;
-			}
-			jointBuffer = &vertexCache.frameData[vertexCache.drawListNum].jointBuffer;
-		}
-
-		uint offset = static_cast<uint>( jointHandle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
-		if( currentJointBuffer != jointBuffer->GetAPIObject() || currentJointOffset != offset )
-		{
-			changeState = true;
-		}
-
-		currentJointBuffer = jointBuffer->GetAPIObject();
-		currentJointOffset = offset;
+		currentJointBuffer = jointBuffer.GetAPIObject();
+		currentJointOffset = jointBuffer.GetOffset();
+		changeState = true;
 	}
 
 	//

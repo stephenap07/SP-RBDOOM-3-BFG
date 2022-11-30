@@ -53,6 +53,8 @@ static void ClearGeoBufferSet( geoBufferSet_t& gbs )
 	gbs.vertexMemUsed.SetValue( 0 );
 	gbs.jointMemUsed.SetValue( 0 );
 	gbs.instanceMemUsed.SetValue( 0 );
+	gbs.skinnedMemUsed.SetValue( 0 );
+	gbs.materialMemUsed.SetValue( 0 );
 	gbs.allocations = 0;
 }
 
@@ -82,6 +84,16 @@ static void MapGeoBufferSet( geoBufferSet_t& gbs )
 	{
 		gbs.mappedInstanceBase = ( byte* )gbs.instanceBuffer.MapBuffer( BM_WRITE );
 	}
+
+	if( gbs.mappedSkinnedBase == NULL && gbs.skinnedBuffer.GetAllocedSize() != 0 )
+	{
+		gbs.mappedSkinnedBase = ( byte* )gbs.skinnedBuffer.MapBuffer( BM_WRITE );
+	}
+
+	if( gbs.mappedMaterialBase == NULL && gbs.materialBuffer.GetAllocedSize() != 0 )
+	{
+		gbs.mappedMaterialBase = ( byte* )gbs.materialBuffer.MapBuffer( BM_WRITE );
+	}
 }
 
 /*
@@ -108,26 +120,115 @@ static void UnmapGeoBufferSet( geoBufferSet_t& gbs )
 		gbs.jointBuffer.UnmapBuffer();
 		gbs.mappedJointBase = NULL;
 	}
+
+	if( gbs.mappedInstanceBase != NULL )
+	{
+		gbs.instanceBuffer.UnmapBuffer();
+		gbs.mappedInstanceBase = NULL;
+	}
+
+	if( gbs.mappedSkinnedBase != NULL )
+	{
+		gbs.skinnedBuffer.UnmapBuffer();
+		gbs.mappedSkinnedBase = NULL;
+	}
+
+	if( gbs.mappedMaterialBase != NULL )
+	{
+		gbs.materialBuffer.UnmapBuffer();
+		gbs.mappedMaterialBase = NULL;
+	}
 }
+
+static int allocFrameNum = 0;
+
+struct BufferData
+{
+	int vertexBytes = 0;
+	int indexBytes = 0;
+	int jointBytes = 0;
+	int instanceBytes = 0;
+	int skinnedBytes = 0;
+	int materialBytes = 0;
+};
 
 /*
 ==============
 AllocGeoBufferSet
 ==============
 */
-static void AllocGeoBufferSet( geoBufferSet_t& gbs, const int vertexBytes, const int indexBytes, const int jointBytes, bufferUsageType_t usage, nvrhi::ICommandList* commandList )
+static void AllocGeoBufferSet( geoBufferSet_t& gbs, BufferData bufferData, bufferUsageType_t usage, nvrhi::ICommandList* commandList )
 {
-	gbs.vertexBuffer.AllocBufferObject( NULL, vertexBytes, usage, commandList );
-	gbs.indexBuffer.AllocBufferObject( NULL, indexBytes, usage, commandList );
-	if( jointBytes > 0 )
+	idStr usageStr = ( usage == BU_STATIC ) ? "Static" : "Mapped";
+	idStr vertexBufferName = usageStr;
+	vertexBufferName.Append( " Vertex Buffer" );
+
+	uintptr_t f = allocFrameNum;
+
+	if( usage == BU_DYNAMIC )
 	{
-		gbs.jointBuffer.AllocBufferObject( NULL, jointBytes, usage, commandList );
+		vertexBufferName.Append( va( " [Frame % d]", ( int )f ) );
+	}
+	gbs.vertexBuffer.AllocBufferObject( NULL, bufferData.vertexBytes, usage, commandList );
+
+	idStr indexBufferName = usageStr;
+	indexBufferName.Append( " Index Buffer" );
+	if( usage == BU_DYNAMIC )
+	{
+		indexBufferName.Append( va( " [Frame % d]", ( int )f ) );
+	}
+	gbs.indexBuffer.SetDebugName( indexBufferName.c_str() );
+	gbs.indexBuffer.AllocBufferObject( NULL, bufferData.indexBytes, usage, commandList );
+
+	if( bufferData.jointBytes > 0 )
+	{
+		gbs.jointBuffer.AllocBufferObject( NULL, bufferData.jointBytes, sizeof( idVec4 ), usage, commandList );
 	}
 
-	int num = vertexBytes / sizeof( idDrawVert );
-	gbs.instanceBuffer.AllocBufferObject( NULL, num * sizeof( idInstanceData ), usage, commandList );
+	idStr instanceBufferName = usageStr;
+	instanceBufferName.Append( " Instance Buffer" );
+	if( usage == BU_DYNAMIC )
+	{
+		instanceBufferName.Append( va( " [Frame % d]", ( int )f ) );
+	}
+	gbs.instanceBuffer.SetDebugName( instanceBufferName.c_str() );
+	if( bufferData.instanceBytes > 0 )
+	{
+		gbs.instanceBuffer.AllocBufferObject( NULL, bufferData.instanceBytes, usage, commandList );
+	}
+
+	// maybe only allocate static for skinned vertices. these should change on a variable basis every 1 or 2 frames.
+	idStr skinnedVertexBufferName = usageStr;
+	skinnedVertexBufferName.Append( " Skinned Vertex Buffer" );
+	if( usage == BU_DYNAMIC )
+	{
+		skinnedVertexBufferName.Append( va( " [Frame % d]", ( int )f ) );
+	}
+	gbs.skinnedBuffer.SetDebugName( skinnedVertexBufferName.c_str() );
+	if( bufferData.skinnedBytes > 0 )
+	{
+		gbs.skinnedBuffer.AllocBufferObject( NULL, bufferData.skinnedBytes, usage, commandList );
+	}
+
+	// maybe only allocate static for skinned vertices. these should change on a variable basis every 1 or 2 frames.
+	idStr materialBufferName = usageStr;
+	materialBufferName.Append( " Material Buffer" );
+	if( usage == BU_DYNAMIC )
+	{
+		materialBufferName.Append( va( " [Frame % d]", ( int )f ) );
+	}
+	gbs.materialBuffer.SetDebugName( materialBufferName.c_str() );
+	if( bufferData.materialBytes > 0 )
+	{
+		gbs.materialBuffer.AllocBufferObject( NULL, bufferData.materialBytes, 0, usage, commandList );
+	}
 
 	ClearGeoBufferSet( gbs );
+
+	if( usage == BU_DYNAMIC )
+	{
+		allocFrameNum++;
+	}
 }
 
 /*
@@ -146,18 +247,33 @@ void idVertexCache::Init( int _uniformBufferOffsetAlignment, nvrhi::ICommandList
 	mostUsedIndex = 0;
 	mostUsedJoint = 0;
 
+	allocFrameNum = 0;
+
 	nvrhi::CommandListParameters parms;
 	parms.setQueueType( nvrhi::CommandQueue::Copy );
 
+	BufferData mappedData;
+	mappedData.vertexBytes = VERTCACHE_VERTEX_MEMORY_PER_FRAME;
+	mappedData.indexBytes = VERTCACHE_INDEX_MEMORY_PER_FRAME;
+	mappedData.jointBytes = VERTCACHE_JOINT_MEMORY_PER_FRAME;
+	mappedData.instanceBytes = VERTCACHE_INSTANCE_MEMORY_PER_FRAME;
+	mappedData.skinnedBytes = VERTCACHE_SKINNED_VERTEX_MEMORY_PER_FRAME;
+	mappedData.materialBytes = VERTCACHE_MATERIAL_MEMORY_PER_FRAME;
+
+	BufferData staticBufferData;
+	staticBufferData.vertexBytes = STATIC_VERTEX_MEMORY;
+	staticBufferData.indexBytes = STATIC_INDEX_MEMORY;
+	staticBufferData.jointBytes = 0;
+	staticBufferData.instanceBytes = 0;
+	staticBufferData.skinnedBytes = STATIC_SKINNED_VERTEX_MEMORY;
+	staticBufferData.materialBytes = 0;
+
 	for( int i = 0; i < NUM_FRAME_DATA; i++ )
 	{
-		AllocGeoBufferSet( frameData[i], VERTCACHE_VERTEX_MEMORY_PER_FRAME, VERTCACHE_INDEX_MEMORY_PER_FRAME, VERTCACHE_JOINT_MEMORY_PER_FRAME, BU_DYNAMIC, commandList );
+		AllocGeoBufferSet( frameData[i], mappedData, BU_DYNAMIC, commandList );
 	}
-#if 1
-	AllocGeoBufferSet( staticData, STATIC_VERTEX_MEMORY, STATIC_INDEX_MEMORY, 0, BU_STATIC, commandList );
-#else
-	AllocGeoBufferSet( staticData, STATIC_VERTEX_MEMORY, STATIC_INDEX_MEMORY, 0, BU_DYNAMIC, commandList );
-#endif
+
+	AllocGeoBufferSet( staticData, staticBufferData, BU_STATIC, commandList );
 
 	MapGeoBufferSet( frameData[ listNum ] );
 }
@@ -175,6 +291,8 @@ void idVertexCache::Shutdown()
 		frameData[i].indexBuffer.FreeBufferObject();
 		frameData[i].jointBuffer.FreeBufferObject();
 		frameData[i].instanceBuffer.FreeBufferObject();
+		frameData[i].skinnedBuffer.FreeBufferObject();
+		frameData[i].materialBuffer.FreeBufferObject();
 	}
 
 	// SRS - free static buffers to avoid Vulkan validation layer errors on shutdown
@@ -182,6 +300,8 @@ void idVertexCache::Shutdown()
 	staticData.indexBuffer.FreeBufferObject();
 	staticData.jointBuffer.FreeBufferObject();
 	staticData.instanceBuffer.FreeBufferObject();
+	staticData.skinnedBuffer.FreeBufferObject();
+	staticData.materialBuffer.FreeBufferObject();
 }
 
 /*
@@ -316,6 +436,46 @@ vertCacheHandle_t idVertexCache::ActuallyAlloc( geoBufferSet_t& vcs, const void*
 			}
 			break;
 		}
+		case CACHE_SKINNED_VERTEX:
+		{
+			endPos = vcs.skinnedMemUsed.Add( bytes );
+			if( endPos > vcs.skinnedBuffer.GetAllocedSize() )
+			{
+				idLib::Error( "Out of skinned vertex cache" );
+			}
+
+			offset = endPos - bytes;
+
+			if( data != NULL )
+			{
+				if( vcs.skinnedBuffer.GetUsage() == BU_DYNAMIC )
+				{
+					MapGeoBufferSet( vcs );
+				}
+				vcs.skinnedBuffer.Update( data, bytes, offset, false, commandList );
+			}
+			break;
+		}
+		case CACHE_MATERIAL:
+		{
+			endPos = vcs.materialMemUsed.Add( bytes );
+			if( endPos > vcs.materialBuffer.GetAllocedSize() )
+			{
+				idLib::Error( "Out of material cache" );
+			}
+
+			offset = endPos - bytes;
+
+			if( data != NULL )
+			{
+				if( vcs.materialBuffer.GetUsage() == BU_DYNAMIC )
+				{
+					MapGeoBufferSet( vcs );
+				}
+				vcs.materialBuffer.Update( data, bytes, offset, false, commandList );
+			}
+			break;
+		}
 		default:
 			assert( false );
 	}
@@ -369,7 +529,27 @@ idVertexCache::AllocInstance
 */
 vertCacheHandle_t idVertexCache::AllocInstance( const void* data, int num, size_t size, nvrhi::ICommandList* commandList )
 {
-	return ActuallyAlloc( frameData[listNum], data, ALIGN( num * size, VERTEX_CACHE_ALIGN ), CACHE_INSTANCE, commandList );
+	return ActuallyAlloc( frameData[ listNum ], data, ALIGN( num * size, VERTEX_CACHE_ALIGN ), CACHE_INSTANCE, commandList );
+}
+
+/*
+==============
+idVertexCache::AllocSkinnedVertex
+==============
+*/
+vertCacheHandle_t idVertexCache::AllocSkinnedVertex( const void* data, int num, size_t size, nvrhi::ICommandList* commandList )
+{
+	return ActuallyAlloc( frameData[ listNum ], data, ALIGN( num * size, VERTEX_CACHE_ALIGN ), CACHE_SKINNED_VERTEX, commandList );
+}
+
+/*
+==============
+idVertexCache::AllocMaterial
+==============
+*/
+vertCacheHandle_t idVertexCache::AllocMaterial( const void* data, int num, size_t size, nvrhi::ICommandList* commandList )
+{
+	return ActuallyAlloc( frameData[ listNum ], data, ALIGN( num * size, MATERIAL_CACHE_ALIGN ), CACHE_MATERIAL, commandList );
 }
 
 /*
@@ -416,6 +596,20 @@ vertCacheHandle_t idVertexCache::AllocStaticInstance( const void* data, int byte
 
 /*
 ==============
+idVertexCache::AllocStaticSkinnedVertex
+==============
+*/
+vertCacheHandle_t idVertexCache::AllocStaticSkinnedVertex( const void* data, int bytes, nvrhi::ICommandList* commandList )
+{
+	if( staticData.skinnedMemUsed.GetValue() + bytes > STATIC_VERTEX_MEMORY )
+	{
+		idLib::FatalError( "AllocStaticSkinnedVertex failed, increase STATIC_VERTEX_MEMORY" );
+	}
+	return ActuallyAlloc( staticData, data, bytes, CACHE_SKINNED_VERTEX, commandList );
+}
+
+/*
+==============
 idVertexCache::MappedVertexBuffer
 ==============
 */
@@ -440,6 +634,16 @@ byte* idVertexCache::MappedIndexBuffer( vertCacheHandle_t handle )
 	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
 	release_assert( frameNum == ( currentFrame & VERTCACHE_FRAME_MASK ) );
 	return frameData[ listNum ].mappedIndexBase + offset;
+}
+
+/*
+==============
+idVertexCache::MappedSkinnedVertexBuffer
+==============
+*/
+byte* idVertexCache::MappedSkinnedVertexBuffer( vertCacheHandle_t handle )
+{
+	return nullptr;
 }
 
 /*
@@ -555,6 +759,54 @@ bool idVertexCache::GetInstanceBuffer( vertCacheHandle_t handle, idVertexBuffer*
 
 /*
 ==============
+idVertexCache::GetSkinnedVertexBuffer
+==============
+*/
+bool idVertexCache::GetSkinnedVertexBuffer( vertCacheHandle_t handle, idVertexBuffer* vb )
+{
+	const int isStatic = handle & VERTCACHE_STATIC;
+	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+	const uint64 offset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+	if( isStatic )
+	{
+		vb->Reference( staticData.skinnedBuffer, offset, numBytes );
+		return true;
+	}
+	if( frameNum != ( ( currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
+	{
+		return false;
+	}
+	vb->Reference( frameData[drawListNum].skinnedBuffer, offset, numBytes );
+	return true;
+}
+
+/*
+==============
+idVertexCache::GetMaterialBuffer
+==============
+*/
+bool idVertexCache::GetMaterialBuffer( vertCacheHandle_t handle, idUniformBuffer* mb )
+{
+	const int isStatic = handle & VERTCACHE_STATIC;
+	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+	const uint64 offset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+	if( isStatic )
+	{
+		mb->Reference( staticData.materialBuffer, offset, numBytes );
+		return true;
+	}
+	if( frameNum != ( ( currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
+	{
+		return false;
+	}
+	mb->Reference( frameData[ drawListNum ].materialBuffer, offset, numBytes );
+	return true;
+}
+
+/*
+==============
 idVertexCache::BeginBackEnd
 ==============
 */
@@ -563,17 +815,20 @@ void idVertexCache::BeginBackEnd()
 	mostUsedVertex = Max( mostUsedVertex, frameData[ listNum ].vertexMemUsed.GetValue() );
 	mostUsedIndex = Max( mostUsedIndex, frameData[ listNum ].indexMemUsed.GetValue() );
 	mostUsedJoint = Max( mostUsedJoint, frameData[ listNum ].jointMemUsed.GetValue() );
+	mostUsedInstance = Max( mostUsedInstance, frameData[listNum].instanceMemUsed.GetValue() );
 
 	if( r_showVertexCache.GetBool() )
 	{
-		idLib::Printf( "%08d: %d allocations, %dkB vertex, %dkB index, %ikB joint : %dkB vertex, %dkB index, %ikB joint\n",
+		idLib::Printf( "%08d: %d allocations, %dkB vertex, %dkB index, %ikB joint, instance %ikB: %dkB vertex, %dkB index, %ikB joint, %ikB instance\n",
 					   currentFrame, frameData[ listNum ].allocations,
 					   frameData[ listNum ].vertexMemUsed.GetValue() / 1024,
 					   frameData[ listNum ].indexMemUsed.GetValue() / 1024,
 					   frameData[ listNum ].jointMemUsed.GetValue() / 1024,
+					   frameData[ listNum ].instanceMemUsed.GetValue() / 1024,
 					   mostUsedVertex / 1024,
 					   mostUsedIndex / 1024,
-					   mostUsedJoint / 1024 );
+					   mostUsedJoint / 1024,
+					   mostUsedInstance / 1024 );
 	}
 
 	// unmap the current frame so the GPU can read it
