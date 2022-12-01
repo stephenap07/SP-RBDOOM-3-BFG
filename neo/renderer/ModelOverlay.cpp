@@ -715,6 +715,8 @@ drawSurf_t* idRenderModelOverlay::CreateOverlayDrawSurf( const viewEntity_t* spa
 	int numVerts = 0;
 	int numIndexes = 0;
 
+	vertCacheHandle_t skinnedCache = 0;
+
 	for( unsigned int i = firstOverlay; i < nextOverlay; i++ )
 	{
 		overlay_t& overlay = overlays[i & ( MAX_OVERLAYS - 1 )];
@@ -773,6 +775,8 @@ drawSurf_t* idRenderModelOverlay::CreateOverlayDrawSurf( const viewEntity_t* spa
 		// use SIMD optimized routine to copy the vertices and indices directly to write-combined memory
 		R_CopyOverlaySurface( mappedVerts, numVerts, mappedIndexes, numIndexes, &overlay, baseTri->verts );
 
+		//skinnedCache = vertexCache.AllocSkinnedVertex( NULL, numVerts, sizeof( idDrawVert ) );
+
 		numIndexes += overlay.numIndexes;
 		numVerts += overlay.numVerts;
 	}
@@ -786,6 +790,7 @@ drawSurf_t* idRenderModelOverlay::CreateOverlayDrawSurf( const viewEntity_t* spa
 	drawSurf->numIndexes = newTri->numIndexes;
 	drawSurf->ambientCache = newTri->ambientCache;
 	drawSurf->indexCache = newTri->indexCache;
+	//drawSurf->skinnedCache = skinnedCache;
 	drawSurf->shadowCache = 0;
 	drawSurf->space = space;
 	drawSurf->scissorRect = space->scissorRect;

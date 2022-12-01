@@ -139,6 +139,44 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	return !allocationFailed;
 }
 
+bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUsageType_t bufferUsage, nvrhi::BufferDesc bufferDesc, nvrhi::ICommandList* commandList )
+{
+	assert( !bufferHandle );
+	assert_16_byte_aligned( data );
+
+	if( allocSize <= 0 )
+	{
+		idLib::Error( "idVertexBuffer::AllocBufferObject: allocSize = %i", allocSize );
+	}
+
+	size = allocSize;
+	usage = bufferUsage;
+
+	bool allocationFailed = false;
+
+	int numBytes = GetAllocedSize();
+	bufferDesc.byteSize = numBytes;
+	if( usage == BU_DYNAMIC )
+	{
+		bufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	}
+
+	bufferHandle = deviceManager->GetDevice()->createBuffer( bufferDesc );
+
+	if( r_showBuffers.GetBool() )
+	{
+		idLib::Printf( "vertex buffer alloc %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
+	}
+
+	// copy the data
+	if( data )
+	{
+		Update( data, allocSize, 0, true, commandList );
+	}
+
+	return !allocationFailed;
+}
+
 /*
 ========================
 idVertexBuffer::FreeBufferObject
@@ -539,6 +577,43 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, int st
 	if( data )
 	{
 		Update( data, allocSize, 0, true, commandList );
+	}
+
+	return true;
+}
+
+bool idUniformBuffer::AllocBufferObject( const void* data, nvrhi::BufferDesc bufferDesc, bufferUsageType_t allocatedUsage, nvrhi::ICommandList* commandList )
+{
+	assert( !bufferHandle );
+	assert_16_byte_aligned( data );
+
+	if( bufferDesc.byteSize <= 0 )
+	{
+		idLib::Error( "idUniformBuffer::AllocBufferObject: allocSize = %i", bufferDesc.byteSize );
+	}
+
+	size = bufferDesc.byteSize;
+	usage = allocatedUsage;
+
+	const int numBytes = GetAllocedSize();
+
+	if( usage == BU_DYNAMIC )
+	{
+		//bufferDesc.initialState = nvrhi::ResourceStates::ShaderResource;
+		bufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	}
+
+	bufferHandle = deviceManager->GetDevice()->createBuffer( bufferDesc );
+
+	if( !bufferHandle )
+	{
+		return false;
+	}
+
+	// copy the data
+	if( data )
+	{
+		Update( data, bufferDesc.byteSize, 0, true, commandList );
 	}
 
 	return true;

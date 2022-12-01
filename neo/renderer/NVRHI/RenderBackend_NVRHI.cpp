@@ -341,7 +341,14 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 	bool changeState = false;
 
 	idVertexBuffer vertexBuffer;
-	vertexCache.GetVertexBuffer( surf->ambientCache, &vertexBuffer );
+	if( surf->skinnedCache )
+	{
+		vertexCache.GetSkinnedVertexBuffer( surf->skinnedCache, &vertexBuffer );
+	}
+	else
+	{
+		vertexCache.GetVertexBuffer( surf->ambientCache, &vertexBuffer );
+	}
 	idIndexBuffer indexBuffer;
 	vertexCache.GetIndexBuffer( surf->indexCache, &indexBuffer );
 	idUniformBuffer jointBuffer;

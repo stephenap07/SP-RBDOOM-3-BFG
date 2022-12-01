@@ -204,10 +204,22 @@ static void AllocGeoBufferSet( geoBufferSet_t& gbs, BufferData bufferData, buffe
 	{
 		skinnedVertexBufferName.Append( va( " [Frame % d]", ( int )f ) );
 	}
-	gbs.skinnedBuffer.SetDebugName( skinnedVertexBufferName.c_str() );
+	nvrhi::BufferDesc skinnedDesc;
+	skinnedDesc.isVertexBuffer = true;
+	skinnedDesc.debugName = skinnedVertexBufferName.c_str();
+	skinnedDesc.canHaveTypedViews = true;
+	skinnedDesc.canHaveRawViews = true;
+	skinnedDesc.canHaveUAVs = true;
+	skinnedDesc.keepInitialState = true;
+	skinnedDesc.initialState = nvrhi::ResourceStates::VertexBuffer;
+	if( usage == BU_DYNAMIC )
+	{
+		skinnedDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+	}
+
 	if( bufferData.skinnedBytes > 0 )
 	{
-		gbs.skinnedBuffer.AllocBufferObject( NULL, bufferData.skinnedBytes, usage, commandList );
+		gbs.skinnedBuffer.AllocBufferObject( NULL, bufferData.skinnedBytes, usage, skinnedDesc, commandList );
 	}
 
 	// maybe only allocate static for skinned vertices. these should change on a variable basis every 1 or 2 frames.

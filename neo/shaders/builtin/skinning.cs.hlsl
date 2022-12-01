@@ -49,6 +49,10 @@ register( b0 )
 
 #endif
 
+// GPU half-float bit patterns
+#define HF_MANTISSA(x)	(x&1023)
+#define HF_EXP(x)		((x&32767)>>10)
+#define HF_SIGN(x)		((x&32768)?-1:1)
 
 [numthreads( 256, 1, 1 )]
 void main( in uint i_globalIdx : SV_DispatchThreadID )
@@ -66,28 +70,29 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 	float4 tangent = 0;
 	uint texCoord1 = 0;
 	uint texCoord2 = 0;
+	const float divisor = 1.0 / 255.0;
 
 	if( g_Const.flags & SkinningFlag_Normals )
 	{
-		normal = Unpack_RGBA8_SNORM( t_VertexBuffer.Load( offset + g_Const.inputNormalOffset ) );
+		normal = UIntToFloat4( t_VertexBuffer.Load( offset + g_Const.inputNormalOffset ) );
 	}
 
 	if( g_Const.flags & SkinningFlag_Tangents )
 	{
-		tangent = Unpack_RGBA8_SNORM( t_VertexBuffer.Load( offset + g_Const.inputTangentOffset ) );
+		tangent = UIntToFloat4( t_VertexBuffer.Load( offset + g_Const.inputTangentOffset ) );
 	}
 
 	if( g_Const.flags & SkinningFlag_TexCoord1 )
 	{
+		// two half floats
 		texCoord1 = t_VertexBuffer.Load( offset + g_Const.inputTexCoord1Offset );
 	}
 
 	if( g_Const.flags & SkinningFlag_TexCoord2 )
 	{
+		// two half floats
 		texCoord2 = t_VertexBuffer.Load( offset + g_Const.inputTexCoord2Offset );
 	}
-
-	float divisor = 1.0 / 255.0;
 
 	uint jp = t_VertexBuffer.Load( offset + g_Const.inputJointIndexOffset );
 	float4 jointIndices = float4( ( ( jp >> 0 ) & 0xff ),
@@ -144,21 +149,21 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 
 	if( g_Const.flags & SkinningFlag_Normals )
 	{
-		u_VertexBuffer.Store( offset + g_Const.outputNormalOffset, Pack_RGBA8_SNORM( normal ) );
+		u_VertexBuffer.Store( offset + g_Const.outputNormalOffset, Float4ToUInt( normal ) );
 	}
 
 	if( g_Const.flags & SkinningFlag_Tangents )
 	{
-		u_VertexBuffer.Store( offset + g_Const.outputTangentOffset, Pack_RGBA8_SNORM( tangent ) );
+		u_VertexBuffer.Store( offset + g_Const.outputTangentOffset, Float4ToUInt( tangent ) );
 	}
 
 	if( g_Const.flags & SkinningFlag_TexCoord1 )
 	{
-		u_VertexBuffer.Store2( offset + g_Const.outputTexCoord1Offset, texCoord1 );
+		u_VertexBuffer.Store( offset + g_Const.outputTexCoord1Offset, texCoord1 );
 	}
 
 	if( g_Const.flags & SkinningFlag_TexCoord2 )
 	{
-		u_VertexBuffer.Store2( offset + g_Const.outputTexCoord2Offset, texCoord2 );
+		u_VertexBuffer.Store( offset + g_Const.outputTexCoord2Offset, texCoord2 );
 	}
 }

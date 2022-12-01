@@ -366,7 +366,7 @@ void idRenderBackend::PrepareStageTexturing( const shaderStage_t* pStage,  const
 
 			GL_SelectTexture( 0 );
 
-			if( surf->jointCache )
+			if( false && surf->jointCache )
 			{
 				renderProgManager.BindShader_BumpyEnvironmentSkinned();
 			}
@@ -377,7 +377,7 @@ void idRenderBackend::PrepareStageTexturing( const shaderStage_t* pStage,  const
 		}
 		else
 		{
-			if( surf->jointCache )
+			if( false && surf->jointCache )
 			{
 				renderProgManager.BindShader_EnvironmentSkinned();
 			}
@@ -694,7 +694,7 @@ void idRenderBackend::FillDepthBufferGeneric( const drawSurf_t* const* drawSurfs
 				idVec4 alphaTestValue( regs[ pStage->alphaTestRegister ] );
 				SetFragmentParm( RENDERPARM_ALPHA_TEST, alphaTestValue.ToFloatPtr() );
 
-				if( drawSurf->jointCache )
+				if( false && drawSurf->jointCache )
 				{
 					renderProgManager.BindShader_TextureVertexColorSkinned();
 				}
@@ -745,7 +745,7 @@ void idRenderBackend::FillDepthBufferGeneric( const drawSurf_t* const* drawSurfs
 			}
 			else
 			{
-				if( drawSurf->jointCache )
+				if( false && drawSurf->jointCache )
 				{
 					renderProgManager.BindShader_DepthSkinned();
 				}
@@ -866,7 +866,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 
 		renderLog.OpenBlock( shader->GetName(), colorMdGrey );
 
-		if( surf->jointCache )
+		if( false && surf->jointCache )
 		{
 			renderProgManager.BindShader_DepthSkinned();
 		}
@@ -1086,7 +1086,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		if( specUsage == TD_SPECULAR_PBR_RMAO || specUsage == TD_SPECULAR_PBR_RMAOD )
 		{
 			// PBR path with roughness, metal and AO
-			if( din->surf->jointCache )
+			if( false && din->surf->jointCache )
 			{
 				renderProgManager.BindShader_ImageBasedLightGridSkinned_PBR();
 			}
@@ -1097,7 +1097,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		}
 		else
 		{
-			if( din->surf->jointCache )
+			if( false && din->surf->jointCache )
 			{
 				renderProgManager.BindShader_ImageBasedLightGridSkinned();
 			}
@@ -1168,7 +1168,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		if( specUsage == TD_SPECULAR_PBR_RMAO || specUsage == TD_SPECULAR_PBR_RMAOD )
 		{
 			// PBR path with roughness, metal and AO
-			if( din->surf->jointCache )
+			if( false && din->surf->jointCache )
 			{
 				renderProgManager.BindShader_ImageBasedLightingSkinned_PBR();
 			}
@@ -1179,7 +1179,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		}
 		else
 		{
-			if( din->surf->jointCache )
+			if( false && din->surf->jointCache )
 			{
 				renderProgManager.BindShader_ImageBasedLightingSkinned();
 			}
@@ -1229,7 +1229,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 
 			if( din->vLight->lightShader->IsAmbientLight() )
 			{
-				if( din->surf->jointCache )
+				if( false && din->surf->jointCache )
 				{
 					renderProgManager.BindShader_PBR_InteractionAmbientSkinned();
 				}
@@ -1250,7 +1250,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						{
 							if( din->vLight->parallel )
 							{
-								if( din->surf->jointCache )
+								if( false && din->surf->jointCache )
 								{
 									renderProgManager.BindShader_PBR_Interaction_ShadowAtlas_Parallel_Skinned();
 								}
@@ -1261,7 +1261,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 							}
 							else if( din->vLight->pointLight )
 							{
-								if( din->surf->jointCache )
+								if( false && din->surf->jointCache )
 								{
 									renderProgManager.BindShader_PBR_Interaction_ShadowAtlas_Point_Skinned();
 								}
@@ -1272,7 +1272,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 							}
 							else
 							{
-								if( din->surf->jointCache )
+								if( false && din->surf->jointCache )
 								{
 									renderProgManager.BindShader_PBR_Interaction_ShadowAtlas_Spot_Skinned();
 								}
@@ -1285,7 +1285,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						else
 						{
 							// no shadowmap allocation possible
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_PBR_InteractionSkinned();
 							}
@@ -1301,7 +1301,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 
 						if( din->vLight->parallel )
 						{
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Parallel_Skinned();
 							}
@@ -1312,7 +1312,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						}
 						else if( din->vLight->pointLight )
 						{
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Point_Skinned();
 							}
@@ -1323,7 +1323,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						}
 						else
 						{
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_PBR_Interaction_ShadowMapping_Spot_Skinned();
 							}
@@ -1336,7 +1336,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 				}
 				else
 				{
-					if( din->surf->jointCache )
+					if( false && din->surf->jointCache )
 					{
 						renderProgManager.BindShader_PBR_InteractionSkinned();
 					}
@@ -1353,7 +1353,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 
 			if( din->vLight->lightShader->IsAmbientLight() )
 			{
-				if( din->surf->jointCache )
+				if( false && din->surf->jointCache )
 				{
 					renderProgManager.BindShader_InteractionAmbientSkinned();
 				}
@@ -1374,7 +1374,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						{
 							if( din->vLight->parallel )
 							{
-								if( din->surf->jointCache )
+								if( false && din->surf->jointCache )
 								{
 									renderProgManager.BindShader_Interaction_ShadowAtlas_Parallel_Skinned();
 								}
@@ -1385,7 +1385,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 							}
 							else if( din->vLight->pointLight )
 							{
-								if( din->surf->jointCache )
+								if( false && din->surf->jointCache )
 								{
 									renderProgManager.BindShader_Interaction_ShadowAtlas_Point_Skinned();
 								}
@@ -1396,7 +1396,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 							}
 							else
 							{
-								if( din->surf->jointCache )
+								if( false && din->surf->jointCache )
 								{
 									renderProgManager.BindShader_Interaction_ShadowAtlas_Spot_Skinned();
 								}
@@ -1409,7 +1409,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						else
 						{
 							// no shadowmap allocation possible
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_InteractionSkinned();
 							}
@@ -1425,7 +1425,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 
 						if( din->vLight->parallel )
 						{
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_Interaction_ShadowMapping_Parallel_Skinned();
 							}
@@ -1436,7 +1436,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						}
 						else if( din->vLight->pointLight )
 						{
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_Interaction_ShadowMapping_Point_Skinned();
 							}
@@ -1447,7 +1447,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 						}
 						else
 						{
-							if( din->surf->jointCache )
+							if( false && din->surf->jointCache )
 							{
 								renderProgManager.BindShader_Interaction_ShadowMapping_Spot_Skinned();
 							}
@@ -1460,7 +1460,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 				}
 				else
 				{
-					if( din->surf->jointCache )
+					if( false && din->surf->jointCache )
 					{
 						renderProgManager.BindShader_InteractionSkinned();
 					}
@@ -2267,7 +2267,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 				// TODO support PBR textures and store roughness in the alpha channel
 
 				// fill geometry buffer with normal/roughness information
-				if( drawSurf->jointCache )
+				if( false && drawSurf->jointCache )
 				{
 					renderProgManager.BindShader_SmallGeometryBufferSkinned();
 				}
@@ -2664,7 +2664,7 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 
 		if( r_showShadows.GetInteger() == 0 )
 		{
-			if( drawSurf->jointCache )
+			if( false && drawSurf->jointCache )
 			{
 				renderProgManager.BindShader_ShadowSkinned();
 			}
@@ -2675,7 +2675,7 @@ void idRenderBackend::StencilShadowPass( const drawSurf_t* drawSurfs, const view
 		}
 		else
 		{
-			if( drawSurf->jointCache )
+			if( false && drawSurf->jointCache )
 			{
 				renderProgManager.BindShader_ShadowDebugSkinned();
 			}
@@ -3402,7 +3402,7 @@ void idRenderBackend::ShadowMapPassPerforated( const drawSurf_t** drawSurfs, int
 				idVec4 alphaTestValue( regs[ pStage->alphaTestRegister ] );
 				SetFragmentParm( RENDERPARM_ALPHA_TEST, alphaTestValue.ToFloatPtr() );
 
-				if( drawSurf->jointCache )
+				if( false && drawSurf->jointCache )
 				{
 					renderProgManager.BindShader_TextureVertexColorSkinned();
 				}
@@ -3439,7 +3439,7 @@ void idRenderBackend::ShadowMapPassPerforated( const drawSurf_t** drawSurfs, int
 
 		if( !didDraw )
 		{
-			if( drawSurf->jointCache )
+			if( false && drawSurf->jointCache )
 			{
 				renderProgManager.BindShader_DepthSkinned();
 			}
@@ -3654,7 +3654,7 @@ void idRenderBackend::ShadowMapPassFast( const drawSurf_t* drawSurfs, viewLight_
 
 		renderLog.OpenBlock( shader->GetName(), colorMdGrey );
 
-		if( drawSurf->jointCache )
+		if( false && drawSurf->jointCache )
 		{
 			renderProgManager.BindShader_DepthSkinned();
 		}
@@ -3916,7 +3916,7 @@ void idRenderBackend::ShadowMapPassOld( const drawSurf_t* drawSurfs, viewLight_t
 				idVec4 alphaTestValue( regs[ pStage->alphaTestRegister ] );
 				SetFragmentParm( RENDERPARM_ALPHA_TEST, alphaTestValue.ToFloatPtr() );
 
-				if( drawSurf->jointCache )
+				if( false && drawSurf->jointCache )
 				{
 					renderProgManager.BindShader_TextureVertexColorSkinned();
 				}
@@ -3954,7 +3954,7 @@ void idRenderBackend::ShadowMapPassOld( const drawSurf_t* drawSurfs, viewLight_t
 
 		if( !didDraw )
 		{
-			if( drawSurf->jointCache )
+			if( false && drawSurf->jointCache )
 			{
 				renderProgManager.BindShader_DepthSkinned();
 			}
@@ -4801,7 +4801,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				}
 
 				// set rpEnableSkinning if the shader has optional support for skinning
-				if( surf->jointCache && renderProgManager.ShaderHasOptionalSkinning() )
+				if( false && surf->jointCache && renderProgManager.ShaderHasOptionalSkinning() )
 				{
 					const idVec4 skinningParm( 1.0f );
 					SetVertexParm( RENDERPARM_ENABLE_SKINNING, skinningParm.ToFloatPtr() );
@@ -4822,7 +4822,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 				DrawElementsWithCounters( surf );
 
 				// clear rpEnableSkinning if it was set
-				if( surf->jointCache && renderProgManager.ShaderHasOptionalSkinning() )
+				if( false && surf->jointCache && renderProgManager.ShaderHasOptionalSkinning() )
 				{
 					const idVec4 skinningParm( 0.0f );
 					SetVertexParm( RENDERPARM_ENABLE_SKINNING, skinningParm.ToFloatPtr() );
@@ -4896,7 +4896,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 					}
 					else
 					{
-						if( surf->jointCache )
+						if( false && surf->jointCache )
 						{
 							renderProgManager.BindShader_TextureVertexColorSkinned();
 						}
@@ -4926,7 +4926,7 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 			}
 			else
 			{
-				if( surf->jointCache )
+				if( false && surf->jointCache )
 				{
 					renderProgManager.BindShader_TextureVertexColorSkinned();
 				}
@@ -5175,7 +5175,7 @@ void idRenderBackend::T_BasicFog( const drawSurf_t* drawSurfs, const idPlane fog
 			currentSpace = ( inverseBaseLightProject == NULL ) ? drawSurf->space : NULL;
 		}
 
-		if( drawSurf->jointCache )
+		if( false && drawSurf->jointCache )
 		{
 			renderProgManager.BindShader_FogSkinned();
 		}
@@ -5514,7 +5514,7 @@ void idRenderBackend::DrawMotionVectors()
 		}
 
 		// this could just be a color, but we don't have a skinned color-only prog
-		if( surf->jointCache )
+		if( false && surf->jointCache )
 		{
 			renderProgManager.BindShader_TextureVertexColorSkinned();
 		}
@@ -7181,7 +7181,7 @@ void idRenderBackend::MotionBlur()
 		}
 
 		// this could just be a color, but we don't have a skinned color-only prog
-		if( surf->jointCache )
+		if( false && surf->jointCache )
 		{
 			renderProgManager.BindShader_TextureVertexColorSkinned();
 		}
@@ -7563,7 +7563,7 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 	{
 		const drawSurf_t* surf = _viewDef->drawSurfs[surfNum];
 
-		if( !surf->skinnedCache || !surf->jointCache || !surf->ambientCache )
+		if( !surf->skinnedCache )
 		{
 			continue;
 		}
