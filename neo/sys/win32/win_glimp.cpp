@@ -1074,7 +1074,7 @@ static bool GetCenteredWindowDimensions( int& x, int& y, int& w, int& h )
 {
 	// get position and size of default display for windowed mode (parms.fullScreen = 0)
 	int displayX, displayY, displayW, displayH, displayHz = 0;
-	if( !GetDisplayCoordinates( 0, displayX, displayY, displayW, displayH, displayHz ) )
+	if( !GetDisplayCoordinates( 1, displayX, displayY, displayW, displayH, displayHz ) )
 	{
 		return false;
 	}

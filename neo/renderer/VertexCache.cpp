@@ -214,6 +214,7 @@ static void AllocGeoBufferSet( geoBufferSet_t& gbs, BufferData bufferData, buffe
 	skinnedDesc.initialState = nvrhi::ResourceStates::VertexBuffer;
 	if( usage == BU_DYNAMIC )
 	{
+		skinnedDesc.canHaveUAVs = false;
 		skinnedDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
 	}
 
