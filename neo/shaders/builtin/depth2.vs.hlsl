@@ -50,20 +50,85 @@ If you have questions concerning this license or the applicable additional terms
 
 #pragma pack_matrix(row_major)
 
-cbuffer c_Depth :
-register( b0 )
+#include "bindless.hlsli"
+#include <vulkan.hlsli>
+
+// GPU half-float bit patterns
+#define HF_MANTISSA(x)	(x&1023)
+#define HF_EXP(x)		((x&32767)>>10)
+#define HF_SIGN(x)		((x&32768)?-1:1)
+
+float F16toF32( uint x )
+{
+	int e = HF_EXP( x );
+	int m = HF_MANTISSA( x );
+	int s = HF_SIGN( x );
+
+	if( 0 < e && e < 31 )
+	{
+		return s * pow( 2.0f, ( e - 15.0f ) ) * ( 1 + m / 1024.0f );
+	}
+	else if( m == 0 )
+	{
+		return s * 0.0f;
+	}
+	return s * pow( 2.0f, -14.0f ) * ( m / 1024.0f );
+}
+
+struct InstanceConstants
+{
+	uint instance;
+	uint geometryInMesh;
+};
+
+struct DepthView
 {
 	float4x4 matWorldToClip;
 };
 
+ConstantBuffer<DepthView> g_View :
+register( b0 );
+VK_PUSH_CONSTANT ConstantBuffer<InstanceConstants> g_Instance :
+register( b1 );
+StructuredBuffer<InstanceData> t_InstanceData :
+register( t0 );
+StructuredBuffer<GeometryData> t_GeometryData :
+register( t1 );
+ByteAddressBuffer t_MaterialConstants :
+register( t2 );
+VK_BINDING( 0, 1 ) ByteAddressBuffer t_BindlessBuffers[] :
+register( t0, space1 );
+VK_BINDING( 1, 1 ) Texture2D t_BindlessTextures[] :
+register( t0, space2 );
+
+SamplerState s_MaterialSampler :
+register( s0 );
+
 void main(
-	in float3 i_pos : POSITION,
-	in float2 i_texCoord : TEXCOORD,
-	in float4x4 i_instanceMatrix : TRANSFORM,
-	in uint i_instance : SV_InstanceID,
+	in uint i_vertexID : SV_VertexID,
 	out float4 o_position : SV_Position,
-	out float2 o_texCoord : TEXCOORD )
+	out float2 o_uv : TEXCOORD,
+	out uint o_material : MATERIAL )
 {
-	o_position = mul( i_instanceMatrix, float4( i_pos, 1.0 ) );
-	o_texCoord = i_texCoord;
+	InstanceData instance = t_InstanceData[g_Instance.instance];
+	GeometryData geometry = t_GeometryData[instance.firstGeometryIndex + g_Instance.geometryInMesh];
+
+	ByteAddressBuffer indexBuffer = t_BindlessBuffers[geometry.indexBufferIndex];
+	ByteAddressBuffer vertexBuffer = t_BindlessBuffers[geometry.vertexBufferIndex];
+
+	uint index = LoadIndex( indexBuffer, geometry.indexOffset, i_vertexID );
+
+	float2 texcoord = 0;
+	if( geometry.texCoord1Offset != ~0u )
+	{
+		uint texcoordIn = vertexBuffer.Load( geometry.texCoord1Offset + ( index * c_SizeOfVertex ) );
+		texcoord.x = F16toF32( ( texcoordIn >> 0 ) & 0xFFFF );
+		texcoord.y = F16toF32( ( texcoordIn >> 16 ) & 0xFFFF );
+	}
+
+	float3 pos = asfloat( vertexBuffer.Load3( geometry.positionOffset + ( index * c_SizeOfVertex ) ) );
+
+	o_position = mul( instance.transform, float4( pos, 1.0 ) );
+	o_uv = texcoord;
+	o_material = geometry.materialIndex;
 }

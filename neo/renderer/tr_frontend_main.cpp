@@ -393,6 +393,157 @@ static void R_SortDrawSurfs( drawSurf_t** drawSurfs, const int numDrawSurfs )
 #endif
 }
 
+// SP Bindless buffers
+static constexpr int MAX_NUM_GEOS_PER_INSTANCE = 16;
+
+static void R_AddBuffers( drawSurf_t** drawSurfs, const int numDrawSurfs )
+{
+	int numGeos = 0;
+
+	const viewEntity_t* currViewEntity = nullptr;
+	drawSurf_t* currSurf[MAX_NUM_GEOS_PER_INSTANCE];
+	memset( currSurf, 0, MAX_NUM_GEOS_PER_INSTANCE );
+	int numSurfs = 0;
+	ALIGN16( instanceData_t instanceData );
+	memset( instanceData.padding, 0, 2 * sizeof( int ) );
+	instanceData.firstGeometryIndex = 0;
+	instanceData.numGeometries = 0;
+
+	auto flushInstance = [&currSurf, &instanceData, &numSurfs]()
+	{
+		vertCacheHandle_t instanceCache = vertexCache.AllocStaticInstance( &instanceData, sizeof( instanceData_t ) );
+		for( int i = 0; i < numSurfs; i++ )
+		{
+			currSurf[i]->instanceCache = instanceCache;
+		}
+	};
+
+	for( int i = 0; i < numDrawSurfs; i++ )
+	{
+		drawSurf_t* surf = drawSurfs[i];
+
+		if( !surf->frontEndGeo )
+		{
+			continue;
+		}
+
+		if( currViewEntity != surf->space )
+		{
+			if( numSurfs > 0 )
+			{
+				flushInstance();
+			}
+
+			currViewEntity = surf->space;
+			instanceData.firstGeometryIndex = numGeos;
+			instanceData.numGeometries = 0;
+			SIMDProcessor->Memcpy( &instanceData.transform, &surf->space->mvp, sizeof( idRenderMatrix ) );
+			SIMDProcessor->Memcpy( &instanceData.prevTransform, &surf->space->mvp, sizeof( idRenderMatrix ) );
+			numSurfs = 0;
+		}
+
+		currSurf[numSurfs] = surf;
+		numSurfs++;
+
+		R_LinkGeometryData( surf );
+		instanceData.numGeometries++;
+		numGeos++;
+	}
+
+	if( numSurfs > 0 )
+	{
+		flushInstance();
+	}
+}
+
+static void GetBindlessIndexData( vertCacheHandle_t handle, int* bindlessIndex, uint64* indexSize, uint64* indexOffset )
+{
+	*indexSize = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+	*indexOffset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const int indexIsStatic = handle & VERTCACHE_STATIC;
+	if( indexIsStatic )
+	{
+		*bindlessIndex = vertexCache.staticData.indexBuffer.GetBindlessIndex();
+	}
+	else
+	{
+		*bindlessIndex = vertexCache.frameData[vertexCache.listNum].indexBuffer.GetBindlessIndex();
+	}
+}
+
+static void GetBindlessVertexData( vertCacheHandle_t handle, int* bindlessIndex, uint64* vertexSize, uint64* vertexOffset )
+{
+	*vertexSize = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+	*vertexOffset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const int isStatic = handle & VERTCACHE_STATIC;
+	if( isStatic )
+	{
+		*bindlessIndex = vertexCache.staticData.vertexBuffer.GetBindlessIndex();
+	}
+	else
+	{
+		*bindlessIndex = vertexCache.frameData[vertexCache.listNum].vertexBuffer.GetBindlessIndex();
+	}
+}
+
+static void GetBindlessSkinnedVertexData( vertCacheHandle_t handle, int* bindlessIndex, uint64* vertexSize, uint64* vertexOffset )
+{
+	bufferView_t bufferView;
+	if( vertexCache.GetSkinnedVertexBuffer( handle, &bufferView ) )
+	{
+		*bindlessIndex = bufferView.bindlessIndex;
+		*vertexSize = bufferView.size;
+		*vertexOffset = bufferView.offset;
+	}
+}
+
+void R_LinkGeometryData( drawSurf_t* drawSurf )
+{
+	int vertexBindlessIndex = 0;
+	uint64 vertexSize = 0;
+	uint64 vertexOffset = 0;
+	if( drawSurf->skinnedCache != 0 )
+	{
+		GetBindlessSkinnedVertexData( drawSurf->skinnedCache, &vertexBindlessIndex, &vertexSize, &vertexOffset );
+	}
+	else
+	{
+		GetBindlessVertexData( drawSurf->ambientCache, &vertexBindlessIndex, &vertexSize, &vertexOffset );
+	}
+
+	int indexBindlessIndex = 0;
+	uint64 indexSize = 0;
+	uint64 indexOffset = 0;
+	GetBindlessIndexData( drawSurf->indexCache, &indexBindlessIndex, &indexSize, &indexOffset );
+
+	int materialOffset = -1;
+	if( drawSurf->matRegisterCache )
+	{
+		const uint64 size = ( int )( drawSurf->matRegisterCache >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+		materialOffset = ( int )( drawSurf->matRegisterCache >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	}
+
+	geometryData_t geometryData;
+	geometryData.numIndices = drawSurf->numIndexes;
+	geometryData.numVertices = drawSurf->frontEndGeo->numVerts;
+	geometryData.indexBufferIndex = indexBindlessIndex;
+	geometryData.indexOffset = indexOffset;
+
+	geometryData.vertexBufferIndex = vertexBindlessIndex;
+	geometryData.positionOffset = vertexOffset;
+	geometryData.prevPositionOffset = -1;
+	geometryData.texCoord1Offset = vertexOffset + offsetof( idDrawVert, st );
+
+	geometryData.texCoord2Offset = vertexOffset + offsetof( idDrawVert, color );
+	geometryData.normalOffset = vertexOffset + offsetof( idDrawVert, normal );
+	geometryData.tangentOffset = vertexOffset + offsetof( idDrawVert, tangent );
+	geometryData.materialIndex = materialOffset;
+
+	drawSurf->geometryCache = vertexCache.AllocGeometryData( &geometryData, sizeof( geometryData_t ) );
+}
+
+// SP bindless end
+
 // RB begin
 static void R_SetupSplitFrustums( viewDef_t* viewDef )
 {
@@ -660,6 +811,9 @@ void R_RenderView( viewDef_t* parms )
 
 	// sort all the ambient surfaces for translucency ordering
 	R_SortDrawSurfs( tr.viewDef->drawSurfs, tr.viewDef->numDrawSurfs );
+
+	// add the instance and geometry buffers for bindless rendering
+	R_AddBuffers( tr.viewDef->drawSurfs, tr.viewDef->numDrawSurfs );
 
 	// generate any subviews (mirrors, cameras, etc) before adding this view
 	if( R_GenerateSubViews( tr.viewDef->drawSurfs, tr.viewDef->numDrawSurfs ) )

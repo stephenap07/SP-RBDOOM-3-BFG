@@ -31,6 +31,8 @@
 
 struct SkinningConstants
 {
+    uint inputJointMatOffset;
+    
     uint numVertices;
     uint flags;
     uint inputPositionOffset;

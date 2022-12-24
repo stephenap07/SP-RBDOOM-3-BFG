@@ -465,6 +465,12 @@ public:
 	nvrhi::TextureHandle GetTextureHandle() const
 	{
 		return texture;
+
+	}
+
+	const DescriptorHandle*	GetDescriptorHandle() const
+	{
+		return &bindlessDescriptor;
 	}
 
 	void*		GetTextureID()
@@ -536,6 +542,7 @@ private:
 	nvrhi::TextureHandle	texture;
 	nvrhi::SamplerHandle	sampler;
 	nvrhi::SamplerDesc		samplerDesc;
+	DescriptorHandle		bindlessDescriptor;
 
 #elif defined( USE_VULKAN )
 	void				CreateSampler();

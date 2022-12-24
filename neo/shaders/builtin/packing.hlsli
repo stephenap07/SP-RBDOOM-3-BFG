@@ -205,7 +205,6 @@ float4 Unpack_RGBA8_SNORM(uint value)
 
 uint FloatToByte( float f )
 {
-	// The converted result is clamped to the range [0,255].
     return (uint)clamp( (int)f, 0, 255 );
 }
 
@@ -214,18 +213,18 @@ uint FloatToByte( float f )
 
 float4 UIntToFloat4( uint i )
 {
-    return float4( VERTEX_BYTE_TO_FLOAT( ( i >> 24 ) & 0xff ),
+    return float4( VERTEX_BYTE_TO_FLOAT( ( i >> 0 )  & 0xff ),
+                   VERTEX_BYTE_TO_FLOAT( ( i >> 8 )  & 0xff ),
                    VERTEX_BYTE_TO_FLOAT( ( i >> 16 ) & 0xff ),
-                   VERTEX_BYTE_TO_FLOAT( ( i >> 8  ) & 0xff ),
-                   VERTEX_BYTE_TO_FLOAT( ( i >> 0  ) & 0xff ) );
+                   VERTEX_BYTE_TO_FLOAT( ( i >> 24 ) & 0xff ) );
 }
 
 uint Float4ToUInt( float4 f )
 {
-    return (uint)( ( VERTEX_FLOAT_TO_BYTE( f.x ) << 24 ) |
-                   ( VERTEX_FLOAT_TO_BYTE( f.y ) << 16 ) |
-                   ( VERTEX_FLOAT_TO_BYTE( f.z ) << 8 ) |
-                   ( VERTEX_FLOAT_TO_BYTE( f.w ) << 0) );
+    return (uint)( ( VERTEX_FLOAT_TO_BYTE( f.x ) << 0 ) |
+                   ( VERTEX_FLOAT_TO_BYTE( f.y ) << 8 ) |
+                   ( VERTEX_FLOAT_TO_BYTE( f.z ) << 16 ) |
+                   ( VERTEX_FLOAT_TO_BYTE( f.w ) << 24) );
 }
 
 #endif // PACKING_HLSLI

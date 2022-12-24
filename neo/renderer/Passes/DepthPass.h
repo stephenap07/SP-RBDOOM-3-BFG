@@ -79,5 +79,6 @@ protected:
 
 	CommonRenderPasses*                     commonPasses;
 	std::shared_ptr<MaterialBindingCache>   materialBindings;
+	nvrhi::BindingSetHandle					bindlessSet;
 };
 

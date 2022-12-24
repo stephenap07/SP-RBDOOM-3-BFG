@@ -91,38 +91,77 @@ const int VERTEX_CACHE_ALIGN		= 32;
 const int INDEX_CACHE_ALIGN			= 16;
 const int JOINT_CACHE_ALIGN			= 16;
 const int MATERIAL_CACHE_ALIGN		= 16;
+const int GEOMETRY_CACHE_ALIGN		= 16;
 
 enum cacheType_t
 {
 	CACHE_VERTEX,
 	CACHE_INDEX,
 	CACHE_JOINT,
-	CACHE_INSTANCE,
-	CACHE_SKINNED_VERTEX,
-	CACHE_MATERIAL
 };
+
+class idStagingBuffer;
+class idTrackedBuffer;
 
 struct geoBufferSet_t
 {
 	idIndexBuffer			indexBuffer;
 	idVertexBuffer			vertexBuffer;
-	idUniformBuffer			jointBuffer;
-	idVertexBuffer			instanceBuffer;
-	idVertexBuffer			skinnedBuffer;
-	idUniformBuffer			materialBuffer;
+
 	byte* 					mappedVertexBase;
 	byte* 					mappedIndexBase;
-	byte* 					mappedJointBase;
-	byte*					mappedInstanceBase;
-	byte*					mappedSkinnedBase;
-	byte*					mappedMaterialBase;
+
 	idSysInterlockedInteger	indexMemUsed;
 	idSysInterlockedInteger	vertexMemUsed;
-	idSysInterlockedInteger	jointMemUsed;
-	idSysInterlockedInteger	instanceMemUsed;
-	idSysInterlockedInteger	skinnedMemUsed;
-	idSysInterlockedInteger materialMemUsed;
 	int						allocations;	// number of index and vertex allocations combined
+
+	idStagingBuffer*		staging;
+	idTrackedBuffer*		instanceBuffer;
+
+	idStagingBuffer*		geometryStaging;
+	idTrackedBuffer*		geometryBuffer;
+
+	idStagingBuffer*		materialStaging;
+	idTrackedBuffer*		materialBuffer;
+
+	idStagingBuffer*		skinnedStaging;
+	idTrackedBuffer*		skinnedBuffer;
+
+	idTrackedBuffer*		staticSkinnedBuffer;
+
+	idStagingBuffer*		jointStagingBuffer;
+	idTrackedBuffer*		jointBuffer;
+};
+
+struct bufferView_t
+{
+	uint64 offset;
+	uint64 size;
+	void* buffer;
+	int bindlessIndex;
+};
+
+class idTrackedBuffer
+{
+public:
+
+	idTrackedBuffer( nvrhi::DeviceHandle device, nvrhi::BufferDesc desc );
+	~idTrackedBuffer();
+
+	vertCacheHandle_t	Alloc( size_t numBytes, int currentFrame, bool isStatic = true );
+	void				Clear();
+	bool				GetBufferView( vertCacheHandle_t handle, bufferView_t* bv );
+	nvrhi::BufferHandle GetBuffer()
+	{
+		return buffer;
+	}
+
+private:
+
+	idSysInterlockedInteger		memUsed;
+	nvrhi::DeviceHandle			device;
+	nvrhi::BufferHandle			buffer;
+	DescriptorHandle			bindlessHandle;
 };
 
 class idVertexCache
@@ -138,16 +177,17 @@ public:
 	// this data is only valid for one frame of rendering
 	vertCacheHandle_t	AllocVertex( const void* data, int num, size_t size = sizeof( idDrawVert ), nvrhi::ICommandList* commandList = nullptr );
 	vertCacheHandle_t	AllocIndex( const void* data, int num, size_t size = sizeof( triIndex_t ), nvrhi::ICommandList* commandList = nullptr );
-	vertCacheHandle_t	AllocJoint( const void* data, int num, size_t size = sizeof( idJointMat ), nvrhi::ICommandList* commandList = nullptr );
-	vertCacheHandle_t	AllocInstance( const void* data, int num, size_t size = sizeof( idInstanceData ), nvrhi::ICommandList* commandList = nullptr );
-	vertCacheHandle_t	AllocSkinnedVertex( const void* data, int num, size_t size = sizeof( idDrawVert ), nvrhi::ICommandList* commandList = nullptr );
-	vertCacheHandle_t	AllocMaterial( const void* data, int num, size_t size = sizeof( MaterialConstants ), nvrhi::ICommandList* commandList = nullptr );
+	vertCacheHandle_t	AllocJoint( const void* data, int num, size_t size = sizeof( idJointMat ) );
 
 	// this data is valid until the next map load
 	vertCacheHandle_t	AllocStaticVertex( const void* data, int bytes, nvrhi::ICommandList* commandList );
 	vertCacheHandle_t	AllocStaticIndex( const void* data, int bytes, nvrhi::ICommandList* commandList );
-	vertCacheHandle_t	AllocStaticInstance( const void* data, int bytes, nvrhi::ICommandList* commandList );
-	vertCacheHandle_t	AllocStaticSkinnedVertex( const void* data, int bytes, nvrhi::ICommandList* commandList );
+	vertCacheHandle_t	AllocStaticInstance( const void* data, int bytes );
+	vertCacheHandle_t	AllocGeometryData( const void* data, int bytes );
+	vertCacheHandle_t	AllocMaterial( const void* data, int numBytes );
+
+	vertCacheHandle_t	AllocStaticSkinnedVertex( int bytes );
+	vertCacheHandle_t	AllocFrameSkinnedVertex( int bytes );
 
 	byte* 			MappedVertexBuffer( vertCacheHandle_t handle );
 	byte* 			MappedIndexBuffer( vertCacheHandle_t handle );
@@ -165,10 +205,14 @@ public:
 	// vb/ib is a temporary reference -- don't store it
 	bool			GetVertexBuffer( vertCacheHandle_t handle, idVertexBuffer* vb );
 	bool			GetIndexBuffer( vertCacheHandle_t handle, idIndexBuffer* ib );
-	bool			GetJointBuffer( vertCacheHandle_t handle, idUniformBuffer* jb );
-	bool			GetInstanceBuffer( vertCacheHandle_t handle, idVertexBuffer* vb );
-	bool			GetSkinnedVertexBuffer( vertCacheHandle_t handle, idVertexBuffer* vb );
-	bool			GetMaterialBuffer( vertCacheHandle_t handle, idUniformBuffer* mb );
+	bool			GetJointBuffer( vertCacheHandle_t handle, bufferView_t* bv );
+	bool			GetInstanceBuffer( vertCacheHandle_t handle, bufferView_t* bv );
+	bool			GetGeometryData( vertCacheHandle_t handle, bufferView_t* bv );
+	bool			GetSkinnedVertexBuffer( vertCacheHandle_t handle, bufferView_t* bv );
+	bool			GetMaterialBuffer( vertCacheHandle_t handle, bufferView_t* bv );
+
+	void			UpdateInstanceBuffer( vertCacheHandle_t handle, void* data );
+	void			UpdateMaterialBuffer( vertCacheHandle_t handle, void* data );
 
 	void			BeginBackEnd();
 
@@ -177,8 +221,8 @@ public:
 	int				listNum;		// currentFrame % NUM_FRAME_DATA
 	int				drawListNum;	// (currentFrame-1) % NUM_FRAME_DATA
 
-	geoBufferSet_t	staticData;
-	geoBufferSet_t	frameData[ NUM_FRAME_DATA ];
+	geoBufferSet_t		staticData;
+	geoBufferSet_t		frameData[ NUM_FRAME_DATA ];
 
 	int				uniformBufferOffsetAlignment;
 

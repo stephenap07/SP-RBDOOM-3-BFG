@@ -36,6 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #if defined( USE_NVRHI )
 	#include <nvrhi/nvrhi.h>
+	#include "DescriptorTableManager.h"
 #endif
 
 enum bufferMapType_t
@@ -112,6 +113,8 @@ public:
 		debugName = str;
 	}
 
+	int					GetBindlessIndex() const;
+
 protected:
 	void				SetMapped() const
 	{
@@ -144,6 +147,7 @@ protected:
 #elif defined( USE_NVRHI )
 	nvrhi::InputLayoutHandle	inputLayout;
 	nvrhi::BufferHandle			bufferHandle;
+	DescriptorHandle			bindlessHandle;
 	void*						buffer;
 	idStr						debugName;
 #else
@@ -268,5 +272,6 @@ private:
 
 	DISALLOW_COPY_AND_ASSIGN( idUniformBuffer );
 };
+
 
 #endif // !__BUFFEROBJECT_H__

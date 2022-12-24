@@ -885,6 +885,14 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	guiModel->EmitFullScreen();
 	guiModel->Clear();
 
+	if( vertexCache.currentFrame > 0 )
+	{
+		tr.CommandList()->close();
+		deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
+	}
+
+	tr.CommandList()->open();
+
 	// unmap the buffer objects so they can be used by the GPU
 	vertexCache.BeginBackEnd();
 
@@ -906,11 +914,6 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	// PC
 	UpdateStereo3DMode();
 
-	if( !commandList )
-	{
-		commandList = deviceManager->GetDevice()->createCommandList();
-	}
-
 	// prepare the new command buffer
 	guiModel->BeginFrame();
 
@@ -923,10 +926,10 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	// scene generation, the basic surfaces needed for drawing the buffers will
 	// always be present.
 	//------------------------------
-	R_InitDrawSurfFromTri( tr.unitSquareSurface_, *tr.unitSquareTriangles, commandList );
-	R_InitDrawSurfFromTri( tr.zeroOneCubeSurface_, *tr.zeroOneCubeTriangles, commandList );
-	R_InitDrawSurfFromTri( tr.zeroOneSphereSurface_, *tr.zeroOneSphereTriangles, commandList );
-	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles, commandList );
+	R_InitDrawSurfFromTri( tr.unitSquareSurface_, *tr.unitSquareTriangles, tr.CommandList() );
+	R_InitDrawSurfFromTri( tr.zeroOneCubeSurface_, *tr.zeroOneCubeTriangles, tr.CommandList() );
+	R_InitDrawSurfFromTri( tr.zeroOneSphereSurface_, *tr.zeroOneSphereTriangles, tr.CommandList() );
+	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles, tr.CommandList() );
 
 	// Reset render crop to be the full screen
 	renderCrops[ 0 ].Clear();
@@ -1326,14 +1329,14 @@ bool idRenderSystemLocal::UploadImage( const char* imageName, const byte* data, 
 	}
 
 #if defined(USE_NVRHI)
-	commandList->open();
+	tr.CommandList()->open();
 #endif
 
-	image->UploadScratch( data, width, height, commandList );
+	image->UploadScratch( data, width, height, tr.CommandList() );
 
 #if defined(USE_NVRHI)
-	commandList->close();
-	deviceManager->GetDevice()->executeCommandList( commandList );
+	tr.CommandList()->close();
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
 #endif
 	return true;
 }

@@ -117,13 +117,6 @@ void idGuiModel::EmitSurfaces( float modelMatrix[16], float modelViewMatrix[16],
 	guiSpace->weaponDepthHack = depthHack;
 	guiSpace->isGuiSurface = true;
 
-	idInstanceData instanceData;
-	SIMDProcessor->Memcpy( instanceData.transform, guiSpace->modelViewMatrix, sizeof( idVec4 ) * 3 );
-	if( !vertexCache.CacheIsCurrent( guiSpace->instanceCache ) )
-	{
-		guiSpace->instanceCache = vertexCache.AllocInstance( &instanceData, 1, sizeof( idInstanceData ) );
-	}
-
 	// If this is an in-game gui, we need to be able to find the matrix again for head mounted
 	// display bypass matrix fixup.
 	if( linkAsEntity )

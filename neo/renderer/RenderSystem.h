@@ -408,6 +408,8 @@ public:
 	// so new scenes and GUIs can be built up in parallel with the rendering.
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers ) = 0;
 
+	virtual nvrhi::ICommandList* CommandList() = 0;
+
 	// aviDemo uses this.
 	// Will automatically tile render large screen shots if necessary
 	// If ref == NULL, common->UpdateScreen will be used

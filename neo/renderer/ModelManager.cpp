@@ -905,12 +905,10 @@ void idRenderModelManagerLocal::EndLevelLoad()
 		}
 	}
 
-	commandList->open();
-
 	for( int i = 0; i < models.Num(); i++ )
 	{
 		idRenderModel* model = models[i];
-		model->CreateBuffers( commandList );
+		model->CreateBuffers( tr.CommandList() );
 	}
 
 	// create static vertex/index buffers for all models
@@ -921,13 +919,10 @@ void idRenderModelManagerLocal::EndLevelLoad()
 		{
 			for( int j = 0; j < model->NumSurfaces(); j++ )
 			{
-				R_CreateStaticBuffersForTri( *( model->Surface( j )->geometry ), commandList );
+				R_CreateStaticBuffersForTri( *( model->Surface( j )->geometry ), tr.CommandList() );
 			}
 		}
 	}
-
-	commandList->close();
-	deviceManager->GetDevice()->executeCommandList( commandList );
 
 	// _D3XP added this
 	int	end = Sys_Milliseconds();

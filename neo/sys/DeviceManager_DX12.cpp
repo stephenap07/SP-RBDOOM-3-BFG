@@ -206,6 +206,8 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 {
 	RefCountPtr<IDXGIAdapter> targetAdapter;
 
+	deviceParms.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
+
 	if( deviceParms.adapter )
 	{
 		targetAdapter = deviceParms.adapter;

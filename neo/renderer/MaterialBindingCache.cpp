@@ -136,7 +136,7 @@ nvrhi::BindingSetHandle MaterialBindingCache::CreateMaterialBindingSet( const dr
 				{
 					setItem = nvrhi::BindingSetItem::ConstantBuffer(
 								  item.slot,
-								  drawSurf->material->GetConstantBuffer() );
+								  vertexCache.staticData.materialBuffer->GetBuffer() );
 				}
 				break;
 			}

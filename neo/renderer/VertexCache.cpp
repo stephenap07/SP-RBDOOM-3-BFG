@@ -34,6 +34,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 #include "sys/DeviceManager.h"
+#include "StagingBuffer.h"
 
 idVertexCache vertexCache;
 
@@ -51,11 +52,42 @@ static void ClearGeoBufferSet( geoBufferSet_t& gbs )
 {
 	gbs.indexMemUsed.SetValue( 0 );
 	gbs.vertexMemUsed.SetValue( 0 );
-	gbs.jointMemUsed.SetValue( 0 );
-	gbs.instanceMemUsed.SetValue( 0 );
-	gbs.skinnedMemUsed.SetValue( 0 );
-	gbs.materialMemUsed.SetValue( 0 );
 	gbs.allocations = 0;
+
+	if( gbs.staging )
+	{
+		gbs.staging->Clear();
+	}
+
+	if( gbs.instanceBuffer )
+	{
+		gbs.instanceBuffer->Clear();
+	}
+
+	if( gbs.geometryBuffer )
+	{
+		gbs.geometryBuffer->Clear();
+	}
+
+	if( gbs.geometryStaging )
+	{
+		gbs.geometryStaging->Clear();
+	}
+
+	if( gbs.materialStaging )
+	{
+		gbs.materialStaging->Clear();
+	}
+
+	if( gbs.skinnedStaging )
+	{
+		gbs.skinnedStaging->Clear();
+	}
+
+	if( gbs.jointStagingBuffer )
+	{
+		gbs.jointStagingBuffer->Clear();
+	}
 }
 
 /*
@@ -73,26 +105,6 @@ static void MapGeoBufferSet( geoBufferSet_t& gbs )
 	if( gbs.mappedIndexBase == NULL )
 	{
 		gbs.mappedIndexBase = ( byte* )gbs.indexBuffer.MapBuffer( BM_WRITE );
-	}
-
-	if( gbs.mappedJointBase == NULL && gbs.jointBuffer.GetAllocedSize() != 0 )
-	{
-		gbs.mappedJointBase = ( byte* )gbs.jointBuffer.MapBuffer( BM_WRITE );
-	}
-
-	if( gbs.mappedInstanceBase == NULL && gbs.instanceBuffer.GetAllocedSize() != 0 )
-	{
-		gbs.mappedInstanceBase = ( byte* )gbs.instanceBuffer.MapBuffer( BM_WRITE );
-	}
-
-	if( gbs.mappedSkinnedBase == NULL && gbs.skinnedBuffer.GetAllocedSize() != 0 )
-	{
-		gbs.mappedSkinnedBase = ( byte* )gbs.skinnedBuffer.MapBuffer( BM_WRITE );
-	}
-
-	if( gbs.mappedMaterialBase == NULL && gbs.materialBuffer.GetAllocedSize() != 0 )
-	{
-		gbs.mappedMaterialBase = ( byte* )gbs.materialBuffer.MapBuffer( BM_WRITE );
 	}
 }
 
@@ -114,30 +126,6 @@ static void UnmapGeoBufferSet( geoBufferSet_t& gbs )
 		gbs.indexBuffer.UnmapBuffer();
 		gbs.mappedIndexBase = NULL;
 	}
-
-	if( gbs.mappedJointBase != NULL )
-	{
-		gbs.jointBuffer.UnmapBuffer();
-		gbs.mappedJointBase = NULL;
-	}
-
-	if( gbs.mappedInstanceBase != NULL )
-	{
-		gbs.instanceBuffer.UnmapBuffer();
-		gbs.mappedInstanceBase = NULL;
-	}
-
-	if( gbs.mappedSkinnedBase != NULL )
-	{
-		gbs.skinnedBuffer.UnmapBuffer();
-		gbs.mappedSkinnedBase = NULL;
-	}
-
-	if( gbs.mappedMaterialBase != NULL )
-	{
-		gbs.materialBuffer.UnmapBuffer();
-		gbs.mappedMaterialBase = NULL;
-	}
 }
 
 static int allocFrameNum = 0;
@@ -148,8 +136,10 @@ struct BufferData
 	int indexBytes = 0;
 	int jointBytes = 0;
 	int instanceBytes = 0;
+	int stagingBytes = 0;
 	int skinnedBytes = 0;
 	int materialBytes = 0;
+	int geometryBytes = 0;
 };
 
 /*
@@ -159,81 +149,152 @@ AllocGeoBufferSet
 */
 static void AllocGeoBufferSet( geoBufferSet_t& gbs, BufferData bufferData, bufferUsageType_t usage, nvrhi::ICommandList* commandList )
 {
-	idStr usageStr = ( usage == BU_STATIC ) ? "Static" : "Mapped";
-	idStr vertexBufferName = usageStr;
-	vertexBufferName.Append( " Vertex Buffer" );
-
-	uintptr_t f = allocFrameNum;
+	int f = allocFrameNum;
 
 	if( usage == BU_DYNAMIC )
 	{
-		vertexBufferName.Append( va( " [Frame % d]", ( int )f ) );
+		gbs.vertexBuffer.SetDebugName( va( "Vertex Buffer [Frame %d]", f ) );
+	}
+	else
+	{
+		gbs.vertexBuffer.SetDebugName( "Static Vertex Buffer" );
 	}
 	gbs.vertexBuffer.AllocBufferObject( NULL, bufferData.vertexBytes, usage, commandList );
 
-	idStr indexBufferName = usageStr;
-	indexBufferName.Append( " Index Buffer" );
 	if( usage == BU_DYNAMIC )
 	{
-		indexBufferName.Append( va( " [Frame % d]", ( int )f ) );
+		gbs.indexBuffer.SetDebugName( va( "Index Buffer [Frame % d]", f ) );
 	}
-	gbs.indexBuffer.SetDebugName( indexBufferName.c_str() );
+	else
+	{
+		gbs.indexBuffer.SetDebugName( "Static Index Buffer" );
+	}
 	gbs.indexBuffer.AllocBufferObject( NULL, bufferData.indexBytes, usage, commandList );
 
-	if( bufferData.jointBytes > 0 )
-	{
-		gbs.jointBuffer.AllocBufferObject( NULL, bufferData.jointBytes, sizeof( idVec4 ), usage, commandList );
+	nvrhi::BufferDesc jointDesc;
+	jointDesc.isConstantBuffer = true;
+	jointDesc.byteSize = bufferData.jointBytes;
+	jointDesc.structStride = sizeof( idJointMat );
+	jointDesc.canHaveRawViews = true;
+	jointDesc.canHaveTypedViews = true;
+	jointDesc.keepInitialState = true;
+	jointDesc.initialState = nvrhi::ResourceStates::Common;
+	if( usage == BU_DYNAMIC ) {
+		jointDesc.debugName = va( "Joint Buffer [Frame %d]", f );
+		jointDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+		gbs.jointStagingBuffer = new idStagingBuffer( deviceManager->GetDevice(), jointDesc );
+	} else if( bufferData.jointBytes > 0 ) {
+		jointDesc.debugName = "Joint Buffer";
+		gbs.jointBuffer = new idTrackedBuffer( deviceManager->GetDevice(), jointDesc );
 	}
 
-	idStr instanceBufferName = usageStr;
-	instanceBufferName.Append( " Instance Buffer" );
 	if( usage == BU_DYNAMIC )
 	{
-		instanceBufferName.Append( va( " [Frame % d]", ( int )f ) );
+		nvrhi::BufferDesc materialStagingDesc;
+		materialStagingDesc.byteSize = bufferData.materialBytes;
+		materialStagingDesc.structStride = sizeof( materialData_t );
+		materialStagingDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+		materialStagingDesc.canHaveRawViews = true;
+		materialStagingDesc.canHaveTypedViews = true;
+		materialStagingDesc.keepInitialState = true;
+		materialStagingDesc.initialState = nvrhi::ResourceStates::Common;
+		gbs.materialStaging = new idStagingBuffer( deviceManager->GetDevice(), materialStagingDesc );
 	}
-	gbs.instanceBuffer.SetDebugName( instanceBufferName.c_str() );
+	else if( bufferData.materialBytes > 0 )
+	{
+		nvrhi::BufferDesc materialBufferDesc;
+		materialBufferDesc.isVertexBuffer = true;
+		materialBufferDesc.byteSize = bufferData.geometryBytes;
+		materialBufferDesc.structStride = sizeof( materialData_t );
+		materialBufferDesc.debugName = "Material Buffer";
+		materialBufferDesc.canHaveTypedViews = true;
+		materialBufferDesc.canHaveRawViews = true;
+		materialBufferDesc.canHaveUAVs = true;
+		materialBufferDesc.initialState = nvrhi::ResourceStates::Common;
+		materialBufferDesc.keepInitialState = true;
+		gbs.materialBuffer = new idTrackedBuffer( deviceManager->GetDevice(), materialBufferDesc );
+	}
+
+	if( bufferData.stagingBytes > 0 )
+	{
+		nvrhi::BufferDesc stagingDesc;
+		stagingDesc.byteSize = bufferData.stagingBytes;
+		stagingDesc.structStride = sizeof( instanceData_t );
+		stagingDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+		stagingDesc.canHaveRawViews = true;
+		stagingDesc.canHaveTypedViews = true;
+		stagingDesc.initialState = nvrhi::ResourceStates::Common;
+		stagingDesc.debugName = va( "Instance Buffer [Frame %d]", f );
+		gbs.staging = new idStagingBuffer( deviceManager->GetDevice(), stagingDesc );
+	}
+
 	if( bufferData.instanceBytes > 0 )
 	{
-		gbs.instanceBuffer.AllocBufferObject( NULL, bufferData.instanceBytes, usage, commandList );
+		nvrhi::BufferDesc instanceBufferDesc;
+		instanceBufferDesc.isVertexBuffer = true;
+		instanceBufferDesc.byteSize = bufferData.instanceBytes;
+		instanceBufferDesc.debugName = "Instance Buffer";
+		instanceBufferDesc.canHaveTypedViews = true;
+		instanceBufferDesc.canHaveRawViews = true;
+		instanceBufferDesc.canHaveUAVs = true;
+		instanceBufferDesc.keepInitialState = true;
+		instanceBufferDesc.structStride = sizeof( instanceData_t );
+		instanceBufferDesc.initialState = nvrhi::ResourceStates::Common;
+		gbs.instanceBuffer = new idTrackedBuffer( deviceManager->GetDevice(), instanceBufferDesc );
 	}
 
-	// maybe only allocate static for skinned vertices. these should change on a variable basis every 1 or 2 frames.
-	idStr skinnedVertexBufferName = usageStr;
-	skinnedVertexBufferName.Append( " Skinned Vertex Buffer" );
 	if( usage == BU_DYNAMIC )
 	{
-		skinnedVertexBufferName.Append( va( " [Frame % d]", ( int )f ) );
+		nvrhi::BufferDesc geometryStagingDesc;
+		geometryStagingDesc.byteSize = 2048 * sizeof( geometryData_t );
+		geometryStagingDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+		geometryStagingDesc.canHaveRawViews = true;
+		geometryStagingDesc.canHaveTypedViews = true;
+		geometryStagingDesc.keepInitialState = true;
+		geometryStagingDesc.structStride = sizeof( geometryData_t );
+		geometryStagingDesc.initialState = nvrhi::ResourceStates::Common;
+		geometryStagingDesc.debugName = va( "Geometry Buffer [Frame %d]", f );
+		gbs.geometryStaging = new idStagingBuffer( deviceManager->GetDevice(), geometryStagingDesc );
 	}
+	else if( bufferData.geometryBytes > 0 )
+	{
+		nvrhi::BufferDesc geometryBufferDesc;
+		geometryBufferDesc.isVertexBuffer = true;
+		geometryBufferDesc.byteSize = bufferData.geometryBytes;
+		geometryBufferDesc.structStride = sizeof( geometryData_t );
+		geometryBufferDesc.debugName = "Geometry Buffer";
+		geometryBufferDesc.canHaveTypedViews = true;
+		geometryBufferDesc.canHaveRawViews = true;
+		geometryBufferDesc.canHaveUAVs = true;
+		geometryBufferDesc.initialState = nvrhi::ResourceStates::Common;
+		geometryBufferDesc.keepInitialState = true;
+		gbs.geometryBuffer = new idTrackedBuffer( deviceManager->GetDevice(), geometryBufferDesc );
+	}
+
 	nvrhi::BufferDesc skinnedDesc;
+	skinnedDesc.byteSize = bufferData.skinnedBytes;
 	skinnedDesc.isVertexBuffer = true;
-	skinnedDesc.debugName = skinnedVertexBufferName.c_str();
 	skinnedDesc.canHaveTypedViews = true;
 	skinnedDesc.canHaveRawViews = true;
 	skinnedDesc.canHaveUAVs = true;
 	skinnedDesc.keepInitialState = true;
-	skinnedDesc.initialState = nvrhi::ResourceStates::VertexBuffer;
+	skinnedDesc.initialState = nvrhi::ResourceStates::Common;
+	skinnedDesc.structStride = sizeof( idDrawVert );
+
 	if( usage == BU_DYNAMIC )
 	{
-		skinnedDesc.canHaveUAVs = false;
-		skinnedDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+		//skinnedDesc.debugName = va( "Skinned Buffer [Frame %d]", f );
+		//skinnedDesc.canHaveUAVs = false;
+		//skinnedDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
+		//gbs.skinnedStaging = new idStagingBuffer( deviceManager->GetDevice(), skinnedDesc );
 	}
-
-	if( bufferData.skinnedBytes > 0 )
+	else if( bufferData.skinnedBytes > 0 )
 	{
-		gbs.skinnedBuffer.AllocBufferObject( NULL, bufferData.skinnedBytes, usage, skinnedDesc, commandList );
-	}
-
-	// maybe only allocate static for skinned vertices. these should change on a variable basis every 1 or 2 frames.
-	idStr materialBufferName = usageStr;
-	materialBufferName.Append( " Material Buffer" );
-	if( usage == BU_DYNAMIC )
-	{
-		materialBufferName.Append( va( " [Frame % d]", ( int )f ) );
-	}
-	gbs.materialBuffer.SetDebugName( materialBufferName.c_str() );
-	if( bufferData.materialBytes > 0 )
-	{
-		gbs.materialBuffer.AllocBufferObject( NULL, bufferData.materialBytes, 0, usage, commandList );
+		skinnedDesc.debugName = "Skinned Buffer";
+		gbs.skinnedBuffer = new idTrackedBuffer( deviceManager->GetDevice(), skinnedDesc );
+		
+		skinnedDesc.debugName = "Static Skinned Buffer";
+		gbs.staticSkinnedBuffer = new idTrackedBuffer( deviceManager->GetDevice(), skinnedDesc );
 	}
 
 	ClearGeoBufferSet( gbs );
@@ -242,6 +303,18 @@ static void AllocGeoBufferSet( geoBufferSet_t& gbs, BufferData bufferData, buffe
 	{
 		allocFrameNum++;
 	}
+}
+
+/*
+==============
+StageAlloc
+==============
+*/
+static vertCacheHandle_t StageAlloc( idStagingBuffer* stagingBuffer, idTrackedBuffer* buffer, size_t numBytes, int currentFrame, const void* data, bool isStatic = true )
+{
+	vertCacheHandle_t handle = buffer->Alloc( numBytes, currentFrame, isStatic );
+	stagingBuffer->Alloc( data, numBytes, handle );
+	return handle;
 }
 
 /*
@@ -269,17 +342,21 @@ void idVertexCache::Init( int _uniformBufferOffsetAlignment, nvrhi::ICommandList
 	mappedData.vertexBytes = VERTCACHE_VERTEX_MEMORY_PER_FRAME;
 	mappedData.indexBytes = VERTCACHE_INDEX_MEMORY_PER_FRAME;
 	mappedData.jointBytes = VERTCACHE_JOINT_MEMORY_PER_FRAME;
-	mappedData.instanceBytes = VERTCACHE_INSTANCE_MEMORY_PER_FRAME;
 	mappedData.skinnedBytes = VERTCACHE_SKINNED_VERTEX_MEMORY_PER_FRAME;
+
+	mappedData.stagingBytes = VERTCACHE_INSTANCE_MEMORY_PER_FRAME;
 	mappedData.materialBytes = VERTCACHE_MATERIAL_MEMORY_PER_FRAME;
+	mappedData.geometryBytes = 2048 * sizeof( geometryData_t );
 
 	BufferData staticBufferData;
 	staticBufferData.vertexBytes = STATIC_VERTEX_MEMORY;
 	staticBufferData.indexBytes = STATIC_INDEX_MEMORY;
-	staticBufferData.jointBytes = 0;
-	staticBufferData.instanceBytes = 0;
+	staticBufferData.jointBytes = VERTCACHE_JOINT_MEMORY_PER_FRAME;
+	staticBufferData.stagingBytes = 0;
+	staticBufferData.instanceBytes = VERTCACHE_INSTANCE_MEMORY_PER_FRAME;
 	staticBufferData.skinnedBytes = STATIC_SKINNED_VERTEX_MEMORY;
-	staticBufferData.materialBytes = 0;
+	staticBufferData.materialBytes = 16384 * sizeof( materialData_t );
+	staticBufferData.geometryBytes = 2048 * sizeof( geometryData_t );
 
 	for( int i = 0; i < NUM_FRAME_DATA; i++ )
 	{
@@ -302,19 +379,40 @@ void idVertexCache::Shutdown()
 	{
 		frameData[i].vertexBuffer.FreeBufferObject();
 		frameData[i].indexBuffer.FreeBufferObject();
-		frameData[i].jointBuffer.FreeBufferObject();
-		frameData[i].instanceBuffer.FreeBufferObject();
-		frameData[i].skinnedBuffer.FreeBufferObject();
-		frameData[i].materialBuffer.FreeBufferObject();
+		delete frameData[i].staging;
+		frameData[i].staging = nullptr;
+		delete frameData[i].geometryStaging;
+		frameData[i].geometryStaging = nullptr;
+		delete frameData[i].materialStaging;
+		frameData[i].materialStaging = nullptr;
+		delete frameData[i].materialBuffer;
+		frameData[i].materialBuffer = nullptr;
+		delete frameData[i].skinnedStaging;
+		frameData[i].skinnedStaging = nullptr;
+		delete frameData[i].jointStagingBuffer;
+		frameData[i].jointStagingBuffer = nullptr;
 	}
 
 	// SRS - free static buffers to avoid Vulkan validation layer errors on shutdown
 	staticData.vertexBuffer.FreeBufferObject();
 	staticData.indexBuffer.FreeBufferObject();
-	staticData.jointBuffer.FreeBufferObject();
-	staticData.instanceBuffer.FreeBufferObject();
-	staticData.skinnedBuffer.FreeBufferObject();
-	staticData.materialBuffer.FreeBufferObject();
+
+	delete staticData.staging;
+	staticData.staging = nullptr;
+	delete staticData.instanceBuffer;
+	staticData.instanceBuffer = nullptr;
+	delete staticData.geometryBuffer;
+	staticData.geometryBuffer = nullptr;
+	delete staticData.geometryStaging;
+	staticData.geometryStaging = nullptr;
+	delete staticData.materialBuffer;
+	staticData.materialBuffer = nullptr;
+	delete staticData.materialStaging;
+	staticData.materialStaging = nullptr;
+	delete staticData.skinnedBuffer;
+	staticData.skinnedBuffer = nullptr;
+	delete staticData.jointBuffer;
+	staticData.jointStagingBuffer = nullptr;
 }
 
 /*
@@ -408,87 +506,6 @@ vertCacheHandle_t idVertexCache::ActuallyAlloc( geoBufferSet_t& vcs, const void*
 
 			break;
 		}
-		case CACHE_JOINT:
-		{
-			endPos = vcs.jointMemUsed.Add( bytes );
-			if( endPos > vcs.jointBuffer.GetAllocedSize() )
-			{
-				idLib::Error( "Out of joint buffer cache" );
-			}
-
-			offset = endPos - bytes;
-
-			if( data != NULL )
-			{
-				if( vcs.jointBuffer.GetUsage() == BU_DYNAMIC )
-				{
-					MapGeoBufferSet( vcs );
-				}
-				vcs.jointBuffer.Update( data, bytes, offset, false, commandList );
-			}
-
-			break;
-		}
-		case CACHE_INSTANCE:
-		{
-			endPos = vcs.instanceMemUsed.Add( bytes );
-			if( endPos > vcs.instanceBuffer.GetAllocedSize() )
-			{
-				idLib::Error( "Out of instance cache" );
-			}
-
-			offset = endPos - bytes;
-
-			if( data != NULL )
-			{
-				if( vcs.instanceBuffer.GetUsage() == BU_DYNAMIC )
-				{
-					MapGeoBufferSet( vcs );
-				}
-				vcs.instanceBuffer.Update( data, bytes, offset, false, commandList );
-			}
-			break;
-		}
-		case CACHE_SKINNED_VERTEX:
-		{
-			endPos = vcs.skinnedMemUsed.Add( bytes );
-			if( endPos > vcs.skinnedBuffer.GetAllocedSize() )
-			{
-				idLib::Error( "Out of skinned vertex cache" );
-			}
-
-			offset = endPos - bytes;
-
-			if( data != NULL )
-			{
-				if( vcs.skinnedBuffer.GetUsage() == BU_DYNAMIC )
-				{
-					MapGeoBufferSet( vcs );
-				}
-				vcs.skinnedBuffer.Update( data, bytes, offset, false, commandList );
-			}
-			break;
-		}
-		case CACHE_MATERIAL:
-		{
-			endPos = vcs.materialMemUsed.Add( bytes );
-			if( endPos > vcs.materialBuffer.GetAllocedSize() )
-			{
-				idLib::Error( "Out of material cache" );
-			}
-
-			offset = endPos - bytes;
-
-			if( data != NULL )
-			{
-				if( vcs.materialBuffer.GetUsage() == BU_DYNAMIC )
-				{
-					MapGeoBufferSet( vcs );
-				}
-				vcs.materialBuffer.Update( data, bytes, offset, false, commandList );
-			}
-			break;
-		}
 		default:
 			assert( false );
 	}
@@ -530,29 +547,9 @@ vertCacheHandle_t idVertexCache::AllocIndex( const void* data, int num, size_t s
 idVertexCache::AllocJoint
 ==============
 */
-vertCacheHandle_t idVertexCache::AllocJoint( const void* data, int num, size_t size /*= sizeof( idJointMat ) */, nvrhi::ICommandList* commandList )
+vertCacheHandle_t idVertexCache::AllocJoint( const void* data, int num, size_t size /*= sizeof( idJointMat ) */ )
 {
-	return ActuallyAlloc( frameData[ listNum ], data, ALIGN( num * size, uniformBufferOffsetAlignment ), CACHE_JOINT, commandList );
-}
-
-/*
-==============
-idVertexCache::AllocInstance
-==============
-*/
-vertCacheHandle_t idVertexCache::AllocInstance( const void* data, int num, size_t size, nvrhi::ICommandList* commandList )
-{
-	return ActuallyAlloc( frameData[ listNum ], data, ALIGN( num * size, VERTEX_CACHE_ALIGN ), CACHE_INSTANCE, commandList );
-}
-
-/*
-==============
-idVertexCache::AllocSkinnedVertex
-==============
-*/
-vertCacheHandle_t idVertexCache::AllocSkinnedVertex( const void* data, int num, size_t size, nvrhi::ICommandList* commandList )
-{
-	return ActuallyAlloc( frameData[ listNum ], data, ALIGN( num * size, VERTEX_CACHE_ALIGN ), CACHE_SKINNED_VERTEX, commandList );
+	return StageAlloc( frameData[listNum].jointStagingBuffer, staticData.jointBuffer, num * size, currentFrame, data, false );
 }
 
 /*
@@ -560,9 +557,11 @@ vertCacheHandle_t idVertexCache::AllocSkinnedVertex( const void* data, int num, 
 idVertexCache::AllocMaterial
 ==============
 */
-vertCacheHandle_t idVertexCache::AllocMaterial( const void* data, int num, size_t size, nvrhi::ICommandList* commandList )
+vertCacheHandle_t idVertexCache::AllocMaterial( const void* data, int numBytes )
 {
-	return ActuallyAlloc( frameData[ listNum ], data, ALIGN( num * size, MATERIAL_CACHE_ALIGN ), CACHE_MATERIAL, commandList );
+	vertCacheHandle_t handle = staticData.materialBuffer->Alloc( numBytes, currentFrame );
+	frameData[listNum].materialStaging->Alloc( data, numBytes, handle );
+	return handle;
 }
 
 /*
@@ -598,27 +597,43 @@ vertCacheHandle_t idVertexCache::AllocStaticIndex( const void* data, int bytes, 
 idVertexCache::AllocStaticInstance
 ==============
 */
-vertCacheHandle_t idVertexCache::AllocStaticInstance( const void* data, int bytes, nvrhi::ICommandList* commandList )
+vertCacheHandle_t idVertexCache::AllocStaticInstance( const void* data, int bytes )
 {
-	if( staticData.instanceMemUsed.GetValue() + bytes > STATIC_VERTEX_MEMORY )
-	{
-		idLib::FatalError( "AllocStaticInstance failed, increase STATIC_VERTEX_MEMORY" );
-	}
-	return ActuallyAlloc( staticData, data, bytes, CACHE_INSTANCE, commandList );
+	return StageAlloc( frameData[listNum].staging, staticData.instanceBuffer, bytes, currentFrame, data, false );
+}
+
+/*
+==============
+idVertexCache::AllocGeometryData
+==============
+*/
+vertCacheHandle_t idVertexCache::AllocGeometryData( const void* data, int bytes )
+{
+	return StageAlloc( frameData[listNum].geometryStaging, staticData.geometryBuffer, bytes, currentFrame, data, false );
 }
 
 /*
 ==============
 idVertexCache::AllocStaticSkinnedVertex
+
+Allocates static skinned vertices.
 ==============
 */
-vertCacheHandle_t idVertexCache::AllocStaticSkinnedVertex( const void* data, int bytes, nvrhi::ICommandList* commandList )
+vertCacheHandle_t idVertexCache::AllocStaticSkinnedVertex( int bytes )
 {
-	if( staticData.skinnedMemUsed.GetValue() + bytes > STATIC_VERTEX_MEMORY )
-	{
-		idLib::FatalError( "AllocStaticSkinnedVertex failed, increase STATIC_VERTEX_MEMORY" );
-	}
-	return ActuallyAlloc( staticData, data, bytes, CACHE_SKINNED_VERTEX, commandList );
+	return staticData.staticSkinnedBuffer->Alloc( bytes, currentFrame, true );
+}
+
+/*
+==============
+idVertexCache::AllocFrameSkinnedVertex
+
+Allocates frame temporary skinned vertices.
+==============
+*/
+vertCacheHandle_t idVertexCache::AllocFrameSkinnedVertex( int bytes )
+{
+	return staticData.skinnedBuffer->Alloc( bytes, currentFrame, false );
 }
 
 /*
@@ -732,42 +747,29 @@ bool idVertexCache::GetIndexBuffer( vertCacheHandle_t handle, idIndexBuffer* ib 
 idVertexCache::GetJointBuffer
 ==============
 */
-bool idVertexCache::GetJointBuffer( vertCacheHandle_t handle, idUniformBuffer* jb )
+bool idVertexCache::GetJointBuffer( vertCacheHandle_t handle, bufferView_t* bv )
 {
-	const int isStatic = handle & VERTCACHE_STATIC;
-	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
-	const uint64 jointOffset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
-	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
-	if( isStatic )
-	{
-		jb->Reference( staticData.jointBuffer, jointOffset, numBytes );
-		return true;
-	}
-	if( frameNum != ( ( currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
-	{
-		return false;
-	}
-	jb->Reference( frameData[ drawListNum ].jointBuffer, jointOffset, numBytes );
-	return true;
+	return staticData.jointBuffer->GetBufferView( handle, bv );
 }
 
-bool idVertexCache::GetInstanceBuffer( vertCacheHandle_t handle, idVertexBuffer* vb )
+/*
+==============
+idVertexCache::GetInstanceBuffer
+==============
+*/
+bool idVertexCache::GetInstanceBuffer( vertCacheHandle_t handle, bufferView_t* bv )
 {
-	const int isStatic = handle & VERTCACHE_STATIC;
-	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
-	const uint64 offset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
-	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
-	if( isStatic )
-	{
-		vb->Reference( staticData.instanceBuffer, offset, numBytes );
-		return true;
-	}
-	if( frameNum != ( ( currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
-	{
-		return false;
-	}
-	vb->Reference( frameData[drawListNum].instanceBuffer, offset, numBytes );
-	return true;
+	return staticData.instanceBuffer->GetBufferView( handle, bv );
+}
+
+/*
+==============
+idVertexCache::GetGeometryData
+==============
+*/
+bool idVertexCache::GetGeometryData( vertCacheHandle_t handle, bufferView_t* bv )
+{
+	return staticData.geometryBuffer->GetBufferView( handle, bv );
 }
 
 /*
@@ -775,23 +777,13 @@ bool idVertexCache::GetInstanceBuffer( vertCacheHandle_t handle, idVertexBuffer*
 idVertexCache::GetSkinnedVertexBuffer
 ==============
 */
-bool idVertexCache::GetSkinnedVertexBuffer( vertCacheHandle_t handle, idVertexBuffer* vb )
+bool idVertexCache::GetSkinnedVertexBuffer( vertCacheHandle_t handle, bufferView_t* bv )
 {
-	const int isStatic = handle & VERTCACHE_STATIC;
-	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
-	const uint64 offset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
-	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
-	if( isStatic )
+	if( CacheIsStatic( handle ) )
 	{
-		vb->Reference( staticData.skinnedBuffer, offset, numBytes );
-		return true;
+		return staticData.staticSkinnedBuffer->GetBufferView( handle, bv );
 	}
-	if( frameNum != ( ( currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
-	{
-		return false;
-	}
-	vb->Reference( frameData[drawListNum].skinnedBuffer, offset, numBytes );
-	return true;
+	return staticData.skinnedBuffer->GetBufferView( handle, bv );
 }
 
 /*
@@ -799,23 +791,31 @@ bool idVertexCache::GetSkinnedVertexBuffer( vertCacheHandle_t handle, idVertexBu
 idVertexCache::GetMaterialBuffer
 ==============
 */
-bool idVertexCache::GetMaterialBuffer( vertCacheHandle_t handle, idUniformBuffer* mb )
+bool idVertexCache::GetMaterialBuffer( vertCacheHandle_t handle, bufferView_t* bv )
 {
-	const int isStatic = handle & VERTCACHE_STATIC;
+	return staticData.materialBuffer->GetBufferView( handle, bv );
+}
+
+/*
+==============
+idVertexCache::UpdateInstanceBuffer
+==============
+*/
+void idVertexCache::UpdateInstanceBuffer( vertCacheHandle_t handle, void* data )
+{
 	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
-	const uint64 offset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
-	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
-	if( isStatic )
-	{
-		mb->Reference( staticData.materialBuffer, offset, numBytes );
-		return true;
-	}
-	if( frameNum != ( ( currentFrame - 1 ) & VERTCACHE_FRAME_MASK ) )
-	{
-		return false;
-	}
-	mb->Reference( frameData[ drawListNum ].materialBuffer, offset, numBytes );
-	return true;
+	frameData[listNum].staging->Alloc( data, numBytes, handle );
+}
+
+/*
+==============
+idVertexCache::UpdateMaterialBuffer
+==============
+*/
+void idVertexCache::UpdateMaterialBuffer( vertCacheHandle_t handle, void* data )
+{
+	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+	frameData[listNum].materialStaging->Alloc( data, numBytes, handle );
 }
 
 /*
@@ -827,22 +827,33 @@ void idVertexCache::BeginBackEnd()
 {
 	mostUsedVertex = Max( mostUsedVertex, frameData[ listNum ].vertexMemUsed.GetValue() );
 	mostUsedIndex = Max( mostUsedIndex, frameData[ listNum ].indexMemUsed.GetValue() );
-	mostUsedJoint = Max( mostUsedJoint, frameData[ listNum ].jointMemUsed.GetValue() );
-	mostUsedInstance = Max( mostUsedInstance, frameData[listNum].instanceMemUsed.GetValue() );
+	//mostUsedJoint = Max( mostUsedJoint, frameData[ listNum ].jointBuffer.GetValue() );
 
 	if( r_showVertexCache.GetBool() )
 	{
-		idLib::Printf( "%08d: %d allocations, %dkB vertex, %dkB index, %ikB joint, instance %ikB: %dkB vertex, %dkB index, %ikB joint, %ikB instance\n",
+		idLib::Printf( "%08d: %d allocations, %dkB vertex, %dkB index, %ikB joint, instance %ikB: %dkB vertex, %dkB index, joint, %ikB instance\n",
 					   currentFrame, frameData[ listNum ].allocations,
 					   frameData[ listNum ].vertexMemUsed.GetValue() / 1024,
 					   frameData[ listNum ].indexMemUsed.GetValue() / 1024,
-					   frameData[ listNum ].jointMemUsed.GetValue() / 1024,
-					   frameData[ listNum ].instanceMemUsed.GetValue() / 1024,
+					   //frameData[ listNum ].jointMemUsed.GetValue() / 1024,
 					   mostUsedVertex / 1024,
 					   mostUsedIndex / 1024,
 					   mostUsedJoint / 1024,
 					   mostUsedInstance / 1024 );
 	}
+
+	nvrhi::ICommandList* commandList = tr.CommandList();
+
+	// Copy buffers from the upload CPU accessible buffers into vmram for
+	// faster reads on the gpu. For UMA architectures this wouldn't be very productive
+	// since there is no performance penalty for using upload buffers directly.
+	commandList->beginMarker( "Copy buffers" );
+	frameData[listNum].staging->CopyBuffers( commandList, staticData.instanceBuffer->GetBuffer() );
+	frameData[listNum].geometryStaging->CopyBuffers( commandList, staticData.geometryBuffer->GetBuffer() );
+	frameData[listNum].materialStaging->CopyBuffers( commandList, staticData.materialBuffer->GetBuffer() );
+	//frameData[listNum].skinnedStaging->CopyBuffers( commandList, staticData.skinnedBuffer->GetBuffer() );
+	frameData[listNum].jointStagingBuffer->CopyBuffers( commandList, staticData.jointBuffer->GetBuffer() );
+	commandList->endMarker();
 
 	// unmap the current frame so the GPU can read it
 	const int startUnmap = Sys_Milliseconds();
@@ -861,12 +872,107 @@ void idVertexCache::BeginBackEnd()
 	listNum = currentFrame % NUM_FRAME_DATA;
 	const int startMap = Sys_Milliseconds();
 	MapGeoBufferSet( frameData[ listNum ] );
+
 	const int endMap = Sys_Milliseconds();
 	if( endMap - startMap > 1 )
 	{
 		idLib::PrintfIf( r_showVertexCacheTimings.GetBool(), "idVertexCache::map took %i msec\n", endMap - startMap );
 	}
 
-	ClearGeoBufferSet( frameData[ listNum ] );
+	// "Clear" address space of these buffers, but doesn't actually clear the data for use by the backend on the gpu.
+	staticData.instanceBuffer->Clear();
+	staticData.geometryBuffer->Clear();
+	staticData.materialBuffer->Clear();
+	staticData.skinnedBuffer->Clear();
+	staticData.jointBuffer->Clear();
+
+	ClearGeoBufferSet( frameData[listNum] );
 }
 
+
+/*
+========================
+idTrackedBuffer::idTrackedBuffer
+========================
+*/
+idTrackedBuffer::idTrackedBuffer( nvrhi::DeviceHandle device, nvrhi::BufferDesc desc )
+	: memUsed()
+	, device( device )
+{
+	assert( !buffer );
+
+	if( desc.byteSize <= 0 )
+	{
+		idLib::Error( "idTrackedBuffer::idTrackedBuffer: allocSize = %i", desc.byteSize );
+	}
+
+	buffer = deviceManager->GetDevice()->createBuffer( desc );
+
+	assert( tr.backend.descriptorTableManager );
+	bindlessHandle = tr.backend.descriptorTableManager->CreateDescriptorHandle(
+		nvrhi::BindingSetItem::RawBuffer_SRV( 0, buffer ) );
+}
+
+/*
+========================
+idTrackedBuffer::~idTrackedBuffer
+========================
+*/
+idTrackedBuffer::~idTrackedBuffer()
+{
+	buffer.Reset();
+}
+
+/*
+========================
+idTrackedBuffer::Alloc
+========================
+*/
+vertCacheHandle_t idTrackedBuffer::Alloc( size_t numBytes, int currentFrame, bool isStatic )
+{
+	if( numBytes == 0 )
+	{
+		return ( vertCacheHandle_t )0;
+	}
+
+	assert( buffer );
+	assert( ( numBytes & 15 ) == 0 );
+
+	uint64 endPos = memUsed.Add( numBytes );
+	if( endPos > buffer->getDesc().byteSize )
+	{
+		idLib::Error( "Out of buffer cache" );
+	}
+
+	uint64 offset = endPos - numBytes;
+
+	vertCacheHandle_t handle = ( ( uint64 )( currentFrame & VERTCACHE_FRAME_MASK ) << VERTCACHE_FRAME_SHIFT ) |
+							   ( ( uint64 )( offset & VERTCACHE_OFFSET_MASK ) << VERTCACHE_OFFSET_SHIFT ) |
+							   ( ( uint64 )( numBytes & VERTCACHE_SIZE_MASK ) << VERTCACHE_SIZE_SHIFT );
+
+	if( isStatic )
+	{
+		handle |= VERTCACHE_STATIC;
+	}
+
+	return handle;
+}
+
+void idTrackedBuffer::Clear()
+{
+	memUsed.SetValue( 0 );
+}
+
+bool idTrackedBuffer::GetBufferView( vertCacheHandle_t handle, bufferView_t* bv )
+{
+	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
+	const uint64 offset = ( int )( handle >> VERTCACHE_OFFSET_SHIFT ) & VERTCACHE_OFFSET_MASK;
+	const uint64 frameNum = ( int )( handle >> VERTCACHE_FRAME_SHIFT ) & VERTCACHE_FRAME_MASK;
+	assert( numBytes + offset < buffer->getDesc().byteSize );
+	bv->buffer = ( void* )buffer.Get();
+	bv->offset = offset;
+	bv->size = numBytes;
+	bv->bindlessIndex = bindlessHandle.Get();
+
+	return true;
+}

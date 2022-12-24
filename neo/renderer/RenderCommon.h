@@ -135,7 +135,9 @@ struct drawSurf_t
 	vertCacheHandle_t		shadowCache;		// idShadowVert / idShadowVertSkinned
 	vertCacheHandle_t		jointCache;			// idJointMat
 	vertCacheHandle_t		skinnedCache;		// idDrawVert - the skinned vertices
-	vertCacheHandle_t		matRegisterCache;	// Material registers
+	vertCacheHandle_t		matRegisterCache;	// MaterialConstants
+	vertCacheHandle_t		instanceCache;		// instanceData_t
+	vertCacheHandle_t		geometryCache;		// geometryData_t
 	const viewEntity_t* 	space;
 	const idMaterial* 		material;			// may be NULL for shadow volumes
 	uint64					extraGLState;		// Extra GL state |'d with material->stage[].drawStateBits
@@ -456,8 +458,6 @@ struct viewEntity_t
 	// back end should NOT reference the entityDef, because it can change when running SMP
 	idRenderEntityLocal*		entityDef;
 
-	vertCacheHandle_t		instanceCache;		// idInstanceData
-
 	// for scissor clipping, local inside renderView viewport
 	// scissorRect.Empty() is true if the viewEntity_t was never actually
 	// seen through any portals, but was created for shadow casting.
@@ -717,6 +717,96 @@ struct drawInteraction_t
 	idVec4				bumpMatrix[2];
 	idVec4				diffuseMatrix[2];
 	idVec4				specularMatrix[2];
+};
+
+// bindless geometry
+struct geometryData_t
+{
+	uint numIndices;
+	uint numVertices;
+	int indexBufferIndex;
+	uint indexOffset;
+
+	int vertexBufferIndex;
+	uint positionOffset;
+	uint prevPositionOffset;
+	uint texCoord1Offset;
+
+	uint texCoord2Offset;
+	uint normalOffset;
+	uint tangentOffset;
+	uint materialIndex;
+
+	uint padding[4];
+};
+
+// bindless instance data
+struct instanceData_t
+{
+	uint padding[2];
+	uint firstGeometryIndex;
+	uint numGeometries;
+
+	float transform[16];
+	float prevTransform[16];
+};
+
+enum stageFlag_t
+{
+	STAGE_FLAG_USE_SPECULAR_GLOSS_MODEL				= BIT( 1 ),
+	STAGE_FLAG_DOUBLE_SIDED							= BIT( 2 ),
+	STAGE_FLAG_USE_METAL_ROUGH_OR_SPECULAR_TEXTURES = BIT( 3 ),
+	STAGE_FLAG_USE_BASE_OR_DIFFUSE_TEXTURE			= BIT( 4 ),
+	STAGE_FLAG_USE_EMISSIVE_TEXTURE					= BIT( 5 ),
+	STAGE_FLAG_USE_NORMAL_TEXTURE					= BIT( 6 ),
+	STAGE_FLAG_USE_OCCLUSION_TEXTURE				= BIT( 7 ),
+	STAGE_FLAG_USE_TRANSMISSION_TEXTURE				= BIT( 8 )
+};
+
+// bindless material data
+struct materialData_t
+{
+	idVec3  baseOrDiffuseColor;
+	int     flags;
+
+	idVec3  specularColor;
+	int     materialID;
+
+	idVec3  emissiveColor;
+	int     domain;
+
+	float   opacity;
+	float   roughness;
+	float   metalness;
+	float   normalTextureScale;
+
+	float   occlusionStrength;
+	float   alphaCutoff;
+	float   transmissionFactor;
+	int     baseOrDiffuseTextureIndex;
+
+	int     metalRoughOrSpecularTextureIndex;
+	int     emissiveTextureIndex;
+	int     normalTextureIndex;
+	int     occlusionTextureIndex;
+
+	int     transmissionTextureIndex;
+	int		numAmbientStages;
+	int     padding1;
+	int     padding2;
+};
+
+struct materialAmbientData_t
+{
+	int		padding[2]; // make it 144 bytes so it's 16-byte aligned.
+	float	alphaTest;
+	int		textureId;
+
+	idVec4	texGen[3];
+	idVec4	textureMatrix[2];
+	idVec4	color;
+	idVec4	vertexColorModulate;
+	idVec4	vertexColorAdd;
 };
 
 /*
@@ -1050,7 +1140,11 @@ public:
 	// renderer globals
 
 #if defined( USE_NVRHI )
-	nvrhi::CommandListHandle commandList;
+	nvrhi::ICommandList* CommandList() override
+	{
+		return backend.FrontendCommandList();
+	}
+#else
 #endif
 
 	bool					registered;		// cleared at shutdown, set at InitOpenGL
@@ -1621,6 +1715,8 @@ void R_LinkDrawSurfToView( drawSurf_t* drawSurf, viewDef_t* viewDef );
 
 void R_AddModels();
 
+void R_LinkGeometryData( drawSurf_t* ds );
+
 /*
 =============================================================
 
@@ -1743,6 +1839,7 @@ struct deformInfo_t
 
 	vertCacheHandle_t	staticIndexCache;		// GL_INDEX_TYPE
 	vertCacheHandle_t	staticAmbientCache;		// idDrawVert
+	// TODO(Stephen): Add a vertex cache for the skinned vertices
 	vertCacheHandle_t	staticShadowCache;		// idShadowCacheSkinned
 };
 
@@ -1818,6 +1915,7 @@ void RB_SetVertexColorParms( stageVertexColor_t svc );
 #include "GLMatrix.h"
 
 #include "BufferObject.h"
+#include "StagingBuffer.h"
 #include "RenderProgs.h"
 #include "RenderWorld_local.h"
 #include "GuiModel.h"

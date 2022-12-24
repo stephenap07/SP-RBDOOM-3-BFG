@@ -23,31 +23,25 @@
 #pragma pack_matrix(row_major)
 
 #include "bindless.hlsli"
-#include <vulkan.hlsli>
 #include "packing.hlsli"
 #include "skinning.cb.hlsli"
 
-ByteAddressBuffer t_VertexBuffer :
-register( t0 );
-StructuredBuffer<float4> t_JointMatrices :
-register( t1 );
+#include <vulkan.hlsli>
 
-RWByteAddressBuffer u_VertexBuffer :
-register( u0 );
+// *INDENT-OFF*
+ByteAddressBuffer t_VertexBuffer : register( t0 );
+ByteAddressBuffer t_JointMatrices : register( t1 );
+RWByteAddressBuffer u_VertexBuffer : register( u0 );
 
 #ifdef SPIRV
-
 [[vk::push_constant]] ConstantBuffer<SkinningConstants> g_Const;
-
 #else
-
-cbuffer g_Const :
-register( b0 )
+cbuffer g_Const : register( b0 )
 {
 	SkinningConstants g_Const;
 }
-
 #endif
+// *INDENT-ON*
 
 // GPU half-float bit patterns
 #define HF_MANTISSA(x)	(x&1023)
@@ -70,7 +64,6 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 	float4 tangent = 0;
 	uint texCoord1 = 0;
 	uint texCoord2 = 0;
-	const float divisor = 1.0 / 255.0;
 
 	if( g_Const.flags & SkinningFlag_Normals )
 	{
@@ -94,6 +87,8 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 		texCoord2 = t_VertexBuffer.Load( offset + g_Const.inputTexCoord2Offset );
 	}
 
+	const float divisor = 1.0 / 255.0;
+
 	uint jp = t_VertexBuffer.Load( offset + g_Const.inputJointIndexOffset );
 	float4 jointIndices = float4( ( ( jp >> 0 ) & 0xff ),
 								  ( ( jp >> 8 ) & 0xff ),
@@ -111,31 +106,31 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 	for( int i = 0; i < 4; i++ )
 	{
 		int index = int( jointIndices[i] * 255.1 * 3.0 );
-		matX += t_JointMatrices[index] * jointWeights[i];
-		matY += t_JointMatrices[index + 1] * jointWeights[i];
-		matZ += t_JointMatrices[index + 2] * jointWeights[i];
+		matX += asfloat( t_JointMatrices.Load4(g_Const.inputJointMatOffset + ( index + 0 ) * 16 ) ) * jointWeights[i];
+		matY += asfloat( t_JointMatrices.Load4(g_Const.inputJointMatOffset + ( index + 1 ) * 16 ) ) * jointWeights[i];
+		matZ += asfloat( t_JointMatrices.Load4(g_Const.inputJointMatOffset + ( index + 2 ) * 16 ) ) * jointWeights[i];
 	}
 
-	float4 modelPosition;
+	float3 modelPosition;
 	modelPosition.x = dot( matX, float4( position, 1 ) );
 	modelPosition.y = dot( matY, float4( position, 1 ) );
 	modelPosition.z = dot( matZ, float4( position, 1 ) );
 
-	float4 modelNormal;
-	modelNormal.x = dot( matX, normal );
-	modelNormal.y = dot( matY, normal );
-	modelNormal.z = dot( matZ, normal );
+	float3 modelNormal;
+	modelNormal.x = dot( matX.xyz, normal.xyz );
+	modelNormal.y = dot( matY.xyz, normal.xyz );
+	modelNormal.z = dot( matZ.xyz, normal.xyz );
 	modelNormal = normalize( modelNormal );
 
-	float4 modelTangent;
-	modelTangent.x = dot( matX, tangent );
-	modelTangent.y = dot( matY, tangent );
-	modelTangent.z = dot( matZ, tangent );
+	float3 modelTangent;
+	modelTangent.x = dot( matX.xyz, tangent.xyz );
+	modelTangent.y = dot( matY.xyz, tangent.xyz );
+	modelTangent.z = dot( matZ.xyz, tangent.xyz );
 	modelTangent = normalize( modelTangent );
 
-	position = modelPosition.xyz;
-	normal.xyz = modelNormal.xyz;
-	tangent.xyz = modelTangent.xyz;
+	position = modelPosition;
+	normal.xyz = modelNormal;
+	tangent.xyz = modelTangent;
 
 	// float3 prevPosition;
 	// if (g_Const.flags & SkinningFlag_FirstFrame)

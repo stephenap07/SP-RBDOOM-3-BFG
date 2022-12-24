@@ -146,6 +146,11 @@ idBufferObject::idBufferObject()
 #endif
 }
 
+int idBufferObject::GetBindlessIndex() const
+{
+	return bindlessHandle.Get();
+}
+
 /*
 ================================================================================================
 
@@ -180,6 +185,7 @@ void idVertexBuffer::Reference( const idVertexBuffer& other )
 	offsetInOtherBuffer = other.GetOffset();	// this strips the OWNS_BUFFER_FLAG
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
+	bindlessHandle = other.bindlessHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif
@@ -204,6 +210,7 @@ void idVertexBuffer::Reference( const idVertexBuffer& other, int refOffset, int 
 	offsetInOtherBuffer = other.GetOffset() + refOffset;
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
+	bindlessHandle = other.bindlessHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif
@@ -244,6 +251,7 @@ void idIndexBuffer::Reference( const idIndexBuffer& other )
 	offsetInOtherBuffer = other.GetOffset();	// this strips the OWNS_BUFFER_FLAG
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
+	bindlessHandle = other.bindlessHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif
@@ -268,6 +276,7 @@ void idIndexBuffer::Reference( const idIndexBuffer& other, int refOffset, int re
 	offsetInOtherBuffer = other.GetOffset() + refOffset;
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
+	bindlessHandle = other.bindlessHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
 #endif

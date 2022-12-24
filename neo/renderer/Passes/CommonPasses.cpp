@@ -87,6 +87,7 @@ void CommonRenderPasses::Init( nvrhi::IDevice* device )
 	samplerDesc.setReductionType( nvrhi::SamplerReductionType::Comparison );
 	m_LinearClampCompareSampler = m_Device->createSampler( samplerDesc );
 
+	samplerDesc.setReductionType( nvrhi::SamplerReductionType::Standard );
 	samplerDesc.setAllAddressModes( nvrhi::SamplerAddressMode::Wrap );
 	m_LinearWrapSampler = m_Device->createSampler( samplerDesc );
 

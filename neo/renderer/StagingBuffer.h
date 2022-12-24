@@ -2,6 +2,7 @@
 ===========================================================================
 
 Doom 3 BFG Edition GPL Source Code
+Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -26,33 +27,47 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#ifndef RENDERER_PASSES_GEOMETRYPASSES_H_
-#define RENDERER_PASSES_GEOMETRYPASSES_H_
+#ifndef RENDERER_STAGINGBUFFER_H_
+#define RENDERER_STAGINGBUFFER_H_
 
-class idGeometryPassContext
-{
-};
-
-class idGeometryPass
+// A linear allocator upload buffer. Used in the vertex cache
+// to provide a thread-safe way of mapping data to the gpu.
+// Use ICommandList::copyBuffer to copy this data to another buffer
+// when you're done updating.
+class idStagingBuffer
 {
 public:
 
-	virtual void SetupView( idGeometryPassContext& abstractContext, nvrhi::ICommandList* commandList, const viewDef_t* view, const viewDef_t* viewPrev ) = 0;
-	virtual bool SetupMaterial( idGeometryPassContext& abstractContext, drawSurf_t* drawSurf, nvrhi::RasterCullMode cullMode, nvrhi::GraphicsState& state ) = 0;
-	virtual void SetupInputBuffers( idGeometryPassContext& abstractContext, drawSurf_t* drawSurf, nvrhi::GraphicsState& state ) = 0;
-	virtual void SetPushConstants( idGeometryPassContext& abstractContext, nvrhi::ICommandList* commandList, nvrhi::GraphicsState& state, nvrhi::DrawArguments& args ) = 0;
-	virtual ~idGeometryPass() = default;
+	constexpr static int MAPPED_FLAG = 1 << ( 4 /* sizeof( int ) */ * 8 - 1 );
+
+	explicit idStagingBuffer( nvrhi::DeviceHandle device, nvrhi::BufferDesc desc );
+	~idStagingBuffer();
+
+	vertCacheHandle_t	Alloc( const void* data, size_t numBytes, vertCacheHandle_t inHandle );
+	void				Clear();
+	void				CopyBuffers( nvrhi::ICommandList* commandList, nvrhi::IBuffer* destBuffer );
+	void				Update( vertCacheHandle_t handle, void* data );
+
+	nvrhi::BufferHandle Buffer()
+	{
+		return buffer;
+	}
+
+public:
+
+	idStagingBuffer( const idStagingBuffer& )				= delete;
+	idStagingBuffer& operator=( const idStagingBuffer& )	= delete;
+
+private:
+
+	void*					MapBuffer();
+
+	nvrhi::BufferHandle		buffer;
+	nvrhi::DeviceHandle		device;
+	byte*					mappedBase;
+	idSysInterlockedInteger memUsed;
+	idSysInterlockedInteger numAllocs;
+	vertCacheHandle_t*		allocations;
 };
-
-void RenderView(
-	nvrhi::ICommandList* commandList,
-	const viewDef_t* view,
-	const viewDef_t* prevView,
-	nvrhi::IFramebuffer* framebuffer,
-	idGeometryPass& pass,
-	idGeometryPassContext& passContext,
-	bool materialEvents = false );
-
-nvrhi::RasterCullMode GetCullMode( drawSurf_t* surf );
 
 #endif

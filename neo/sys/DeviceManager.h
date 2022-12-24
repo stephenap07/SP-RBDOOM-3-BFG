@@ -52,8 +52,8 @@ struct DeviceCreationParameters
 	bool enableNvrhiValidationLayer = false;
 	bool vsyncEnabled = false;
 	bool enableRayTracingExtensions = false; // for vulkan
-	bool enableComputeQueue = false;
-	bool enableCopyQueue = false;
+	bool enableComputeQueue = true;
+	bool enableCopyQueue = true;
 
 #if _WIN32
 	HINSTANCE	hInstance;

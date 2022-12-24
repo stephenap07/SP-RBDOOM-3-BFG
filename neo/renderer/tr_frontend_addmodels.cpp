@@ -273,6 +273,168 @@ idRenderModel* R_EntityDefDynamicModel( idRenderEntityLocal* def )
 	return def->dynamicModel;
 }
 
+static void FillConstantBuffer( drawSurf_t* drawSurf )
+{
+	const idMaterial* material = drawSurf->material;
+	const float* reg = drawSurf->shaderRegisters;
+
+	int flags = 0;
+	float opacity = 0.0f;
+	float alphaTest = -1.0f;
+
+	for( int i = 0; i < material->GetNumStages(); i++ )
+	{
+		const shaderStage_t* stage = material->GetStage( i );
+
+		if( reg[stage->conditionRegister] == 0.0f )
+		{
+			continue;
+		}
+
+		if( stage->hasAlphaTest )
+		{
+			alphaTest = reg[stage->alphaTestRegister];
+			opacity = reg[stage->color.registers[3]];
+		}
+
+		switch( stage->lighting )
+		{
+			case SL_AMBIENT:
+				flags |= STAGE_FLAG_USE_EMISSIVE_TEXTURE;
+				break;
+			case SL_BUMP:
+				flags |= STAGE_FLAG_USE_NORMAL_TEXTURE;
+				break;
+			case SL_DIFFUSE:
+				flags |= STAGE_FLAG_USE_BASE_OR_DIFFUSE_TEXTURE;
+				break;
+			case SL_SPECULAR:
+				flags |= STAGE_FLAG_USE_SPECULAR_GLOSS_MODEL;
+				break;
+			default:
+				break;
+		}
+	}
+
+	if( material->Coverage() == MC_OPAQUE )
+	{
+		alphaTest = -1.0f;
+	}
+
+	int numPerforated = 0;
+
+	if( material->Coverage() == MC_PERFORATED )
+	{
+		for( int i = 0; i < material->GetNumStages(); i++ )
+		{
+			const shaderStage_t* stage = material->GetStage( i );
+			if( reg[stage->conditionRegister] == 0.0f )
+			{
+				continue;
+			}
+			if( !stage->hasAlphaTest )
+			{
+				continue;
+			}
+			// skip the entire stage if alpha would be black
+			if( reg[stage->color.registers[3]] <= 0.0f )
+			{
+				continue;
+			}
+			numPerforated++;
+		}
+	}
+
+	size_t dataSize = sizeof( materialData_t ) + ( numPerforated * sizeof( materialAmbientData_t ) );
+	void* tempData = _alloca( dataSize );
+	materialAmbientData_t* ambientData = ( materialAmbientData_t* )( ( byte* )tempData + sizeof( materialData_t ) );
+
+	materialData_t constants;
+
+	// free parameters
+	constants.alphaCutoff = alphaTest;
+	constants.flags = flags;
+	constants.opacity = opacity;
+	constants.domain = material->Coverage();
+	constants.baseOrDiffuseColor = idVec3( 0 );
+	constants.specularColor = idVec3( 0 );
+	constants.emissiveColor = idVec3( 0 );
+	constants.roughness = 0;
+	constants.metalness = 0;
+	constants.normalTextureScale = 1;
+	constants.materialID = material->Index();
+	constants.occlusionStrength = 0;
+	constants.transmissionFactor = 0;
+
+	// bindless textures
+	constants.baseOrDiffuseTextureIndex = material->GetBindlessTextureIndex( SL_DIFFUSE );
+	constants.metalRoughOrSpecularTextureIndex = material->GetBindlessTextureIndex( SL_SPECULAR );
+	constants.normalTextureIndex = material->GetBindlessTextureIndex( SL_BUMP );
+	constants.emissiveTextureIndex = -1;
+	constants.occlusionTextureIndex = -1;
+	constants.transmissionTextureIndex = -1;
+	constants.numAmbientStages = numPerforated;
+
+	memcpy( tempData, &constants, sizeof( materialData_t ) );
+
+	if( material->Coverage() == MC_PERFORATED )
+	{
+		idVec4 color;
+		if( material->GetSort() == SS_SUBVIEW )
+		{
+			memset( &color[0], 1.0f, sizeof( idVec4 ) );
+		}
+		else
+		{
+			// others just draw black
+			memset( &color[0], 0.0f, sizeof( idVec4 ) );
+			color[3] = 1.0f;
+		}
+
+		int index = 0;
+		for( int i = 0; i < material->GetNumStages(); i++ )
+		{
+			const shaderStage_t* stage = material->GetStage( i );
+			if( reg[stage->conditionRegister] == 0.0f )
+			{
+				continue;
+			}
+
+			if( !stage->hasAlphaTest )
+			{
+				continue;
+			}
+
+			color[3] = reg[stage->color.registers[3]];
+
+			// skip the entire stage if alpha would be black
+			if( color[3] <= 0.0f )
+			{
+				continue;
+			}
+
+			// TODO: add some other attributes like texture matrices and vertex color modes.
+			materialAmbientData_t data;
+			data.alphaTest = reg[stage->alphaTestRegister];
+			data.color = color;
+
+			const DescriptorHandle* handle = stage->texture.image->GetDescriptorHandle();
+			if( handle )
+			{
+				data.textureId = handle->Get();
+			}
+			assert( index < numPerforated );
+			ambientData[index++] = data;
+		}
+	}
+
+	// push it to the gpu frame cache
+	if( !vertexCache.CacheIsCurrent( drawSurf->matRegisterCache ) )
+	{
+		drawSurf->matRegisterCache = vertexCache.AllocMaterial( tempData, dataSize );
+	}
+}
+
 /*
 ===================
 R_SetupDrawSurfShader
@@ -327,14 +489,7 @@ void R_SetupDrawSurfShader( drawSurf_t* drawSurf, const idMaterial* shader, cons
 								   tr.viewDef->renderView.time[renderEntity->timeGroup] * 0.001f, renderEntity->referenceSound );
 	}
 
-	MaterialConstants constants;
-	shader->FillConstantBuffer( constants, drawSurf->shaderRegisters );
-
-	// push it to the gpu frame cache
-	if( !vertexCache.CacheIsCurrent( drawSurf->matRegisterCache ) )
-	{
-		drawSurf->matRegisterCache = vertexCache.AllocMaterial( &constants, 1, sizeof( MaterialConstants ) );
-	}
+	FillConstantBuffer( drawSurf );
 }
 
 /*
@@ -611,18 +766,6 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 		idRenderMatrix::ApplyModelDepthHack( vEntity->mvp, renderEntity->modelDepthHack );
 	}
 
-	// Transform modelView into 3x4 matrix.
-	// We're not really using these bindless geometries at the moment.
-	idInstanceData instanceData;
-	instanceData.firstGeometryIndex = 0;
-	instanceData.numGeometries = 1;
-	SIMDProcessor->Memcpy( &instanceData.transform, &vEntity->mvp, sizeof( idRenderMatrix ) );
-	SIMDProcessor->Memcpy( &instanceData.prevTransform, &instanceData.transform, sizeof( idRenderMatrix ) );
-	if( !vertexCache.CacheIsCurrent( vEntity->instanceCache ) )
-	{
-		vEntity->instanceCache = vertexCache.AllocInstance( &instanceData, 1, sizeof( idInstanceData ) );
-	}
-
 	// local light and view origins are used to determine if the view is definitely outside
 	// an extruded shadow volume, which means we can skip drawing the end caps
 	idVec3 localViewOrigin;
@@ -760,6 +903,12 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 		const bool gpuSkinned = ( tri->staticModelWithJoints != NULL && r_useGPUSkinning.GetBool() && glConfig.gpuSkinningAvailable );
 		// RB end
 
+		vertCacheHandle_t skinnedCache = 0;
+		if( gpuSkinned )
+		{
+			skinnedCache = vertexCache.AllocFrameSkinnedVertex( tri->numVerts * sizeof( idDrawVert ) );
+		}
+
 		//--------------------------
 		// base drawing surface
 		//--------------------------
@@ -838,21 +987,16 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 
 					R_SetupDrawSurfJoints( baseDrawSurf, tri, shader );
 
-					if( vertexCache.CacheIsCurrent( baseDrawSurf->jointCache ) )
+					if( gpuSkinned && !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
 					{
-						if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
-						{
-							surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
-						}
-
-						baseDrawSurf->skinnedCache = surf->skinnedCache;
+						baseDrawSurf->skinnedCache = vertexCache.AllocFrameSkinnedVertex( tri->numVerts * sizeof( idDrawVert ) );
 					}
 
+					baseDrawSurf->skinnedCache = skinnedCache;
 					baseDrawSurf->numIndexes = tri->numIndexes;
 					baseDrawSurf->ambientCache = tri->ambientCache;
 					baseDrawSurf->indexCache = tri->indexCache;
 					baseDrawSurf->shadowCache = 0;
-
 					baseDrawSurf->linkChain = NULL;		// link to the view
 					baseDrawSurf->nextOnLight = vEntity->drawSurfs;
 					vEntity->drawSurfs = baseDrawSurf;
@@ -991,6 +1135,7 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 
 						lightDrawSurf->ambientCache = tri->ambientCache;
 						lightDrawSurf->shadowCache = 0;
+						lightDrawSurf->skinnedCache = skinnedCache;
 						lightDrawSurf->frontEndGeo = tri;
 						lightDrawSurf->space = vEntity;
 						lightDrawSurf->material = shader;
@@ -1001,16 +1146,6 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 						lightDrawSurf->shaderRegisters = shaderRegisters;
 
 						R_SetupDrawSurfJoints( lightDrawSurf, tri, shader );
-
-						if( vertexCache.CacheIsCurrent( lightDrawSurf->jointCache ) )
-						{
-							if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
-							{
-								surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
-							}
-
-							lightDrawSurf->skinnedCache = surf->skinnedCache;
-						}
 
 						// Determine which linked list to add the light surface to.
 						// There will only be localSurfaces if the light casts shadows and
@@ -1163,6 +1298,7 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 
 						shadowDrawSurf->ambientCache = tri->ambientCache;
 						shadowDrawSurf->shadowCache = 0;
+						shadowDrawSurf->skinnedCache = skinnedCache;
 						shadowDrawSurf->frontEndGeo = tri;
 						shadowDrawSurf->space = vEntity;
 						shadowDrawSurf->material = shader;
@@ -1178,16 +1314,6 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 						}
 
 						R_SetupDrawSurfJoints( shadowDrawSurf, tri, shader );
-
-						if( vertexCache.CacheIsCurrent( shadowDrawSurf->jointCache ) )
-						{
-							if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
-							{
-								surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
-							}
-
-							shadowDrawSurf->skinnedCache = surf->skinnedCache;
-						}
 
 						// determine which linked list to add the shadow surface to
 
@@ -1351,6 +1477,7 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 			assert( vertexCache.CacheIsCurrent( shadowDrawSurf->indexCache ) );
 
 			shadowDrawSurf->ambientCache = 0;
+			shadowDrawSurf->skinnedCache = skinnedCache;
 			shadowDrawSurf->frontEndGeo = NULL;
 			shadowDrawSurf->space = vEntity;
 			shadowDrawSurf->material = NULL;
@@ -1359,16 +1486,6 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 			shadowDrawSurf->shaderRegisters = NULL;
 
 			R_SetupDrawSurfJoints( shadowDrawSurf, tri, NULL );
-
-			if( vertexCache.CacheIsCurrent( shadowDrawSurf->jointCache ) )
-			{
-				if( !vertexCache.CacheIsCurrent( surf->skinnedCache ) )
-				{
-					surf->skinnedCache = vertexCache.AllocStaticSkinnedVertex( NULL, tri->numVerts * sizeof( idDrawVert ), nullptr );
-				}
-
-				shadowDrawSurf->skinnedCache = surf->skinnedCache;
-			}
 
 			// determine which linked list to add the shadow surface to
 			shadowDrawSurf->linkChain = shader->TestMaterialFlag( MF_NOSELFSHADOW ) ? &vLight->localShadows : &vLight->globalShadows;
@@ -1508,6 +1625,7 @@ void R_AddModels()
 
 	tr.viewDef->numDrawSurfs = 0;	// clear the ambient surface list
 	tr.viewDef->maxDrawSurfs = 0;	// will be set to INITIAL_DRAWSURFS on R_LinkDrawSurfToView
+	int numGeos = 0;
 
 	for( viewEntity_t* vEntity = tr.viewDef->viewEntitys; vEntity != NULL; vEntity = vEntity->next )
 	{

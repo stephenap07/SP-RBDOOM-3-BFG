@@ -1320,8 +1320,10 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 			splashScreen = declManager->FindMaterial( "guis/assets/splash/legal_english" );
 		}
 
+		tr.CommandList()->open();
+
 		// SP: Load in the splash screen images.
-		globalImages->LoadDeferredImages();
+		globalImages->LoadDeferredImages( tr.CommandList() );
 
 		const int legalMinTime = 4000;
 		const bool showVideo = ( !com_skipIntroVideos.GetBool() && fileSystem->UsingResourceFiles() );
@@ -1469,7 +1471,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		com_fullyInitialized = true;
 
-		globalImages->LoadDeferredImages();
+		globalImages->LoadDeferredImages( tr.CommandList() );
 
 		// No longer need the splash screen
 		if( splashScreen != NULL )

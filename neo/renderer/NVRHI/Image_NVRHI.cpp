@@ -394,6 +394,8 @@ void idImage::AllocImage()
 					   .setWidth( scaledWidth )
 					   .setHeight( scaledHeight )
 					   .setFormat( format )
+					   .setInitialState( nvrhi::ResourceStates::Common )
+					   .setKeepInitialState( true )
 					   .setIsUAV( opts.isUAV )
 					   .setSampleCount( opts.samples )
 					   .setMipLevels( opts.numLevels );
@@ -441,6 +443,11 @@ void idImage::AllocImage()
 		textureDesc.componentMapping.a = nvrhi::ComponentSwizzle::One;
 	}
 
+	if( opts.isUAV )
+	{
+		textureDesc.setIsUAV( true );
+	}
+
 	if( opts.isRenderTarget )
 	{
 		textureDesc.setInitialState( nvrhi::ResourceStates::RenderTarget )
@@ -452,13 +459,6 @@ void idImage::AllocImage()
 		{
 			textureDesc.setInitialState( nvrhi::ResourceStates::DepthWrite )
 			.setClearValue( nvrhi::Color( 1.f ) );
-		}
-
-		if( opts.isUAV )
-		{
-			// TODO(Stephen): Probably make this an image option.
-			// This is a hack to make cszBuffer and ambient occlusion uav work.
-			textureDesc.setIsUAV( true );
 		}
 	}
 
@@ -484,6 +484,11 @@ void idImage::AllocImage()
 
 	texture = deviceManager->GetDevice()->createTexture( textureDesc );
 
+	if( !opts.isRenderTarget && tr.backend.descriptorTableManager )
+	{
+		bindlessDescriptor = tr.backend.descriptorTableManager->CreateDescriptorHandle( nvrhi::BindingSetItem( nvrhi::BindingSetItem::Texture_SRV( 0, texture ) ) );
+	}
+
 	assert( texture );
 }
 
@@ -496,6 +501,7 @@ void idImage::PurgeImage()
 {
 	texture.Reset();
 	sampler.Reset();
+	bindlessDescriptor.Free();
 	isLoaded = false;
 	defaulted = false;
 }

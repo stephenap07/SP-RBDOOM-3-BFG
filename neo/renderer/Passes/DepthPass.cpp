@@ -54,55 +54,10 @@ void DepthPass::SetupView( idGeometryPassContext& abstractContext, nvrhi::IComma
 
 bool DepthPass::SetupMaterial( idGeometryPassContext& abstractContext, drawSurf_t* drawSurf, nvrhi::RasterCullMode cullMode, nvrhi::GraphicsState& state )
 {
-	auto& context = static_cast<Context&>( abstractContext );
-
+	auto& context = static_cast< Context& >( abstractContext );
 	PipelineKey key = context.keyTemplate;
 	key.bits.cullMode = cullMode;
-
-	const idMaterial* shader = drawSurf->material;
-
-	// get the expressions for conditionals / color / texcoords
-	const float* regs = drawSurf->shaderRegisters;
-
-	// if all stages of a material have been conditioned off, don't do anything
-	int stage = 0;
-	for( ; stage < shader->GetNumStages(); stage++ )
-	{
-		const shaderStage_t* pStage = shader->GetStage( stage );
-		// check the stage enable condition
-		if( regs[pStage->conditionRegister] != 0 )
-		{
-			break;
-		}
-	}
-
-	if( stage == shader->GetNumStages() )
-	{
-		return false;
-	}
-
-	if( shader->Coverage() == MC_PERFORATED )
-	{
-		nvrhi::IBindingSet* materialBindingSet = materialBindings->GetMaterialBindingSet( drawSurf );
-
-		if( !materialBindingSet )
-		{
-			return false;
-		}
-
-		state.bindings = { viewBindingSet, materialBindingSet };
-		key.bits.alphaTested = true;
-	}
-	else if( shader->Coverage() == MC_OPAQUE )
-	{
-		state.bindings = { viewBindingSet };
-		key.bits.alphaTested = false;
-	}
-	else
-	{
-		return false;
-	}
-
+	state.bindings = { bindlessSet, tr.backend.descriptorTableManager->GetDescriptorTable() };
 	nvrhi::GraphicsPipelineHandle& pipeline = pipelines[key.value];
 
 	if( !pipeline )
@@ -130,32 +85,7 @@ bool DepthPass::SetupMaterial( idGeometryPassContext& abstractContext, drawSurf_
 
 void DepthPass::SetupInputBuffers( idGeometryPassContext& abstractContext, drawSurf_t* surf, nvrhi::GraphicsState& state )
 {
-	idVertexBuffer vertexBuffer;
-	if( surf->skinnedCache != 0 )
-	{
-		vertexCache.GetSkinnedVertexBuffer( surf->skinnedCache, &vertexBuffer );
-	}
-	else
-	{
-		vertexCache.GetVertexBuffer( surf->ambientCache, &vertexBuffer );
-	}
-
-	idIndexBuffer indexBuffer;
-	vertexCache.GetIndexBuffer( surf->indexCache, &indexBuffer );
-
-	idVertexBuffer instanceBuffer;
-	vertexCache.GetInstanceBuffer( surf->space->instanceCache, &instanceBuffer );
-
-	state.vertexBuffers =
-	{
-		{ vertexBuffer.GetAPIObject(), 0, 0 },
-		{ vertexBuffer.GetAPIObject(), 1, 0 },
-		{ instanceBuffer.GetAPIObject(), 2, 0 }
-	};
-
-	nvrhi::IBuffer* indexPtr = indexBuffer.GetAPIObject();
-
-	state.indexBuffer = { indexPtr, nvrhi::Format::R16_UINT, 0 };
+	return; // skip for bindless
 }
 
 void DepthPass::SetPushConstants( idGeometryPassContext& abstractContext, nvrhi::ICommandList* commandList, nvrhi::GraphicsState& state, nvrhi::DrawArguments& args )
@@ -193,18 +123,24 @@ void DepthPass::CreateViewBindings( nvrhi::BindingLayoutHandle& layout, nvrhi::B
 	nvrhi::BindingSetDesc bindingSetDesc;
 	bindingSetDesc.bindings =
 	{
-		nvrhi::BindingSetItem::ConstantBuffer( 0, depthCb )
+		nvrhi::BindingSetItem::ConstantBuffer( 0, depthCb ),
+		nvrhi::BindingSetItem::PushConstants( 1, 2 * sizeof( int ) ),
+		nvrhi::BindingSetItem::StructuredBuffer_SRV( 0, vertexCache.staticData.instanceBuffer->GetBuffer() ),
+		nvrhi::BindingSetItem::StructuredBuffer_SRV( 1, vertexCache.staticData.geometryBuffer->GetBuffer() ),
+		nvrhi::BindingSetItem::RawBuffer_SRV( 2, vertexCache.staticData.materialBuffer->GetBuffer() ),
+		nvrhi::BindingSetItem::Sampler( 0, commonPasses->m_AnisotropicWrapSampler )
 	};
-	bindingSetDesc.trackLiveness = trackLiveness;
-
-	nvrhi::utils::CreateBindingSetAndLayout( device, nvrhi::ShaderType::Vertex, 0, bindingSetDesc, layout, set );
+	nvrhi::utils::CreateBindingSetAndLayout( device, nvrhi::ShaderType::All, 0, bindingSetDesc, viewBindingLayout, bindlessSet );
 }
 
 nvrhi::GraphicsPipelineHandle DepthPass::CreateGraphicsPipeline( PipelineKey key, nvrhi::IFramebuffer* framebuffer )
 {
 	nvrhi::GraphicsPipelineDesc pipelineDesc;
-	pipelineDesc.inputLayout = inputLayout;
+	//pipelineDesc.inputLayout = inputLayout;
 	pipelineDesc.VS = vertexShader;
+	pipelineDesc.PS = pixelShader;
+	pipelineDesc.primType = nvrhi::PrimitiveType::TriangleList;
+	pipelineDesc.bindingLayouts = { viewBindingLayout, tr.backend.bindlessLayout };
 	pipelineDesc.renderState.rasterState.depthBias = depthBias;
 	pipelineDesc.renderState.rasterState.depthBiasClamp = depthBiasClamp;
 	pipelineDesc.renderState.rasterState.slopeScaledDepthBias = slopeScaledDepthBias;
@@ -213,17 +149,6 @@ nvrhi::GraphicsPipelineHandle DepthPass::CreateGraphicsPipeline( PipelineKey key
 	pipelineDesc.renderState.depthStencilState.depthFunc = key.bits.reverseDepth
 			? nvrhi::ComparisonFunc::GreaterOrEqual
 			: nvrhi::ComparisonFunc::LessOrEqual;
-
-	if( key.bits.alphaTested )
-	{
-		pipelineDesc.PS = pixelShader;
-		pipelineDesc.bindingLayouts = { viewBindingLayout, materialBindings->GetLayout() };
-	}
-	else
-	{
-		pipelineDesc.PS = nullptr;
-		pipelineDesc.bindingLayouts = { viewBindingLayout };
-	}
 
 	return device->createGraphicsPipeline( pipelineDesc, framebuffer );
 }

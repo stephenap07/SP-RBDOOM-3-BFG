@@ -56,7 +56,6 @@ void RenderView( nvrhi::ICommandList* commandList, const viewDef_t* view, const 
 	pass.SetupView( passContext, commandList, view, prevView );
 
 	const idMaterial* lastMaterial = nullptr;
-	BufferGroup lastBuffers;
 	const viewEntity_t* lastSpace = nullptr;
 	nvrhi::RasterCullMode lastCullMode = nvrhi::RasterCullMode::Back;
 
@@ -105,126 +104,109 @@ void RenderView( nvrhi::ICommandList* commandList, const viewDef_t* view, const 
 
 		pass.SetPushConstants( passContext, commandList, graphicsState, currentDraw );
 
-		commandList->drawIndexed( currentDraw );
+		commandList->draw( currentDraw );
 		currentDraw.instanceCount = 0;
 	};
 
-	int surfNum = 0;
-	int numDrawSurfs = view->numDrawSurfs;
-	const viewEntity_t* currentSpace = nullptr;
+	int geoNum = 0;
+	const int numDrawSurfs = view->numDrawSurfs;
 
-	for( ; surfNum < numDrawSurfs; surfNum++ )
+	for( int surfNum = 0; surfNum < numDrawSurfs; surfNum++ )
 	{
-		drawSurf_t* item = view->drawSurfs[surfNum];
+		drawSurf_t* surf = view->drawSurfs[surfNum];
+		const idMaterial* shader = surf->material;
 
-		if( !item->material )
+		++geoNum;
+
+		if( surf->space != lastSpace )
+		{
+			geoNum = 0;
+		}
+
+		lastSpace = surf->space;
+
+		if( !surf->frontEndGeo )
 		{
 			continue;
 		}
 
-		idVertexBuffer vertexBuffer;
-		if( item->skinnedCache != 0 )
+		if( !shader )
 		{
-			vertexCache.GetSkinnedVertexBuffer( item->skinnedCache, &vertexBuffer );
-		}
-		else
-		{
-			vertexCache.GetVertexBuffer( item->ambientCache, &vertexBuffer );
+			continue;
 		}
 
-		idIndexBuffer indexBuffer;
-		vertexCache.GetIndexBuffer( item->indexCache, &indexBuffer );
-		idVertexBuffer instanceBuffer;
-		vertexCache.GetInstanceBuffer( item->space->instanceCache, &instanceBuffer );
-
-		BufferGroup currBufferGroup =
+		if( surf->material->Coverage() == MC_TRANSLUCENT )
 		{
-			vertexBuffer.GetAPIObject(),
-			indexBuffer.GetAPIObject(),
-			instanceBuffer.GetAPIObject()
-		};
-
-		bool newBuffers = currBufferGroup != lastBuffers;
-		bool newMaterial = item->material != lastMaterial;
-
-		if( item->space != currentSpace )
-		{
-			currentSpace = item->space;
+			// shouldn't be added to the depth buffer
+			continue;
 		}
 
-		if( newBuffers || newMaterial )
+		const float* regs = surf->shaderRegisters;
+
+		// if all stages of a material have been conditioned off, don't do anything
+		int stage = 0;
+		for( ; stage < shader->GetNumStages(); stage++ )
 		{
-			flushDraw( lastMaterial );
-		}
-
-		if( newBuffers || true )
-		{
-			pass.SetupInputBuffers( passContext, item, graphicsState );
-
-			lastBuffers = currBufferGroup;
-			stateValid = false;
-		}
-
-		nvrhi::RasterCullMode cullMode = lastCullMode;
-
-		switch( item->material->GetCullType() )
-		{
-			case CT_FRONT_SIDED:
-				cullMode = nvrhi::RasterCullMode::Front;
+			const shaderStage_t* pStage = shader->GetStage( stage );
+			// check the stage enable condition
+			if( regs[pStage->conditionRegister] != 0 )
+			{
 				break;
-			case CT_BACK_SIDED:
-				cullMode = nvrhi::RasterCullMode::Back;
-				break;
-			case CT_TWO_SIDED:
-				cullMode = nvrhi::RasterCullMode::None;
-				break;
-			default:
-				common->Warning( "Invalid cull mode" );
+			}
 		}
 
-		if( newMaterial )
+		if( stage == shader->GetNumStages() )
 		{
-			drawMaterial = pass.SetupMaterial( passContext, item, cullMode, graphicsState );
+			continue;
+		}
 
-			lastMaterial = item->material;
+		nvrhi::RasterCullMode cullMode = GetCullMode( surf );
+
+		if( lastCullMode != cullMode )
+		{
+			pass.SetupMaterial( passContext, surf, cullMode, graphicsState );
 			lastCullMode = cullMode;
 			stateValid = false;
 		}
 
-		if( drawMaterial )
+		if( !stateValid )
 		{
-			if( !stateValid )
-			{
-				commandList->setGraphicsState( graphicsState );
-				stateValid = true;
-			}
-
-			nvrhi::DrawArguments args;
-			args.vertexCount = item->numIndexes;
-			args.instanceCount = 1;
-			args.startVertexLocation = vertexBuffer.GetOffset() / sizeof( idDrawVert );
-			args.startIndexLocation = indexBuffer.GetOffset() / sizeof( triIndex_t );
-			args.startInstanceLocation = instanceBuffer.GetOffset() / sizeof( idInstanceData );
-
-			if( currentDraw.instanceCount > 0 &&
-					currentDraw.startIndexLocation == args.startIndexLocation &&
-					currentDraw.startInstanceLocation + currentDraw.instanceCount == args.startInstanceLocation )
-			{
-				currentDraw.instanceCount += 1;
-			}
-			else
-			{
-				flushDraw( item->material );
-
-				currentDraw = args;
-			}
+			commandList->setGraphicsState( graphicsState );
+			stateValid = true;
 		}
+
+		bufferView_t instanceBuffer;
+		vertexCache.GetInstanceBuffer( surf->instanceCache, &instanceBuffer );
+
+		nvrhi::DrawArguments args;
+		args.vertexCount = surf->numIndexes;
+		args.instanceCount = 1;
+		currentDraw = args;
+		idVec2i constants = idVec2i( instanceBuffer.offset / instanceBuffer.size, geoNum );
+		commandList->setPushConstants( &constants, sizeof( idVec2i ) );
+		flushDraw( shader );
 	}
 
-	flushDraw( lastMaterial );
+	lastSpace = nullptr;
 
 	if( materialEvents && eventMaterial )
 	{
 		commandList->endMarker();
+	}
+}
+
+nvrhi::RasterCullMode GetCullMode( drawSurf_t* surf )
+{
+	switch( surf->material->GetCullType() )
+	{
+		case CT_FRONT_SIDED:
+			return nvrhi::RasterCullMode::Front;
+		case CT_BACK_SIDED:
+			return nvrhi::RasterCullMode::Back;
+		case CT_TWO_SIDED:
+			return nvrhi::RasterCullMode::None;
+		default:
+			common->Warning( "Invalid cull mode" );
+			return nvrhi::RasterCullMode::None;
 	}
 }

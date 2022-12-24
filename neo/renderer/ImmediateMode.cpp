@@ -92,7 +92,9 @@ int fhImmediateMode::DrawCallVertexSize()
 void fhImmediateMode::InitBuffers( nvrhi::ICommandList* commandList )
 {
 	commandList->open();
+	vertexBuffer.SetDebugName( "debug vertex" );
 	vertexBuffer.AllocBufferObject( nullptr, c_drawVertsCapacity * sizeof( idDrawVert ), bufferUsageType_t::BU_STATIC, commandList );
+	indexBuffer.SetDebugName( "debug index" );
 	indexBuffer.AllocBufferObject( nullptr, c_drawIndexesCapacity * sizeof( triIndex_t ), bufferUsageType_t::BU_STATIC, commandList );
 	commandList->close();
 	deviceManager->GetDevice()->executeCommandList( commandList );

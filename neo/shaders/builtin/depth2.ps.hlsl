@@ -50,29 +50,83 @@ If you have questions concerning this license or the applicable additional terms
 
 #pragma pack_matrix(row_major)
 
-#include <material_cb.h>
+#include "bindless.hlsli"
 #include <scene_material.hlsli>
 #include <vulkan.hlsli>
 
-Texture2D t_BaseOrDiffuse :
-register( t0 VK_DESCRIPTOR_SET( 1 ) );
-SamplerState s_MaterialSampler :
-register( s0 VK_DESCRIPTOR_SET( 1 ) );
+// ----------------------
+// YCoCg Color Conversion
+// ----------------------
+// Co
+#define matrixRGB1toCoCg1YX float4( 0.50,  0.0, -0.50, 0.50196078 )
+// Cg
+#define matrixRGB1toCoCg1YY float4( -0.25,  0.5, -0.25, 0.50196078 )
+// 1.0
+#define matrixRGB1toCoCg1YZ float4( 0.0,   0.0,  0.0,  1.0 )
+// Y
+#define matrixRGB1toCoCg1YW float4( 0.25,  0.5,  0.25, 0.0 )
 
-cbuffer c_Material :
-register( b1 VK_DESCRIPTOR_SET( 1 ) )
+#define matrixCoCg1YtoRGB1X float4( 1.0, -1.0,  0.0,        1.0 )
+// -0.5 * 256.0 / 255.0
+#define matrixCoCg1YtoRGB1Y float4( 0.0,  1.0, -0.50196078, 1.0 )
+// +1.0 * 256.0 / 255.0
+#define matrixCoCg1YtoRGB1Z float4( -1.0, -1.0,  1.00392156, 1.0 )
+
+static float3 ConvertYCoCgToRGB( float4 YCoCg )
 {
-	MaterialConstants g_Material;
+	float4 rgbColor;
+
+	YCoCg.z = ( YCoCg.z * 31.875 ) + 1.0;			//z = z * 255.0/8.0 + 1.0
+	YCoCg.z = 1.0 / YCoCg.z;
+	YCoCg.xy *= YCoCg.z;
+	rgbColor.x = dot( YCoCg, matrixCoCg1YtoRGB1X );
+	rgbColor.y = dot( YCoCg, matrixCoCg1YtoRGB1Y );
+	rgbColor.z = dot( YCoCg, matrixCoCg1YtoRGB1Z );
+	return rgbColor.xyz;
+}
+
+struct InstanceConstants
+{
+	uint instance;
+	uint geometryInMesh;
 };
 
-void main( in float4 i_position : SV_Position,
-		   in float2 i_texCoord : TEXCOORD )
+struct DepthView
 {
+	float4x4 matWorldToClip;
+};
+
+// *INDENT-OFF*
+ConstantBuffer<DepthView> g_View : register( b0 );
+VK_PUSH_CONSTANT ConstantBuffer<InstanceConstants> g_Instance : register( b1 );
+StructuredBuffer<InstanceData> t_InstanceData : register( t0 );
+StructuredBuffer<GeometryData> t_GeometryData : register( t1 );
+ByteAddressBuffer t_MaterialConstants : register( t2 );
+VK_BINDING( 0, 1 ) ByteAddressBuffer t_BindlessBuffers[] : register( t0, space1 );
+VK_BINDING( 1, 1 ) Texture2D t_BindlessTextures[] : register( t0, space2 );
+
+SamplerState s_MaterialSampler : register( s0 );
+// *INDENT-ON*
+
+void main(
+	in float4 i_position : SV_Position,
+	in float2 i_uv : TEXCOORD,
+	nointerpolation in uint i_material : MATERIAL,
+	out float4 o_color : SV_Target0 )
+{
+	MaterialConstants material = LoadMaterialConstants( t_MaterialConstants, i_material );
 	MaterialTextureSample textures = DefaultMaterialTextures();
-	textures.baseOrDiffuse = t_BaseOrDiffuse.Sample( s_MaterialSampler, i_texCoord );
 
-	MaterialSample materialSample = EvaluateSceneMaterial( /* normal = */ float3( 1, 0, 0 ),
-									/* tangent = */ float4( 0, 1, 0, 0 ), g_Material, textures );
-
-	clip( materialSample.opacity - g_Material.alphaCutoff );
+	for( int i = 0; i < material.numAmbientStages; i++ )
+	{
+		materialAmbientData_t ambientStage = LoadMaterialAmbientStage( t_MaterialConstants, i_material + SizeOfMaterialConstants + ( i * SizeOfAmbientStage ) );
+		Texture2D texture = t_BindlessTextures[ ambientStage.textureId ];
+		float4 color = texture.Sample( s_MaterialSampler, i_uv ) * ambientStage.color;
+		float test = color.w - ambientStage.alphaTest;
+		clip( test );
+		if( test < 0 )
+		{
+			break;
+		}
+	}
 }

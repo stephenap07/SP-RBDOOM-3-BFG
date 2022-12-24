@@ -210,7 +210,7 @@ void idRenderBackend::Init()
 			{
 				nvrhi::BindingLayoutItem::PushConstants( 0, sizeof( SkinningConstants ) ),
 				nvrhi::BindingLayoutItem::RawBuffer_SRV( 0 ),
-				nvrhi::BindingLayoutItem::StructuredBuffer_SRV( 1 ),
+				nvrhi::BindingLayoutItem::RawBuffer_SRV( 1 ),
 				nvrhi::BindingLayoutItem::RawBuffer_UAV( 0 )
 			};
 
@@ -224,11 +224,6 @@ void idRenderBackend::Init()
 			skinningPipeline = deviceManager->GetDevice()->createComputePipeline( pipelineDesc );
 		}
 	}
-
-	DepthPass::CreateParameters shadowDepthParams;
-	//shadowDepthParams.slopeScaledDepthBias = 0;
-	//shadowDepthParams.depthBias = 0;
-	depthPass.Init( deviceManager->GetDevice(), &commonPasses, renderProgManager, shadowDepthParams );
 
 	// Maximum resolution of one tile within tiled shadow map. Resolution must be power of two and
 	// square, since quad-tree for managing tiles will not work correctly otherwise. Furthermore
@@ -245,10 +240,30 @@ void idRenderBackend::Init()
 
 	tr.SetInitialized();
 
-	if( !commandList )
+	nvrhi::CommandListParameters commandListParms;
+	commandListParms.enableImmediateExecution = false;
+	commandListParms.queueType = nvrhi::CommandQueue::Copy;
+
+	for( int i = 0; i < NUM_FRAME_DATA; i++ )
 	{
-		commandList = deviceManager->GetDevice()->createCommandList();
+		// These command lists are run on the game/draw thread.
+		commandLists[i] = deviceManager->GetDevice()->createCommandList( commandListParms );
 	}
+
+	commandList = deviceManager->GetDevice()->createCommandList();
+
+	nvrhi::BindlessLayoutDesc bindlessLayoutDesc;
+	bindlessLayoutDesc.visibility = nvrhi::ShaderType::All;
+	bindlessLayoutDesc.firstSlot = 0;
+	bindlessLayoutDesc.maxCapacity = 1024;
+	bindlessLayoutDesc.registerSpaces =
+	{
+		nvrhi::BindingLayoutItem::RawBuffer_SRV( 1 ),	// vertex buffers
+		nvrhi::BindingLayoutItem::Texture_SRV( 2 )		// texture buffers
+	};
+	bindlessLayout = deviceManager->GetDevice()->createBindlessLayout( bindlessLayoutDesc );
+
+	descriptorTableManager = new DescriptorTableManager( deviceManager->GetDevice(), bindlessLayout );
 
 	// allocate the vertex array range or vertex objects
 	commandList->open();
@@ -288,6 +303,11 @@ void idRenderBackend::Init()
 		r_useSSAO.SetBool( false );
 	}
 
+	DepthPass::CreateParameters shadowDepthParams;
+	//shadowDepthParams.slopeScaledDepthBias = 0;
+	//shadowDepthParams.depthBias = 0;
+	depthPass.Init( deviceManager->GetDevice(), &commonPasses, renderProgManager, shadowDepthParams );
+
 	deviceManager->GetDevice()->waitForIdle();
 	deviceManager->GetDevice()->runGarbageCollection();
 
@@ -318,7 +338,12 @@ void idRenderBackend::Shutdown()
 	// Delete renderlog command buffer and timer query resources
 	renderLog.Shutdown();
 
-	// Delete command list
+	// Delete command lists
+	for( int i = 0; i < NUM_FRAME_DATA; i++ )
+	{
+		commandLists[ i ].Reset();
+	}
+
 	commandList.Reset();
 
 	// Delete immediate mode buffer objects
@@ -329,6 +354,8 @@ void idRenderBackend::Shutdown()
 #else
 	GLimp_Shutdown();
 #endif
+
+	delete descriptorTableManager;
 }
 
 /*
@@ -340,25 +367,29 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 {
 	bool changeState = false;
 
-	idVertexBuffer vertexBuffer;
+	bufferView_t vertexView;
 	if( surf->skinnedCache )
 	{
-		vertexCache.GetSkinnedVertexBuffer( surf->skinnedCache, &vertexBuffer );
+		vertexCache.GetSkinnedVertexBuffer( surf->skinnedCache, &vertexView );
 	}
 	else
 	{
+		idVertexBuffer vertexBuffer;
 		vertexCache.GetVertexBuffer( surf->ambientCache, &vertexBuffer );
+		vertexView.buffer = ( void* )vertexBuffer.GetAPIObject();
+		vertexView.offset = vertexBuffer.GetOffset();
+		vertexView.size = vertexBuffer.GetSize();
 	}
+
 	idIndexBuffer indexBuffer;
 	vertexCache.GetIndexBuffer( surf->indexCache, &indexBuffer );
-	idUniformBuffer jointBuffer;
+	bufferView_t jointBuffer;
 	vertexCache.GetJointBuffer( surf->jointCache, &jointBuffer );
 
-	if( currentVertexBuffer.Get() != vertexBuffer.GetAPIObject() ||
-			currentVertexOffset != vertexBuffer.GetOffset() )
+	if( currentVertexBuffer.Get() != vertexView.buffer || currentVertexOffset != vertexView.offset )
 	{
-		currentVertexBuffer = vertexBuffer.GetAPIObject();
-		currentVertexOffset = vertexBuffer.GetOffset();
+		currentVertexBuffer = (nvrhi::IBuffer*)vertexView.buffer;
+		currentVertexOffset = vertexView.offset;
 		changeState = true;
 	}
 
@@ -370,11 +401,10 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 		changeState = true;
 	}
 
-	if( currentJointBuffer != jointBuffer.GetAPIObject() ||
-			currentJointOffset != jointBuffer.GetOffset() )
+	if( currentJointBuffer != jointBuffer.buffer || currentJointOffset != jointBuffer.offset )
 	{
-		currentJointBuffer = jointBuffer.GetAPIObject();
-		currentJointOffset = jointBuffer.GetOffset();
+		currentJointBuffer = (nvrhi::IBuffer*)jointBuffer.buffer;
+		currentJointOffset = jointBuffer.offset;
 		changeState = true;
 	}
 
@@ -684,7 +714,9 @@ void idRenderBackend::GetCurrentBindingLayout( int type )
 		}
 		else
 		{
+			desc[3].bindings[0].slot = 0;
 			desc[3].bindings[0].resourceHandle = commonPasses.m_AnisotropicWrapSampler;
+			desc[3].bindings[1].slot = 1;
 			desc[3].bindings[1].resourceHandle = commonPasses.m_LinearClampSampler;
 		}
 	}

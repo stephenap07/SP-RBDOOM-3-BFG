@@ -108,6 +108,7 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	vertexBufferDesc.isVertexBuffer = true;
 	vertexBufferDesc.canHaveTypedViews = true;
 	vertexBufferDesc.canHaveRawViews = true;
+	vertexBufferDesc.structStride = sizeof( idDrawVert );
 
 	if( usage == BU_DYNAMIC )
 	{
@@ -124,6 +125,12 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	}
 
 	bufferHandle = deviceManager->GetDevice()->createBuffer( vertexBufferDesc );
+
+	if( tr.backend.descriptorTableManager )
+	{
+		bindlessHandle = tr.backend.descriptorTableManager->CreateDescriptorHandle(
+							 nvrhi::BindingSetItem::RawBuffer_SRV( 0, bufferHandle ) );
+	}
 
 	if( r_showBuffers.GetBool() )
 	{
@@ -162,6 +169,12 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 	}
 
 	bufferHandle = deviceManager->GetDevice()->createBuffer( bufferDesc );
+
+	if( tr.backend.descriptorTableManager )
+	{
+		bindlessHandle = tr.backend.descriptorTableManager->CreateDescriptorHandle(
+							 nvrhi::BindingSetItem::RawBuffer_SRV( 0, bufferHandle ) );
+	}
 
 	if( r_showBuffers.GetBool() )
 	{
@@ -207,6 +220,7 @@ void idVertexBuffer::FreeBufferObject()
 	}
 
 	bufferHandle.Reset();
+	bindlessHandle.Free();
 
 	ClearWithoutFreeing();
 }
@@ -348,25 +362,30 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 	int numBytes = GetAllocedSize();
 
 	nvrhi::BufferDesc indexBufferDesc;
-	indexBufferDesc.byteSize = numBytes;
 	indexBufferDesc.isIndexBuffer = true;
+	indexBufferDesc.byteSize = numBytes;
 	indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
 	indexBufferDesc.canHaveRawViews = true;
 	indexBufferDesc.canHaveTypedViews = true;
 	indexBufferDesc.format = nvrhi::Format::R16_UINT;
+	indexBufferDesc.debugName = debugName.c_str();
 
 	if( _usage == BU_STATIC )
 	{
 		indexBufferDesc.keepInitialState = true;
-		indexBufferDesc.debugName = ( debugName.IsEmpty() ) ? "VertexCache Static Index Buffer" : debugName.c_str();
 	}
 	else if( _usage == BU_DYNAMIC )
 	{
 		indexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
-		indexBufferDesc.debugName = ( debugName.IsEmpty() ) ? "VertexCache Mapped Index Buffer" : debugName.c_str();
 	}
 
 	bufferHandle  = deviceManager->GetDevice()->createBuffer( indexBufferDesc );
+
+	if( tr.backend.descriptorTableManager )
+	{
+		bindlessHandle = tr.backend.descriptorTableManager->CreateDescriptorHandle(
+							 nvrhi::BindingSetItem::RawBuffer_SRV( 0, bufferHandle ) );
+	}
 
 	if( data )
 	{
@@ -406,6 +425,7 @@ void idIndexBuffer::FreeBufferObject()
 	}
 
 	bufferHandle.Reset();
+	bindlessHandle.Free();
 
 	ClearWithoutFreeing();
 }
@@ -504,6 +524,7 @@ void idIndexBuffer::ClearWithoutFreeing()
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	bufferHandle.Reset();
+	bindlessHandle = DescriptorHandle();
 }
 
 /*

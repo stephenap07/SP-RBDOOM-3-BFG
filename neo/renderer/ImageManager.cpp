@@ -73,10 +73,10 @@ void R_ReloadImages_f( const idCmdArgs& args )
 	}
 
 #if defined( USE_NVRHI )
-	tr.commandList->open();
-	globalImages->ReloadImages( all, tr.commandList );
-	tr.commandList->close();
-	deviceManager->GetDevice()->executeCommandList( tr.commandList );
+	//tr.CommandList()->open();
+	globalImages->ReloadImages( all, tr.CommandList() );
+	//tr.CommandList()->close();
+	//deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
 
 	// Images (including the framebuffer images) were reloaded, reinitialize the framebuffers.
 	Framebuffer::ResizeFramebuffers();
@@ -770,7 +770,10 @@ void idImageManager::Init()
 	cmdSystem->AddCommand( "combineCubeImages", R_CombineCubeImages_f, CMD_FL_RENDERER, "combines six images for roq compression" );
 
 	// should forceLoadImages be here?
-	LoadDeferredImages();
+	tr.CommandList()->open();
+	LoadDeferredImages( tr.CommandList() );
+	tr.CommandList()->close();
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
 }
 
 /*
@@ -889,14 +892,7 @@ idImageManager::LoadLevelImages
 int idImageManager::LoadLevelImages( bool pacifier )
 {
 #if defined( USE_NVRHI )
-	if( !commandList )
-	{
-		commandList = deviceManager->GetDevice()->createCommandList();
-	}
-
 	common->UpdateLevelLoadPacifier();
-
-	commandList->open();
 #endif
 
 	int	loadCount = 0;
@@ -925,11 +921,7 @@ int idImageManager::LoadLevelImages( bool pacifier )
 	}
 
 #if defined( USE_NVRHI )
-	globalImages->LoadDeferredImages( commandList );
-
-	commandList->close();
-
-	deviceManager->GetDevice()->executeCommandList( commandList );
+	globalImages->LoadDeferredImages( tr.CommandList() );
 
 	common->UpdateLevelLoadPacifier();
 #endif
@@ -1015,28 +1007,10 @@ void idImageManager::PrintMemInfo( MemInfo_t* mi )
 
 void idImageManager::LoadDeferredImages( nvrhi::ICommandList* _commandList )
 {
-	if( !commandList )
-	{
-		commandList = deviceManager->GetDevice()->createCommandList();
-	}
-
-	nvrhi::ICommandList* thisCmdList = _commandList;
-	if( !_commandList )
-	{
-		thisCmdList = commandList;
-		thisCmdList->open();
-	}
-
 	for( int i = 0; i < globalImages->imagesToLoad.Num(); i++ )
 	{
 		// This is a "deferred" load of textures to the gpu.
-		globalImages->imagesToLoad[i]->FinalizeImage( false, thisCmdList );
-	}
-
-	if( !_commandList )
-	{
-		thisCmdList->close();
-		deviceManager->GetDevice()->executeCommandList( thisCmdList );
+		globalImages->imagesToLoad[i]->FinalizeImage( false, _commandList );
 	}
 
 	globalImages->imagesToLoad.Clear();

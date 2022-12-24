@@ -1636,7 +1636,7 @@ void idRenderBackend::DBG_ShowPortals()
 
 	idRenderWorldLocal& world = *viewDef->renderWorld;
 
-	fhImmediateMode im( tr.backend.GL_GetCommandList() );
+	fhImmediateMode im( tr.backend.commandList );
 
 	// flood out through portals, setting area viewCount
 	for( int i = 0; i < world.numPortalAreas; i++ )
@@ -1820,7 +1820,7 @@ static void RB_DrawText( const char* text, const idVec3& origin, float scale, co
 	renderProgManager.BindShader_Color();
 	renderProgManager.CommitUniforms( tr.backend.GL_GetCurrentState() );
 
-	fhImmediateMode im( tr.backend.GL_GetCommandList() );
+	fhImmediateMode im( tr.backend.CommandList() );
 
 	int i, j, len, num, index, charIndex, line;
 	float textLen = 1.0f, spacing = 1.0f;
@@ -2078,7 +2078,7 @@ void idRenderBackend::DBG_ShowDebugLines()
 		GL_State( GLS_POLYMODE_LINE );
 	}
 
-	fhImmediateMode im( tr.backend.GL_GetCommandList() );
+	fhImmediateMode im( tr.backend.commandList );
 
 	im.Begin( GFX_LINES );
 	line = rb_debugLines;

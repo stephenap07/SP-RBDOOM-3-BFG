@@ -846,39 +846,4 @@ ID_INLINE void idShadowVertSkinned::Clear()
 	xyzw.Zero();
 }
 
-/**
-Bindless data structures
-*/
-
-struct idGeometryData
-{
-	uint numIndices;
-	uint numVertices;
-	int indexBufferIndex;
-	uint indexOffset;
-
-	int vertexBufferIndex;
-	uint positionOffset;
-	uint prevPositionOffset;
-	uint texCoord1Offset;
-
-	uint texCoord2Offset;
-	uint normalOffset;
-	uint tangentOffset;
-	uint materialIndex;
-};
-
-class idInstanceData
-{
-public:
-	// 128 bytes
-	uint padding[ 30 ];
-	uint firstGeometryIndex;
-	uint numGeometries;
-
-	// 128 bytes
-	idVec4 transform[ 4 ];
-	idVec4 prevTransform[ 4 ];
-};
-
 #endif /* !__DRAWVERT_H__ */

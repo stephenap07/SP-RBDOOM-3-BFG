@@ -39,6 +39,9 @@ static const int MaterialFlags_UseNormalTexture                 = 0x00000020;
 static const int MaterialFlags_UseOcclusionTexture              = 0x00000040;
 static const int MaterialFlags_UseTransmissionTexture           = 0x00000080;
 
+static const int SizeOfMaterialConstants = 112;
+static const int SizeOfAmbientStage = 144;
+
 // NOTE: adjust LoadMaterialConstants(...) in bindless.h when changing this structure
 
 struct MaterialConstants
@@ -68,9 +71,22 @@ struct MaterialConstants
 	int     occlusionTextureIndex;
 
 	int     transmissionTextureIndex;
+	int		numAmbientStages;
 	int     padding1;
 	int     padding2;
-	int     padding3; // makes it 16 byte aligned
+};
+
+struct materialAmbientData_t
+{
+	int		padding[2]; // make it 144 bytes so it's 16-byte aligned.
+	float	alphaTest;
+	int		textureId;
+
+	float4	texGen[3];
+	float4	textureMatrix[2];
+	float4	color;
+	float4	vertexColorModulate;
+	float4	vertexColorAdd;
 };
 
 #endif // MATERIAL_CB_H

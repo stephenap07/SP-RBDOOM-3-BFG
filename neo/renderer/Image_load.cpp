@@ -592,13 +592,13 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 #if defined( USE_NVRHI )
 				const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 
-				commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
+				//commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 				for( int level = 0; level < opts.numLevels; level++ )
 				{
 					commandList->writeTexture( texture, 0, level, clear.Ptr(), GetRowPitch( opts.format, opts.width ) );
 				}
-				commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-				commandList->commitBarriers();
+				//commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
+				//commandList->commitBarriers();
 #else
 				for( int level = 0; level < opts.numLevels; level++ )
 				{
@@ -677,7 +677,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 	const int bytesPerPixel = info.bytesPerBlock / info.blockSize;
 
-	commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
+	//commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
 	for( int i = 0; i < im.NumImages(); i++ )
 	{
@@ -724,8 +724,8 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 			commandList->writeTexture( texture, img.destZ, img.level, pic, GetRowPitch( opts.format, img.width ) );
 		}
 	}
-	commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-	commandList->commitBarriers();
+	//commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
+	//commandList->commitBarriers();
 #else
 	for( int i = 0; i < im.NumImages(); i++ )
 	{
@@ -1010,25 +1010,23 @@ void idImage::GenerateImage( const byte* pic, int width, int height, textureFilt
 		AllocImage();
 
 #if defined( USE_NVRHI )
-		if( commandList )
+		assert( commandList );
+		const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
+		const int bytesPerBlock = info.bytesPerBlock;
+
+		//commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
+
+		for( int i = 0; i < im.NumImages(); i++ )
 		{
-			const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
-			const int bytesPerBlock = info.bytesPerBlock;
+			const bimageImage_t& img = im.GetImageHeader( i );
+			const byte* data = im.GetImageData( i );
 
-			commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
-
-			for( int i = 0; i < im.NumImages(); i++ )
-			{
-				const bimageImage_t& img = im.GetImageHeader( i );
-				const byte* data = im.GetImageData( i );
-
-				int rowPitch = GetRowPitch( opts.format, img.width );
-				commandList->writeTexture( texture, img.destZ, img.level, data, rowPitch );
-			}
-
-			commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-			commandList->commitBarriers();
+			int rowPitch = GetRowPitch( opts.format, img.width );
+			commandList->writeTexture( texture, img.destZ, img.level, data, rowPitch );
 		}
+
+		//commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::Common );
+		//commandList->commitBarriers();
 #else
 		for( int i = 0; i < im.NumImages(); i++ )
 		{
@@ -1104,7 +1102,7 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 	const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 	bytesPerPixel = info.bytesPerBlock;
 
-	commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
+	//commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
 	for( int i = 0; i < im.NumImages(); i++ )
 	{
@@ -1114,8 +1112,8 @@ void idImage::GenerateCubeImage( const byte* pic[6], int size, textureFilter_t f
 		commandList->writeTexture( texture, 0, img.level, data, GetRowPitch( opts.format, img.width ) );
 	}
 
-	commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-	commandList->commitBarriers();
+	//commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
+	//commandList->commitBarriers();
 #else
 
 	for( int i = 0; i < im.NumImages(); i++ )
@@ -1203,7 +1201,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 
 		SetSamplerState( TF_LINEAR, TR_CLAMP );
 
-		commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
+		//commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
 		int bufferW = opts.width;
 		if( IsCompressed() )
@@ -1216,8 +1214,8 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 			commandList->writeTexture( texture, i, 0, pic[i], GetRowPitch( opts.format, opts.width ) );
 		}
 
-		commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-		commandList->commitBarriers();
+		//commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
+		//commandList->commitBarriers();
 #else
 		for( int i = 0; i < 6; i++ )
 		{
@@ -1265,12 +1263,12 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 				bufferW = ( opts.width + 3 ) & ~3;
 			}
 
-			commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
+			//commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 
 			commandList->writeTexture( texture, 0, 0, data, GetRowPitch( opts.format, opts.width ) );
 			//commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
 
-			commandList->commitBarriers();
+			//commandList->commitBarriers();
 		}
 #else
 		if( opts.textureType != TT_2D || usage != TD_LOOKUP_TABLE_RGBA )

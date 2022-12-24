@@ -43,6 +43,7 @@ If you have questions concerning this license or the applicable additional terms
 	#include "Passes/TonemapPass.h"
 	#include "Passes/TemporalAntiAliasingPass.h"
 
+	#include "DescriptorTableManager.h"
 	#include "MaterialBindingCache.h"
 	#include "PipelineCache.h"
 
@@ -119,6 +120,8 @@ struct debugPolygon_t
 
 struct SkinningConstants
 {
+	uint inputJointMatOffset;
+
 	uint numVertices;
 	uint flags;
 	uint inputPositionOffset;
@@ -371,7 +374,6 @@ private:
 	void				TemporalAAPass( const viewDef_t* _viewDef );
 
 	void				UpdateSkinnedMeshes( const viewDef_t* _viewDef );
-	void				UpdateMaterialConstants( const viewDef_t* _viewDef );
 
 	// RB: HDR stuff
 
@@ -396,10 +398,17 @@ public:
 	uint64				GL_GetCurrentState() const;
 	idVec2				GetCurrentPixelOffset() const;
 
-	nvrhi::ICommandList* GL_GetCommandList() const
+	nvrhi::ICommandList* FrontendCommandList()
+	{
+		return commandLists[ vertexCache.listNum ];
+	}
+
+	nvrhi::ICommandList* CommandList()
 	{
 		return commandList;
 	}
+
+	nvrhi::CommandListHandle	commandLists[ NUM_FRAME_DATA ];
 
 private:
 	uint64				GL_GetCurrentStateMinusStencil() const;
@@ -520,6 +529,9 @@ public:
 
 	float				slopeScaleBias;
 	float				depthBias;
+
+	DescriptorTableManager*		descriptorTableManager;
+	nvrhi::BindingLayoutHandle	bindlessLayout;
 
 private:
 	uint64				glStateBits;

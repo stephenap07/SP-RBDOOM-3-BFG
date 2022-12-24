@@ -2290,10 +2290,6 @@ void idRenderSystemLocal::Shutdown()
 
 	Clear();
 
-#if defined( USE_NVRHI )
-	commandList.Reset();
-#endif
-
 	ShutdownOpenGL();
 
 	bInitialized = false;
@@ -2441,18 +2437,14 @@ void idRenderSystemLocal::InitBackend()
 		backend.Init();
 
 #if defined( USE_NVRHI )
-		if( !commandList )
-		{
-			commandList = deviceManager->GetDevice()->createCommandList();
-		}
 
-		commandList->open();
+		tr.CommandList()->open();
 
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
-		globalImages->ReloadImages( true, commandList );
+		globalImages->ReloadImages( true, tr.CommandList() );
 
-		commandList->close();
-		deviceManager->GetDevice()->executeCommandList( commandList );
+		tr.CommandList()->close();
+		deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
 #else
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		//globalImages->ReloadImages( true );

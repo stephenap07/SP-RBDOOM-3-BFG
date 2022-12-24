@@ -803,13 +803,16 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 	renderLog.OpenMainBlock( MRB_FILL_DEPTH_BUFFER );
 	renderLog.OpenBlock( "Render_FillDepthBufferFast", colorBlue );
 
-	DepthPass::Context context;
-	RenderView( commandList, viewDef, nullptr, currentFrameBuffer->GetApiObject(), depthPass, context, true );
+	if( 1 )
+	{
+		DepthPass::Context context;
+		RenderView( commandList, viewDef, nullptr, currentFrameBuffer->GetApiObject(), depthPass, context, true );
 
-	renderLog.CloseBlock();
-	renderLog.CloseMainBlock();
+		renderLog.CloseBlock();
+		renderLog.CloseMainBlock();
 
-	return;
+		return;
+	}
 
 	// force MVP change on first surface
 	currentSpace = NULL;
@@ -6764,7 +6767,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 #endif
 
 	UpdateSkinnedMeshes( _viewDef );
-	UpdateMaterialConstants( _viewDef );
 
 	//-------------------------------------------------
 	// RB_BeginDrawingView
@@ -7555,11 +7557,25 @@ void idRenderBackend::PostProcess( const void* data )
 
 void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 {
+	if( _viewDef->numDrawSurfs == 0 )
+	{
+		return;
+	}
+
+	if( _viewDef->is2Dgui )
+	{
+		return;
+	}
+
 	renderLog.OpenMainBlock( MRB_UPDATE_BUFFERS );
 	renderLog.OpenBlock( "UpdatedSkinnedMeshes" );
 
-	int surfNum = 0;
-	for( ; surfNum < _viewDef->numDrawSurfs; surfNum++ )
+	// avoid updating the skinned mesh multiple times.
+	//vertCacheHandle_t* skinnedCaches = ( uint64_t* )_alloca( _viewDef->numDrawSurfs * sizeof( vertCacheHandle_t ) );
+	//memset( skinnedCaches, 0, _viewDef->numDrawSurfs * sizeof( vertCacheHandle_t ) );
+	//int numSkins = 0;
+
+	for( int surfNum = 0; surfNum < _viewDef->numDrawSurfs; surfNum++ )
 	{
 		const drawSurf_t* surf = _viewDef->drawSurfs[surfNum];
 
@@ -7568,11 +7584,29 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 			continue;
 		}
 
+		assert( surf->ambientCache );
+
+		//int i = 0;
+		//for( ; i < numSkins; i++ )
+		//{
+		//	if( skinnedCaches[i] == surf->skinnedCache )
+		//	{
+		//		break;
+		//	}
+		//}
+
+		//if( i < numSkins )
+		//{
+		//	continue;
+		//}
+
+		//skinnedCaches[numSkins++] = surf->skinnedCache;
+
 		renderLog.OpenBlock( surf->material->GetName() );
 
 		idVertexBuffer vb;
-		idUniformBuffer jb;
-		idVertexBuffer sb;
+		bufferView_t jb;
+		bufferView_t sb;
 		vertexCache.GetVertexBuffer( surf->ambientCache, &vb );
 		vertexCache.GetJointBuffer( surf->jointCache, &jb );
 		vertexCache.GetSkinnedVertexBuffer( surf->skinnedCache, &sb );
@@ -7583,8 +7617,8 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 		{
 			nvrhi::BindingSetItem::PushConstants( 0, sizeof( SkinningConstants ) ),
 			nvrhi::BindingSetItem::RawBuffer_SRV( 0, vb.GetAPIObject() ),
-			nvrhi::BindingSetItem::StructuredBuffer_SRV( 1, jb.GetAPIObject(), nvrhi::Format::UNKNOWN, nvrhi::BufferRange( jb.GetOffset(), sizeof( idVec4 ) * 480 ) ),
-			nvrhi::BindingSetItem::RawBuffer_UAV( 0, sb.GetAPIObject() )
+			nvrhi::BindingSetItem::RawBuffer_SRV( 1, ( nvrhi::IBuffer* )jb.buffer ),
+			nvrhi::BindingSetItem::RawBuffer_UAV( 0, ( nvrhi::IBuffer* )sb.buffer )
 		};
 
 		nvrhi::BindingSetHandle bindingSet = deviceManager->GetDevice()->createBindingSet( setDesc, skinningBindingLayout );
@@ -7596,9 +7630,10 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 
 		// byte offsets for the buffers.
 		uint32 vertexOffset = vb.GetOffset();
-		uint32 outOffset = sb.GetOffset();
+		uint32 outOffset = sb.offset;
 		SkinningConstants constants{};
-		constants.numVertices = vb.GetSize() / sizeof( idDrawVert );
+		constants.inputJointMatOffset = jb.offset;
+		constants.numVertices = surf->frontEndGeo->numVerts;
 		constants.flags = SkinningFlag_Normals | SkinningFlag_Tangents | SkinningFlag_TexCoord1;
 		constants.inputPositionOffset = vertexOffset;
 		constants.inputNormalOffset = vertexOffset + offsetof( idDrawVert, normal );
@@ -7617,46 +7652,6 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 		commandList->dispatch( idMath::Ceil( ( float )constants.numVertices / 256.0f ) );
 
 		renderLog.CloseBlock();
-	}
-
-	renderLog.CloseBlock();
-	renderLog.CloseMainBlock();
-}
-
-void idRenderBackend::UpdateMaterialConstants( const viewDef_t* _viewDef )
-{
-	renderLog.OpenMainBlock( MRB_UPDATE_BUFFERS );
-	renderLog.OpenBlock( "UpdateMaterialConstants" );
-
-	int surfNum = 0;
-	for( ; surfNum < _viewDef->numDrawSurfs; surfNum++ )
-	{
-		drawSurf_t* surf = _viewDef->drawSurfs[ surfNum ];
-		if( !surf->material )
-		{
-			continue;
-		}
-
-		nvrhi::IBuffer* buffer = surf->material->GetConstantBuffer();
-
-		if( !buffer )
-		{
-			nvrhi::BufferDesc bufferDesc;
-			bufferDesc.byteSize = sizeof( MaterialConstants );
-			bufferDesc.debugName = va( "Constants for %s", surf->material->GetName() );
-			bufferDesc.isConstantBuffer = true;
-			bufferDesc.initialState = nvrhi::ResourceStates::ConstantBuffer;
-			bufferDesc.keepInitialState = true;
-
-			nvrhi::BufferHandle handle = deviceManager->GetDevice()->createBuffer( bufferDesc );
-			const_cast< idMaterial* >( surf->material )->SetConstantBuffer( handle );
-			buffer = handle;
-		}
-
-		MaterialConstants constants;
-		surf->material->FillConstantBuffer( constants, surf->shaderRegisters );
-
-		commandList->writeBuffer( buffer, &constants, sizeof( MaterialConstants ) );
 	}
 
 	renderLog.CloseBlock();

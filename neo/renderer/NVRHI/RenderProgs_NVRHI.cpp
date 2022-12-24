@@ -365,15 +365,15 @@ nvrhi::VertexAttributeDesc GetVertexAttributeDesc( vertexAttribute_t attribute, 
 		case VERTEXATTRIBUTE_TRANSFORM:
 			result.format = nvrhi::Format::RGBA32_FLOAT;
 			result.arraySize = 4;
-			result.offset = offsetof( idInstanceData, transform );
-			result.elementStride = sizeof( idInstanceData );
+			result.offset = offsetof( instanceData_t, transform );
+			result.elementStride = sizeof( instanceData_t );
 			result.isInstanced = true;
 			break;
 		case VERTEXATTRIBUTE_PREVTRANSFORM:
 			result.format = nvrhi::Format::RGBA32_FLOAT;
 			result.arraySize = 4;
-			result.offset = offsetof( idInstanceData, prevTransform );
-			result.elementStride = sizeof( idInstanceData );
+			result.offset = offsetof( instanceData_t, prevTransform );
+			result.elementStride = sizeof( instanceData_t );
 			result.isInstanced = true;
 			break;
 
