@@ -426,7 +426,7 @@ static void R_AddBuffers( drawSurf_t** drawSurfs, const int numDrawSurfs )
 		{
 			continue;
 		}
-
+		
 		if( currViewEntity != surf->space )
 		{
 			if( numSurfs > 0 )

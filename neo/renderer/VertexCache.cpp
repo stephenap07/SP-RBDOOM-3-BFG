@@ -549,7 +549,7 @@ idVertexCache::AllocJoint
 */
 vertCacheHandle_t idVertexCache::AllocJoint( const void* data, int num, size_t size /*= sizeof( idJointMat ) */ )
 {
-	return StageAlloc( frameData[listNum].jointStagingBuffer, staticData.jointBuffer, num * size, currentFrame, data, false );
+	return StageAlloc( frameData[listNum].jointStagingBuffer, staticData.jointBuffer, ALIGN( num * size, JOINT_CACHE_ALIGN ), currentFrame, data, false );
 }
 
 /*
@@ -559,8 +559,8 @@ idVertexCache::AllocMaterial
 */
 vertCacheHandle_t idVertexCache::AllocMaterial( const void* data, int numBytes )
 {
-	vertCacheHandle_t handle = staticData.materialBuffer->Alloc( numBytes, currentFrame );
-	frameData[listNum].materialStaging->Alloc( data, numBytes, handle );
+	vertCacheHandle_t handle = staticData.materialBuffer->Alloc( ALIGN( numBytes, MATERIAL_CACHE_ALIGN ), currentFrame );
+	frameData[listNum].materialStaging->Alloc( data, ALIGN( numBytes, MATERIAL_CACHE_ALIGN ), handle );
 	return handle;
 }
 
@@ -599,7 +599,7 @@ idVertexCache::AllocStaticInstance
 */
 vertCacheHandle_t idVertexCache::AllocStaticInstance( const void* data, int bytes )
 {
-	return StageAlloc( frameData[listNum].staging, staticData.instanceBuffer, bytes, currentFrame, data, false );
+	return StageAlloc( frameData[listNum].staging, staticData.instanceBuffer, ALIGN( bytes, INDEX_CACHE_ALIGN ), currentFrame, data, false );
 }
 
 /*
@@ -609,7 +609,7 @@ idVertexCache::AllocGeometryData
 */
 vertCacheHandle_t idVertexCache::AllocGeometryData( const void* data, int bytes )
 {
-	return StageAlloc( frameData[listNum].geometryStaging, staticData.geometryBuffer, bytes, currentFrame, data, false );
+	return StageAlloc( frameData[listNum].geometryStaging, staticData.geometryBuffer, ALIGN( bytes, GEOMETRY_CACHE_ALIGN ), currentFrame, data, false );
 }
 
 /*
@@ -621,7 +621,7 @@ Allocates static skinned vertices.
 */
 vertCacheHandle_t idVertexCache::AllocStaticSkinnedVertex( int bytes )
 {
-	return staticData.staticSkinnedBuffer->Alloc( bytes, currentFrame, true );
+	return staticData.staticSkinnedBuffer->Alloc( ALIGN( bytes, VERTEX_CACHE_ALIGN ), currentFrame, true );
 }
 
 /*
@@ -633,7 +633,7 @@ Allocates frame temporary skinned vertices.
 */
 vertCacheHandle_t idVertexCache::AllocFrameSkinnedVertex( int bytes )
 {
-	return staticData.skinnedBuffer->Alloc( bytes, currentFrame, false );
+	return staticData.skinnedBuffer->Alloc( ALIGN( bytes, VERTEX_CACHE_ALIGN ), currentFrame, false );
 }
 
 /*

@@ -43,11 +43,6 @@ cbuffer g_Const : register( b0 )
 #endif
 // *INDENT-ON*
 
-// GPU half-float bit patterns
-#define HF_MANTISSA(x)	(x&1023)
-#define HF_EXP(x)		((x&32767)>>10)
-#define HF_SIGN(x)		((x&32768)?-1:1)
-
 [numthreads( 256, 1, 1 )]
 void main( in uint i_globalIdx : SV_DispatchThreadID )
 {
@@ -77,13 +72,11 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 
 	if( g_Const.flags & SkinningFlag_TexCoord1 )
 	{
-		// two half floats
 		texCoord1 = t_VertexBuffer.Load( offset + g_Const.inputTexCoord1Offset );
 	}
 
 	if( g_Const.flags & SkinningFlag_TexCoord2 )
 	{
-		// two half floats
 		texCoord2 = t_VertexBuffer.Load( offset + g_Const.inputTexCoord2Offset );
 	}
 
@@ -105,10 +98,11 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 	[unroll]
 	for( int i = 0; i < 4; i++ )
 	{
-		int index = int( jointIndices[i] * 255.1 * 3.0 );
-		matX += asfloat( t_JointMatrices.Load4(g_Const.inputJointMatOffset + ( index + 0 ) * 16 ) ) * jointWeights[i];
-		matY += asfloat( t_JointMatrices.Load4(g_Const.inputJointMatOffset + ( index + 1 ) * 16 ) ) * jointWeights[i];
-		matZ += asfloat( t_JointMatrices.Load4(g_Const.inputJointMatOffset + ( index + 2 ) * 16 ) ) * jointWeights[i];
+		uint index = uint( jointIndices[i] * 255.1 * 3.0 );
+		float weight = jointWeights[i];
+		matX += asfloat( t_JointMatrices.Load4( g_Const.inputJointMatOffset + ( index + 0 ) * 16 ) ) * weight;
+		matY += asfloat( t_JointMatrices.Load4( g_Const.inputJointMatOffset + ( index + 1 ) * 16 ) ) * weight;
+		matZ += asfloat( t_JointMatrices.Load4( g_Const.inputJointMatOffset + ( index + 2 ) * 16 ) ) * weight;
 	}
 
 	float3 modelPosition;

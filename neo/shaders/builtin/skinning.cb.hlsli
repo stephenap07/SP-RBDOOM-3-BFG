@@ -30,9 +30,7 @@
 #define SkinningFlag_TexCoord2      0x10
 
 struct SkinningConstants
-{
-    uint inputJointMatOffset;
-    
+{  
     uint numVertices;
     uint flags;
     uint inputPositionOffset;
@@ -44,10 +42,11 @@ struct SkinningConstants
     uint inputJointIndexOffset;
 
     uint inputJointWeightOffset;
+    uint inputJointMatOffset;
     uint outputPositionOffset;
     uint outputPrevPositionOffset;
-    uint outputNormalOffset;
 
+    uint outputNormalOffset;
     uint outputTangentOffset;
     uint outputTexCoord1Offset;
     uint outputTexCoord2Offset;

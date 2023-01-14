@@ -77,7 +77,7 @@ void RenderView( nvrhi::ICommandList* commandList, const viewDef_t* view, const 
 	nvrhi::DrawArguments currentDraw;
 	currentDraw.instanceCount = 0;
 
-	auto flushDraw = [commandList, materialEvents, &graphicsState, &currentDraw, &eventMaterial, &pass, &passContext]( const idMaterial * material )
+	auto flushDraw = [commandList, materialEvents, &graphicsState, &currentDraw, &eventMaterial, &pass, &passContext]( const idMaterial* material )
 	{
 		if( currentDraw.instanceCount == 0 )
 		{
@@ -124,11 +124,6 @@ void RenderView( nvrhi::ICommandList* commandList, const viewDef_t* view, const 
 		}
 
 		lastSpace = surf->space;
-
-		if( !surf->frontEndGeo )
-		{
-			continue;
-		}
 
 		if( !shader )
 		{

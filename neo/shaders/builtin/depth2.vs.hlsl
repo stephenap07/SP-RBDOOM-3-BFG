@@ -86,23 +86,16 @@ struct DepthView
 	float4x4 matWorldToClip;
 };
 
-ConstantBuffer<DepthView> g_View :
-register( b0 );
-VK_PUSH_CONSTANT ConstantBuffer<InstanceConstants> g_Instance :
-register( b1 );
-StructuredBuffer<InstanceData> t_InstanceData :
-register( t0 );
-StructuredBuffer<GeometryData> t_GeometryData :
-register( t1 );
-ByteAddressBuffer t_MaterialConstants :
-register( t2 );
-VK_BINDING( 0, 1 ) ByteAddressBuffer t_BindlessBuffers[] :
-register( t0, space1 );
-VK_BINDING( 1, 1 ) Texture2D t_BindlessTextures[] :
-register( t0, space2 );
-
-SamplerState s_MaterialSampler :
-register( s0 );
+// *INDENT-OFF*
+ConstantBuffer<DepthView> g_View : register( b0 );
+VK_PUSH_CONSTANT ConstantBuffer<InstanceConstants> g_Instance : register( b1 );
+StructuredBuffer<InstanceData> t_InstanceData : register( t0 );
+StructuredBuffer<GeometryData> t_GeometryData : register( t1 );
+ByteAddressBuffer t_MaterialConstants : register( t2 );
+VK_BINDING( 0, 1 ) ByteAddressBuffer t_BindlessBuffers[] : register( t0, space1 );
+VK_BINDING( 1, 1 ) Texture2D t_BindlessTextures[] : register( t0, space2 );
+SamplerState s_MaterialSampler : register( s0 );
+// *INDENT-ON*
 
 void main(
 	in uint i_vertexID : SV_VertexID,

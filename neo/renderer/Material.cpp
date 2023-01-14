@@ -151,7 +151,6 @@ void idMaterial::CommonInit()
 	fastPathDiffuseImage = NULL;
 	fastPathSpecularImage = NULL;
 	deformDecl = NULL;
-	materialCache = 0;
 
 	decalInfo.stayTime = 10000;
 	decalInfo.fadeTime = 4000;

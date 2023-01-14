@@ -120,8 +120,6 @@ struct debugPolygon_t
 
 struct SkinningConstants
 {
-	uint inputJointMatOffset;
-
 	uint numVertices;
 	uint flags;
 	uint inputPositionOffset;
@@ -133,10 +131,11 @@ struct SkinningConstants
 	uint inputJointIndexOffset;
 
 	uint inputJointWeightOffset;
+	uint inputJointMatOffset;
 	uint outputPositionOffset;
 	uint outputPrevPositionOffset;
+	
 	uint outputNormalOffset;
-
 	uint outputTangentOffset;
 	uint outputTexCoord1Offset;
 	uint outputTexCoord2Offset;
@@ -373,7 +372,7 @@ private:
 	void				DrawMotionVectors();
 	void				TemporalAAPass( const viewDef_t* _viewDef );
 
-	void				UpdateSkinnedMeshes( const viewDef_t* _viewDef );
+	void				ComputeSkinnedMeshes( const viewDef_t* _viewDef );
 
 	// RB: HDR stuff
 

@@ -948,17 +948,7 @@ public:
 	}
 
 #ifdef USE_NVRHI
-	uint64	GetCacheHandle() const
-	{
-		return materialCache;
-	}
-
-	void SetConstantBuffer( uint64_t handle )
-	{
-		materialCache = handle;
-	}
-
-	int GetBindlessTextureIndex( stageLighting_t lightingStage ) const;
+	int					GetBindlessTextureIndex( stageLighting_t lightingStage ) const;
 #endif
 
 private:
@@ -1070,10 +1060,6 @@ private:
 	bool				suppressInSubview;
 	bool				portalSky;
 	int					refCount;
-
-#ifdef USE_NVRHI
-	uint64_t	materialCache;
-#endif
 };
 
 #endif /* !__MATERIAL_H__ */

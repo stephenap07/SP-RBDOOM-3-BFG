@@ -133,11 +133,11 @@ struct drawSurf_t
 	vertCacheHandle_t		indexCache;			// triIndex_t
 	vertCacheHandle_t		ambientCache;		// idDrawVert
 	vertCacheHandle_t		shadowCache;		// idShadowVert / idShadowVertSkinned
-	vertCacheHandle_t		jointCache;			// idJointMat
-	vertCacheHandle_t		skinnedCache;		// idDrawVert - the skinned vertices
-	vertCacheHandle_t		matRegisterCache;	// MaterialConstants
-	vertCacheHandle_t		instanceCache;		// instanceData_t
-	vertCacheHandle_t		geometryCache;		// geometryData_t
+	vertCacheHandle_t		jointCache = 0;			// idJointMat
+	vertCacheHandle_t		skinnedCache = 0;		// idDrawVert - the skinned vertices
+	vertCacheHandle_t		matRegisterCache = 0;	// MaterialConstants
+	vertCacheHandle_t		instanceCache = 0;		// instanceData_t
+	vertCacheHandle_t		geometryCache = 0;		// geometryData_t
 	const viewEntity_t* 	space;
 	const idMaterial* 		material;			// may be NULL for shadow volumes
 	uint64					extraGLState;		// Extra GL state |'d with material->stage[].drawStateBits

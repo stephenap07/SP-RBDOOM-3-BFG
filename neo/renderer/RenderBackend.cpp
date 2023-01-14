@@ -6766,7 +6766,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	currentJointOffset = 0;
 #endif
 
-	UpdateSkinnedMeshes( _viewDef );
+	ComputeSkinnedMeshes( _viewDef );
 
 	//-------------------------------------------------
 	// RB_BeginDrawingView
@@ -7549,13 +7549,16 @@ void idRenderBackend::PostProcess( const void* data )
 	renderLog.CloseMainBlock();
 }
 
-#define SkinningFlag_FirstFrame     0x01
-#define SkinningFlag_Normals        0x02
-#define SkinningFlag_Tangents       0x04
-#define SkinningFlag_TexCoord1      0x08
-#define SkinningFlag_TexCoord2      0x10
+enum skinningFlag_t
+{
+	SKINNING_FLAG_FIRST_FRAME = 0x01,
+	SKINNING_FLAG_NORMALS = 0x02,
+	SKINNING_FLAG_TANGENTS = 0x04,
+	SKINNING_FLAG_TEXCOORD1 = 0x08,
+	SKINNING_FLAG_TEXCOORD2 = 0x10,
+};
 
-void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
+void idRenderBackend::ComputeSkinnedMeshes( const viewDef_t* _viewDef )
 {
 	if( _viewDef->numDrawSurfs == 0 )
 	{
@@ -7570,11 +7573,6 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 	renderLog.OpenMainBlock( MRB_UPDATE_BUFFERS );
 	renderLog.OpenBlock( "UpdatedSkinnedMeshes" );
 
-	// avoid updating the skinned mesh multiple times.
-	//vertCacheHandle_t* skinnedCaches = ( uint64_t* )_alloca( _viewDef->numDrawSurfs * sizeof( vertCacheHandle_t ) );
-	//memset( skinnedCaches, 0, _viewDef->numDrawSurfs * sizeof( vertCacheHandle_t ) );
-	//int numSkins = 0;
-
 	for( int surfNum = 0; surfNum < _viewDef->numDrawSurfs; surfNum++ )
 	{
 		const drawSurf_t* surf = _viewDef->drawSurfs[surfNum];
@@ -7584,23 +7582,12 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 			continue;
 		}
 
+		//if( idStr::Icmp( surf->material->GetName(), "models/characters/player/arm2" ) == 0 )
+		//{
+		//	common->Warning( "hi" );
+		//}
+
 		assert( surf->ambientCache );
-
-		//int i = 0;
-		//for( ; i < numSkins; i++ )
-		//{
-		//	if( skinnedCaches[i] == surf->skinnedCache )
-		//	{
-		//		break;
-		//	}
-		//}
-
-		//if( i < numSkins )
-		//{
-		//	continue;
-		//}
-
-		//skinnedCaches[numSkins++] = surf->skinnedCache;
 
 		renderLog.OpenBlock( surf->material->GetName() );
 
@@ -7633,8 +7620,8 @@ void idRenderBackend::UpdateSkinnedMeshes( const viewDef_t* _viewDef )
 		uint32 outOffset = sb.offset;
 		SkinningConstants constants{};
 		constants.inputJointMatOffset = jb.offset;
-		constants.numVertices = surf->frontEndGeo->numVerts;
-		constants.flags = SkinningFlag_Normals | SkinningFlag_Tangents | SkinningFlag_TexCoord1;
+		constants.numVertices = sb.size / sizeof( idDrawVert );
+		constants.flags = SKINNING_FLAG_FIRST_FRAME | SKINNING_FLAG_NORMALS | SKINNING_FLAG_TANGENTS | SKINNING_FLAG_TEXCOORD1;
 		constants.inputPositionOffset = vertexOffset;
 		constants.inputNormalOffset = vertexOffset + offsetof( idDrawVert, normal );
 		constants.inputTangentOffset = vertexOffset + offsetof( idDrawVert, tangent );
