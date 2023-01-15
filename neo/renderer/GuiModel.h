@@ -43,11 +43,6 @@ struct guiModelSurface_t
 class idRenderMatrix;
 class Framebuffer;
 
-namespace ImGui
-{
-struct ImDrawData;
-}
-
 struct ImDrawData;
 
 class idGuiModel
