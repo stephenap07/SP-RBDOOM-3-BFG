@@ -2334,11 +2334,6 @@ idRenderSystemLocal::LoadLevelImages
 void idRenderSystemLocal::LoadLevelImages()
 {
 	globalImages->LoadLevelImages( false );
-
-#if defined( USE_NVRHI )
-	deviceManager->GetDevice()->waitForIdle();
-	deviceManager->GetDevice()->runGarbageCollection();
-#endif
 }
 
 /*
@@ -2444,7 +2439,7 @@ void idRenderSystemLocal::InitBackend()
 		globalImages->ReloadImages( true, tr.CommandList() );
 
 		tr.CommandList()->close();
-		deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
+		deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Graphics );
 #else
 		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
 		//globalImages->ReloadImages( true );

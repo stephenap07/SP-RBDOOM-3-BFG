@@ -529,6 +529,9 @@ file(GLOB TINYEXR_INCLUDES libs/tinyexr/*.h)
 file(GLOB MIKKTSPACE_INCLUDES libs/mikktspace/*.h)
 file(GLOB MIKKTSPACE_SOURCES libs/mikktspace/*.c)
 
+set(RENDERDOC_INCLUDES
+	libs/renderdoc_app.h)
+
 if (NOT JPEG_FOUND)
     set(JPEG_INCLUDES
         libs/jpeg-6/jchuff.h
@@ -1169,6 +1172,8 @@ source_group("libs\\mikktspace" FILES ${MIKKTSPACE_SOURCES})
 source_group("libs\\jpeg-6" FILES ${JPEG_INCLUDES})
 source_group("libs\\jpeg-6" FILES ${JPEG_SOURCES})
 
+source_group("libs\\renderdoc" FILES ${RENDERDOC_INCLUDES})
+
 source_group("libs\\libbinkdec" FILES ${BINKDEC_INCLUDES})
 source_group("libs\\libbinkdec" FILES ${BINKDEC_SOURCES})
 
@@ -1357,6 +1362,7 @@ set(RBDOOM3_INCLUDES
 			${TINYEXR_INCLUDES}
 			${MIKKTSPACE_INCLUDES}
 			${JPEG_INCLUDES}
+			${RENDERDOC_INCLUDES}
 			${PNG_INCLUDES}
 			${ZLIB_INCLUDES}
 			${MINIZIP_INCLUDES}

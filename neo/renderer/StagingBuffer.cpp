@@ -29,6 +29,8 @@ idStagingBuffer::idStagingBuffer( nvrhi::DeviceHandle device, nvrhi::BufferDesc 
 	// we can make upto 2^16 allocations/updates per frame or
 	// however many structs fit in the allocated memory.
 	allocations = new vertCacheHandle_t[maxAllocs];
+
+	Clear();
 }
 
 idStagingBuffer::~idStagingBuffer()

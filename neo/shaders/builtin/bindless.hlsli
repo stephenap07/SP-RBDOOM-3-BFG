@@ -142,22 +142,19 @@ MaterialConstants LoadMaterialConstants(ByteAddressBuffer buffer, uint offset)
     ret.occlusionTextureIndex = int(f.w);
     ret.transmissionTextureIndex = int(g.x);
     ret.numAmbientStages = int(f.y);
-    ret.padding1 = int(f.z);
-    ret.padding2 = int(f.w);
+    ret.padding[0] = int(f.z);
+    ret.padding[1] = int(f.w);
     return ret;   
 }
 
 materialAmbientData_t LoadMaterialAmbientStage( ByteAddressBuffer buffer, int offset )
 {
 	uint4 a = buffer.Load4(offset + 16 * 0);
-	
     uint4 b = buffer.Load4(offset + 16 * 1);
     uint4 c = buffer.Load4(offset + 16 * 2);
     uint4 d = buffer.Load4(offset + 16 * 3);
-
     uint4 e = buffer.Load4(offset + 16 * 4);
     uint4 f = buffer.Load4(offset + 16 * 5);
-
     uint4 g = buffer.Load4(offset + 16 * 6);
     uint4 h = buffer.Load4(offset + 16 * 7);
     uint4 i = buffer.Load4(offset + 16 * 8);

@@ -1986,6 +1986,7 @@ void idRenderWorldLocal::GenerateAllInteractions()
 
 	// iterate through all lights
 	int	count = 0;
+	tr.CommandList()->open();
 	for( int i = 0; i < this->lightDefs.Num(); i++ )
 	{
 		idRenderLightLocal*	ldef = this->lightDefs[i];
@@ -2036,6 +2037,10 @@ void idRenderWorldLocal::GenerateAllInteractions()
 
 		session->Pump();
 	}
+
+	tr.CommandList()->close();
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList() );
+	deviceManager->GetDevice()->waitForIdle();
 
 	int end = Sys_Milliseconds();
 	int	msec = end - start;

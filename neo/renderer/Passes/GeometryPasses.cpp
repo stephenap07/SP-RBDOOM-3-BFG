@@ -116,8 +116,6 @@ void RenderView( nvrhi::ICommandList* commandList, const viewDef_t* view, const 
 		drawSurf_t* surf = view->drawSurfs[surfNum];
 		const idMaterial* shader = surf->material;
 
-		++geoNum;
-
 		if( surf->space != lastSpace )
 		{
 			geoNum = 0;
@@ -180,6 +178,7 @@ void RenderView( nvrhi::ICommandList* commandList, const viewDef_t* view, const 
 		idVec2i constants = idVec2i( instanceBuffer.offset / instanceBuffer.size, geoNum );
 		commandList->setPushConstants( &constants, sizeof( idVec2i ) );
 		flushDraw( shader );
+		++geoNum;
 	}
 
 	lastSpace = nullptr;

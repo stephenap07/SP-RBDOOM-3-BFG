@@ -39,6 +39,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "../ImmediateMode.h"
 
 #include "nvrhi/utils.h"
+#include "libs/renderdoc/renderdoc_app.h"
+
+#include <libloaderapi.h>
+
 #include <sys/DeviceManager.h>
 extern DeviceManager* deviceManager;
 
@@ -60,6 +64,23 @@ idCVar r_syncEveryFrame( "r_syncEveryFrame", "1", CVAR_BOOL, "Don't let the GPU 
 void RB_SetMVP( const idRenderMatrix& mvp );
 
 #define MAX_IMAGE_PARMS 16
+
+static RENDERDOC_API_1_1_2* rdoc_api = NULL;
+
+static void InitRenderDoc()
+{
+	// At init, on windows
+	if( !rdoc_api )
+	{
+		if( HMODULE mod = GetModuleHandleA( "renderdoc.dll" ) )
+		{
+			pRENDERDOC_GetAPI RENDERDOC_GetAPI =
+				( pRENDERDOC_GetAPI )GetProcAddress( mod, "RENDERDOC_GetAPI" );
+			int ret = RENDERDOC_GetAPI( eRENDERDOC_API_Version_1_1_2, ( void** )&rdoc_api );
+			assert( ret == 1 );
+		}
+	}
+}
 
 class NvrhiContext
 {
@@ -208,7 +229,7 @@ void idRenderBackend::Init()
 			layoutDesc.visibility = nvrhi::ShaderType::Compute;
 			layoutDesc.bindings =
 			{
-				nvrhi::BindingLayoutItem::PushConstants( 0, sizeof( SkinningConstants ) ),
+				nvrhi::BindingLayoutItem::PushConstants( 0, sizeof( skinningConstants_t ) ),
 				nvrhi::BindingLayoutItem::RawBuffer_SRV( 0 ),
 				nvrhi::BindingLayoutItem::RawBuffer_SRV( 1 ),
 				nvrhi::BindingLayoutItem::RawBuffer_UAV( 0 )
@@ -242,7 +263,7 @@ void idRenderBackend::Init()
 
 	nvrhi::CommandListParameters commandListParms;
 	commandListParms.enableImmediateExecution = false;
-	commandListParms.queueType = nvrhi::CommandQueue::Copy;
+	commandListParms.queueType = nvrhi::CommandQueue::Graphics; // used to be copy queue
 
 	for( int i = 0; i < NUM_FRAME_DATA; i++ )
 	{
@@ -251,6 +272,9 @@ void idRenderBackend::Init()
 	}
 
 	commandList = deviceManager->GetDevice()->createCommandList();
+
+	// The fence that is signaled to the gpu when the front end is done so that backend can start.
+	memset( frontEndFences, 0, sizeof( uint64 ) * NUM_FRAME_DATA );
 
 	nvrhi::BindlessLayoutDesc bindlessLayoutDesc;
 	bindlessLayoutDesc.visibility = nvrhi::ShaderType::All;
@@ -313,6 +337,8 @@ void idRenderBackend::Init()
 
 	materialVersions.SetNum( declManager->GetNumDecls( DECL_MATERIAL ) );
 	SIMDProcessor->Memset( &materialVersions[ 0 ], 0, materialVersions.Num() );
+
+	InitRenderDoc();
 }
 
 void idRenderBackend::Shutdown()
@@ -1535,12 +1561,14 @@ void idRenderBackend::GL_StartFrame()
 	// fetch GPU timer queries of last frame
 	renderLog.FetchGPUTimers( pc );
 
-	deviceManager->BeginFrame();
-
 	commandList->open();
 
 	renderLog.StartFrame( commandList );
 	renderLog.OpenMainBlock( MRB_GPU_TIME );
+
+	if( vertexCache.currentFrame == ( VERTCACHE_FRAME_MASK + 2 ) ) {
+		if( rdoc_api ) rdoc_api->StartFrameCapture( NULL, NULL );
+	}
 }
 
 /*
@@ -1577,14 +1605,16 @@ We want to exit this with the GPU idle, right at vsync
 */
 void idRenderBackend::GL_BlockingSwapBuffers()
 {
-	// Make sure that all frames have finished rendering
-	deviceManager->GetDevice()->waitForIdle();
+	if( vertexCache.currentFrame == ( VERTCACHE_FRAME_MASK + 2 ) ) {
+		common->Printf( "hi" );
 
-	// Release all in-flight references to the render targets
-	deviceManager->GetDevice()->runGarbageCollection();
+		// stop the capture
+		if( rdoc_api ) rdoc_api->EndFrameCapture( NULL, NULL );
+	}
 
-	// Present to the swap chain.
 	deviceManager->Present();
+
+	deviceManager->GetDevice()->runGarbageCollection();
 
 	renderLog.EndFrame();
 

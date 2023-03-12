@@ -1325,6 +1325,10 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 		// SP: Load in the splash screen images.
 		globalImages->LoadDeferredImages( tr.CommandList() );
 
+		tr.CommandList()->close();
+		deviceManager->GetDevice()->executeCommandList( tr.CommandList() );
+		deviceManager->GetDevice()->waitForIdle();
+
 		const int legalMinTime = 4000;
 		const bool showVideo = ( !com_skipIntroVideos.GetBool() && fileSystem->UsingResourceFiles() );
 		const bool showSplash = true;
@@ -1471,6 +1475,7 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 
 		com_fullyInitialized = true;
 
+		tr.CommandList()->open();
 		globalImages->LoadDeferredImages( tr.CommandList() );
 
 		// No longer need the splash screen
@@ -1485,6 +1490,10 @@ void idCommonLocal::Init( int argc, const char* const* argv, const char* cmdline
 				}
 			}
 		}
+
+		tr.CommandList()->close();
+		deviceManager->GetDevice()->executeCommandList( tr.CommandList() );
+		deviceManager->GetDevice()->waitForIdle();
 
 		Printf( "--- Common Initialization Complete ---\n" );
 

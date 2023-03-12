@@ -73,10 +73,10 @@ void R_ReloadImages_f( const idCmdArgs& args )
 	}
 
 #if defined( USE_NVRHI )
-	//tr.CommandList()->open();
+	tr.CommandList()->open();
 	globalImages->ReloadImages( all, tr.CommandList() );
-	//tr.CommandList()->close();
-	//deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
+	tr.CommandList()->close();
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
 
 	// Images (including the framebuffer images) were reloaded, reinitialize the framebuffers.
 	Framebuffer::ResizeFramebuffers();
@@ -773,7 +773,7 @@ void idImageManager::Init()
 	tr.CommandList()->open();
 	LoadDeferredImages( tr.CommandList() );
 	tr.CommandList()->close();
-	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Graphics );
 }
 
 /*
@@ -893,6 +893,8 @@ int idImageManager::LoadLevelImages( bool pacifier )
 {
 #if defined( USE_NVRHI )
 	common->UpdateLevelLoadPacifier();
+
+	tr.CommandList()->open();
 #endif
 
 	int	loadCount = 0;
@@ -916,12 +918,16 @@ int idImageManager::LoadLevelImages( bool pacifier )
 		if( image->levelLoadReferenced && !image->IsLoaded() )
 		{
 			loadCount++;
-			image->FinalizeImage( false, commandList );
+			image->FinalizeImage( false, tr.CommandList() );
 		}
 	}
 
 #if defined( USE_NVRHI )
 	globalImages->LoadDeferredImages( tr.CommandList() );
+
+	tr.CommandList()->close();
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Graphics );
+	deviceManager->GetDevice()->waitForIdle();
 
 	common->UpdateLevelLoadPacifier();
 #endif

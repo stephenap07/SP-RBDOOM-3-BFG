@@ -107,11 +107,11 @@ struct viewEnvprobe_t;
 
 struct drawSurf_t
 {
-	const srfTriangles_t* 	frontEndGeo;		// don't use on the back end, it may be updated by the front end!
+	const srfTriangles_t* 	frontEndGeo;			// don't use on the back end, it may be updated by the front end!
 	int						numIndexes;
-	vertCacheHandle_t		indexCache;			// triIndex_t
-	vertCacheHandle_t		ambientCache;		// idDrawVert
-	vertCacheHandle_t		shadowCache;		// idShadowVert / idShadowVertSkinned
+	vertCacheHandle_t		indexCache;				// triIndex_t
+	vertCacheHandle_t		ambientCache = 0;		// idDrawVert
+	vertCacheHandle_t		shadowCache;			// idShadowVert / idShadowVertSkinned
 	vertCacheHandle_t		jointCache = 0;			// idJointMat
 	vertCacheHandle_t		skinnedCache = 0;		// idDrawVert - the skinned vertices
 	vertCacheHandle_t		matRegisterCache = 0;	// MaterialConstants
@@ -771,13 +771,12 @@ struct materialData_t
 
 	int     transmissionTextureIndex;
 	int		numAmbientStages;
-	int     padding1;
-	int     padding2;
+	int     padding[2];
 };
 
 struct materialAmbientData_t
 {
-	int		padding[2]; // make it 144 bytes so it's 16-byte aligned.
+	int		padding[2];
 	float	alphaTest;
 	int		textureId;
 
@@ -1121,7 +1120,7 @@ public:
 #if defined( USE_NVRHI )
 	nvrhi::ICommandList* CommandList() override
 	{
-		return backend.FrontendCommandList();
+		return backend.CommandList();
 	}
 #else
 #endif
@@ -1693,7 +1692,7 @@ void R_LinkDrawSurfToView( drawSurf_t* drawSurf, viewDef_t* viewDef );
 
 void R_AddModels();
 
-void R_LinkGeometryData( drawSurf_t* ds );
+bool R_LinkGeometryData( drawSurf_t* ds );
 
 /*
 =============================================================
@@ -1780,7 +1779,7 @@ srfTriangles_t* 	R_MergeTriangles( const srfTriangles_t* tri1, const srfTriangle
 void				R_DeriveTangents( srfTriangles_t* tri );
 
 // copy data from a front-end srfTriangles_t to a back-end drawSurf_t
-void				R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri, nvrhi::ICommandList* commandList );
+void				R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri );
 
 // For static surfaces, the indexes, ambient, and shadow buffers can be pre-created at load
 // time, rather than being re-created each frame in the frame temporary buffers.

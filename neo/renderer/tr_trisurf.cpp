@@ -2200,7 +2200,7 @@ VERTEX / INDEX CACHING
 R_InitDrawSurfFromTri
 ===================
 */
-void R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri, nvrhi::ICommandList* commandList )
+void R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri )
 {
 	if( tri.numIndexes == 0 )
 	{
@@ -2219,11 +2219,11 @@ void R_InitDrawSurfFromTri( drawSurf_t& ds, srfTriangles_t& tri, nvrhi::ICommand
 	}
 	else if( !vertexCache.CacheIsCurrent( tri.ambientCache ) )
 	{
-		tri.ambientCache = vertexCache.AllocVertex( tri.verts, tri.numVerts, sizeof( idDrawVert ), commandList );
+		tri.ambientCache = vertexCache.AllocVertex( tri.verts, tri.numVerts, sizeof( idDrawVert ) );
 	}
 	if( !vertexCache.CacheIsCurrent( tri.indexCache ) )
 	{
-		tri.indexCache = vertexCache.AllocIndex( tri.indexes, tri.numIndexes, sizeof( triIndex_t ), commandList );
+		tri.indexCache = vertexCache.AllocIndex( tri.indexes, tri.numIndexes, sizeof( triIndex_t ) );
 	}
 
 	ds.numIndexes = tri.numIndexes;

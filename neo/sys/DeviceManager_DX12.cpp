@@ -393,6 +393,8 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 	hr = pSwapChain1->QueryInterface( IID_PPV_ARGS( &m_SwapChain ) );
 	HR_RETURN( hr );
 
+	m_SwapChain->SetMaximumFrameLatency( NUM_FRAME_DATA );
+
 	nvrhi::d3d12::DeviceDesc deviceDesc;
 	deviceDesc.errorCB = &DefaultMessageCallback::GetInstance();
 	deviceDesc.pDevice = m_Device12;
@@ -545,34 +547,20 @@ void DeviceManager_DX12::ResizeSwapChain()
 
 void DeviceManager_DX12::BeginFrame()
 {
-	/*	SRS - This code not needed: framebuffer/swapchain resizing & fullscreen are handled by idRenderBackend::ResizeImages() and DeviceManager::UpdateWindowSize()
+	if( !windowVisible )
+	{
+		return;
+	}
 
-		DXGI_SWAP_CHAIN_DESC1 newSwapChainDesc;
-		DXGI_SWAP_CHAIN_FULLSCREEN_DESC newFullScreenDesc;
-		if( SUCCEEDED( m_SwapChain->GetDesc1( &newSwapChainDesc ) ) && SUCCEEDED( m_SwapChain->GetFullscreenDesc( &newFullScreenDesc ) ) )
-		{
-			if( fullScreenDesc.Windowed != newFullScreenDesc.Windowed )
-			{
-				BackBufferResizing();
+	uint32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-				fullScreenDesc = newFullScreenDesc;
-				m_SwapChainDesc = newSwapChainDesc;
-				deviceParms.backBufferWidth = newSwapChainDesc.Width;
-				deviceParms.backBufferHeight = newSwapChainDesc.Height;
+	int prevIndex = bufferIndex - 1;
+	if( prevIndex < 0 )
+	{
+		prevIndex = m_SwapChainDesc.BufferCount - 1;
+	}
 
-				if( newFullScreenDesc.Windowed )
-				{
-					//glfwSetWindowMonitor( m_Window, nullptr, 50, 50, newSwapChainDesc.Width, newSwapChainDesc.Height, 0 );
-				}
-
-				ResizeSwapChain();
-				BackBufferResized();
-			}
-		}
-	*/
-	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-
-	WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
+	WaitForSingleObject( m_FrameFenceEvents[prevIndex], INFINITE );
 }
 
 nvrhi::ITexture* DeviceManager_DX12::GetCurrentBackBuffer()
@@ -601,7 +589,6 @@ uint32_t DeviceManager_DX12::GetBackBufferCount()
 
 void DeviceManager_DX12::EndFrame()
 {
-
 }
 
 void DeviceManager_DX12::Present()
@@ -611,11 +598,12 @@ void DeviceManager_DX12::Present()
 		return;
 	}
 
-	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+	const int32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
 	UINT presentFlags = 0;
 
 	// SRS - DXGI docs say fullscreen must be disabled for unlocked fps/tear, but this does not seem to be true
+
 	if( !deviceParms.vsyncEnabled && m_TearingSupported ) //&& !glConfig.isFullscreen )
 	{
 		presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
@@ -624,9 +612,13 @@ void DeviceManager_DX12::Present()
 	// SRS - Don't change deviceParms.vsyncEnabled here, simply test for vsync mode 2 to set DXGI SyncInterval
 	m_SwapChain->Present( deviceParms.vsyncEnabled && r_swapInterval.GetInteger() == 2 ? 1 : 0, presentFlags );
 
+	int32 bufferIndex2 = m_SwapChain->GetCurrentBackBufferIndex();
+
 	m_FrameFence->SetEventOnCompletion( m_FrameCount, m_FrameFenceEvents[bufferIndex] );
 	m_GraphicsQueue->Signal( m_FrameFence, m_FrameCount );
 	m_FrameCount++;
+
+	BeginFrame();
 }
 
 DeviceManager* DeviceManager::CreateD3D12()

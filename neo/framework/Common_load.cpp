@@ -33,6 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "Common_local.h"
 #include "../sys/sys_lobby_backend.h"
+#include <sys/DeviceManager.h>
 
 
 #define LAUNCH_TITLE_DOOM_EXECUTABLE		"doom1.exe"
@@ -46,6 +47,8 @@ idCVar com_disableAllSaves( "com_disableAllSaves", "0", CVAR_SYSTEM | CVAR_BOOL,
 extern idCVar sys_lang;
 
 extern idCVar g_demoMode;
+
+extern DeviceManager* deviceManager;
 
 // This is for the dirty hack to get a dialog to show up before we capture the screen for autorender.
 const int NumScreenUpdatesToShowDialog = 25;
@@ -675,7 +678,6 @@ void idCommonLocal::ExecuteMapChange()
 	// at this point we should be done with the loading gui so we kill it
 	delete loadGUI;
 	loadGUI = NULL;
-
 
 	// capture the current screen and start a wipe
 	StartWipe( "wipe2Material" );

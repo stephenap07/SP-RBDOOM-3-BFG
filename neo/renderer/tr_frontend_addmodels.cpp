@@ -510,6 +510,13 @@ void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, con
 
 	idRenderModelStatic* model = tri->staticModelWithJoints;
 	assert( model->jointsInverted != NULL );
+	
+	// TODO(Stephen): Remove this. The pistol and the arm share the same joint buffer.
+	// 46 joints for the entire arm and pistol system. Is it normal to have so many joints?
+	if( idStr::Icmp( drawSurf->material->GetName(), "models/characters/player/arm2" ) == 0 )
+	{
+		common->DPrintf( "hi" );
+	}
 
 	if( !vertexCache.CacheIsCurrent( model->jointsInvertedBuffer ) )
 	{
@@ -799,10 +806,10 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 			continue;
 		}
 
-	/*	if( idStr::Icmp( shader->GetName(), "models/characters/player/arm2" ) == 0 )
+		if( idStr::Icmp( shader->GetName(), "models/characters/player/arm2" ) == 0 )
 		{
-			common->Warning( "hi" );
-		}*/
+			common->DPrintf( "hi" );
+		}
 
 		// motorsep 11-24-2014; checking for LOD surface for LOD1 iteration
 		if( shader->IsLOD() )
@@ -1487,13 +1494,8 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 			assert( vertexCache.CacheIsCurrent( shadowDrawSurf->shadowCache ) );
 			assert( vertexCache.CacheIsCurrent( shadowDrawSurf->indexCache ) );
 
-			if( gpuSkinned && !skinnedCache )
-			{
-				skinnedCache = vertexCache.AllocFrameSkinnedVertex( tri->numVerts * sizeof( idDrawVert ) );
-			}
-
 			shadowDrawSurf->ambientCache = 0;
-			shadowDrawSurf->skinnedCache = skinnedCache;
+			shadowDrawSurf->skinnedCache = 0;
 			shadowDrawSurf->frontEndGeo = NULL;
 			shadowDrawSurf->space = vEntity;
 			shadowDrawSurf->material = NULL;

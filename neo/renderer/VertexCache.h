@@ -115,21 +115,17 @@ struct geoBufferSet_t
 	idSysInterlockedInteger	vertexMemUsed;
 	int						allocations;	// number of index and vertex allocations combined
 
-	idStagingBuffer*		staging;
-	idTrackedBuffer*		instanceBuffer;
-
+	idStagingBuffer*		instanceStaging;
 	idStagingBuffer*		geometryStaging;
-	idTrackedBuffer*		geometryBuffer;
-
 	idStagingBuffer*		materialStaging;
-	idTrackedBuffer*		materialBuffer;
-
 	idStagingBuffer*		skinnedStaging;
-	idTrackedBuffer*		skinnedBuffer;
-
-	idTrackedBuffer*		staticSkinnedBuffer;
-
 	idStagingBuffer*		jointStagingBuffer;
+
+	idTrackedBuffer*		instanceBuffer;
+	idTrackedBuffer*		geometryBuffer;
+	idTrackedBuffer*		materialBuffer;
+	idTrackedBuffer*		skinnedBuffer;
+	idTrackedBuffer*		staticSkinnedBuffer;
 	idTrackedBuffer*		jointBuffer;
 };
 
@@ -141,6 +137,10 @@ struct bufferView_t
 	int bindlessIndex;
 };
 
+/// A tracked buffer is used to keep track of the location of an upcoming
+/// buffer update. The staging buffer is fed the data first, then when
+/// it's time for the backend to do work, do a copy from the staging buffer
+/// to the buffer that is being tracked.
 class idTrackedBuffer
 {
 public:

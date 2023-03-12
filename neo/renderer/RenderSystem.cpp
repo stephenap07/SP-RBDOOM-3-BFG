@@ -848,7 +848,7 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 	{
 		*pc = this->pc;
 	}
-
+	
 	// print any other statistics and clear all of them
 	PrintPerformanceCounters();
 
@@ -862,6 +862,8 @@ void idRenderSystemLocal::SwapCommandBuffers_FinishRendering(
 	// check for errors
 	GL_CheckErrors();
 }
+
+extern DeviceManager* deviceManager;
 
 /*
 =====================
@@ -884,14 +886,6 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	// close any gui drawing
 	guiModel->EmitFullScreen();
 	guiModel->Clear();
-
-	if( vertexCache.currentFrame > 0 )
-	{
-		tr.CommandList()->close();
-		deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
-	}
-
-	tr.CommandList()->open();
 
 	// unmap the buffer objects so they can be used by the GPU
 	vertexCache.BeginBackEnd();
@@ -926,10 +920,10 @@ const emptyCommand_t* idRenderSystemLocal::SwapCommandBuffers_FinishCommandBuffe
 	// scene generation, the basic surfaces needed for drawing the buffers will
 	// always be present.
 	//------------------------------
-	R_InitDrawSurfFromTri( tr.unitSquareSurface_, *tr.unitSquareTriangles, tr.CommandList() );
-	R_InitDrawSurfFromTri( tr.zeroOneCubeSurface_, *tr.zeroOneCubeTriangles, tr.CommandList() );
-	R_InitDrawSurfFromTri( tr.zeroOneSphereSurface_, *tr.zeroOneSphereTriangles, tr.CommandList() );
-	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles, tr.CommandList() );
+	R_InitDrawSurfFromTri( tr.unitSquareSurface_, *tr.unitSquareTriangles );
+	R_InitDrawSurfFromTri( tr.zeroOneCubeSurface_, *tr.zeroOneCubeTriangles );
+	R_InitDrawSurfFromTri( tr.zeroOneSphereSurface_, *tr.zeroOneSphereTriangles );
+	R_InitDrawSurfFromTri( tr.testImageSurface_, *tr.testImageTriangles );
 
 	// Reset render crop to be the full screen
 	renderCrops[ 0 ].Clear();
@@ -1336,7 +1330,7 @@ bool idRenderSystemLocal::UploadImage( const char* imageName, const byte* data, 
 
 #if defined(USE_NVRHI)
 	tr.CommandList()->close();
-	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Graphics );
 #endif
 	return true;
 }

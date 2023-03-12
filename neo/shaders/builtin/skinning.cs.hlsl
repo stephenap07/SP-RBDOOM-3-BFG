@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
+* Copyright (c) 2023, Stephen Pridham
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -43,6 +44,8 @@ cbuffer g_Const : register( b0 )
 #endif
 // *INDENT-ON*
 
+static const float divisor = 1.0 / 255.0;
+
 [numthreads( 256, 1, 1 )]
 void main( in uint i_globalIdx : SV_DispatchThreadID )
 {
@@ -50,6 +53,8 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 	{
 		return;
 	}
+
+	// == BEGIN LOAD ==
 
 	// offset into the idDrawVert
 	int offset = i_globalIdx * c_SizeOfVertex;
@@ -80,8 +85,6 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 		texCoord2 = t_VertexBuffer.Load( offset + g_Const.inputTexCoord2Offset );
 	}
 
-	const float divisor = 1.0 / 255.0;
-
 	uint jp = t_VertexBuffer.Load( offset + g_Const.inputJointIndexOffset );
 	float4 jointIndices = float4( ( ( jp >> 0 ) & 0xff ),
 								  ( ( jp >> 8 ) & 0xff ),
@@ -93,6 +96,10 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 								  ( ( jwp >> 8 ) & 0xff ),
 								  ( ( jwp >> 16 ) & 0xff ),
 								  ( ( jwp >> 24 ) & 0xff ) ) * divisor;
+
+	// == END LOAD ==
+
+	// == BEGIN TRANSFORM ==
 
 	float4 matX = 0, matY = 0, matZ = 0;
 	[unroll]
@@ -126,6 +133,10 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 	normal.xyz = modelNormal;
 	tangent.xyz = modelTangent;
 
+	// == END TRANSFORM ==
+
+	// == BEGIN STORE ==
+
 	// float3 prevPosition;
 	// if (g_Const.flags & SkinningFlag_FirstFrame)
 	// 	prevPosition = position;
@@ -155,4 +166,6 @@ void main( in uint i_globalIdx : SV_DispatchThreadID )
 	{
 		u_VertexBuffer.Store( offset + g_Const.outputTexCoord2Offset, texCoord2 );
 	}
+
+	// == END STORE ==
 }

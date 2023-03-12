@@ -75,6 +75,10 @@ idRenderModel* idRenderModelPrt::InstantiateDynamicModel( const struct renderEnt
 {
 	idRenderModelStatic*	staticModel;
 
+	if( vertexCache.currentFrame == ( VERTCACHE_FRAME_MASK + 2 ) ) {
+		common->Printf("hi");
+	}
+
 	if( cachedModel && !r_useCachedDynamicModels.GetBool() )
 	{
 		delete cachedModel;

@@ -54,9 +54,9 @@ static void ClearGeoBufferSet( geoBufferSet_t& gbs )
 	gbs.vertexMemUsed.SetValue( 0 );
 	gbs.allocations = 0;
 
-	if( gbs.staging )
+	if( gbs.instanceStaging )
 	{
-		gbs.staging->Clear();
+		gbs.instanceStaging->Clear();
 	}
 
 	if( gbs.instanceBuffer )
@@ -225,7 +225,7 @@ static void AllocGeoBufferSet( geoBufferSet_t& gbs, BufferData bufferData, buffe
 		stagingDesc.canHaveTypedViews = true;
 		stagingDesc.initialState = nvrhi::ResourceStates::Common;
 		stagingDesc.debugName = va( "Instance Buffer [Frame %d]", f );
-		gbs.staging = new idStagingBuffer( deviceManager->GetDevice(), stagingDesc );
+		gbs.instanceStaging = new idStagingBuffer( deviceManager->GetDevice(), stagingDesc );
 	}
 
 	if( bufferData.instanceBytes > 0 )
@@ -335,9 +335,6 @@ void idVertexCache::Init( int _uniformBufferOffsetAlignment, nvrhi::ICommandList
 
 	allocFrameNum = 0;
 
-	nvrhi::CommandListParameters parms;
-	parms.setQueueType( nvrhi::CommandQueue::Copy );
-
 	BufferData mappedData;
 	mappedData.vertexBytes = VERTCACHE_VERTEX_MEMORY_PER_FRAME;
 	mappedData.indexBytes = VERTCACHE_INDEX_MEMORY_PER_FRAME;
@@ -379,8 +376,8 @@ void idVertexCache::Shutdown()
 	{
 		frameData[i].vertexBuffer.FreeBufferObject();
 		frameData[i].indexBuffer.FreeBufferObject();
-		delete frameData[i].staging;
-		frameData[i].staging = nullptr;
+		delete frameData[i].instanceStaging;
+		frameData[i].instanceStaging = nullptr;
 		delete frameData[i].geometryStaging;
 		frameData[i].geometryStaging = nullptr;
 		delete frameData[i].materialStaging;
@@ -397,8 +394,8 @@ void idVertexCache::Shutdown()
 	staticData.vertexBuffer.FreeBufferObject();
 	staticData.indexBuffer.FreeBufferObject();
 
-	delete staticData.staging;
-	staticData.staging = nullptr;
+	delete staticData.instanceStaging;
+	staticData.instanceStaging = nullptr;
 	delete staticData.instanceBuffer;
 	staticData.instanceBuffer = nullptr;
 	delete staticData.geometryBuffer;
@@ -599,7 +596,7 @@ idVertexCache::AllocStaticInstance
 */
 vertCacheHandle_t idVertexCache::AllocStaticInstance( const void* data, int bytes )
 {
-	return StageAlloc( frameData[listNum].staging, staticData.instanceBuffer, ALIGN( bytes, INDEX_CACHE_ALIGN ), currentFrame, data, false );
+	return StageAlloc( frameData[listNum].instanceStaging, staticData.instanceBuffer, ALIGN( bytes, INDEX_CACHE_ALIGN ), currentFrame, data, false );
 }
 
 /*
@@ -804,7 +801,7 @@ idVertexCache::UpdateInstanceBuffer
 void idVertexCache::UpdateInstanceBuffer( vertCacheHandle_t handle, void* data )
 {
 	const uint64 numBytes = ( int )( handle >> VERTCACHE_SIZE_SHIFT ) & VERTCACHE_SIZE_MASK;
-	frameData[listNum].staging->Alloc( data, numBytes, handle );
+	frameData[listNum].instanceStaging->Alloc( data, numBytes, handle );
 }
 
 /*
@@ -842,19 +839,6 @@ void idVertexCache::BeginBackEnd()
 					   mostUsedInstance / 1024 );
 	}
 
-	nvrhi::ICommandList* commandList = tr.CommandList();
-
-	// Copy buffers from the upload CPU accessible buffers into vmram for
-	// faster reads on the gpu. For UMA architectures this wouldn't be very productive
-	// since there is no performance penalty for using upload buffers directly.
-	commandList->beginMarker( "Copy buffers" );
-	frameData[listNum].staging->CopyBuffers( commandList, staticData.instanceBuffer->GetBuffer() );
-	frameData[listNum].geometryStaging->CopyBuffers( commandList, staticData.geometryBuffer->GetBuffer() );
-	frameData[listNum].materialStaging->CopyBuffers( commandList, staticData.materialBuffer->GetBuffer() );
-	//frameData[listNum].skinnedStaging->CopyBuffers( commandList, staticData.skinnedBuffer->GetBuffer() );
-	frameData[listNum].jointStagingBuffer->CopyBuffers( commandList, staticData.jointBuffer->GetBuffer() );
-	commandList->endMarker();
-
 	// unmap the current frame so the GPU can read it
 	const int startUnmap = Sys_Milliseconds();
 	UnmapGeoBufferSet( frameData[ listNum ] );
@@ -878,13 +862,6 @@ void idVertexCache::BeginBackEnd()
 	{
 		idLib::PrintfIf( r_showVertexCacheTimings.GetBool(), "idVertexCache::map took %i msec\n", endMap - startMap );
 	}
-
-	// "Clear" address space of these buffers, but doesn't actually clear the data for use by the backend on the gpu.
-	staticData.instanceBuffer->Clear();
-	staticData.geometryBuffer->Clear();
-	staticData.materialBuffer->Clear();
-	staticData.skinnedBuffer->Clear();
-	staticData.jointBuffer->Clear();
 
 	ClearGeoBufferSet( frameData[listNum] );
 }

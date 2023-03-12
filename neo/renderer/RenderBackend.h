@@ -118,7 +118,7 @@ struct debugPolygon_t
 	int			lifeTime;
 };
 
-struct SkinningConstants
+struct skinningConstants_t
 {
 	uint numVertices;
 	uint flags;
@@ -407,7 +407,13 @@ public:
 		return commandList;
 	}
 
+	uint64				FrontEndFence() const
+	{
+		return frontEndFences[ vertexCache.listNum ];
+	}
+
 	nvrhi::CommandListHandle	commandLists[ NUM_FRAME_DATA ];
+	uint64						frontEndFences[ NUM_FRAME_DATA ];
 
 private:
 	uint64				GL_GetCurrentStateMinusStencil() const;

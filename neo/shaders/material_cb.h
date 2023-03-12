@@ -72,8 +72,7 @@ struct MaterialConstants
 
 	int     transmissionTextureIndex;
 	int		numAmbientStages;
-	int     padding1;
-	int     padding2;
+	int     padding[2];
 };
 
 struct materialAmbientData_t

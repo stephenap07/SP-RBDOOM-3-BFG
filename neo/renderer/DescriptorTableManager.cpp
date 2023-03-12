@@ -69,6 +69,8 @@ DescriptorTableManager::~DescriptorTableManager()
 			descriptor.resourceHandle = nullptr;
 		}
 	}
+
+	descriptors.Clear();
 }
 
 DescriptorIndex DescriptorTableManager::CreateDescriptor( nvrhi::BindingSetItem item )

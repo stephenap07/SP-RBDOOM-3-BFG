@@ -905,6 +905,8 @@ void idRenderModelManagerLocal::EndLevelLoad()
 		}
 	}
 
+	tr.CommandList()->open();
+
 	for( int i = 0; i < models.Num(); i++ )
 	{
 		idRenderModel* model = models[i];
@@ -923,6 +925,10 @@ void idRenderModelManagerLocal::EndLevelLoad()
 			}
 		}
 	}
+
+	tr.CommandList()->close();
+	deviceManager->GetDevice()->executeCommandList( tr.CommandList() );
+	deviceManager->GetDevice()->waitForIdle();
 
 	// _D3XP added this
 	int	end = Sys_Milliseconds();

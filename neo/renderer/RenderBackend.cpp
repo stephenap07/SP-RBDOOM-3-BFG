@@ -55,6 +55,7 @@ idCVar r_useStencilShadowPreload( "r_useStencilShadowPreload", "0", CVAR_RENDERE
 idCVar r_skipShaderPasses( "r_skipShaderPasses", "0", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_skipInteractionFastPath( "r_skipInteractionFastPath", "1", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_useLightStencilSelect( "r_useLightStencilSelect", "0", CVAR_RENDERER | CVAR_BOOL, "use stencil select pass" );
+idCVar r_useNewDepthPass( "r_useNewDepthPass", "0", CVAR_RENDERER | CVAR_BOOL, "use the new depth buffer pass " );
 
 extern idCVar stereoRender_swapEyes;
 
@@ -803,7 +804,7 @@ void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSu
 	renderLog.OpenMainBlock( MRB_FILL_DEPTH_BUFFER );
 	renderLog.OpenBlock( "Render_FillDepthBufferFast", colorBlue );
 
-	if( 1 )
+	if( r_useNewDepthPass.GetBool() )
 	{
 		DepthPass::Context context;
 		RenderView( commandList, viewDef, nullptr, currentFrameBuffer->GetApiObject(), depthPass, context, true );
@@ -6589,6 +6590,29 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	}
 
 	GL_StartFrame();
+	
+	{
+		// Copy buffers from the upload CPU accessible buffers into vmram for
+		// faster reads on the gpu. For UMA architectures this wouldn't be very productive
+		// since there is no performance penalty for using upload buffers directly.
+		commandList->beginMarker( "Copy buffers" );
+
+		geoBufferSet_t& frameData = vertexCache.frameData[vertexCache.drawListNum];
+
+		frameData.instanceStaging->CopyBuffers( commandList, vertexCache.staticData.instanceBuffer->GetBuffer() );
+		frameData.geometryStaging->CopyBuffers( commandList, vertexCache.staticData.geometryBuffer->GetBuffer() );
+		frameData.materialStaging->CopyBuffers( commandList, vertexCache.staticData.materialBuffer->GetBuffer() );
+		frameData.jointStagingBuffer->CopyBuffers( commandList, vertexCache.staticData.jointBuffer->GetBuffer() );
+
+		// "Clear" address space of these buffers, but doesn't actually clear the data for use by the backend on the gpu.
+		vertexCache.staticData.instanceBuffer->Clear();
+		vertexCache.staticData.geometryBuffer->Clear();
+		vertexCache.staticData.materialBuffer->Clear();
+		vertexCache.staticData.skinnedBuffer->Clear();
+		vertexCache.staticData.jointBuffer->Clear();
+
+		commandList->endMarker();
+	}
 
 	void* textureId = globalImages->hierarchicalZbufferImage->GetTextureID();
 	globalImages->LoadDeferredImages( commandList );
@@ -6765,8 +6789,10 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	currentIndexOffset = 0;
 	currentJointOffset = 0;
 #endif
-
-	ComputeSkinnedMeshes( _viewDef );
+	
+	if( !r_useGPUSkinning.GetBool() ) {
+		ComputeSkinnedMeshes( _viewDef );
+	}
 
 	//-------------------------------------------------
 	// RB_BeginDrawingView
@@ -7577,17 +7603,16 @@ void idRenderBackend::ComputeSkinnedMeshes( const viewDef_t* _viewDef )
 	{
 		const drawSurf_t* surf = _viewDef->drawSurfs[surfNum];
 
-		if( !surf->skinnedCache )
+		if( !surf->skinnedCache ||
+			!surf->ambientCache )
 		{
 			continue;
 		}
 
-		//if( idStr::Icmp( surf->material->GetName(), "models/characters/player/arm2" ) == 0 )
-		//{
-		//	common->Warning( "hi" );
-		//}
-
-		assert( surf->ambientCache );
+		if( idStr::Icmp( surf->material->GetName(), "models/characters/player/arm2" ) == 0 )
+		{
+			common->DPrintf( "hi" );
+		}
 
 		renderLog.OpenBlock( surf->material->GetName() );
 
@@ -7602,7 +7627,7 @@ void idRenderBackend::ComputeSkinnedMeshes( const viewDef_t* _viewDef )
 		nvrhi::BindingSetDesc setDesc;
 		setDesc.bindings =
 		{
-			nvrhi::BindingSetItem::PushConstants( 0, sizeof( SkinningConstants ) ),
+			nvrhi::BindingSetItem::PushConstants( 0, sizeof( skinningConstants_t ) ),
 			nvrhi::BindingSetItem::RawBuffer_SRV( 0, vb.GetAPIObject() ),
 			nvrhi::BindingSetItem::RawBuffer_SRV( 1, ( nvrhi::IBuffer* )jb.buffer ),
 			nvrhi::BindingSetItem::RawBuffer_UAV( 0, ( nvrhi::IBuffer* )sb.buffer )
@@ -7618,7 +7643,7 @@ void idRenderBackend::ComputeSkinnedMeshes( const viewDef_t* _viewDef )
 		// byte offsets for the buffers.
 		uint32 vertexOffset = vb.GetOffset();
 		uint32 outOffset = sb.offset;
-		SkinningConstants constants{};
+		skinningConstants_t constants{};
 		constants.inputJointMatOffset = jb.offset;
 		constants.numVertices = sb.size / sizeof( idDrawVert );
 		constants.flags = SKINNING_FLAG_FIRST_FRAME | SKINNING_FLAG_NORMALS | SKINNING_FLAG_TANGENTS | SKINNING_FLAG_TEXCOORD1;
