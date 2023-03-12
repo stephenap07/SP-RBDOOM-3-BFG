@@ -128,21 +128,14 @@ idBufferObject::idBufferObject()
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	usage = BU_STATIC;
 
-#if defined( USE_VULKAN )
-	apiObject = VK_NULL_HANDLE;
-
-#if defined( USE_AMD_ALLOCATOR )
-	vmaAllocation = NULL;
-#endif
-
-#elif defined( USE_NVRHI )
 	bufferHandle.Reset();
 	inputLayout.Reset();
 	buffer = NULL;
 
-#else
-	apiObject = NULL;
-	buffer = NULL;
+#if defined( USE_AMD_ALLOCATOR )
+	vkBuffer = VK_NULL_HANDLE;
+	allocation = NULL;
+	allocationInfo = {};
 #endif
 }
 
@@ -188,6 +181,9 @@ void idVertexBuffer::Reference( const idVertexBuffer& other )
 	bindlessHandle = other.bindlessHandle;
 #if defined( USE_VULKAN )
 	allocation = other.allocation;
+#if defined ( USE_AMD_ALLOCATOR )
+	allocationInfo = other.allocationInfo;
+#endif
 #endif
 	assert( OwnsBuffer() == false );
 }
@@ -211,8 +207,8 @@ void idVertexBuffer::Reference( const idVertexBuffer& other, int refOffset, int 
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
 	bindlessHandle = other.bindlessHandle;
-#if defined( USE_VULKAN )
-	allocation = other.allocation;
+#if defined ( USE_AMD_ALLOCATOR )
+	allocationInfo = other.allocationInfo;
 #endif
 	assert( OwnsBuffer() == false );
 }
@@ -252,8 +248,8 @@ void idIndexBuffer::Reference( const idIndexBuffer& other )
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
 	bindlessHandle = other.bindlessHandle;
-#if defined( USE_VULKAN )
-	allocation = other.allocation;
+#if defined ( USE_AMD_ALLOCATOR )
+	allocationInfo = other.allocationInfo;
 #endif
 	assert( OwnsBuffer() == false );
 }
@@ -277,8 +273,8 @@ void idIndexBuffer::Reference( const idIndexBuffer& other, int refOffset, int re
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
 	bindlessHandle = other.bindlessHandle;
-#if defined( USE_VULKAN )
-	allocation = other.allocation;
+#if defined ( USE_AMD_ALLOCATOR )
+	allocationInfo = other.allocationInfo;
 #endif
 	assert( OwnsBuffer() == false );
 }
@@ -317,8 +313,9 @@ void idUniformBuffer::Reference( const idUniformBuffer& other )
 	offsetInOtherBuffer = other.GetOffset();	// this strips the OWNS_BUFFER_FLAG
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
-#if defined( USE_VULKAN )
-	allocation = other.allocation;
+
+#if defined ( USE_AMD_ALLOCATOR )
+	allocationInfo = other.allocationInfo;
 #endif
 	assert( OwnsBuffer() == false );
 }
@@ -341,8 +338,9 @@ void idUniformBuffer::Reference( const idUniformBuffer& other, int refOffset, in
 	offsetInOtherBuffer = other.GetOffset() + refOffset;
 	usage = other.usage;
 	bufferHandle = other.bufferHandle;
-#if defined( USE_VULKAN )
-	allocation = other.allocation;
+
+#if defined ( USE_AMD_ALLOCATOR )
+	allocationInfo = other.allocationInfo;
 #endif
 	assert( OwnsBuffer() == false );
 }

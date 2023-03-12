@@ -40,6 +40,7 @@ idImageManager	imageManager;
 idImageManager* globalImages = &imageManager;
 
 extern DeviceManager* deviceManager;
+extern idCVar r_uploadBufferSizeMB;
 
 idCVar preLoad_Images( "preLoad_Images", "1", CVAR_SYSTEM | CVAR_BOOL, "preload images during beginlevelload" );
 
@@ -72,17 +73,13 @@ void R_ReloadImages_f( const idCmdArgs& args )
 		}
 	}
 
-#if defined( USE_NVRHI )
-	tr.CommandList()->open();
-	globalImages->ReloadImages( all, tr.CommandList() );
-	tr.CommandList()->close();
-	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Copy );
+	tr.commandList->open();
+	globalImages->ReloadImages( all, tr.commandList );
+	tr.commandList->close();
+	deviceManager->GetDevice()->executeCommandList( tr.commandList );
 
 	// Images (including the framebuffer images) were reloaded, reinitialize the framebuffers.
 	Framebuffer::ResizeFramebuffers();
-#else
-	globalImages->ReloadImages( all );
-#endif
 }
 
 typedef struct
@@ -479,11 +476,7 @@ idImage*	idImageManager::ImageFromFile( const char* _name, textureFilter_t filte
 	image->levelLoadReferenced = true;
 
 	// load it if we aren't in a level preload
-#if defined( USE_NVRHI )
 	if( !insideLevelLoad || preloadingMapImages )
-#else
-	if( ( !insideLevelLoad || preloadingMapImages ) && idLib::IsMainThread() )
-#endif
 	{
 		image->referencedOutsideLevelLoad = ( !insideLevelLoad && !preloadingMapImages );
 		image->FinalizeImage( false, nullptr );
@@ -787,9 +780,7 @@ void idImageManager::Shutdown()
 	imageHash.Clear();
 	deferredImages.DeleteContents( true );
 	deferredImageHash.Clear();
-#if defined( USE_NVRHI )
 	commandList.Reset();
-#endif
 }
 
 /*
@@ -891,24 +882,26 @@ idImageManager::LoadLevelImages
 */
 int idImageManager::LoadLevelImages( bool pacifier )
 {
-#if defined( USE_NVRHI )
+	if( !commandList )
+	{
+		nvrhi::CommandListParameters params = {};
+		if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
+		{
+			// SRS - set upload buffer size to avoid Vulkan staging buffer fragmentation
+			size_t maxBufferSize = ( size_t )( r_uploadBufferSizeMB.GetInteger() * 1024 * 1024 );
+			params.setUploadChunkSize( maxBufferSize );
+		}
+		commandList = deviceManager->GetDevice()->createCommandList( params );
+	}
+
 	common->UpdateLevelLoadPacifier();
 
-	tr.CommandList()->open();
-#endif
+	commandList->open();
 
 	int	loadCount = 0;
 	for( int i = 0 ; i < images.Num() ; i++ )
 	{
 		idImage* image = images[ i ];
-
-#if !defined( USE_NVRHI )
-		if( pacifier )
-		{
-			// SP: Cannot update the pacifier because then two command lists would be open at once.
-			common->UpdateLevelLoadPacifier();
-		}
-#endif
 
 		if( image->generatorFunction )
 		{
@@ -918,19 +911,17 @@ int idImageManager::LoadLevelImages( bool pacifier )
 		if( image->levelLoadReferenced && !image->IsLoaded() )
 		{
 			loadCount++;
-			image->FinalizeImage( false, tr.CommandList() );
+			image->FinalizeImage( false, commandList );
 		}
 	}
 
-#if defined( USE_NVRHI )
-	globalImages->LoadDeferredImages( tr.CommandList() );
+	globalImages->LoadDeferredImages( commandList );
 
-	tr.CommandList()->close();
-	deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Graphics );
-	deviceManager->GetDevice()->waitForIdle();
+	commandList->close();
+
+	deviceManager->GetDevice()->executeCommandList( commandList );
 
 	common->UpdateLevelLoadPacifier();
-#endif
 
 	return loadCount;
 }
@@ -1013,10 +1004,35 @@ void idImageManager::PrintMemInfo( MemInfo_t* mi )
 
 void idImageManager::LoadDeferredImages( nvrhi::ICommandList* _commandList )
 {
+	if( !commandList )
+	{
+		nvrhi::CommandListParameters params = {};
+		if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
+		{
+			// SRS - set upload buffer size to avoid Vulkan staging buffer fragmentation
+			size_t maxBufferSize = ( size_t )( r_uploadBufferSizeMB.GetInteger() * 1024 * 1024 );
+			params.setUploadChunkSize( maxBufferSize );
+		}
+		commandList = deviceManager->GetDevice()->createCommandList( params );
+	}
+
+	nvrhi::ICommandList* thisCmdList = _commandList;
+	if( !_commandList )
+	{
+		thisCmdList = commandList;
+		thisCmdList->open();
+	}
+
 	for( int i = 0; i < globalImages->imagesToLoad.Num(); i++ )
 	{
 		// This is a "deferred" load of textures to the gpu.
-		globalImages->imagesToLoad[i]->FinalizeImage( false, _commandList );
+		globalImages->imagesToLoad[i]->FinalizeImage( false, thisCmdList );
+	}
+
+	if( !_commandList )
+	{
+		thisCmdList->close();
+		deviceManager->GetDevice()->executeCommandList( thisCmdList );
 	}
 
 	globalImages->imagesToLoad.Clear();

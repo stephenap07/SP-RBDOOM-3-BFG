@@ -7,6 +7,8 @@
 
 #include "CommonPasses.h"
 
+#include "renderer/MaterialBindingCache.h"
+
 #include <nvrhi/utils.h>
 
 void DepthPass::Init( nvrhi::DeviceHandle deviceHandle, CommonRenderPasses* inCommonPasses, idRenderProgManager& progManager, const CreateParameters& parms )

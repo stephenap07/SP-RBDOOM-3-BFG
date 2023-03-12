@@ -1,29 +1,26 @@
 /*
-===========================================================================
-
-Doom 3 BFG Edition GPL Source Code
-Copyright (C) 2022 Stephen Pridham
-
-This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
-
-Doom 3 BFG Edition Source Code is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Doom 3 BFG Edition Source Code is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Doom 3 BFG Edition Source Code.  If not, see <http://www.gnu.org/licenses/>.
-
-In addition, the Doom 3 BFG Edition Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the Doom 3 BFG Edition Source Code.  If not, please request a copy in writing from id Software at the address below.
-
-If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
-
-===========================================================================
+* Copyright (c) 2014-2021, NVIDIA CORPORATION. All rights reserved.
+* Copyright (C) 2022 Stephen Pridham (id Tech 4x integration)
+* Copyright (C) 2023 Stephen Saunders (id Tech 4x integration)
+* Copyright (C) 2023 Robert Beckebans (id Tech 4x integration)
+*
+* Permission is hereby granted, free of charge, to any person obtaining a
+* copy of this software and associated documentation files (the "Software"),
+* to deal in the Software without restriction, including without limitation
+* the rights to use, copy, modify, merge, publish, distribute, sublicense,
+* and/or sell copies of the Software, and to permit persons to whom the
+* Software is furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
 */
 #include <precompiled.h>
 #pragma hdrstop
@@ -32,8 +29,25 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "SsaoPass.h"
 
+
+static idCVar r_ssaoBackgroundViewDepth( "r_ssaoBackgroundViewDepth", "100", CVAR_RENDERER | CVAR_FLOAT, "specified in meters" );
+static idCVar r_ssaoRadiusWorld( "r_ssaoRadiusWorld", "1.0", CVAR_RENDERER | CVAR_FLOAT, "specified in meters" );
+static idCVar r_ssaoSurfaceBias( "r_ssaoSurfaceBias", "0.05", CVAR_RENDERER | CVAR_FLOAT, "specified in meters" );
+static idCVar r_ssaoPowerExponent( "r_ssaoPowerExponent", "2", CVAR_RENDERER | CVAR_FLOAT, "" );
+static idCVar r_ssaoBlurSharpness( "r_ssaoBlurSharpness", "16", CVAR_RENDERER | CVAR_FLOAT, "" );
+static idCVar r_ssaoAmount( "r_ssaoAmount", "4", CVAR_RENDERER | CVAR_FLOAT, "" );
+
 struct SsaoConstants
 {
+	idVec2		viewportOrigin;
+	idVec2		viewportSize;
+	idVec2		pixelOffset;
+	idVec2		unused;
+
+	idRenderMatrix matClipToView;
+	idRenderMatrix matWorldToView; // unused
+	idRenderMatrix matViewToWorld; // unused
+
 	idVec2      clipToView;
 	idVec2      invQuantizedGbufferSize;
 
@@ -223,58 +237,76 @@ void SsaoPass::CreateBindingSet(
 
 void SsaoPass::Render(
 	nvrhi::ICommandList* commandList,
-	const SsaoParameters& params,
-	viewDef_t* viewDef,
+	const viewDef_t* viewDef,
 	int bindingSetIndex )
 {
 	assert( m_Deinterleave.BindingSets[bindingSetIndex] );
 	assert( m_Compute.BindingSets[bindingSetIndex] );
 	assert( m_Blur.BindingSets[bindingSetIndex] );
 
-	commandList->beginMarker( "SSAO" );
+	{
+		// RB HACK: add one 1 extra pixel to width and height
+		nvrhi::Rect viewExtent( viewDef->viewport.x1, viewDef->viewport.x2 + 1, viewDef->viewport.y1, viewDef->viewport.y2 + 1 );
+		nvrhi::Rect quarterResExtent = viewExtent;
+		quarterResExtent.minX /= 4;
+		quarterResExtent.minY /= 4;
+		quarterResExtent.maxX = ( quarterResExtent.maxX + 3 ) / 4;
+		quarterResExtent.maxY = ( quarterResExtent.maxY + 3 ) / 4;
 
-	nvrhi::Rect viewExtent( viewDef->viewport.x1, viewDef->viewport.x2, viewDef->viewport.y1, viewDef->viewport.y2 );
-	nvrhi::Rect quarterResExtent = viewExtent;
-	quarterResExtent.minX /= 4;
-	quarterResExtent.minY /= 4;
-	quarterResExtent.maxX = ( quarterResExtent.maxX + 3 ) / 4;
-	quarterResExtent.maxY = ( quarterResExtent.maxY + 3 ) / 4;
+		// TODO required and remove this by fixing the shaders
+		renderProgManager.BindShader_TextureVertexColor();
 
-	SsaoConstants ssaoConstants = {};
-	ssaoConstants.clipToView = idVec2(
-								   viewDef->projectionMatrix[2 * 4 + 3] / viewDef->projectionMatrix[0 * 4 + 0],
-								   viewDef->projectionMatrix[2 * 4 + 3] / viewDef->projectionMatrix[0 * 4 + 1] );
-	ssaoConstants.invQuantizedGbufferSize = 1.f / m_QuantizedGbufferTextureSize;
-	ssaoConstants.quantizedViewportOrigin = idVec2i( quarterResExtent.minX, quarterResExtent.minY ) * 4;
-	ssaoConstants.amount = params.amount;
-	ssaoConstants.invBackgroundViewDepth = ( params.backgroundViewDepth > 0.f ) ? 1.f / params.backgroundViewDepth : 0.f;
-	ssaoConstants.radiusWorld = params.radiusWorld;
-	ssaoConstants.surfaceBias = params.surfaceBias;
-	ssaoConstants.powerExponent = params.powerExponent;
-	ssaoConstants.radiusToScreen = 0.5f * viewDef->viewport.GetHeight() * abs( viewDef->projectionMatrix[1 * 4 + 1] );
-	commandList->writeBuffer( m_ConstantBuffer, &ssaoConstants, sizeof( ssaoConstants ) );
+		renderProgManager.CommitConstantBuffer( commandList, true );
 
-	uint32_t dispatchWidth = ( quarterResExtent.width() + 7 ) / 8;
-	uint32_t dispatchHeight = ( quarterResExtent.height() + 7 ) / 8;
+		SsaoConstants ssaoConstants = {};
+		ssaoConstants.viewportOrigin = idVec2( viewDef->viewport.x1, viewDef->viewport.y1 );
+		ssaoConstants.viewportSize = idVec2( viewDef->viewport.GetWidth(), viewDef->viewport.GetHeight() );
+		ssaoConstants.pixelOffset = tr.backend.GetCurrentPixelOffset();
 
-	nvrhi::ComputeState state;
-	state.pipeline = m_Deinterleave.Pipeline;
-	state.bindings = { m_Deinterleave.BindingSets[bindingSetIndex] };
-	commandList->setComputeState( state );
-	commandList->dispatch( dispatchWidth, dispatchHeight, 1 );
+		// RB: this actually should work but it only works with the old SSAO method ...
+		//ssaoConstants.matClipToView = viewDef->unprojectionToCameraRenderMatrix;
 
-	state.pipeline = m_Compute.Pipeline;
-	state.bindings = { m_Compute.BindingSets[bindingSetIndex] };
-	commandList->setComputeState( state );
-	commandList->dispatch( dispatchWidth, dispatchHeight, 16 );
+		idRenderMatrix::Inverse( *( idRenderMatrix* ) viewDef->projectionMatrix, ssaoConstants.matClipToView );
 
-	dispatchWidth = ( viewExtent.width() + 15 ) / 16;
-	dispatchHeight = ( viewExtent.height() + 15 ) / 16;
+		// RB: TODO: only need for DIRECTIONAL_OCCLUSION
+		// we don't store the view matrix separatly yet
+		//ssaoConstants.matViewToWorld = viewDef->worldSpace;
+		//idRenderMatrix::Inverse( ssaoConstants.matViewToWorld, ssaoConstants.matWorldToView );
 
-	state.pipeline = m_Blur.Pipeline;
-	state.bindings = { m_Blur.BindingSets[bindingSetIndex] };
-	commandList->setComputeState( state );
-	commandList->dispatch( dispatchWidth, dispatchHeight, 1 );
+		ssaoConstants.clipToView = idVec2(
+									   viewDef->projectionMatrix[2 * 4 + 3] / viewDef->projectionMatrix[0 * 4 + 0],
+									   viewDef->projectionMatrix[2 * 4 + 3] / viewDef->projectionMatrix[1 * 4 + 1] );
 
-	commandList->endMarker();
+		ssaoConstants.invQuantizedGbufferSize = idVec2( 1.0f, 1.0f ) / m_QuantizedGbufferTextureSize;
+		ssaoConstants.quantizedViewportOrigin = idVec2i( quarterResExtent.minX, quarterResExtent.minY ) * 4;
+		ssaoConstants.amount = r_ssaoAmount.GetFloat();
+		ssaoConstants.invBackgroundViewDepth = ( r_ssaoBackgroundViewDepth.GetFloat() > 0.f ) ? 1.f / r_ssaoBackgroundViewDepth.GetFloat() : 0.f;
+		ssaoConstants.radiusWorld = r_ssaoRadiusWorld.GetFloat();
+		ssaoConstants.surfaceBias = r_ssaoSurfaceBias.GetFloat();
+		ssaoConstants.powerExponent = r_ssaoPowerExponent.GetFloat();
+		ssaoConstants.radiusToScreen = 0.5f * viewDef->viewport.GetHeight() * abs( viewDef->projectionMatrix[1 * 4 + 1] );
+		commandList->writeBuffer( m_ConstantBuffer, &ssaoConstants, sizeof( ssaoConstants ) );
+
+		uint32_t dispatchWidth = ( quarterResExtent.width() + 7 ) / 8;
+		uint32_t dispatchHeight = ( quarterResExtent.height() + 7 ) / 8;
+
+		nvrhi::ComputeState state;
+		state.pipeline = m_Deinterleave.Pipeline;
+		state.bindings = { m_Deinterleave.BindingSets[bindingSetIndex] };
+		commandList->setComputeState( state );
+		commandList->dispatch( dispatchWidth, dispatchHeight, 1 );
+
+		state.pipeline = m_Compute.Pipeline;
+		state.bindings = { m_Compute.BindingSets[bindingSetIndex] };
+		commandList->setComputeState( state );
+		commandList->dispatch( dispatchWidth, dispatchHeight, 16 );
+
+		dispatchWidth = ( viewExtent.width() + 15 ) / 16;
+		dispatchHeight = ( viewExtent.height() + 15 ) / 16;
+
+		state.pipeline = m_Blur.Pipeline;
+		state.bindings = { m_Blur.BindingSets[bindingSetIndex] };
+		commandList->setComputeState( state );
+		commandList->dispatch( dispatchWidth, dispatchHeight, 1 );
+	}
 }

@@ -35,7 +35,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../RenderCommon.h"
 #include "../RenderBackend.h"
 #include "../../framework/Common_local.h"
-#include "../../imgui/imgui.h"
+#include "imgui.h"
 #include "../ImmediateMode.h"
 
 #include "nvrhi/utils.h"
@@ -58,6 +58,8 @@ idCVar stereoRender_warpTargetFraction( "stereoRender_warpTargetFraction", "1.0"
 
 idCVar r_showSwapBuffers( "r_showSwapBuffers", "0", CVAR_BOOL, "Show timings from GL_BlockingSwapBuffers" );
 idCVar r_syncEveryFrame( "r_syncEveryFrame", "1", CVAR_BOOL, "Don't let the GPU buffer execution past swapbuffers" );
+
+idCVar r_uploadBufferSizeMB( "r_uploadBufferSizeMB", "64", CVAR_INTEGER | CVAR_INIT, "Size of gpu upload buffer (Vulkan only)" );
 
 // SRS - What is GLimp_SwapBuffers() used for?  Disable for now
 //void GLimp_SwapBuffers();
@@ -271,8 +273,18 @@ void idRenderBackend::Init()
 		commandLists[i] = deviceManager->GetDevice()->createCommandList( commandListParms );
 	}
 
-	commandList = deviceManager->GetDevice()->createCommandList();
-
+	if( !commandList )
+	{
+		nvrhi::CommandListParameters params = {};
+		if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
+		{
+			// SRS - set upload buffer size to avoid Vulkan staging buffer fragmentation
+			size_t maxBufferSize = ( size_t )( r_uploadBufferSizeMB.GetInteger() * 1024 * 1024 );
+			params.setUploadChunkSize( maxBufferSize );
+		}
+		commandList = deviceManager->GetDevice()->createCommandList( params );
+	}
+	
 	// The fence that is signaled to the gpu when the front end is done so that backend can start.
 	memset( frontEndFences, 0, sizeof( uint64 ) * NUM_FRAME_DATA );
 
@@ -320,17 +332,6 @@ void idRenderBackend::Init()
 	currentIndexOffset = 0;
 	currentJointOffset = 0;
 	prevBindingLayoutType = -1;
-
-	// RB: FIXME but for now disable it to avoid validation errors
-	if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
-	{
-		r_useSSAO.SetBool( false );
-	}
-
-	DepthPass::CreateParameters shadowDepthParams;
-	//shadowDepthParams.slopeScaledDepthBias = 0;
-	//shadowDepthParams.depthBias = 0;
-	depthPass.Init( deviceManager->GetDevice(), &commonPasses, renderProgManager, shadowDepthParams );
 
 	deviceManager->GetDevice()->waitForIdle();
 	deviceManager->GetDevice()->runGarbageCollection();
@@ -429,9 +430,10 @@ void idRenderBackend::DrawElementsWithCounters( const drawSurf_t* surf )
 
 	if( currentJointBuffer != jointBuffer.buffer || currentJointOffset != jointBuffer.offset )
 	{
-		currentJointBuffer = (nvrhi::IBuffer*)jointBuffer.buffer;
-		currentJointOffset = jointBuffer.offset;
-		changeState = true;
+		if( !verify( !renderProgManager.ShaderUsesJoints() || renderProgManager.ShaderHasOptionalSkinning() ) )
+		{
+			return;
+		}
 	}
 
 	//
@@ -1558,8 +1560,16 @@ idRenderBackend::GL_StartFrame
 */
 void idRenderBackend::GL_StartFrame()
 {
+	OPTICK_EVENT( "StartFrame" );
+
 	// fetch GPU timer queries of last frame
 	renderLog.FetchGPUTimers( pc );
+
+	//deviceManager->BeginFrame();
+
+#if defined( USE_AMD_ALLOCATOR )
+	idImage::EmptyGarbage();
+#endif
 
 	commandList->open();
 
@@ -1578,6 +1588,11 @@ idRenderBackend::GL_EndFrame
 */
 void idRenderBackend::GL_EndFrame()
 {
+	uint32_t swapIndex = deviceManager->GetCurrentBackBufferIndex();
+
+	OPTICK_EVENT( "EndFrame" );
+	OPTICK_TAG( "Firing to swapIndex", swapIndex );
+
 	if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
 	{
 		tr.SetReadyToPresent();
@@ -1607,13 +1622,24 @@ void idRenderBackend::GL_BlockingSwapBuffers()
 {
 	if( vertexCache.currentFrame == ( VERTCACHE_FRAME_MASK + 2 ) ) {
 		common->Printf( "hi" );
-
-		// stop the capture
-		if( rdoc_api ) rdoc_api->EndFrameCapture( NULL, NULL );
 	}
 
+	uint32_t swapIndex = deviceManager->GetCurrentBackBufferIndex();
+
+	OPTICK_CATEGORY( "BlockingSwapBuffers", Optick::Category::Wait );
+	OPTICK_TAG( "Waiting for swapIndex", swapIndex );
+
+	// SRS - device-level sync kills perf by serializing command queue processing (CPU) and rendering (GPU)
+	//	   - instead, use alternative sync method (based on command queue event queries) inside Present()
+	//deviceManager->GetDevice()->waitForIdle();
+
+	// Make sure that all frames have finished rendering
 	deviceManager->Present();
 
+	// stop the capture
+	if( rdoc_api ) rdoc_api->EndFrameCapture( NULL, NULL );
+
+	// Release all in-flight references to the render targets
 	deviceManager->GetDevice()->runGarbageCollection();
 
 	renderLog.EndFrame();
@@ -1773,10 +1799,6 @@ void idRenderBackend::GL_Clear( bool color, bool depth, bool stencil, byte stenc
 	if( depth || stencil )
 	{
 		nvrhi::utils::ClearDepthStencilAttachment( commandList, framebuffer, 1.0f, stencilValue );
-
-		//nvrhi::ITexture* depthTexture = ( nvrhi::ITexture* )( globalImages->currentDepthImage->GetTextureID() );
-		//const nvrhi::FormatInfo& depthFormatInfo = nvrhi::getFormatInfo( depthTexture->getDesc().format );
-		//commandList->clearDepthStencilTexture( depthTexture, nvrhi::AllSubresources, depth, 1.f, depthFormatInfo.hasStencil, stencilValue );
 	}
 }
 
@@ -1876,12 +1898,6 @@ void idRenderBackend::CheckCVars()
 		r_antiAliasing.ClearModified();
 	}
 #endif
-
-	// RB: FIXME but for now disable it to avoid validation errors
-	if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
-	{
-		r_useSSAO.SetBool( false );
-	}
 }
 
 /*
@@ -2199,7 +2215,6 @@ idRenderBackend::idRenderBackend()
 
 	memset( &glConfig, 0, sizeof( glConfig ) );
 
-	glConfig.gpuSkinningAvailable = true;
 	glConfig.uniformBufferOffsetAlignment = 256;
 	glConfig.timerQueryAvailable = true;
 }

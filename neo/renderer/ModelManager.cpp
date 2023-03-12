@@ -34,11 +34,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "Model_local.h"
 #include "RenderCommon.h"	// just for R_FreeWorldInteractions and R_CreateWorldInteractions
 
-#if defined( USE_NVRHI )
-	#include <sys/DeviceManager.h>
+#include <sys/DeviceManager.h>
 
-	extern DeviceManager* deviceManager;
-#endif
+extern DeviceManager* deviceManager;
+extern idCVar r_uploadBufferSizeMB;
 
 idCVar binaryLoadRenderModels( "binaryLoadRenderModels", "1", 0, "enable binary load/write of render models" );
 idCVar preload_MapModels( "preload_MapModels", "1", CVAR_SYSTEM | CVAR_BOOL, "preload models during begin or end levelload" );
@@ -242,12 +241,17 @@ idRenderModelManagerLocal::Init
 */
 void idRenderModelManagerLocal::Init()
 {
-#if defined( USE_NVRHI )
 	if( !commandList )
 	{
-		commandList = deviceManager->GetDevice()->createCommandList();
+		nvrhi::CommandListParameters params = {};
+		if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
+		{
+			// SRS - set upload buffer size to avoid Vulkan staging buffer fragmentation
+			size_t maxBufferSize = ( size_t )( r_uploadBufferSizeMB.GetInteger() * 1024 * 1024 );
+			params.setUploadChunkSize( maxBufferSize );
+		}
+		commandList = deviceManager->GetDevice()->createCommandList( params );
 	}
-#endif
 
 	cmdSystem->AddCommand( "listModels", ListModels_f, CMD_FL_RENDERER, "lists all models" );
 	cmdSystem->AddCommand( "printModel", PrintModel_f, CMD_FL_RENDERER, "prints model info", idCmdSystem::ArgCompletion_ModelName );
@@ -287,9 +291,7 @@ void idRenderModelManagerLocal::Shutdown()
 {
 	models.DeleteContents( true );
 	hash.Free();
-#if defined( USE_NVRHI )
 	commandList.Reset();
-#endif
 }
 
 /*

@@ -26,6 +26,15 @@
 
 struct SsaoConstants
 {
+	float2		viewportOrigin;
+	float2		viewportSize;
+	float2		pixelOffset;
+	float2		unused; // padding
+
+	float4x4	matClipToView;
+	float4x4	matWorldToView;
+	float4x4	matViewToWorld;
+
 	float2      clipToView;
 	float2      invQuantizedGbufferSize;
 
@@ -68,13 +77,11 @@ void main( uint3 globalId : SV_DispatchThreadID )
 			float linearDepth = depth;
 #else
 			float4 clipPos = float4( 0, 0, depth, 1 );
-			float4 viewPos;
-			viewPos.x = dot4( clipPos, rpModelMatrixX );
-			viewPos.y = dot4( clipPos, rpModelMatrixY );
-			viewPos.z = dot4( clipPos, rpModelMatrixZ );
-			viewPos.w = dot4( clipPos, rpModelMatrixW );
-
+			float4 viewPos = mul( clipPos, g_Ssao.matClipToView );
 			float linearDepth = viewPos.z / viewPos.w;
+
+			linearDepth *= -1.0f; // now we have something similar to Doom units = inches
+			linearDepth *= DOOM_TO_METERS;
 #endif
 
 			depths[y * 4 + x] = linearDepth;

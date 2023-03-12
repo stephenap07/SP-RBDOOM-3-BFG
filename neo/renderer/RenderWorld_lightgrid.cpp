@@ -35,10 +35,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "CmdlineProgressbar.h"
 #include "../framework/Common_local.h" // commonLocal.WaitGameThread();
 
-#if defined( USE_NVRHI )
-	#include <sys/DeviceManager.h>
-	extern DeviceManager* deviceManager;
-#endif
+#include <sys/DeviceManager.h>
+extern DeviceManager* deviceManager;
 
 
 #define LGRID_FILE_EXT			"lightgrid"
@@ -419,11 +417,8 @@ void idRenderWorldLocal::LoadLightGridImages()
 
 	idStr filename;
 
-#if defined( USE_NVRHI )
 	nvrhi::CommandListHandle commandList = deviceManager->GetDevice()->createCommandList();
-
 	commandList->open();
-#endif
 
 	// try to load existing lightgrid image data
 	for( int i = 0; i < numPortalAreas; i++ )
@@ -441,11 +436,8 @@ void idRenderWorldLocal::LoadLightGridImages()
 		}
 	}
 
-#if defined( USE_NVRHI )
 	commandList->close();
-
 	deviceManager->GetDevice()->executeCommandList( commandList );
-#endif
 }
 
 /*
@@ -1166,6 +1158,10 @@ CONSOLE_COMMAND( bakeLightGrids, "Bake irradiance/vis light grid data", NULL )
 		}
 	}
 
+	// turn vsync off for faster capturing of the probes
+	int oldVsync = r_swapInterval.GetInteger();
+	r_swapInterval.SetInteger( 0 );
+
 	idLib::Printf( "----------------------------------\n" );
 	idLib::Printf( "Processing %i light probes in %i areas for %i bounces\n", totalProcessedProbes, totalProcessedAreas, bounces );
 	//common->Printf( "ETA %5.1f minutes\n\n", ( totalEnd - totalStart ) / ( 1000.0f * 60 ) );
@@ -1275,14 +1271,10 @@ CONSOLE_COMMAND( bakeLightGrids, "Bake irradiance/vis light grid data", NULL )
 							// discard anything currently on the list (this triggers SwapBuffers)
 							tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
 
-#if defined( USE_VULKAN )
-							// TODO
-#elif defined( USE_NVRHI )
 							// make sure that all frames have finished rendering
 							//deviceManager->GetDevice()->waitForIdle();
 
 							byte* floatRGB16F = NULL;
-
 #if 0
 							// this probe fails in game/admin.map
 							if( a == 5 && tr.lightGridJobs.Num() == 17 && side == 4 )
@@ -1304,25 +1296,6 @@ CONSOLE_COMMAND( bakeLightGrids, "Bake irradiance/vis light grid data", NULL )
 							}
 #endif
 
-#else
-							int pix = captureSize * captureSize;
-							const int bufferSize = pix * 3 * 2;
-
-							byte* floatRGB16F = ( byte* )R_StaticAlloc( bufferSize );
-
-							glFinish();
-
-							glReadBuffer( GL_BACK );
-
-							globalFramebuffers.envprobeFBO->Bind();
-
-							glPixelStorei( GL_PACK_ROW_LENGTH, ENVPROBE_CAPTURE_SIZE );
-							glReadPixels( 0, 0, captureSize, captureSize, GL_RGB, GL_HALF_FLOAT, float16FRGB );
-
-							R_VerticalFlipRGB16F( float16FRGB, captureSize, captureSize );
-
-							Framebuffer::Unbind();
-#endif
 							jobParms->radiance[ side ] = floatRGB16F;
 						}
 
@@ -1465,5 +1438,8 @@ CONSOLE_COMMAND( bakeLightGrids, "Bake irradiance/vis light grid data", NULL )
 	idLib::Printf( "----------------------------------\n" );
 	idLib::Printf( "Processed %i light probes in %i areas\n", totalProcessedProbes, totalProcessedAreas );
 	common->Printf( "Baked light grid irradiance in %5.1f minutes\n\n", ( totalEnd - totalStart ) / ( 1000.0f * 60 ) );
+
+	// restore vsync setting
+	r_swapInterval.SetInteger( oldVsync );
 }
 

@@ -32,13 +32,11 @@ If you have questions concerning this license or the applicable additional terms
 #include "precompiled.h"
 #pragma hdrstop
 
-#include "libs/imgui/imgui.h"
+#include "imgui.h"
 
 #include "RenderCommon.h"
 
-#if defined( USE_NVRHI )
-	#include "sys/DeviceManager.h"
-#endif
+#include "sys/DeviceManager.h"
 
 // RB begin
 #if defined(_WIN32)
@@ -65,15 +63,15 @@ glconfig_t	glConfig;
 
 idCVar r_requestStereoPixelFormat( "r_requestStereoPixelFormat", "1", CVAR_RENDERER, "Ask for a stereo GL pixel format on startup" );
 idCVar r_debugContext( "r_debugContext", "0", CVAR_RENDERER, "Enable various levels of context debug." );
-#if defined( USE_NVRHI )
-	#if defined( _WIN32 )
-		idCVar r_graphicsAPI( "r_graphicsAPI", "dx12", CVAR_RENDERER | CVAR_INIT | CVAR_ARCHIVE, "Specifies the graphics api to use (dx12, vulkan)" );
-	#else
-		idCVar r_graphicsAPI( "r_graphicsAPI", "vulkan", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC, "Specifies the graphics api to use (vulkan)" );
-	#endif
 
-	idCVar r_useValidationLayers( "r_useValidationLayers", "1", CVAR_INTEGER | CVAR_INIT, "1 is just the NVRHI and 2 will turn on additional DX12, VK validation layers" );
+#if defined( _WIN32 )
+	idCVar r_graphicsAPI( "r_graphicsAPI", "dx12", CVAR_RENDERER | CVAR_INIT | CVAR_ARCHIVE, "Specifies the graphics api to use (dx12, vulkan)" );
+#else
+	idCVar r_graphicsAPI( "r_graphicsAPI", "vulkan", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC, "Specifies the graphics api to use (vulkan)" );
 #endif
+
+idCVar r_useValidationLayers( "r_useValidationLayers", "1", CVAR_INTEGER | CVAR_INIT, "1 is just the NVRHI and 2 will turn on additional DX12, VK validation layers" );
+
 // SRS - Added workaround for AMD OSX driver bugs caused by GL_EXT_timer_query when shadow mapping enabled; Intel bugs not present on OSX
 #if defined(__APPLE__)
 	idCVar r_skipIntelWorkarounds( "r_skipIntelWorkarounds", "1", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for Intel driver bugs" );
@@ -115,7 +113,6 @@ idCVar r_useSilRemap( "r_useSilRemap", "1", CVAR_RENDERER | CVAR_BOOL, "consider
 idCVar r_useNodeCommonChildren( "r_useNodeCommonChildren", "1", CVAR_RENDERER | CVAR_BOOL, "stop pushing reference bounds early when possible" );
 idCVar r_useShadowSurfaceScissor( "r_useShadowSurfaceScissor", "1", CVAR_RENDERER | CVAR_BOOL, "scissor shadows by the scissor rect of the interaction surfaces" );
 idCVar r_useCachedDynamicModels( "r_useCachedDynamicModels", "1", CVAR_RENDERER | CVAR_BOOL, "cache snapshots of dynamic models" );
-idCVar r_useSeamlessCubeMap( "r_useSeamlessCubeMap", "1", CVAR_RENDERER | CVAR_BOOL, "use ARB_seamless_cube_map if available" );
 idCVar r_maxAnisotropicFiltering( "r_maxAnisotropicFiltering", "8", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "limit aniso filtering" );
 idCVar r_useTrilinearFiltering( "r_useTrilinearFiltering", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "Extra quality filtering" );
 // RB: not used anymore
@@ -135,20 +132,13 @@ idCVar r_brightness( "r_brightness", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FL
 idCVar r_skipStaticInteractions( "r_skipStaticInteractions", "0", CVAR_RENDERER | CVAR_BOOL, "skip interactions created at level load" );
 idCVar r_skipDynamicInteractions( "r_skipDynamicInteractions", "0", CVAR_RENDERER | CVAR_BOOL, "skip interactions created after level load" );
 idCVar r_skipSuppress( "r_skipSuppress", "0", CVAR_RENDERER | CVAR_BOOL, "ignore the per-view suppressions" );
-#if defined( USE_VULKAN )
-	idCVar r_skipPostProcess( "r_skipPostProcess", "1", CVAR_RENDERER | CVAR_BOOL, "skip all post-process renderings except bloom" );
-#else
-	idCVar r_skipPostProcess( "r_skipPostProcess", "0", CVAR_RENDERER | CVAR_BOOL, "skip all post-process renderings except bloom" );
-#endif
+idCVar r_skipPostProcess( "r_skipPostProcess", "0", CVAR_RENDERER | CVAR_BOOL, "skip all post-process renderings except bloom" );
 idCVar r_skipBloom( "r_skipBloom", "0", CVAR_RENDERER | CVAR_BOOL, "Skip bloom" );
 idCVar r_skipInteractions( "r_skipInteractions", "0", CVAR_RENDERER | CVAR_BOOL, "skip all light/surface interaction drawing" );
 idCVar r_skipDynamicTextures( "r_skipDynamicTextures", "0", CVAR_RENDERER | CVAR_BOOL, "don't dynamically create textures" );
 idCVar r_skipCopyTexture( "r_skipCopyTexture", "0", CVAR_RENDERER | CVAR_BOOL, "do all rendering, but don't actually copyTexSubImage2D" );
 idCVar r_skipBackEnd( "r_skipBackEnd", "0", CVAR_RENDERER | CVAR_BOOL, "don't draw anything" );
 idCVar r_skipRender( "r_skipRender", "0", CVAR_RENDERER | CVAR_BOOL, "skip 3D rendering, but pass 2D" );
-// RB begin
-idCVar r_skipRenderContext( "r_skipRenderContext", "0", CVAR_RENDERER | CVAR_BOOL, "DISABLED: NULL the rendering context during backend 3D rendering" );
-// RB end
 idCVar r_skipTranslucent( "r_skipTranslucent", "0", CVAR_RENDERER | CVAR_BOOL, "skip the translucent interaction rendering" );
 idCVar r_skipAmbient( "r_skipAmbient", "0", CVAR_RENDERER | CVAR_BOOL, "bypasses all non-interaction drawing" );
 idCVar r_skipNewAmbient( "r_skipNewAmbient", "0", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "bypasses all vertex/fragment program ambient drawing" );
@@ -265,18 +255,14 @@ idCVar stereoRender_deGhost( "stereoRender_deGhost", "0.05", CVAR_FLOAT | CVAR_A
 idCVar r_useVirtualScreenResolution( "r_useVirtualScreenResolution", "0", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "do 2D rendering at 640x480 and stretch to the current resolution" );
 
 // RB: shadow mapping parameters
-#if defined( USE_VULKAN )
-	idCVar r_useShadowMapping( "r_useShadowMapping", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_INTEGER, "use shadow mapping instead of stencil shadows" );
-#else
-	idCVar r_useShadowMapping( "r_useShadowMapping", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "use shadow mapping instead of stencil shadows" );
-#endif
+idCVar r_useShadowMapping( "r_useShadowMapping", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "use shadow mapping instead of stencil shadows" );
 idCVar r_useShadowAtlas( "r_useShadowAtlas", "1", CVAR_RENDERER | CVAR_INTEGER, "" );
-idCVar r_shadowMapAtlasSize( "r_shadowMapAtlasSize", "16384", CVAR_RENDERER | CVAR_INTEGER | CVAR_ROM, "size of the shadowmap atlas" );
+idCVar r_shadowMapAtlasSize( "r_shadowMapAtlasSize", "8192", CVAR_RENDERER | CVAR_INTEGER | CVAR_ROM, "size of the shadowmap atlas" );
 idCVar r_shadowMapFrustumFOV( "r_shadowMapFrustumFOV", "92", CVAR_RENDERER | CVAR_FLOAT, "oversize FOV for point light side matching" );
 idCVar r_shadowMapSingleSide( "r_shadowMapSingleSide", "-1", CVAR_RENDERER | CVAR_INTEGER, "only draw a single side (0-5) of point lights" );
 idCVar r_shadowMapImageSize( "r_shadowMapImageSize", "1024", CVAR_RENDERER | CVAR_INTEGER, "", 128, 2048 );
 idCVar r_shadowMapJitterScale( "r_shadowMapJitterScale", "2.5", CVAR_RENDERER | CVAR_FLOAT, "scale factor for jitter offset" );
-idCVar r_shadowMapBiasScale( "r_shadowMapBiasScale", "0.0001", CVAR_RENDERER | CVAR_FLOAT, "scale factor for jitter bias" );
+//idCVar r_shadowMapBiasScale( "r_shadowMapBiasScale", "0.0001", CVAR_RENDERER | CVAR_FLOAT, "scale factor for jitter bias" );
 idCVar r_shadowMapRandomizeJitter( "r_shadowMapRandomizeJitter", "1", CVAR_RENDERER | CVAR_BOOL, "randomly offset jitter texture each draw" );
 idCVar r_shadowMapSamples( "r_shadowMapSamples", "16", CVAR_RENDERER | CVAR_INTEGER, "1, 4, 12 or 16", 1, 64 );
 idCVar r_shadowMapSplits( "r_shadowMapSplits", "3", CVAR_RENDERER | CVAR_INTEGER, "number of splits for cascaded shadow mapping with parallel lights", 0, 4 );
@@ -290,12 +276,6 @@ idCVar r_shadowMapRegularDepthBiasScale( "r_shadowMapRegularDepthBiasScale", "0.
 idCVar r_shadowMapSunDepthBiasScale( "r_shadowMapSunDepthBiasScale", "0.999991", CVAR_RENDERER | CVAR_FLOAT, "shadowmap bias to fight shadow acne for cascaded shadow mapping with parallel lights" );
 
 // RB: HDR parameters
-#if defined( USE_VULKAN )
-	idCVar r_useHDR( "r_useHDR", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "Can't be changed, is broken on Vulkan backend" );
-#else
-	idCVar r_useHDR( "r_useHDR", "1", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "Can't be changed: Use high dynamic range rendering" );
-#endif
-
 idCVar r_hdrAutoExposure( "r_hdrAutoExposure", "0", CVAR_RENDERER | CVAR_BOOL, "EXPENSIVE: enables adapative HDR tone mapping otherwise the exposure is derived by r_exposure" );
 idCVar r_hdrAdaptionRate( "r_hdrAdaptionRate", "1", CVAR_RENDERER | CVAR_FLOAT, "The rate of adapting the hdr exposure value`. Defaulted to a second." );
 idCVar r_hdrMinLuminance( "r_hdrMinLuminance", "0.02", CVAR_RENDERER | CVAR_FLOAT, "" );
@@ -312,21 +292,9 @@ idCVar r_ldrContrastOffset( "r_ldrContrastOffset", "3", CVAR_RENDERER | CVAR_FLO
 
 idCVar r_useFilmicPostProcessing( "r_useFilmicPostProcessing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "apply several post process effects to mimic a filmic look" );
 
-#if defined( USE_VULKAN )
-	idCVar r_forceAmbient( "r_forceAmbient", "0.5", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "render additional ambient pass to make the game less dark", 0.0f, 0.75f );
-#else
-	idCVar r_forceAmbient( "r_forceAmbient", "0.5", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "render additional ambient pass to make the game less dark", 0.0f, 1.0f );
-#endif
+idCVar r_forceAmbient( "r_forceAmbient", "0.5", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "render additional ambient pass to make the game less dark", 0.0f, 1.0f );
 
-idCVar r_useSSGI( "r_useSSGI", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space global illumination and reflections" );
-idCVar r_ssgiDebug( "r_ssgiDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
-idCVar r_ssgiFiltering( "r_ssgiFiltering", "1", CVAR_RENDERER | CVAR_BOOL, "" );
-
-#if defined( USE_VULKAN )
-	idCVar r_useSSAO( "r_useSSAO", "0", CVAR_RENDERER | CVAR_ROM | CVAR_STATIC | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
-#else
-	idCVar r_useSSAO( "r_useSSAO", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
-#endif
+idCVar r_useSSAO( "r_useSSAO", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "use screen space ambient occlusion to darken corners" );
 idCVar r_ssaoDebug( "r_ssaoDebug", "0", CVAR_RENDERER | CVAR_INTEGER, "" );
 idCVar r_ssaoFiltering( "r_ssaoFiltering", "0", CVAR_RENDERER | CVAR_BOOL, "" );
 idCVar r_useHierarchicalDepthBuffer( "r_useHierarchicalDepthBuffer", "1", CVAR_RENDERER | CVAR_BOOL, "" );
@@ -354,9 +322,7 @@ const char* fileExten[4] = { "tga", "png", "jpg", "exr" };
 const char* envDirection[6] = { "_px", "_nx", "_py", "_ny", "_pz", "_nz" };
 const char* skyDirection[6] = { "_forward", "_back", "_left", "_right", "_up", "_down" };
 
-#if defined( USE_NVRHI )
-	DeviceManager* deviceManager;
-#endif
+DeviceManager* deviceManager;
 
 
 bool R_UseTemporalAA()
@@ -515,7 +481,6 @@ void R_SetNewMode( const bool fullInit )
 		{
 			// create the context as well as setting up the window
 
-#if defined( USE_NVRHI )
 			nvrhi::GraphicsAPI api = nvrhi::GraphicsAPI::D3D12;
 			if( !idStr::Icmp( r_graphicsAPI.GetString(), "vulkan" ) )
 			{
@@ -526,7 +491,6 @@ void R_SetNewMode( const bool fullInit )
 				api = nvrhi::GraphicsAPI::D3D12;
 			}
 			deviceManager = DeviceManager::Create( api );
-#endif
 
 #if defined( VULKAN_USE_PLATFORM_SDL )
 			if( VKimp_Init( parms ) )
@@ -606,19 +570,14 @@ static void R_ReloadSurface_f( const idCmdArgs& args )
 	// reload the decl
 	mt.material->base->Reload();
 
-#if defined( USE_NVRHI )
 	nvrhi::CommandListHandle commandList = deviceManager->GetDevice()->createCommandList();
-
 	commandList->open();
-#endif
 
 	// reload any images used by the decl
 	mt.material->ReloadImages( false, commandList );
 
-#if defined( USE_NVRHI )
 	commandList->close();
 	deviceManager->GetDevice()->executeCommandList( commandList );
-#endif
 }
 
 /*
@@ -704,25 +663,15 @@ void R_TestVideo_f( const idCmdArgs& args )
 
 	tr.testImage = globalImages->ImageFromFile( "_scratch", TF_DEFAULT, TR_REPEAT, TD_DEFAULT );
 	tr.testVideo = idCinematic::Alloc();
-	tr.testVideo->InitFromFile( args.Argv( 1 ), true, NULL );
-
-	cinData_t	cin;
-
-	// FIXME commandList
-	cin = tr.testVideo->ImageForTime( 0, NULL );
-	// SRS - Also handle ffmpeg and original RoQ decoders for test videos (using cin.image)
-	if( cin.imageY == NULL && cin.image == NULL )
+	// SRS - make sure we have a valid bink, ffmpeg, or RoQ video file, otherwise delete testVideo and return
+	// SRS - no need to call ImageForTime() here, playback is handled within idRenderBackend::DBG_TestImage()
+	if( !tr.testVideo->InitFromFile( args.Argv( 1 ), true, NULL ) )
 	{
 		delete tr.testVideo;
 		tr.testVideo = NULL;
 		tr.testImage = NULL;
 		return;
 	}
-
-	common->Printf( "%i x %i images\n", cin.imageWidth, cin.imageHeight );
-
-	int	len = tr.testVideo->AnimationLength();
-	common->Printf( "%5.1f seconds of video\n", len * 0.001 );
 
 	// try to play the matching wav file
 	idStr	wavString = args.Argv( ( args.Argc() == 2 ) ? 1 : 2 );
@@ -907,7 +856,12 @@ bool R_ReadPixelsRGB8( nvrhi::IDevice* device, CommonRenderPasses* pPasses, nvrh
 		data[ i * 4 + 3 ] = 0xff;
 	}
 
+	// SRS - Save screen shots to fs_savepath on macOS (i.e. don't save into an app bundle's basepath)
+#if defined(__APPLE__)
+	R_WritePNG( fullname, static_cast<byte*>( pData ), 4, desc.width, desc.height, true, "fs_savepath" );
+#else
 	R_WritePNG( fullname, static_cast<byte*>( pData ), 4, desc.width, desc.height, true, "fs_basepath" );
+#endif
 
 	if( newData )
 	{
@@ -1086,6 +1040,10 @@ void idRenderSystemLocal::TakeScreenshot( int widthIgnored, int heightIgnored, c
 
 	// discard anything currently on the list
 	tr.SwapCommandBuffers( NULL, NULL, NULL, NULL, NULL, NULL );
+
+	// SRS - Update finishSyncTime so frame-over-frame timers display correctly for screenshots
+	commonLocal.frameTiming.finishSyncTime = Sys_Microseconds();
+
 	if( ref )
 	{
 		// ref is only used by envShot, Event_camShot, etc to grab screenshots of things in the world,
@@ -1538,19 +1496,8 @@ void GfxInfo_f( const idCmdArgs& args )
 		"fullscreen"
 	};
 
-	common->Printf( "\nGL_VENDOR: %s\n", glConfig.vendor_string );
-	common->Printf( "GL_RENDERER: %s\n", glConfig.renderer_string );
-	common->Printf( "GL_VERSION: %s\n", glConfig.version_string );
-	common->Printf( "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
-#if !defined( USE_NVRHI )
-	if( glConfig.wgl_extensions_string )
-	{
-		common->Printf( "WGL_EXTENSIONS: %s\n", glConfig.wgl_extensions_string );
-	}
-	common->Printf( "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
-	common->Printf( "GL_MAX_TEXTURE_COORDS_ARB: %d\n", glConfig.maxTextureCoords );
-	common->Printf( "GL_MAX_TEXTURE_IMAGE_UNITS_ARB: %d\n", glConfig.maxTextureImageUnits );
-#endif
+	common->Printf( "Graphics API: %s\n", deviceManager->GetDevice()->getGraphicsAPI() == nvrhi::GraphicsAPI::D3D12 ? "DirectX 12 " : "Vulkan" );
+	common->Printf( "Render Device: %s\n", deviceManager->GetRendererString() );
 
 	// print all the display adapters, monitors, and video modes
 	//void DumpAllDisplayDevices();
@@ -1569,10 +1516,7 @@ void GfxInfo_f( const idCmdArgs& args )
 
 	common->Printf( "-------\n" );
 
-	// RB begin
-#if defined(_WIN32) && !defined(USE_VULKAN) && !defined(USE_NVRHI)
-	// WGL_EXT_swap_interval
-	if( r_swapInterval.GetInteger() && wglSwapIntervalEXT != NULL )
+	if( r_swapInterval.GetInteger() )//&& wglSwapIntervalEXT != NULL )
 	{
 		common->Printf( "Forcing swapInterval %i\n", r_swapInterval.GetInteger() );
 	}
@@ -1580,8 +1524,6 @@ void GfxInfo_f( const idCmdArgs& args )
 	{
 		common->Printf( "swapInterval not forced\n" );
 	}
-#endif
-	// RB end
 
 	if( glConfig.stereoPixelFormatAvailable && glConfig.isStereoPixelFormat )
 	{
@@ -1636,15 +1578,6 @@ void GfxInfo_f( const idCmdArgs& args )
 		common->Printf( "screen size manually forced to %5.1f cm width (%4.1f\" diagonal)\n",
 						renderSystem->GetPhysicalScreenWidthInCentimeters(), renderSystem->GetPhysicalScreenWidthInCentimeters() / 2.54f
 						* sqrt( ( float )( 16 * 16 + 9 * 9 ) ) / 16.0f );
-	}
-
-	if( glConfig.gpuSkinningAvailable )
-	{
-		common->Printf( S_COLOR_GREEN "GPU skeletal animation available\n" );
-	}
-	else
-	{
-		common->Printf( S_COLOR_RED "GPU skeletal animation not available (slower CPU path active)\n" );
 	}
 }
 
@@ -2258,6 +2191,13 @@ void idRenderSystemLocal::Shutdown()
 
 	renderModelManager->Shutdown();
 
+	// SRS - if testVideo is currently playing, make sure cinematic is deleted before ShutdownCinematic()
+	if( tr.testVideo )
+	{
+		delete tr.testVideo;
+		tr.testVideo = NULL;
+	}
+
 	idCinematic::ShutdownCinematic();
 
 	globalImages->Shutdown();
@@ -2289,6 +2229,8 @@ void idRenderSystemLocal::Shutdown()
 	parallelJobManager->FreeJobList( frontEndJobList );
 
 	Clear();
+
+	commandList.Reset();
 
 	ShutdownOpenGL();
 
@@ -2334,6 +2276,9 @@ idRenderSystemLocal::LoadLevelImages
 void idRenderSystemLocal::LoadLevelImages()
 {
 	globalImages->LoadLevelImages( false );
+
+	deviceManager->GetDevice()->waitForIdle();
+	deviceManager->GetDevice()->runGarbageCollection();
 }
 
 /*
@@ -2431,28 +2376,18 @@ void idRenderSystemLocal::InitBackend()
 	{
 		backend.Init();
 
-#if defined( USE_NVRHI )
-
-		tr.CommandList()->open();
-
-		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
-		globalImages->ReloadImages( true, tr.CommandList() );
-
-		tr.CommandList()->close();
-		deviceManager->GetDevice()->executeCommandList( tr.CommandList(), nvrhi::CommandQueue::Graphics );
-#else
-		// Reloading images here causes the rendertargets to get deleted. Figure out how to handle this properly on 360
-		//globalImages->ReloadImages( true );
-
-#if !defined(USE_VULKAN)
-		int err = glGetError();
-		if( err != GL_NO_ERROR )
+		if( !commandList )
 		{
-			common->Printf( "glGetError() = 0x%x\n", err );
+			commandList = deviceManager->GetDevice()->createCommandList();
 		}
-#endif
 
-#endif
+		commandList->open();
+
+		// Reloading images here causes the rendertargets to get deleted
+		globalImages->ReloadImages( true, commandList );
+
+		commandList->close();
+		deviceManager->GetDevice()->executeCommandList( commandList );
 	}
 }
 

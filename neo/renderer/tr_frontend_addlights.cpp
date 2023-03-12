@@ -266,7 +266,10 @@ static void R_AddSingleLight( viewLight_t* vLight )
 		vLight->scissorRect.zmax = projected[1][2];
 
 		// RB: calculate shadow LOD similar to Q3A .md3 LOD code
-		vLight->shadowLOD = 0;
+
+		// -1 means no shadows
+		vLight->shadowLOD = -1;
+		vLight->shadowFadeOut = 0;
 
 		if( r_useShadowMapping.GetBool() && lightCastsShadows )
 		{
@@ -274,6 +277,8 @@ static void R_AddSingleLight( viewLight_t* vLight )
 			float           projectedRadius;
 			int             lod;
 			int             numLods;
+
+			vLight->shadowLOD = 0;
 
 			numLods = MAX_SHADOWMAP_RESOLUTIONS;
 
@@ -303,7 +308,8 @@ static void R_AddSingleLight( viewLight_t* vLight )
 				flod = 0;
 			}
 
-			flod *= numLods;
+			// +1 allow to be so distant so we turn off shadow mapping
+			flod *= ( numLods + 1 );
 
 			if( flod < 0 )
 			{
@@ -311,12 +317,6 @@ static void R_AddSingleLight( viewLight_t* vLight )
 			}
 
 			lod = idMath::Ftoi( flod );
-
-			if( lod >= numLods )
-			{
-				//lod = numLods - 1;
-			}
-
 			lod += r_shadowMapLodBias.GetInteger();
 
 			if( lod < 0 )
@@ -327,9 +327,13 @@ static void R_AddSingleLight( viewLight_t* vLight )
 			if( lod >= numLods )
 			{
 				// don't draw any shadow
-				//lod = -1;
+				lod = -1;
+			}
 
-				lod = numLods - 1;
+			if( lod == ( numLods - 1 ) )
+			{
+				// blend shadows smoothly in
+				vLight->shadowFadeOut = idMath::Frac( flod );
 			}
 
 			// 2048^2 ultra quality is only for cascaded shadow mapping with sun lights

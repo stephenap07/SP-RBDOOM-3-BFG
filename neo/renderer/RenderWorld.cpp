@@ -33,10 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "RenderCommon.h"
 
-#if defined( USE_NVRHI )
-	#include <sys/DeviceManager.h>
-	extern DeviceManager* deviceManager;
-#endif
+#include <sys/DeviceManager.h>
+extern DeviceManager* deviceManager;
 
 /*
 ===================
@@ -1984,9 +1982,10 @@ void idRenderWorldLocal::GenerateAllInteractions()
 	int	size =  interactionTableWidth * interactionTableHeight * sizeof( *interactionTable );
 	interactionTable = ( idInteraction** )R_ClearedStaticAlloc( size );
 
+	tr.commandList->open();
+
 	// iterate through all lights
 	int	count = 0;
-	tr.CommandList()->open();
 	for( int i = 0; i < this->lightDefs.Num(); i++ )
 	{
 		idRenderLightLocal*	ldef = this->lightDefs[i];
@@ -2031,16 +2030,15 @@ void idRenderWorldLocal::GenerateAllInteractions()
 				count++;
 
 				// the interaction may create geometry
-				inter->CreateStaticInteraction( tr.CommandList() );
+				inter->CreateStaticInteraction( tr.commandList );
 			}
 		}
 
 		session->Pump();
 	}
 
-	tr.CommandList()->close();
-	deviceManager->GetDevice()->executeCommandList( tr.CommandList() );
-	deviceManager->GetDevice()->waitForIdle();
+	tr.commandList->close();
+	deviceManager->GetDevice()->executeCommandList( tr.commandList );
 
 	int end = Sys_Milliseconds();
 	int	msec = end - start;

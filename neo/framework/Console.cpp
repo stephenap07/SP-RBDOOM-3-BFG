@@ -33,10 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "Common_local.h"
 #include "../imgui/BFGimgui.h"
 
-#if defined( USE_NVRHI )
-	#include <sys/DeviceManager.h>
-	extern DeviceManager* deviceManager;
-#endif
+#include <sys/DeviceManager.h>
+extern DeviceManager* deviceManager;
 
 #define	CON_TEXTSIZE			0x30000
 #define	NUM_CON_TIMES			4
@@ -300,18 +298,18 @@ float idConsoleLocal::DrawFPS( float y )
 	const uint64 rendererGPUPostProcessingTime = commonLocal.GetRendererGpuPostProcessingMicroseconds();
 
 	// SRS - Calculate max fps and max frame time based on glConfig.displayFrequency if vsync enabled and lower than engine Hz, otherwise use com_engineHz_latched
-	const int max_FPS = ( r_swapInterval.GetInteger() > 0 && glConfig.displayFrequency > 0 ? std::min( glConfig.displayFrequency, int( com_engineHz_latched ) ) : com_engineHz_latched );
-	const int maxTime = 1000.0 / max_FPS * 1000;
+	const int maxFPS = ( r_swapInterval.GetInteger() > 0 && glConfig.displayFrequency > 0 ? std::min( glConfig.displayFrequency, int( com_engineHz_latched ) ) : com_engineHz_latched );
+	const int maxTime = ( 1000.0 / maxFPS ) * 1050; // slight 5% tolerance offset to avoid flickering of the stats
 
 	// SRS - Frame idle and busy time calculations are based on direct frame-over-frame measurement relative to finishSyncTime
-	const uint64 frameIdleTime = commonLocal.mainFrameTiming.startGameTime - commonLocal.mainFrameTiming.finishSyncTime;
-	const uint64 frameBusyTime = commonLocal.frameTiming.finishSyncTime - commonLocal.mainFrameTiming.startGameTime;
+	const int64 frameIdleTime = int64( commonLocal.mainFrameTiming.startGameTime ) - int64( commonLocal.mainFrameTiming.finishSyncTime );
+	const int64 frameBusyTime = int64( commonLocal.frameTiming.finishSyncTime ) - int64( commonLocal.mainFrameTiming.startGameTime );
 
 	// SRS - Frame sync time represents swap buffer synchronization + game thread wait + other time spent outside of rendering
-	const uint64 frameSyncTime = commonLocal.frameTiming.finishSyncTime - commonLocal.mainFrameTiming.finishRenderTime;
+	const int64 frameSyncTime = int64( commonLocal.frameTiming.finishSyncTime ) - int64( commonLocal.mainFrameTiming.finishRenderTime );
 
 	// SRS - GPU idle time is simply the difference between measured frame-over-frame time and GPU busy time (directly from GPU timers)
-	const uint64 rendererGPUIdleTime = frameBusyTime + frameIdleTime - rendererGPUTime;
+	const int64 rendererGPUIdleTime = frameBusyTime + frameIdleTime - rendererGPUTime;
 
 #if 1
 
@@ -320,12 +318,12 @@ float idConsoleLocal::DrawFPS( float y )
 	{
 		// start smaller
 		int32 statsWindowWidth = 320;
-		int32 statsWindowHeight = 295;
+		int32 statsWindowHeight = 315;
 
 		if( com_showFPS.GetInteger() > 2 )
 		{
 			statsWindowWidth += 230;
-			statsWindowHeight += 110;
+			statsWindowHeight += 105;
 		}
 
 		ImVec2 pos;
@@ -350,10 +348,10 @@ float idConsoleLocal::DrawFPS( float y )
 		static ImVec4 colorLtGrey	= ImVec4( 0.75f, 0.75f, 0.75f, 1.00f );
 		static ImVec4 colorMdGrey	= ImVec4( 0.50f, 0.50f, 0.50f, 1.00f );
 		static ImVec4 colorDkGrey	= ImVec4( 0.25f, 0.25f, 0.25f, 1.00f );
+		static ImVec4 colorGold		= ImVec4( 0.68f, 0.63f, 0.36f, 1.00f );
 
 		ImGui::Begin( "Performance Stats" );
 
-#if defined( USE_NVRHI )
 		static const int gfxNumValues = 3;
 
 		static const char* gfxValues[gfxNumValues] =
@@ -364,12 +362,6 @@ float idConsoleLocal::DrawFPS( float y )
 		};
 
 		const char* API = gfxValues[ int( deviceManager->GetGraphicsAPI() ) ];
-
-#elif defined( USE_VULKAN )
-		const char* API = "Vulkan";
-#else
-		const char* API = "OpenGL";
-#endif
 
 		extern idCVar r_antiAliasing;
 
@@ -431,6 +423,8 @@ float idConsoleLocal::DrawFPS( float y )
 
 		ImGui::TextColored( colorCyan, "API: %s, AA[%i, %i]: %s, %s", API, width, height, aaMode, resolutionText.c_str() );
 
+		ImGui::TextColored( colorGold, "Device: %s", deviceManager->GetRendererString() );
+
 		ImGui::TextColored( colorLtGrey, "GENERAL: views:%i draws:%i tris:%i (shdw:%i)",
 							commonLocal.stats_frontend.c_numViews,
 							commonLocal.stats_backend.c_drawElements + commonLocal.stats_backend.c_shadowElements,
@@ -479,7 +473,7 @@ float idConsoleLocal::DrawFPS( float y )
 		}
 		else
 		{
-			ImGui::TextColored( fps < max_FPS ? colorRed : colorYellow, "Average FPS %i", fps );
+			ImGui::TextColored( fps < maxFPS ? colorRed : colorYellow, "Average FPS %i", fps );
 		}
 
 		ImGui::Spacing();
@@ -490,12 +484,12 @@ float idConsoleLocal::DrawFPS( float y )
 		ImGui::TextColored( gameThreadRenderTime > maxTime ? colorRed : colorWhite,			"RF:      %5llu us   SSR:          %5llu us", gameThreadRenderTime, rendererGPU_SSRTime );
 		ImGui::TextColored( rendererBackEndTime > maxTime ? colorRed : colorWhite,			"RB:      %5llu us   Ambient Pass: %5llu us", rendererBackEndTime, rendererGPUAmbientPassTime );
 		ImGui::TextColored( rendererGPUShadowAtlasTime > maxTime ? colorRed : colorWhite,	"Shadows: %5llu us   Shadow Atlas: %5llu us", rendererShadowsTime, rendererGPUShadowAtlasTime );
-		ImGui::TextColored( rendererGPUInteractionsTime > maxTime ? colorRed : colorWhite,	"Sync:    %5llu us   Interactions: %5llu us", frameSyncTime, rendererGPUInteractionsTime );
+		ImGui::TextColored( rendererGPUInteractionsTime > maxTime ? colorRed : colorWhite,	"Sync:    %5lld us   Interactions: %5llu us", frameSyncTime, rendererGPUInteractionsTime );
 		ImGui::TextColored( rendererGPUShaderPassesTime > maxTime ? colorRed : colorWhite,	"                    Shader Pass:  %5llu us", rendererGPUShaderPassesTime );
 		ImGui::TextColored( rendererGPU_TAATime > maxTime ? colorRed : colorWhite,			"                    TAA:          %5llu us", rendererGPU_TAATime );
 		ImGui::TextColored( rendererGPUPostProcessingTime > maxTime ? colorRed : colorWhite, "                    PostFX:       %5llu us", rendererGPUPostProcessingTime );
-		ImGui::TextColored( frameBusyTime > maxTime || rendererGPUTime > maxTime ? colorRed : colorWhite, "Total:   %5llu us   Total:        %5llu us", frameBusyTime, rendererGPUTime );
-		ImGui::TextColored( colorWhite,														"Idle:    %5llu us   Idle:         %5llu us", frameIdleTime, rendererGPUIdleTime );
+		ImGui::TextColored( frameBusyTime > maxTime || rendererGPUTime > maxTime ? colorRed : colorWhite, "Total:   %5lld us   Total:        %5lld us", frameBusyTime, rendererGPUTime );
+		ImGui::TextColored( colorWhite,														"Idle:    %5lld us   Idle:         %5lld us", frameIdleTime, rendererGPUIdleTime );
 
 		ImGui::End();
 	}

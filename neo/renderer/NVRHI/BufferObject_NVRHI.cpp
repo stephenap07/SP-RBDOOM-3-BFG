@@ -39,6 +39,96 @@ extern idCVar r_showBuffers;
 
 extern DeviceManager* deviceManager;
 
+#if defined( USE_AMD_ALLOCATOR )
+#include "vk_mem_alloc.h"
+
+extern VmaAllocator m_VmaAllocator;
+
+idCVar r_vmaAllocateBufferMemory( "r_vmaAllocateBufferMemory", "1", CVAR_BOOL | CVAR_INIT, "Use VMA allocator for buffer memory." );
+
+/*
+========================
+pickBufferUsage - copied from nvrhi vulkan-buffer.cpp
+========================
+* Copyright (c) 2014-2021, NVIDIA CORPORATION. All rights reserved.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a
+* copy of this software and associated documentation files (the "Software"),
+* to deal in the Software without restriction, including without limitation
+* the rights to use, copy, modify, merge, publish, distribute, sublicense,
+* and/or sell copies of the Software, and to permit persons to whom the
+* Software is furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*/
+vk::BufferUsageFlags pickBufferUsage( const nvrhi::BufferDesc& desc )
+{
+	vk::BufferUsageFlags usageFlags = vk::BufferUsageFlagBits::eTransferSrc |
+									  vk::BufferUsageFlagBits::eTransferDst;
+
+	if( desc.isVertexBuffer )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eVertexBuffer;
+	}
+
+	if( desc.isIndexBuffer )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eIndexBuffer;
+	}
+
+	if( desc.isDrawIndirectArgs )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eIndirectBuffer;
+	}
+
+	if( desc.isConstantBuffer )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eUniformBuffer;
+	}
+
+	if( desc.structStride != 0 || desc.canHaveUAVs || desc.canHaveRawViews )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eStorageBuffer;
+	}
+
+	if( desc.canHaveTypedViews )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eUniformTexelBuffer;
+	}
+
+	if( desc.canHaveTypedViews && desc.canHaveUAVs )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eStorageTexelBuffer;
+	}
+
+	if( desc.isAccelStructBuildInput )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
+	}
+
+	if( desc.isAccelStructStorage )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR;
+	}
+
+	if( deviceManager->IsVulkanDeviceExtensionEnabled( VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME ) )
+	{
+		usageFlags |= vk::BufferUsageFlagBits::eShaderDeviceAddress;
+	}
+
+	return usageFlags;
+}
+#endif
+
 /*
 ================================================================================================
 
@@ -75,10 +165,9 @@ idVertexBuffer::idVertexBuffer
 */
 idVertexBuffer::idVertexBuffer()
 {
-	size = 0;
-	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
-	bufferHandle.Reset();
+	//SRS - Generic initialization handled by idBufferObject base class
 	SetUnmapped();
+	SetDebugName( "Vertex Buffer" );
 }
 
 /*
@@ -124,7 +213,40 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 		vertexBufferDesc.debugName = ( debugName.IsEmpty() ) ? "Static vertex buffer" : debugName.c_str();
 	}
 
-	bufferHandle = deviceManager->GetDevice()->createBuffer( vertexBufferDesc );
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
+	{
+		VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferCreateInfo.size = numBytes;
+		bufferCreateInfo.usage = static_cast< VkBufferUsageFlags >( pickBufferUsage( vertexBufferDesc ) );
+		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		VmaAllocationCreateInfo allocCreateInfo = {};
+		if( usage == BU_DYNAMIC )
+		{
+			allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+			allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+		}
+		else
+		{
+			allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+		}
+
+		VkResult result = vmaCreateBuffer( m_VmaAllocator, &bufferCreateInfo, &allocCreateInfo, &vkBuffer, &allocation, &allocationInfo );
+		assert( result == VK_SUCCESS );
+
+		bufferHandle = deviceManager->GetDevice()->createHandleForNativeBuffer( nvrhi::ObjectTypes::VK_Buffer, vkBuffer, vertexBufferDesc );
+	}
+	else
+#endif
+	{
+		bufferHandle = deviceManager->GetDevice()->createBuffer( vertexBufferDesc );
+	}
+
+	if( !bufferHandle )
+	{
+		return false;
+	}
 
 	if( tr.backend.descriptorTableManager )
 	{
@@ -187,7 +309,7 @@ bool idVertexBuffer::AllocBufferObject( const void* data, int allocSize, bufferU
 		Update( data, allocSize, 0, true, commandList );
 	}
 
-	return !allocationFailed;
+	return true;
 }
 
 /*
@@ -222,6 +344,13 @@ void idVertexBuffer::FreeBufferObject()
 	bufferHandle.Reset();
 	bindlessHandle.Free();
 
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
+	{
+		vmaDestroyBuffer( m_VmaAllocator, vkBuffer, allocation );
+	}
+#endif
+
 	ClearWithoutFreeing();
 }
 
@@ -245,6 +374,8 @@ void idVertexBuffer::Update( const void* data, int updateSize, int offset, bool 
 
 	if( usage == BU_DYNAMIC )
 	{
+		assert( IsMapped() );
+
 		CopyBuffer( ( byte* )buffer + offset, ( const byte* )data, numBytes );
 	}
 	else
@@ -270,15 +401,25 @@ idVertexBuffer::MapBuffer
 void* idVertexBuffer::MapBuffer( bufferMapType_t mapType )
 {
 	assert( bufferHandle );
+	assert( usage == BU_DYNAMIC );
 	assert( IsMapped() == false );
 
-	nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
-	if( mapType == bufferMapType_t::BM_READ )
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
 	{
-		accessMode = nvrhi::CpuAccessMode::Read;
+		buffer = ( byte* )allocationInfo.pMappedData + GetOffset();
 	}
+	else
+#endif
+	{
+		nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
+		if( mapType == bufferMapType_t::BM_READ )
+		{
+			accessMode = nvrhi::CpuAccessMode::Read;
+		}
 
-	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
+		buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
+	}
 
 	SetMapped();
 
@@ -298,11 +439,17 @@ idVertexBuffer::UnmapBuffer
 void idVertexBuffer::UnmapBuffer()
 {
 	assert( bufferHandle );
+	assert( usage == BU_DYNAMIC );
 	assert( IsMapped() );
 
-	if( deviceManager && deviceManager->GetDevice() )
+#if defined( USE_AMD_ALLOCATOR )
+	if( !m_VmaAllocator || !r_vmaAllocateBufferMemory.GetBool() )
+#endif
 	{
-		deviceManager->GetDevice()->unmapBuffer( bufferHandle );
+		if( deviceManager && deviceManager->GetDevice() )
+		{
+			deviceManager->GetDevice()->unmapBuffer( bufferHandle );
+		}
 	}
 
 	SetUnmapped();
@@ -318,6 +465,11 @@ void idVertexBuffer::ClearWithoutFreeing()
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	bufferHandle.Reset();
+
+#if defined( USE_AMD_ALLOCATOR )
+	allocation = NULL;
+	allocationInfo = {};
+#endif
 }
 
 /*
@@ -335,10 +487,9 @@ idIndexBuffer::idIndexBuffer
 */
 idIndexBuffer::idIndexBuffer()
 {
-	size = 0;
-	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
-	bufferHandle.Reset();
+	//SRS - Generic initialization handled by idBufferObject base class
 	SetUnmapped();
+	SetDebugName( "Index Buffer" );
 }
 
 /*
@@ -379,7 +530,45 @@ bool idIndexBuffer::AllocBufferObject( const void* data, int allocSize, bufferUs
 		indexBufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
 	}
 
-	bufferHandle  = deviceManager->GetDevice()->createBuffer( indexBufferDesc );
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
+	{
+		VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferCreateInfo.size = numBytes;
+		bufferCreateInfo.usage = static_cast< VkBufferUsageFlags >( pickBufferUsage( indexBufferDesc ) );
+		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		VmaAllocationCreateInfo allocCreateInfo = {};
+		if( usage == BU_DYNAMIC )
+		{
+			allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+			allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+		}
+		else
+		{
+			allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+		}
+
+		VkResult result = vmaCreateBuffer( m_VmaAllocator, &bufferCreateInfo, &allocCreateInfo, &vkBuffer, &allocation, &allocationInfo );
+		assert( result == VK_SUCCESS );
+
+		bufferHandle = deviceManager->GetDevice()->createHandleForNativeBuffer( nvrhi::ObjectTypes::VK_Buffer, vkBuffer, indexBufferDesc );
+	}
+	else
+#endif
+	{
+		bufferHandle  = deviceManager->GetDevice()->createBuffer( indexBufferDesc );
+	}
+
+	if( !bufferHandle )
+	{
+		return false;
+	}
+
+	if( r_showBuffers.GetBool() )
+	{
+		idLib::Printf( "index buffer alloc %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
+	}
 
 	if( tr.backend.descriptorTableManager )
 	{
@@ -427,6 +616,13 @@ void idIndexBuffer::FreeBufferObject()
 	bufferHandle.Reset();
 	bindlessHandle.Free();
 
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
+	{
+		vmaDestroyBuffer( m_VmaAllocator, vkBuffer, allocation );
+	}
+#endif
+
 	ClearWithoutFreeing();
 }
 
@@ -450,6 +646,8 @@ void idIndexBuffer::Update( const void* data, int updateSize, int offset, bool i
 
 	if( usage == BU_DYNAMIC )
 	{
+		assert( IsMapped() );
+
 		CopyBuffer( ( byte* )buffer + offset, ( const byte* )data, numBytes );
 	}
 	else
@@ -476,15 +674,25 @@ idIndexBuffer::MapBuffer
 void* idIndexBuffer::MapBuffer( bufferMapType_t mapType )
 {
 	assert( bufferHandle );
+	assert( usage == BU_DYNAMIC );
 	assert( IsMapped() == false );
 
-	nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
-	if( mapType == BM_READ )
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
 	{
-		accessMode = nvrhi::CpuAccessMode::Read;
+		buffer = ( byte* )allocationInfo.pMappedData + GetOffset();
 	}
+	else
+#endif
+	{
+		nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
+		if( mapType == bufferMapType_t::BM_READ )
+		{
+			accessMode = nvrhi::CpuAccessMode::Read;
+		}
 
-	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
+		buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
+	}
 
 	SetMapped();
 
@@ -504,11 +712,17 @@ idIndexBuffer::UnmapBuffer
 void idIndexBuffer::UnmapBuffer()
 {
 	assert( bufferHandle );
+	assert( usage == BU_DYNAMIC );
 	assert( IsMapped() );
 
-	if( deviceManager && deviceManager->GetDevice() )
+#if defined( USE_AMD_ALLOCATOR )
+	if( !m_VmaAllocator || !r_vmaAllocateBufferMemory.GetBool() )
+#endif
 	{
-		deviceManager->GetDevice()->unmapBuffer( bufferHandle );
+		if( deviceManager && deviceManager->GetDevice() )
+		{
+			deviceManager->GetDevice()->unmapBuffer( bufferHandle );
+		}
 	}
 
 	SetUnmapped();
@@ -525,6 +739,10 @@ void idIndexBuffer::ClearWithoutFreeing()
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	bufferHandle.Reset();
 	bindlessHandle = DescriptorHandle();
+#if defined( USE_AMD_ALLOCATOR )
+	allocation = NULL;
+	allocationInfo = {};
+#endif
 }
 
 /*
@@ -542,9 +760,7 @@ idUniformBuffer::idUniformBuffer
 */
 idUniformBuffer::idUniformBuffer()
 {
-	size = 0;
-	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
-	bufferHandle.Reset();
+	//SRS - Generic initialization handled by idBufferObject base class
 	SetUnmapped();
 	SetDebugName( "Uniform Buffer" );
 }
@@ -572,8 +788,9 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, int st
 	// This buffer is a shader resource as opposed to a constant buffer due to
 	// constant buffers not being able to be sub-ranged.
 	nvrhi::BufferDesc bufferDesc;
-	bufferDesc.initialState = nvrhi::ResourceStates::ConstantBuffer;
-	bufferDesc.keepInitialState = true;
+	//bufferDesc.initialState = nvrhi::ResourceStates::ConstantBuffer;		// SRS - shouldn't this be initialized to CopyDest?
+	bufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+	//bufferDesc.keepInitialState = true;									// SRS - shouldn't this be set for BU_STATIC only?
 	bufferDesc.canHaveTypedViews = true;
 	bufferDesc.canHaveRawViews = true;
 	bufferDesc.byteSize = numBytes;
@@ -583,15 +800,53 @@ bool idUniformBuffer::AllocBufferObject( const void* data, int allocSize, int st
 
 	if( usage == BU_DYNAMIC )
 	{
-		//bufferDesc.initialState = nvrhi::ResourceStates::ShaderResource;
+		bufferDesc.debugName = "VertexCache Mapped Joint Buffer";
 		bufferDesc.cpuAccess = nvrhi::CpuAccessMode::Write;
 	}
+	else
+	{
+		bufferDesc.debugName = "Static Uniform Buffer";
+		bufferDesc.keepInitialState = true;
+	}
 
-	bufferHandle = deviceManager->GetDevice()->createBuffer( bufferDesc );
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
+	{
+		VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferCreateInfo.size = numBytes;
+		bufferCreateInfo.usage = static_cast< VkBufferUsageFlags >( pickBufferUsage( bufferDesc ) );
+		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		VmaAllocationCreateInfo allocCreateInfo = {};
+		if( usage == BU_DYNAMIC )
+		{
+			allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+			allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+		}
+		else
+		{
+			allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+		}
+
+		VkResult result = vmaCreateBuffer( m_VmaAllocator, &bufferCreateInfo, &allocCreateInfo, &vkBuffer, &allocation, &allocationInfo );
+		assert( result == VK_SUCCESS );
+
+		bufferHandle = deviceManager->GetDevice()->createHandleForNativeBuffer( nvrhi::ObjectTypes::VK_Buffer, vkBuffer, bufferDesc );
+	}
+	else
+#endif
+	{
+		bufferHandle  = deviceManager->GetDevice()->createBuffer( bufferDesc );
+	}
 
 	if( !bufferHandle )
 	{
 		return false;
+	}
+
+	if( r_showBuffers.GetBool() )
+	{
+		idLib::Printf( "uniform buffer alloc %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
 	}
 
 	// copy the data
@@ -666,10 +921,17 @@ void idUniformBuffer::FreeBufferObject()
 
 	if( r_showBuffers.GetBool() )
 	{
-		idLib::Printf( "index buffer free %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
+		idLib::Printf( "uniform buffer free %p, api %p (%i bytes)\n", this, bufferHandle.Get(), GetSize() );
 	}
 
 	bufferHandle.Reset();
+
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
+	{
+		vmaDestroyBuffer( m_VmaAllocator, vkBuffer, allocation );
+	}
+#endif
 
 	ClearWithoutFreeing();
 }
@@ -687,13 +949,15 @@ void idUniformBuffer::Update( const void* data, int updateSize, int offset, bool
 
 	if( updateSize > GetSize() )
 	{
-		idLib::FatalError( "idIndexBuffer::Update: size overrun, %i > %i\n", updateSize, GetSize() );
+		idLib::FatalError( "idUniformBuffer::Update: size overrun, %i > %i\n", updateSize, GetSize() );
 	}
 
 	int numBytes = ( updateSize + 15 ) & ~15;
 
 	if( usage == BU_DYNAMIC )
 	{
+		assert( IsMapped() );
+
 		CopyBuffer( ( byte* )buffer + offset, ( const byte* )data, numBytes );
 	}
 	else
@@ -719,15 +983,25 @@ idUniformBuffer::MapBuffer
 void* idUniformBuffer::MapBuffer( bufferMapType_t mapType )
 {
 	assert( bufferHandle );
+	assert( usage == BU_DYNAMIC );
 	assert( IsMapped() == false );
 
-	nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
-	if( mapType == BM_READ )
+#if defined( USE_AMD_ALLOCATOR )
+	if( m_VmaAllocator && r_vmaAllocateBufferMemory.GetBool() )
 	{
-		accessMode = nvrhi::CpuAccessMode::Read;
+		buffer = ( byte* )allocationInfo.pMappedData + GetOffset();
 	}
+	else
+#endif
+	{
+		nvrhi::CpuAccessMode accessMode = nvrhi::CpuAccessMode::Write;
+		if( mapType == bufferMapType_t::BM_READ )
+		{
+			accessMode = nvrhi::CpuAccessMode::Read;
+		}
 
-	buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
+		buffer = deviceManager->GetDevice()->mapBuffer( bufferHandle, accessMode );
+	}
 
 	SetMapped();
 
@@ -735,7 +1009,7 @@ void* idUniformBuffer::MapBuffer( bufferMapType_t mapType )
 	{
 		idLib::FatalError( "idUniformBuffer::MapBuffer: failed" );
 	}
-
+		
 	return buffer;
 }
 
@@ -747,11 +1021,17 @@ idUniformBuffer::UnmapBuffer
 void idUniformBuffer::UnmapBuffer()
 {
 	assert( bufferHandle );
+	assert( usage == BU_DYNAMIC );
 	assert( IsMapped() );
 
-	if( deviceManager && deviceManager->GetDevice() )
+#if defined( USE_AMD_ALLOCATOR )
+	if( !m_VmaAllocator || !r_vmaAllocateBufferMemory.GetBool() )
+#endif
 	{
-		deviceManager->GetDevice()->unmapBuffer( bufferHandle );
+		if( deviceManager && deviceManager->GetDevice() )
+		{
+			deviceManager->GetDevice()->unmapBuffer( bufferHandle );
+		}
 	}
 
 	SetUnmapped();
@@ -767,4 +1047,9 @@ void idUniformBuffer::ClearWithoutFreeing()
 	size = 0;
 	offsetInOtherBuffer = OWNS_BUFFER_FLAG;
 	bufferHandle.Reset();
+
+#if defined( USE_AMD_ALLOCATOR )
+	allocation = NULL;
+	allocationInfo = {};
+#endif
 }

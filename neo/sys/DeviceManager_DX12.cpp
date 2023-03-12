@@ -1,5 +1,8 @@
 /*
 * Copyright (c) 2014-2021, NVIDIA CORPORATION. All rights reserved.
+* Copyright (C) 2022 Stephen Pridham (id Tech 4x integration)
+* Copyright (C) 2023 Stephen Saunders (id Tech 4x integration)
+* Copyright (C) 2023 Robert Beckebans (id Tech 4x integration)
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -43,6 +46,8 @@ using nvrhi::RefCountPtr;
 
 #define HR_RETURN(hr) if(FAILED(hr)) return false
 
+idCVar r_graphicsAdapter( "r_graphicsAdapter", "", CVAR_RENDERER | CVAR_INIT | CVAR_ARCHIVE, "Substring in the name the DXGI graphics adapter to select a certain GPU" );
+
 class DeviceManager_DX12 : public DeviceManager
 {
 	RefCountPtr<ID3D12Device>                   m_Device12;
@@ -51,7 +56,7 @@ class DeviceManager_DX12 : public DeviceManager
 	RefCountPtr<ID3D12CommandQueue>             m_CopyQueue;
 	RefCountPtr<IDXGISwapChain3>                m_SwapChain;
 	DXGI_SWAP_CHAIN_DESC1                       m_SwapChainDesc{};
-	DXGI_SWAP_CHAIN_FULLSCREEN_DESC             fullScreenDesc{};
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC             m_FullScreenDesc{};
 	RefCountPtr<IDXGIAdapter>                   m_DxgiAdapter;
 	bool                                        m_TearingSupported = false;
 
@@ -59,22 +64,23 @@ class DeviceManager_DX12 : public DeviceManager
 	std::vector<nvrhi::TextureHandle>           m_RhiSwapChainBuffers;
 	RefCountPtr<ID3D12Fence>                    m_FrameFence;
 	std::vector<HANDLE>                         m_FrameFenceEvents;
+	nvrhi::EventQueryHandle						m_FrameWaitQuery;
 
 	UINT64                                      m_FrameCount = 1;
 
-	nvrhi::DeviceHandle                         nvrhiDevice;
+	nvrhi::DeviceHandle                         m_NvrhiDevice;
 
-	std::string                                 renderString;
+	std::string                                 m_RendererString;
 
 public:
 	const char* GetRendererString() const override
 	{
-		return renderString.c_str();
+		return m_RendererString.c_str();
 	}
 
 	nvrhi::IDevice* GetDevice() const override
 	{
-		return nvrhiDevice;
+		return m_NvrhiDevice;
 	}
 
 	void ReportLiveObjects() override;
@@ -202,23 +208,45 @@ void DeviceManager_DX12::ReportLiveObjects()
 	}
 }
 
+std::wstring StrToWS( const std::string& str )
+{
+	int sizeNeeded = MultiByteToWideChar( CP_UTF8, 0, &str[0], ( int )str.size(), NULL, 0 );
+	std::wstring wstrTo( sizeNeeded, 0 );
+	MultiByteToWideChar( CP_UTF8, 0, &str[0], ( int )str.size(), &wstrTo[0], sizeNeeded );
+	return wstrTo;
+}
+
+std::wstring StrToWS( const idStr& str )
+{
+	int sizeNeeded = MultiByteToWideChar( CP_UTF8, 0, str.c_str(), str.Length(), NULL, 0 );
+	std::wstring wstrTo( sizeNeeded, 0 );
+	MultiByteToWideChar( CP_UTF8, 0, str.c_str(), str.Length(), &wstrTo[0], sizeNeeded );
+	return wstrTo;
+}
+
 bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 {
 	RefCountPtr<IDXGIAdapter> targetAdapter;
 
-	deviceParms.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
-
-	if( deviceParms.adapter )
+	if( m_DeviceParams.adapter )
 	{
-		targetAdapter = deviceParms.adapter;
+		targetAdapter = m_DeviceParams.adapter;
 	}
 	else
 	{
-		targetAdapter = FindAdapter( deviceParms.adapterNameSubstring );
+		idStr adapterName( r_graphicsAdapter.GetString() );
+		if( !adapterName.IsEmpty() )
+		{
+			targetAdapter = FindAdapter( StrToWS( adapterName ) );
+		}
+		else
+		{
+			targetAdapter = FindAdapter( m_DeviceParams.adapterNameSubstring );
+		}
 
 		if( !targetAdapter )
 		{
-			std::wstring adapterNameStr( deviceParms.adapterNameSubstring.begin(), deviceParms.adapterNameSubstring.end() );
+			std::wstring adapterNameStr( m_DeviceParams.adapterNameSubstring.begin(), m_DeviceParams.adapterNameSubstring.end() );
 			common->FatalError( "Could not find an adapter matching %s\n", adapterNameStr.c_str() );
 			return false;
 		}
@@ -237,7 +265,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 		{
 			ss << wss.narrow( c, '?' );
 		}
-		renderString = ss.str();
+		m_RendererString = ss.str();
 
 		isNvidia = IsNvDeviceID( aDesc.VendorId );
 	}
@@ -245,18 +273,18 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 		// SRS - Don't center window here for DX12 only, instead use portable initialization in CreateWindowDeviceAndSwapChain() within win_glimp.cpp
 		//     - Also, calling SetWindowPos() triggers a window mgr event that overwrites r_windowX / r_windowY, which may be undesirable to the user
 
-		UINT windowStyle = deviceParms.startFullscreen
+		UINT windowStyle = m_DeviceParams.startFullscreen
 						   ? ( WS_POPUP | WS_SYSMENU | WS_VISIBLE )
-						   : deviceParms.startMaximized
+						   : m_DeviceParams.startMaximized
 						   ? ( WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_MAXIMIZE )
 						   : ( WS_OVERLAPPEDWINDOW | WS_VISIBLE );
 
-		RECT rect = { 0, 0, LONG( deviceParms.backBufferWidth ), LONG( deviceParms.backBufferHeight ) };
+		RECT rect = { 0, 0, LONG( m_DeviceParams.backBufferWidth ), LONG( m_DeviceParams.backBufferHeight ) };
 		AdjustWindowRect( &rect, windowStyle, FALSE );
 
 		if( MoveWindowOntoAdapter( targetAdapter, rect ) )
 		{
-			SetWindowPos( ( HWND )windowHandle, deviceParms.startFullscreen ? HWND_TOPMOST : HWND_NOTOPMOST,
+			SetWindowPos( ( HWND )windowHandle, m_DeviceParams.startFullscreen ? HWND_TOPMOST : HWND_NOTOPMOST,
 						  rect.left, rect.top, 0, 0, SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSIZE );
 		}
 	*/
@@ -270,17 +298,17 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 	ZeroMemory( &m_SwapChainDesc, sizeof( m_SwapChainDesc ) );
 	m_SwapChainDesc.Width = width;
 	m_SwapChainDesc.Height = height;
-	m_SwapChainDesc.SampleDesc.Count = deviceParms.swapChainSampleCount;
+	m_SwapChainDesc.SampleDesc.Count = m_DeviceParams.swapChainSampleCount;
 	m_SwapChainDesc.SampleDesc.Quality = 0;
-	m_SwapChainDesc.BufferUsage = deviceParms.swapChainUsage;
-	m_SwapChainDesc.BufferCount = deviceParms.swapChainBufferCount;
+	m_SwapChainDesc.BufferUsage = m_DeviceParams.swapChainUsage;
+	m_SwapChainDesc.BufferCount = m_DeviceParams.swapChainBufferCount;
 	m_SwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	m_SwapChainDesc.Flags = deviceParms.allowModeSwitch ? DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH : 0;
+	m_SwapChainDesc.Flags = m_DeviceParams.allowModeSwitch ? DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH : 0;
 
 	// Special processing for sRGB swap chain formats.
 	// DXGI will not create a swap chain with an sRGB format, but its contents will be interpreted as sRGB.
 	// So we need to use a non-sRGB format here, but store the true sRGB format for later framebuffer creation.
-	switch( deviceParms.swapChainFormat )  // NOLINT(clang-diagnostic-switch-enum)
+	switch( m_DeviceParams.swapChainFormat )  // NOLINT(clang-diagnostic-switch-enum)
 	{
 		case nvrhi::Format::SRGBA8_UNORM:
 			m_SwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -289,11 +317,11 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 			m_SwapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 			break;
 		default:
-			m_SwapChainDesc.Format = nvrhi::d3d12::convertFormat( deviceParms.swapChainFormat );
+			m_SwapChainDesc.Format = nvrhi::d3d12::convertFormat( m_DeviceParams.swapChainFormat );
 			break;
 	}
 
-	if( deviceParms.enableDebugRuntime )
+	if( m_DeviceParams.enableDebugRuntime )
 	{
 		RefCountPtr<ID3D12Debug> pDebug;
 		hr = D3D12GetDebugInterface( IID_PPV_ARGS( &pDebug ) );
@@ -302,7 +330,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 	}
 
 	RefCountPtr<IDXGIFactory2> pDxgiFactory;
-	UINT dxgiFactoryFlags = deviceParms.enableDebugRuntime ? DXGI_CREATE_FACTORY_DEBUG : 0;
+	UINT dxgiFactoryFlags = m_DeviceParams.enableDebugRuntime ? DXGI_CREATE_FACTORY_DEBUG : 0;
 	hr = CreateDXGIFactory2( dxgiFactoryFlags, IID_PPV_ARGS( &pDxgiFactory ) );
 	HR_RETURN( hr );
 
@@ -323,11 +351,11 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 
 	hr = D3D12CreateDevice(
 			 targetAdapter,
-			 deviceParms.featureLevel,
+			 m_DeviceParams.featureLevel,
 			 IID_PPV_ARGS( &m_Device12 ) );
 	HR_RETURN( hr );
 
-	if( deviceParms.enableDebugRuntime )
+	if( m_DeviceParams.enableDebugRuntime )
 	{
 		RefCountPtr<ID3D12InfoQueue> pInfoQueue;
 		m_Device12->QueryInterface( &pInfoQueue );
@@ -363,7 +391,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 	HR_RETURN( hr );
 	m_GraphicsQueue->SetName( L"Graphics Queue" );
 
-	if( deviceParms.enableComputeQueue )
+	if( m_DeviceParams.enableComputeQueue )
 	{
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 		hr = m_Device12->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( &m_ComputeQueue ) );
@@ -371,7 +399,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 		m_ComputeQueue->SetName( L"Compute Queue" );
 	}
 
-	if( deviceParms.enableCopyQueue )
+	if( m_DeviceParams.enableCopyQueue )
 	{
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 		hr = m_Device12->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( &m_CopyQueue ) );
@@ -379,15 +407,15 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 		m_CopyQueue->SetName( L"Copy Queue" );
 	}
 
-	fullScreenDesc = {};
-	fullScreenDesc.RefreshRate.Numerator = deviceParms.refreshRate;
-	fullScreenDesc.RefreshRate.Denominator = 1;
-	fullScreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-	fullScreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	fullScreenDesc.Windowed = !deviceParms.startFullscreen;
+	m_FullScreenDesc = {};
+	m_FullScreenDesc.RefreshRate.Numerator = m_DeviceParams.refreshRate;
+	m_FullScreenDesc.RefreshRate.Denominator = 1;
+	m_FullScreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+	m_FullScreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+	m_FullScreenDesc.Windowed = !m_DeviceParams.startFullscreen;
 
 	RefCountPtr<IDXGISwapChain1> pSwapChain1;
-	hr = pDxgiFactory->CreateSwapChainForHwnd( m_GraphicsQueue, ( HWND )windowHandle, &m_SwapChainDesc, &fullScreenDesc, nullptr, &pSwapChain1 );
+	hr = pDxgiFactory->CreateSwapChainForHwnd( m_GraphicsQueue, ( HWND )windowHandle, &m_SwapChainDesc, &m_FullScreenDesc, nullptr, &pSwapChain1 );
 	HR_RETURN( hr );
 
 	hr = pSwapChain1->QueryInterface( IID_PPV_ARGS( &m_SwapChain ) );
@@ -402,14 +430,14 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 	deviceDesc.pComputeCommandQueue = m_ComputeQueue;
 	deviceDesc.pCopyCommandQueue = m_CopyQueue;
 
-	nvrhiDevice = nvrhi::d3d12::createDevice( deviceDesc );
+	m_NvrhiDevice = nvrhi::d3d12::createDevice( deviceDesc );
 
-	deviceParms.enableNvrhiValidationLayer = r_useValidationLayers.GetInteger() > 0;
-	deviceParms.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
+	m_DeviceParams.enableNvrhiValidationLayer = r_useValidationLayers.GetInteger() > 0;
+	m_DeviceParams.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
 
-	if( deviceParms.enableNvrhiValidationLayer )
+	if( m_DeviceParams.enableNvrhiValidationLayer )
 	{
-		nvrhiDevice = nvrhi::validation::createValidationLayer( nvrhiDevice );
+		m_NvrhiDevice = nvrhi::validation::createValidationLayer( m_NvrhiDevice );
 	}
 
 	if( !CreateRenderTargets() )
@@ -425,17 +453,24 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 		m_FrameFenceEvents.push_back( CreateEvent( nullptr, false, true, NULL ) );
 	}
 
+	m_FrameWaitQuery = m_NvrhiDevice->createEventQuery();
+	m_NvrhiDevice->setEventQuery( m_FrameWaitQuery, nvrhi::CommandQueue::Graphics );
+
+	OPTICK_GPU_INIT_D3D12( m_Device12, &m_GraphicsQueue, 1 );
+
 	return true;
 }
 
 void DeviceManager_DX12::DestroyDeviceAndSwapChain()
 {
 	m_RhiSwapChainBuffers.clear();
-	renderString.clear();
+	m_RendererString.clear();
 
 	ReleaseRenderTargets();
 
-	nvrhiDevice = nullptr;
+	m_NvrhiDevice = nullptr;
+
+	m_FrameWaitQuery = nullptr;
 
 	for( auto fenceEvent : m_FrameFenceEvents )
 	{
@@ -472,18 +507,18 @@ bool DeviceManager_DX12::CreateRenderTargets()
 		HR_RETURN( hr );
 
 		nvrhi::TextureDesc textureDesc;
-		textureDesc.width = deviceParms.backBufferWidth;
-		textureDesc.height = deviceParms.backBufferHeight;
-		textureDesc.sampleCount = deviceParms.swapChainSampleCount;
-		textureDesc.sampleQuality = deviceParms.swapChainSampleQuality;
-		textureDesc.format = deviceParms.swapChainFormat;
+		textureDesc.width = m_DeviceParams.backBufferWidth;
+		textureDesc.height = m_DeviceParams.backBufferHeight;
+		textureDesc.sampleCount = m_DeviceParams.swapChainSampleCount;
+		textureDesc.sampleQuality = m_DeviceParams.swapChainSampleQuality;
+		textureDesc.format = m_DeviceParams.swapChainFormat;
 		textureDesc.debugName = "SwapChainBuffer";
 		textureDesc.isRenderTarget = true;
 		textureDesc.isUAV = false;
 		textureDesc.initialState = nvrhi::ResourceStates::Present;
 		textureDesc.keepInitialState = true;
 
-		m_RhiSwapChainBuffers[n] = nvrhiDevice->createHandleForNativeTexture( nvrhi::ObjectTypes::D3D12_Resource, nvrhi::Object( m_SwapChainBuffers[n] ), textureDesc );
+		m_RhiSwapChainBuffers[n] = m_NvrhiDevice->createHandleForNativeTexture( nvrhi::ObjectTypes::D3D12_Resource, nvrhi::Object( m_SwapChainBuffers[n] ), textureDesc );
 	}
 
 	return true;
@@ -491,16 +526,16 @@ bool DeviceManager_DX12::CreateRenderTargets()
 
 void DeviceManager_DX12::ReleaseRenderTargets()
 {
-	if( !nvrhiDevice )
+	if( !m_NvrhiDevice )
 	{
 		return;
 	}
 
 	// Make sure that all frames have finished rendering
-	nvrhiDevice->waitForIdle();
+	m_NvrhiDevice->waitForIdle();
 
 	// Release all in-flight references to the render targets
-	nvrhiDevice->runGarbageCollection();
+	m_NvrhiDevice->runGarbageCollection();
 
 	// Set the events so that WaitForSingleObject in OneFrame will not hang later
 	for( auto e : m_FrameFenceEvents )
@@ -517,7 +552,7 @@ void DeviceManager_DX12::ResizeSwapChain()
 {
 	ReleaseRenderTargets();
 
-	if( !nvrhiDevice )
+	if( !m_NvrhiDevice )
 	{
 		return;
 	}
@@ -527,9 +562,9 @@ void DeviceManager_DX12::ResizeSwapChain()
 		return;
 	}
 
-	const HRESULT hr = m_SwapChain->ResizeBuffers( deviceParms.swapChainBufferCount,
-					   deviceParms.backBufferWidth,
-					   deviceParms.backBufferHeight,
+	const HRESULT hr = m_SwapChain->ResizeBuffers( m_DeviceParams.swapChainBufferCount,
+					   m_DeviceParams.backBufferWidth,
+					   m_DeviceParams.backBufferHeight,
 					   m_SwapChainDesc.Format,
 					   m_SwapChainDesc.Flags );
 
@@ -547,20 +582,11 @@ void DeviceManager_DX12::ResizeSwapChain()
 
 void DeviceManager_DX12::BeginFrame()
 {
-	if( !windowVisible )
-	{
-		return;
-	}
+	OPTICK_CATEGORY( "DX12_BeginFrame", Optick::Category::Wait );
 
-	uint32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-	int prevIndex = bufferIndex - 1;
-	if( prevIndex < 0 )
-	{
-		prevIndex = m_SwapChainDesc.BufferCount - 1;
-	}
-
-	WaitForSingleObject( m_FrameFenceEvents[prevIndex], INFINITE );
+	WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
 }
 
 nvrhi::ITexture* DeviceManager_DX12::GetCurrentBackBuffer()
@@ -593,9 +619,22 @@ void DeviceManager_DX12::EndFrame()
 
 void DeviceManager_DX12::Present()
 {
-	if( !windowVisible )
+	if( !m_windowVisible )
 	{
 		return;
+	}
+
+	// SRS - Sync on previous frame's command queue completion vs. waitForIdle() on whole device
+	{
+		OPTICK_CATEGORY( "DX12_Present", Optick::Category::Wait );
+
+		int prevIndex = m_SwapChain->GetCurrentBackBufferIndex() - 1;
+		if( prevIndex < 0 )
+		{
+			prevIndex = m_SwapChainDesc.BufferCount - 1;
+		}
+
+		WaitForSingleObject( m_FrameFenceEvents[prevIndex], INFINITE );
 	}
 
 	const int32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
@@ -603,22 +642,22 @@ void DeviceManager_DX12::Present()
 	UINT presentFlags = 0;
 
 	// SRS - DXGI docs say fullscreen must be disabled for unlocked fps/tear, but this does not seem to be true
-
-	if( !deviceParms.vsyncEnabled && m_TearingSupported ) //&& !glConfig.isFullscreen )
+	if( !m_DeviceParams.vsyncEnabled && m_TearingSupported ) //&& !glConfig.isFullscreen )
 	{
 		presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
 	}
 
-	// SRS - Don't change deviceParms.vsyncEnabled here, simply test for vsync mode 2 to set DXGI SyncInterval
-	m_SwapChain->Present( deviceParms.vsyncEnabled && r_swapInterval.GetInteger() == 2 ? 1 : 0, presentFlags );
+	OPTICK_GPU_FLIP( m_SwapChain.Get() );
+	OPTICK_CATEGORY( "Present", Optick::Category::Wait );
+
+	// SRS - Don't change m_DeviceParams.vsyncEnabled here, simply test for vsync mode 2 to set DXGI SyncInterval
+	m_SwapChain->Present( m_DeviceParams.vsyncEnabled && r_swapInterval.GetInteger() == 2 ? 1 : 0, presentFlags );
 
 	int32 bufferIndex2 = m_SwapChain->GetCurrentBackBufferIndex();
 
 	m_FrameFence->SetEventOnCompletion( m_FrameCount, m_FrameFenceEvents[bufferIndex] );
 	m_GraphicsQueue->Signal( m_FrameFence, m_FrameCount );
 	m_FrameCount++;
-
-	BeginFrame();
 }
 
 DeviceManager* DeviceManager::CreateD3D12()

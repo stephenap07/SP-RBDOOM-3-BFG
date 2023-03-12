@@ -64,13 +64,6 @@ void GBufferFillPass::RenderView( nvrhi::ICommandList* commandList, const drawSu
 		return;
 	}
 
-#if defined( USE_VULKAN )
-	if( fillGbuffer )
-	{
-		return;
-	}
-#endif
-
 
 	/*
 	if( !fillGbuffer )
@@ -185,7 +178,7 @@ void GBufferFillPass::RenderView( nvrhi::ICommandList* commandList, const drawSu
 		if( !r_usePBR.GetBool() )
 		{
 			ambientBoost += r_useSSAO.GetBool() ? 0.2f : 0.0f;
-			ambientBoost *= r_useHDR.GetBool() ? 1.1f : 1.0f;
+			ambientBoost *= 1.1f;
 		}
 
 		ambientColor.x = r_forceAmbient.GetFloat() * ambientBoost;

@@ -31,7 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __VERTEXCACHE_H__
 #define __VERTEXCACHE_H__
 
-#if 1
+#if 0
 
 	// RB: increased some static memory limits for custom modder content
 
@@ -69,11 +69,15 @@ If you have questions concerning this license or the applicable additional terms
 	const int VERTCACHE_INDEX_MEMORY_PER_FRAME = 31 * 1024 * 1024;
 	const int VERTCACHE_VERTEX_MEMORY_PER_FRAME = 31 * 1024 * 1024;
 	const int VERTCACHE_JOINT_MEMORY_PER_FRAME = 256 * 1024;
+	const int VERTCACHE_INSTANCE_MEMORY_PER_FRAME = 256 * 1024;
+	const int VERTCACHE_SKINNED_VERTEX_MEMORY_PER_FRAME = 31 * 1024 * 1024;
+	const int VERTCACHE_MATERIAL_MEMORY_PER_FRAME = 31 * 1024 * 1024;
 
 	// there are a lot more static indexes than vertexes, because interactions are just new
 	// index lists that reference existing vertexes
 	const int STATIC_INDEX_MEMORY = 31 * 1024 * 1024;
 	const int STATIC_VERTEX_MEMORY = 31 * 1024 * 1024;	// make sure it fits in VERTCACHE_OFFSET_MASK!
+	const int STATIC_SKINNED_VERTEX_MEMORY = 4 * 31 * 1024 * 1024;
 
 	// vertCacheHandle_t packs size, offset, and frame number into 64 bits
 	typedef uint64 vertCacheHandle_t;

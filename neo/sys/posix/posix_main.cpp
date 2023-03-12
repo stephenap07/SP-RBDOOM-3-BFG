@@ -425,8 +425,7 @@ const char* Sys_DefaultBasePath()
 	basepath = Sys_EXEPath();
 	if( basepath.Length() )
 	{
-		basepath.StripFilename();
-		exepath = basepath;
+		exepath = basepath.StripFilename();
 		testbase = basepath;
 		testbase += "/";
 		testbase += BASE_GAMEDIR;
@@ -457,8 +456,9 @@ const char* Sys_DefaultBasePath()
 	if( exepath.Length() )
 	{
 #if defined(__APPLE__)
-		// SRS - Check for macOS app bundle resources path
-		basepath = exepath + "/../Resources";
+		// SRS - Check for macOS app bundle resources path (up one dir level and down to Resources dir)
+		basepath = exepath;
+		basepath = basepath.StripFilename() + "/Resources";
 		testbase = basepath;
 		testbase += "/";
 		testbase += BASE_GAMEDIR;
@@ -471,11 +471,11 @@ const char* Sys_DefaultBasePath()
 			common->Printf( "no '%s' directory in macOS app bundle resources path %s, skipping\n", BASE_GAMEDIR, basepath.c_str() );
 		}
 #endif
-		// SRS - Check for macOS/linux build path (directory structure with build dir and possible config suffix)
-#if defined(__APPLE__) && !defined( NO_MULTI_CONFIG )
-		basepath = exepath + "/../..";		// for macOS Xcode builds with Debug/Release/etc config suffix
-#else
-		basepath = exepath + "/..";			// for linux and macOS single-config makefile builds
+		// SRS - Check for linux/macOS build path (directory structure with build dir and possible config suffix)
+		basepath = exepath;
+		basepath.StripFilename();						// up 1st dir level for single-config dev builds
+#if !defined( NO_MULTI_CONFIG )
+		basepath.StripFilename();						// up 2nd dir level for multi-config dev builds with Debug/Release/etc suffix
 #endif
 		testbase = basepath;
 		testbase += "/";
@@ -594,23 +594,25 @@ int Sys_ListFiles( const char* directory, const char* extension, idStrList& list
 
 	// DG: use readdir_r instead of readdir for thread safety
 	// the following lines are from the readdir_r manpage.. fscking ugly.
-	int nameMax = pathconf( directory, _PC_NAME_MAX );
-	if( nameMax == -1 )
-	{
-		nameMax = 255;
-	}
-	int direntLen = offsetof( struct dirent, d_name ) + nameMax + 1;
+	//int nameMax = pathconf( directory, _PC_NAME_MAX );
+	//if( nameMax == -1 )
+	//{
+	//	nameMax = 255;
+	//}
+	//int direntLen = offsetof( struct dirent, d_name ) + nameMax + 1;
 
-	struct dirent* entry = ( struct dirent* )Mem_Alloc( direntLen, TAG_CRAP );
+	//struct dirent* entry = ( struct dirent* )Mem_Alloc( direntLen, TAG_CRAP );
 
-	if( entry == NULL )
-	{
-		common->Warning( "Sys_ListFiles: Mem_Alloc for entry failed!" );
-		closedir( fdir );
-		return 0;
-	}
+	//if( entry == NULL )
+	//{
+	//	common->Warning( "Sys_ListFiles: Mem_Alloc for entry failed!" );
+	//	closedir( fdir );
+	//	return 0;
+	//}
 
-	while( readdir_r( fdir, entry, &d ) == 0 && d != NULL )
+	//while( readdir_r( fdir, entry, &d ) == 0 && d != NULL )
+	// SRS - readdir_r() is deprecated on linux, readdir() is thread safe with different dir streams
+	while( ( d = readdir( fdir ) ) != NULL )
 	{
 		// DG end
 		idStr::snPrintf( search, sizeof( search ), "%s/%s", directory, d->d_name );
@@ -640,7 +642,7 @@ int Sys_ListFiles( const char* directory, const char* extension, idStrList& list
 	}
 
 	closedir( fdir );
-	Mem_Free( entry );
+	//Mem_Free( entry );
 
 	if( debug )
 	{

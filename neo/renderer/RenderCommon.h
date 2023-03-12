@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2012-2021 Robert Beckebans
+Copyright (C) 2012-2023 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 Copyright (C) 2022 Stephen Pridham
 
@@ -399,6 +399,7 @@ struct viewLight_t
 	bool					parallel;					// lightCenter gives the direction to the light at infinity
 	idVec3					lightCenter;				// offset the lighting direction for shading and
 	int						shadowLOD;					// level of detail for shadowmap selection
+	float					shadowFadeOut;				// blending from last shadow LOD to invisible
 	idRenderMatrix			shadowV[6];					// shadow depth view matrix for lighting pass
 	idRenderMatrix			shadowP[6];					// shadow depth projection matrix for lighting pass
 	idVec2i					imageSize;
@@ -1072,6 +1073,10 @@ public:
 
 	virtual void			RenderCommandBuffers( const emptyCommand_t* commandBuffers );
 	virtual void			TakeScreenshot( int width, int height, const char* fileName, renderView_t* ref );
+	virtual bool			IsTakingScreenshot()
+	{
+		return takingScreenshot;
+	}
 	virtual byte*			CaptureRenderToBuffer( int width, int height, renderView_t* ref );
 	virtual void			CropRenderSize( int width, int height );
 	virtual void            CropRenderSize( int x, int y, int width, int height, bool topLeftAncor );
@@ -1117,13 +1122,12 @@ public:
 public:
 	// renderer globals
 
-#if defined( USE_NVRHI )
 	nvrhi::ICommandList* CommandList() override
 	{
 		return backend.CommandList();
 	}
-#else
-#endif
+
+	nvrhi::CommandListHandle commandList;
 
 	bool					registered;		// cleared at shutdown, set at InitOpenGL
 
@@ -1217,9 +1221,7 @@ extern idCVar r_windowWidth;
 extern idCVar r_windowHeight;
 
 extern idCVar r_debugContext;				// enable various levels of context debug
-#if defined(USE_NVRHI)
-	extern idCVar r_useValidationLayers;
-#endif
+extern idCVar r_useValidationLayers;
 extern idCVar r_skipAMDWorkarounds;         // skip work arounds for AMD driver bugs
 extern idCVar r_skipIntelWorkarounds;		// skip work arounds for Intel driver bugs
 extern idCVar r_vidMode;					// video mode number
@@ -1268,8 +1270,6 @@ extern idCVar r_useShadowDepthBounds;		// use depth bounds test on individual sh
 extern idCVar r_useShadowMapping;			// use shadow mapping instead of stencil shadows
 extern idCVar r_useShadowAtlas;				// temporary for perf testing: pack shadow maps into big atlas
 extern idCVar r_useHalfLambertLighting;		// use Half-Lambert lighting instead of classic Lambert
-extern idCVar r_useHDR;
-extern idCVar r_useSeamlessCubeMap;
 // RB end
 
 extern idCVar r_skipStaticInteractions;		// skip interactions created at level load
@@ -1282,7 +1282,6 @@ extern idCVar r_skipFrontEnd;				// bypasses all front end work, but 2D gui rend
 extern idCVar r_skipBackEnd;				// don't draw anything
 extern idCVar r_skipCopyTexture;			// do all rendering, but don't actually copyTexSubImage2D
 extern idCVar r_skipRender;					// skip 3D rendering, but pass 2D
-extern idCVar r_skipRenderContext;			// NULL the rendering context during backend 3D rendering
 extern idCVar r_skipTranslucent;			// skip the translucent interaction rendering
 extern idCVar r_skipAmbient;				// bypasses all non-interaction drawing
 extern idCVar r_skipNewAmbient;				// bypasses all vertex/fragment program ambients
@@ -1374,7 +1373,7 @@ extern idCVar r_shadowMapFrustumFOV;
 extern idCVar r_shadowMapSingleSide;
 extern idCVar r_shadowMapImageSize;
 extern idCVar r_shadowMapJitterScale;
-extern idCVar r_shadowMapBiasScale;
+//extern idCVar r_shadowMapBiasScale;
 extern idCVar r_shadowMapRandomizeJitter;
 extern idCVar r_shadowMapSamples;
 extern idCVar r_shadowMapSplits;
@@ -1403,10 +1402,6 @@ extern idCVar r_ldrContrastOffset;
 
 extern idCVar r_useFilmicPostProcessing;
 extern idCVar r_forceAmbient;
-
-extern idCVar r_useSSGI;
-extern idCVar r_ssgiDebug;
-extern idCVar r_ssgiFiltering;
 
 extern idCVar r_useSSAO;
 extern idCVar r_ssaoDebug;
@@ -1518,10 +1513,6 @@ struct glimpParms_t
 #define CLAMP(x, lo, hi)    ((x) < (lo) ? (lo) : (x) > (hi) ? (hi) : (x))
 // Helper function for using SDL2 and Vulkan on Linux.
 std::vector<const char*> get_required_extensions();
-
-#if !defined( USE_NVRHI )
-	extern vulkanContext_t vkcontext;
-#endif
 
 // DG: R_GetModeListForDisplay is called before GLimp_Init(), but SDL needs SDL_Init() first.
 // So add PreInit for platforms that need it, others can just stub it.

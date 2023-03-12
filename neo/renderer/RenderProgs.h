@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2022 Robert Beckebans
+Copyright (C) 2013-2023 Robert Beckebans
 Copyright (C) 2016-2017 Dustin Land
 Copyright (C) 2022 Stephen Pridham
 
@@ -268,7 +268,6 @@ struct shaderMacro_t
 	{ }
 };
 
-#if defined( USE_NVRHI )
 struct programInfo_t
 {
 	int bindingLayoutType;
@@ -278,7 +277,6 @@ struct programInfo_t
 	nvrhi::InputLayoutHandle inputLayout;
 	idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>* bindingLayouts;
 };
-#endif
 
 enum
 {
@@ -392,8 +390,6 @@ enum
 	BUILTIN_AMBIENT_OCCLUSION_AND_OUTPUT,
 	BUILTIN_AMBIENT_OCCLUSION_BLUR,
 	BUILTIN_AMBIENT_OCCLUSION_BLUR_AND_OUTPUT,
-	BUILTIN_AMBIENT_OCCLUSION_MINIFY,
-	BUILTIN_AMBIENT_OCCLUSION_RECONSTRUCT_CSZ,
 
 	BUILTIN_DEEP_GBUFFER_RADIOSITY_SSGI,
 	BUILTIN_DEEP_GBUFFER_RADIOSITY_BLUR,
@@ -449,7 +445,6 @@ public:
 	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 	int		FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout = LAYOUT_DRAW_VERT );
 
-#if defined( USE_NVRHI )
 	nvrhi::ShaderHandle GetShader( int index );
 
 	programInfo_t GetProgramInfo( int index );
@@ -458,7 +453,6 @@ public:
 	{
 		return currentIndex;
 	}
-#endif
 
 	void	BindProgram( int progIndex );
 
@@ -788,20 +782,12 @@ public:
 
 	void	BindShader_Shadow()
 	{
-		// RB: no FFP fragment rendering anymore
-		//BindShader( -1, builtinShaders[BUILTIN_SHADOW], -1, true );
-
 		BindShader_Builtin( BUILTIN_SHADOW );
-		// RB end
 	}
 
 	void	BindShader_ShadowSkinned()
 	{
-		// RB: no FFP fragment rendering anymore
-		//BindShader( -1, builtinShaders[BUILTIN_SHADOW_SKINNED], -1, true );
-
 		BindShader_Builtin( BUILTIN_SHADOW_SKINNED );
-		// RB end
 	}
 
 	void	BindShader_ShadowDebug()
@@ -919,16 +905,6 @@ public:
 		BindShader_Builtin( BUILTIN_AMBIENT_OCCLUSION_BLUR_AND_OUTPUT );
 	}
 
-	void	BindShader_AmbientOcclusionMinify()
-	{
-		BindShader_Builtin( BUILTIN_AMBIENT_OCCLUSION_MINIFY );
-	}
-
-	void	BindShader_AmbientOcclusionReconstructCSZ()
-	{
-		BindShader_Builtin( BUILTIN_AMBIENT_OCCLUSION_RECONSTRUCT_CSZ );
-	}
-
 	void	BindShader_DeepGBufferRadiosity()
 	{
 		BindShader_Builtin( BUILTIN_DEEP_GBUFFER_RADIOSITY_SSGI );
@@ -943,13 +919,6 @@ public:
 	{
 		BindShader_Builtin( BUILTIN_DEEP_GBUFFER_RADIOSITY_BLUR_AND_OUTPUT );
 	}
-
-#if 0
-	void	BindShader_ZCullReconstruct()
-	{
-		BindShader_Builtin( BUILTIN_ZCULL_RECONSTRUCT );
-	}
-#endif
 
 	void	BindShader_Bink()
 	{
@@ -1015,12 +984,10 @@ public:
 
 	void		SetUniformValue( const renderParm_t rp, const float* value );
 	void		CommitUniforms( uint64 stateBits );
-	void		CachePipeline( uint64 stateBits );
 	int			FindProgram( const char* name, int vIndex, int fIndex, bindingLayoutType_t bindingType = BINDING_LAYOUT_DEFAULT );
 	void		ZeroUniforms();
 	int			UniformSize();
 
-#if defined( USE_NVRHI )
 	bool									CommitConstantBuffer( nvrhi::ICommandList* commandList, bool bindingLayoutTypeChanged );
 
 	ID_INLINE nvrhi::IBuffer*				ConstantBuffer()
@@ -1047,10 +1014,6 @@ public:
 	idUniformBuffer									renderParmUbo;
 	idArray<idUniformBuffer, NUM_BINDING_LAYOUTS>	bindingParmUbo;
 	idArray<idVec4*, NUM_BINDING_LAYOUTS>			mappedRenderParms;
-#elif defined(USE_VULKAN)
-	void		PrintPipelines();
-	void		ClearPipelines();
-#endif
 
 	static const char* FindEmbeddedSourceShader( const char* name );
 
@@ -1060,38 +1023,17 @@ private:
 	// Reads the binary fileName and returns a ShaderBlob.
 	ShaderBlob	GetBytecode( const char* fileName );
 
-	idStr		StripDeadCode( const idStr& in, const char* name, const idStrList& compileMacros, bool builtin );
-	idStr		ConvertCG2GLSL( const idStr& in, const char* name, rpStage_t stage, idStr& outLayout, bool vkGLSL, bool hasGPUSkinning, vertexLayoutType_t vertexLayout );
-
 	int builtinShaders[MAX_BUILTINS];
 	void BindShader_Builtin( int i )
 	{
 		BindProgram( i );
 	}
 
-	enum shaderFeature_t
-	{
-		USE_GPU_SKINNING,
-		LIGHT_POINT,
-		LIGHT_PARALLEL,
-		BRIGHTPASS,
-		HDR_DEBUG,
-		USE_SRGB,
-		USE_PBR,
-
-		MAX_SHADER_MACRO_NAMES,
-	};
-
-	static const char* GLSLMacroNames[MAX_SHADER_MACRO_NAMES];
-	const char*	GetGLSLMacroName( shaderFeature_t sf ) const;
-
-	bool	CompileGLSL( uint target, const char* name );
 	void	LoadProgram( const int programIndex, const int vertexShaderIndex, const int fragmentShaderIndex );
 	void	LoadComputeProgram( const int programIndex, const int computeShaderIndex );
 
 	static const uint INVALID_PROGID = 0xFFFFFFFF;
 
-#if defined( USE_NVRHI )
 	struct shader_t
 	{
 		shader_t() :
@@ -1157,131 +1099,6 @@ private:
 	idStaticList< idStaticList<nvrhi::BindingLayoutHandle, nvrhi::c_MaxBindingLayouts>, NUM_BINDING_LAYOUTS > bindingLayouts;
 
 	idArray<nvrhi::BufferHandle, NUM_BINDING_LAYOUTS>	constantBuffer;
-
-#elif defined(USE_VULKAN)
-	struct shader_t
-	{
-		shader_t() :
-			shaderFeatures( 0 ),
-			builtin( false ),
-			vertexLayout( LAYOUT_DRAW_VERT ),
-			module( VK_NULL_HANDLE ) {}
-		idStr				name;
-		idStr				nameOutSuffix;
-		uint32				shaderFeatures;		// RB: Cg compile macros
-		bool				builtin;			// RB: part of the core shaders built into the executable
-		rpStage_t			stage;
-		vertexLayoutType_t	vertexLayout;
-		VkShaderModule		module;
-		idList<rpBinding_t>	bindings;
-		idList<int>			parmIndices;
-	};
-
-	struct renderProg_t
-	{
-		renderProg_t() :
-			progId( INVALID_PROGID ),
-			usesJoints( false ),
-			optionalSkinning( false ),
-			builtin( false ),
-			vertexShaderIndex( -1 ),
-			fragmentShaderIndex( -1 ),
-			vertexLayout( LAYOUT_DRAW_VERT ),
-			pipelineLayout( VK_NULL_HANDLE ),
-			descriptorSetLayout( VK_NULL_HANDLE ) {}
-
-		struct pipelineState_t
-		{
-			pipelineState_t() :
-				stateBits( 0 ),
-				pipeline( VK_NULL_HANDLE )
-			{
-			}
-
-			uint64		stateBits;
-			VkPipeline	pipeline;
-		};
-
-		VkPipeline GetPipeline( uint64 stateBits, VkShaderModule vertexShader, VkShaderModule fragmentShader );
-
-		idStr				name;
-		uint				progId;
-		bool				usesJoints;
-		bool				optionalSkinning;
-		bool				builtin;			// RB: part of the core shaders built into the executable
-		int					vertexShaderIndex;
-		int					fragmentShaderIndex;
-
-		vertexLayoutType_t		vertexLayout;
-		VkPipelineLayout		pipelineLayout;
-		VkDescriptorSetLayout	descriptorSetLayout;
-		idList<rpBinding_t>		bindings;
-		idList<pipelineState_t>	pipelines;
-	};
-
-	static void		CreateDescriptorSetLayout( const shader_t& vertexShader, const shader_t& fragmentShader, renderProg_t& renderProg );
-	void			AllocParmBlockBuffer( const idList<int>& parmIndices, idUniformBuffer& ubo );
-#else
-	struct shader_t
-	{
-		shader_t() :
-			progId( INVALID_PROGID ),
-			shaderFeatures( 0 ),
-			builtin( false ),
-			vertexLayout( LAYOUT_DRAW_VERT ),
-			uniformArray( -1 ) {}
-		idStr			name;
-		idStr			nameOutSuffix;
-		uint32			shaderFeatures;		// RB: Cg compile macros
-		bool			builtin;			// RB: part of the core shaders built into the executable
-		vertexLayoutType_t	vertexLayout;
-		rpStage_t		stage;
-		uint			progId;
-		int				uniformArray;
-		idList<int>		uniforms;
-	};
-
-	struct renderProg_t
-	{
-		renderProg_t() :
-			progId( INVALID_PROGID ),
-			usesJoints( false ),
-			optionalSkinning( false ),
-			builtin( false ),
-			vertexLayout( LAYOUT_UNKNOWN ),
-			vertexShaderIndex( -1 ),
-			fragmentShaderIndex( -1 ) {}
-
-		idStr				name;
-		uint				progId;
-		bool				usesJoints;
-		bool				optionalSkinning;
-		bool				builtin;			// RB: part of the core shaders built into the executable
-		vertexLayoutType_t	vertexLayout;
-		int					vertexShaderIndex;
-		int					fragmentShaderIndex;
-	};
-
-	void							LoadShader( shader_t& shader );
-
-	int											current;
-	idList<renderProg_t, TAG_RENDER>			renderProgs;
-	idList<shader_t, TAG_RENDER>				shaders;
-
-	idStaticList < idVec4, RENDERPARM_TOTAL >	uniforms;
-
-#if defined( USE_VULKAN )
-	int					counter;
-	int					currentData;
-	int					currentDescSet;
-	int					currentParmBufferOffset;
-	VkDescriptorPool	descriptorPools[ NUM_FRAME_DATA ];
-	VkDescriptorSet		descriptorSets[ NUM_FRAME_DATA ][ MAX_DESC_SETS ];
-
-	idUniformBuffer* 	parmBuffers[ NUM_FRAME_DATA ];
-#endif
-
-#endif //#if defined( USE_NVRHI )
 };
 
 extern idRenderProgManager renderProgManager;

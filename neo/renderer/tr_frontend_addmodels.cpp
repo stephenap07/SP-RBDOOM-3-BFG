@@ -500,7 +500,7 @@ R_SetupDrawSurfJoints
 void R_SetupDrawSurfJoints( drawSurf_t* drawSurf, const srfTriangles_t* tri, const idMaterial* shader )
 {
 	// RB: added check whether GPU skinning is available at all
-	if( tri->staticModelWithJoints == NULL || !r_useGPUSkinning.GetBool() || !glConfig.gpuSkinningAvailable )
+	if( tri->staticModelWithJoints == NULL || !r_useGPUSkinning.GetBool() )
 	{
 		drawSurf->jointCache = 0;
 		drawSurf->skinnedCache = 0;
@@ -912,7 +912,7 @@ void R_AddSingleModel( viewEntity_t* vEntity )
 		const bool surfaceDirectlyVisible = modelIsVisible && !idRenderMatrix::CullBoundsToMVP( vEntity->mvp, tri->bounds );
 
 		// RB: added check whether GPU skinning is available at all
-		const bool gpuSkinned = ( tri->staticModelWithJoints != NULL && r_useGPUSkinning.GetBool() && glConfig.gpuSkinningAvailable );
+		const bool gpuSkinned = ( tri->staticModelWithJoints != NULL && r_useGPUSkinning.GetBool() );
 		// RB end
 
 		vertCacheHandle_t skinnedCache = 0;

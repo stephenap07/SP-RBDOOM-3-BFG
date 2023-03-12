@@ -6,6 +6,7 @@ Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2012 dhewg (dhewm3)
 Copyright (C) 2012-2014 Robert Beckebans
 Copyright (C) 2013 Daniel Gibson
+Copyright (C) 2023 Stephen Saunders
 
 This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
@@ -46,10 +47,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "renderer/RenderCommon.h"
 #include "sdl_local.h"
 
-#if defined( USE_NVRHI )
-	#include <sys/DeviceManager.h>
-	extern DeviceManager* deviceManager;
-#endif
+#include <sys/DeviceManager.h>
+extern DeviceManager* deviceManager;
 
 idCVar in_nograb( "in_nograb", "0", CVAR_SYSTEM | CVAR_NOCHEAT, "prevents input grabbing" );
 
@@ -69,9 +68,6 @@ idCVar r_waylandcompat( "r_waylandcompat", "0", CVAR_SYSTEM | CVAR_NOCHEAT | CVA
 // RB end
 
 static bool grabbed = false;
-
-//vulkanContext_t vkcontext; // Eric: I added this to pass SDL_Window* window to the SDL_Vulkan_* methods that are used else were.
-
 static SDL_Window* window = nullptr;
 
 // Eric: Integrate this into RBDoom3BFG's source code ecosystem.
@@ -88,7 +84,6 @@ std::vector<const char*> get_required_extensions()
 	return sdlInstanceExtensions;
 }
 
-#if defined( USE_NVRHI )
 // SRS - Helper method for creating SDL Vulkan surface within DeviceManager_VK() when NVRHI enabled
 vk::Result DeviceManager::CreateSDLWindowSurface( vk::Instance instance, vk::SurfaceKHR* surface )
 {
@@ -121,10 +116,10 @@ bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, c
 	}
 
 	// RB
-	deviceParms.backBufferWidth = parms.width;
-	deviceParms.backBufferHeight = parms.height;
-	deviceParms.backBufferSampleCount = parms.multiSamples;
-	deviceParms.vsyncEnabled = requestedVSync;
+	m_DeviceParams.backBufferWidth = parms.width;
+	m_DeviceParams.backBufferHeight = parms.height;
+	m_DeviceParams.backBufferSampleCount = parms.multiSamples;
+	m_DeviceParams.vsyncEnabled = m_RequestedVSync;
 
 	if( !CreateDeviceAndSwapChain() )
 	{
@@ -136,33 +131,32 @@ bool DeviceManager::CreateWindowDeviceAndSwapChain( const glimpParms_t& parms, c
 
 void DeviceManager::UpdateWindowSize( const glimpParms_t& parms )
 {
-	windowVisible = true;
+	m_windowVisible = true;
 
-	if( int( deviceParms.backBufferWidth ) != parms.width ||
-			int( deviceParms.backBufferHeight ) != parms.height ||
+	if( int( m_DeviceParams.backBufferWidth ) != parms.width ||
+			int( m_DeviceParams.backBufferHeight ) != parms.height ||
 #if ID_MSAA
-			int( deviceParms.backBufferSampleCount ) != parms.multiSamples ||
+			int( m_DeviceParams.backBufferSampleCount ) != parms.multiSamples ||
 #endif
-			( deviceParms.vsyncEnabled != requestedVSync && GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN ) )
+			( m_DeviceParams.vsyncEnabled != m_RequestedVSync && GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN ) )
 	{
 		// window is not minimized, and the size has changed
 
 		BackBufferResizing();
 
-		deviceParms.backBufferWidth = parms.width;
-		deviceParms.backBufferHeight = parms.height;
-		deviceParms.backBufferSampleCount = parms.multiSamples;
-		deviceParms.vsyncEnabled = requestedVSync;
+		m_DeviceParams.backBufferWidth = parms.width;
+		m_DeviceParams.backBufferHeight = parms.height;
+		m_DeviceParams.backBufferSampleCount = parms.multiSamples;
+		m_DeviceParams.vsyncEnabled = m_RequestedVSync;
 
 		ResizeSwapChain();
 		BackBufferResized();
 	}
 	else
 	{
-		deviceParms.vsyncEnabled = requestedVSync;
+		m_DeviceParams.vsyncEnabled = m_RequestedVSync;
 	}
 }
-#endif
 
 /*
 ===================
@@ -197,7 +191,7 @@ static int GetDisplayFrequency( glimpParms_t parms )
 	return m.refresh_rate;
 }
 
-/* Eric: Is the majority of this function not needed since switching from GL to Vulkan?
+/*
 ===================
 VKimp_Init
 ===================
@@ -207,7 +201,8 @@ bool VKimp_Init( glimpParms_t parms )
 
 	common->Printf( "Initializing Vulkan subsystem\n" );
 
-	VKimp_PreInit(); // DG: make sure SDL is initialized
+	// DG: make sure SDL is initialized
+	VKimp_PreInit();
 
 	// DG: make window resizable
 	Uint32 flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
@@ -331,21 +326,10 @@ bool VKimp_Init( glimpParms_t parms )
 		 * the mouse cursor.
 		 */
 
-#if defined( USE_NVRHI )
 		glimpParms_t createParms = parms;
 		createParms.x = createParms.y = windowPos;
 
 		if( !deviceManager->CreateWindowDeviceAndSwapChain( createParms, GAME_NAME ) )
-#else
-		window = SDL_CreateWindow( GAME_NAME,
-								   windowPos,
-								   windowPos,
-								   parms.width, parms.height, flags );
-
-		vkcontext.sdlWindow = window;
-
-		if( !window )
-#endif
 		{
 			common->DPrintf( "Couldn't set Vulkan mode %d/%d/%d: %s",
 							 channelcolorbits, tdepthbits, tstencilbits, SDL_GetError() );
@@ -371,14 +355,8 @@ bool VKimp_Init( glimpParms_t parms )
 
 		glConfig.isFullscreen = ( SDL_GetWindowFlags( window ) & SDL_WINDOW_FULLSCREEN ) == SDL_WINDOW_FULLSCREEN;
 
-#if !defined( USE_NVRHI )
 		common->Printf( "Using %d color bits, %d depth, %d stencil display\n",
 						channelcolorbits, tdepthbits, tstencilbits );
-
-		glConfig.colorBits = tcolorbits;
-		glConfig.depthBits = tdepthbits;
-		glConfig.stencilBits = tstencilbits;
-#endif
 
 		// RB begin
 		glConfig.displayFrequency = GetDisplayFrequency( parms );
@@ -470,21 +448,30 @@ static bool SetScreenParmsFullscreen( glimpParms_t parms )
 
 	// change settings in that display mode according to parms
 	// FIXME: check if refreshrate, width and height are supported?
-	m.refresh_rate = parms.displayHz;
-	m.w = parms.width;
-	m.h = parms.height;
-
-	// set that displaymode
-	if( SDL_SetWindowDisplayMode( window, &m ) < 0 )
+	if( m.w != parms.width || m.h != parms.height || m.refresh_rate != parms.displayHz )
 	{
-		common->Warning( "Couldn't set window mode for fullscreen, reason: %s", SDL_GetError() );
-		return false;
+		m.w = parms.width;
+		m.h = parms.height;
+		m.refresh_rate = parms.displayHz;
+
+		// if we're already in fullscreen mode, disable it first so resizing works properly
+		if( glConfig.isFullscreen )
+		{
+			SDL_SetWindowFullscreen( window, SDL_FALSE );
+		}
+
+		// set the new displaymode
+		if( SDL_SetWindowDisplayMode( window, &m ) < 0 )
+		{
+			common->Warning( "Couldn't set window mode for fullscreen, reason: %s", SDL_GetError() );
+			return false;
+		}
 	}
 
 	// if we're currently not in fullscreen mode, we need to switch to fullscreen
 	if( !( SDL_GetWindowFlags( window ) & SDL_WINDOW_FULLSCREEN ) )
 	{
-		if( SDL_SetWindowFullscreen( window, SDL_TRUE ) < 0 )
+		if( SDL_SetWindowFullscreen( window, SDL_WINDOW_FULLSCREEN ) < 0 )
 		{
 			common->Warning( "Couldn't switch to fullscreen mode, reason: %s!", SDL_GetError() );
 			return false;
@@ -510,14 +497,16 @@ static bool SetScreenParmsWindowed( glimpParms_t parms )
 		}
 	}
 
+	// if window is maximized, restore it to normal before setting size
+	if( SDL_GetWindowFlags( window ) & SDL_WINDOW_MAXIMIZED )
+	{
+		SDL_RestoreWindow( window );
+	}
+
 	SDL_SetWindowSize( window, parms.width, parms.height );
 
-	// SRS - this logic prevents window position drift on linux when coming in and out of fullscreen
 #if !defined(__APPLE__)
-	SDL_bool borderState = SDL_GetWindowFlags( window ) & SDL_WINDOW_BORDERLESS ? SDL_FALSE : SDL_TRUE;
-	SDL_SetWindowBordered( window, SDL_FALSE );
 	SDL_SetWindowPosition( window, parms.x, parms.y );
-	SDL_SetWindowBordered( window, borderState );
 #endif
 
 	return true;
@@ -531,7 +520,6 @@ VKimp_SetScreenParms
 */
 bool VKimp_SetScreenParms( glimpParms_t parms )
 {
-
 	if( parms.fullScreen > 0 || parms.fullScreen == -2 )
 	{
 		if( !SetScreenParmsFullscreen( parms ) )
@@ -562,12 +550,10 @@ bool VKimp_SetScreenParms( glimpParms_t parms )
 	return true;
 }
 
-#if defined( USE_NVRHI )
 void DeviceManager::Shutdown()
 {
 	DestroyDeviceAndSwapChain();
 }
-#endif
 
 /*
 ===================
@@ -578,12 +564,10 @@ void VKimp_Shutdown()
 {
 	common->Printf( "Shutting down Vulkan subsystem\n" );
 
-#if defined( USE_NVRHI )
 	if( deviceManager )
 	{
 		deviceManager->Shutdown();
 	}
-#endif
 
 	if( window )
 	{
@@ -600,7 +584,6 @@ VKimp_SetGamma
 */
 void VKimp_SetGamma( unsigned short red[256], unsigned short green[256], unsigned short blue[256] )
 {
-#ifndef USE_VULKAN
 	if( !window )
 	{
 		common->Warning( "VKimp_SetGamma called without window" );
@@ -613,21 +596,7 @@ void VKimp_SetGamma( unsigned short red[256], unsigned short green[256], unsigne
 	if( SDL_SetGammaRamp( red, green, blue ) )
 #endif
 		common->Warning( "Couldn't set gamma ramp: %s", SDL_GetError() );
-#endif
 }
-
-/*
-===================
-VKimp_ExtensionPointer
-===================
-*/
-/*
-GLExtension_t VKimp_ExtensionPointer(const char *name) {
-	assert(SDL_WasInit(SDL_INIT_VIDEO));
-
-	return (GLExtension_t)SDL_GL_GetProcAddress(name);
-}
-*/
 
 void VKimp_GrabInput( int flags )
 {
@@ -707,6 +676,8 @@ static void FillStaticVidModes( idList<vidMode_t>& modeList )
 	modeList.AddUnique( vidMode_t( 1920, 1200, 60 ) );
 	modeList.AddUnique( vidMode_t( 2048, 1536, 60 ) );
 	modeList.AddUnique( vidMode_t( 2560, 1600, 60 ) );
+	modeList.AddUnique( vidMode_t( 2560, 1600, 60 ) );
+	modeList.AddUnique( vidMode_t( 3840, 2160, 60 ) );
 
 	modeList.SortWithTemplate( idSort_VidMode() );
 }
@@ -721,6 +692,8 @@ bool R_GetModeListForDisplay( const int requestedDisplayNum, idList<vidMode_t>& 
 	assert( requestedDisplayNum >= 0 );
 
 	modeList.Clear();
+
+	bool	verbose = false;
 
 	// DG: SDL2 implementation
 	if( requestedDisplayNum >= SDL_GetNumVideoDisplays() )
@@ -740,6 +713,29 @@ bool R_GetModeListForDisplay( const int requestedDisplayNum, idList<vidMode_t>& 
 			{
 				common->Warning( "Can't get video mode no %i, because of %s\n", i, SDL_GetError() );
 				continue;
+			}
+
+			if( SDL_BITSPERPIXEL( m.format ) != 32 && SDL_BITSPERPIXEL( m.format ) != 24 )
+			{
+				continue;
+			}
+			if( ( m.refresh_rate != 60 ) && ( m.refresh_rate != 120 ) &&
+					( m.refresh_rate != 144 ) && ( m.refresh_rate != 165 ) && ( m.refresh_rate != 240 ) )
+			{
+				continue;
+			}
+			if( m.h < 720 )
+			{
+				continue;
+			}
+			if( verbose )
+			{
+				common->Printf( "          -------------------\n" );
+				common->Printf( "          modeNum             : %i\n", i );
+				common->Printf( "          dmBitsPerPel        : %i\n", SDL_BITSPERPIXEL( m.format ) );
+				common->Printf( "          dmPelsWidth         : %i\n", m.w );
+				common->Printf( "          dmPelsHeight        : %i\n", m.h );
+				common->Printf( "          dmDisplayFrequency  : %i\n", m.refresh_rate );
 			}
 
 			vidMode_t mode;

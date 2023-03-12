@@ -30,8 +30,12 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __BUFFEROBJECT_H__
 #define __BUFFEROBJECT_H__
 
-#if defined( USE_VULKAN )
-	#include "Vulkan/Allocator_VK.h"
+
+#include <nvrhi/nvrhi.h>
+
+#if defined( USE_AMD_ALLOCATOR )
+	#include <nvrhi/vulkan.h>
+	#include "vk_mem_alloc.h"
 #endif
 
 #if defined( USE_NVRHI )
@@ -82,22 +86,10 @@ public:
 	{
 		return usage;
 	}
-#if defined( USE_VULKAN )
-	VkBuffer			GetAPIObject() const
-	{
-		return bufferHandle;
-	}
-#elif defined( USE_NVRHI )
 	nvrhi::IBuffer*		GetAPIObject() const
 	{
 		return bufferHandle;
 	}
-#else
-	GLintptr			GetAPIObject() const
-	{
-		return bufferHandle;
-	}
-#endif
 	int					GetOffset() const
 	{
 		return ( offsetInOtherBuffer & ~OWNS_BUFFER_FLAG );
@@ -134,26 +126,16 @@ protected:
 	int							offsetInOtherBuffer;	// offset in bytes
 	bufferUsageType_t			usage;
 
-#if defined( USE_VULKAN )
-	VkBuffer			bufferHandle;
-
-#if defined( USE_AMD_ALLOCATOR )
-	VmaAllocation		vmaAllocation;
-	VmaAllocationInfo	allocation;
-#else
-	vulkanAllocation_t	allocation;
-#endif
-
-#elif defined( USE_NVRHI )
 	nvrhi::InputLayoutHandle	inputLayout;
 	nvrhi::BufferHandle			bufferHandle;
 	DescriptorHandle			bindlessHandle;
 	void*						buffer;
 	idStr						debugName;
-#else
-	// GL
-	GLintptr					bufferHandle;
-	void* 						buffer;
+
+#if defined( USE_AMD_ALLOCATOR )
+	VkBuffer					vkBuffer;
+	VmaAllocation				allocation;
+	VmaAllocationInfo			allocationInfo;
 #endif
 
 	// sizeof() confuses typeinfo...

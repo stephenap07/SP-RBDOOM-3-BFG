@@ -39,14 +39,12 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "imgui/ImGui_Hooks.h"
 
-#if defined( USE_NVRHI )
-	#include "RenderPass.h"
-	#include <sys/DeviceManager.h>
-	#include <nvrhi/utils.h>
+#include "RenderPass.h"
+#include <sys/DeviceManager.h>
+#include <nvrhi/utils.h>
 
-	idCVar r_useNewSsaoPass( "r_useNewSSAOPass", "0", CVAR_RENDERER | CVAR_BOOL, "use the new ssao pass from donut" );
-	extern DeviceManager* deviceManager;
-#endif
+idCVar r_useNewSsaoPass( "r_useNewSSAOPass", "1", CVAR_RENDERER | CVAR_BOOL, "use the new SSAO pass from Donut" );
+extern DeviceManager* deviceManager;
 
 idCVar r_drawEyeColor( "r_drawEyeColor", "0", CVAR_RENDERER | CVAR_BOOL, "Draw a colored box, red = left eye, blue = right eye, grey = non-stereo" );
 idCVar r_motionBlur( "r_motionBlur", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_ARCHIVE, "1 - 5, log2 of the number of motion blur samples" );
@@ -58,6 +56,9 @@ idCVar r_useLightStencilSelect( "r_useLightStencilSelect", "0", CVAR_RENDERER | 
 idCVar r_useNewDepthPass( "r_useNewDepthPass", "0", CVAR_RENDERER | CVAR_BOOL, "use the new depth buffer pass " );
 
 extern idCVar stereoRender_swapEyes;
+
+// SRS - flag indicating whether we are drawing a 3d view vs. a 2d-only view (e.g. menu or pda)
+bool drawView3D;
 
 /*
 ================
@@ -790,6 +791,13 @@ on the 360.
 */
 void idRenderBackend::FillDepthBufferFast( drawSurf_t** drawSurfs, int numDrawSurfs )
 {
+	OPTICK_EVENT( "Render_FillDepthBufferFast" );
+
+#if USE_OPTICK_GPU
+	OPTICK_GPU_CONTEXT( ( ID3D12GraphicsCommandList* ) commandList->getNativeObject( nvrhi::ObjectTypes::D3D12_GraphicsCommandList ) );
+	OPTICK_GPU_EVENT( "Render_FillDepthBufferFast" );
+#endif
+
 	if( numDrawSurfs == 0 )
 	{
 		return;
@@ -909,22 +917,16 @@ GENERAL INTERACTION RENDERING
 const int INTERACTION_TEXUNIT_BUMP			= 0;
 const int INTERACTION_TEXUNIT_SPECULARMIX	= 1;
 const int INTERACTION_TEXUNIT_BASECOLOR		= 2;
+
 const int INTERACTION_TEXUNIT_FALLOFF		= 3;	// RB: also _brdfLut
 const int INTERACTION_TEXUNIT_PROJECTION	= 4;	// RB: also SSAO render target
 const int INTERACTION_TEXUNIT_SHADOWMAPS	= 5;
 const int INTERACTION_TEXUNIT_JITTER		= 6;
 
-#if defined( USE_VULKAN )
-	const int INTERACTION_TEXUNIT_AMBIENT_CUBE1 = 5;
-	const int INTERACTION_TEXUNIT_SPECULAR_CUBE1 = 6;
-	const int INTERACTION_TEXUNIT_SPECULAR_CUBE2 = 7;
-	const int INTERACTION_TEXUNIT_SPECULAR_CUBE3 = 8;
-#else
-	const int INTERACTION_TEXUNIT_AMBIENT_CUBE1 = 7;
-	const int INTERACTION_TEXUNIT_SPECULAR_CUBE1 = 8;
-	const int INTERACTION_TEXUNIT_SPECULAR_CUBE2 = 9;
-	const int INTERACTION_TEXUNIT_SPECULAR_CUBE3 = 10;
-#endif
+const int INTERACTION_TEXUNIT_AMBIENT_CUBE1 = 7;
+const int INTERACTION_TEXUNIT_SPECULAR_CUBE1 = 8;
+const int INTERACTION_TEXUNIT_SPECULAR_CUBE2 = 9;
+const int INTERACTION_TEXUNIT_SPECULAR_CUBE3 = 10;
 
 /*
 ==================
@@ -1115,9 +1117,6 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		globalImages->brdfLutImage->Bind();
 
 		GL_SelectTexture( INTERACTION_TEXUNIT_PROJECTION );
-#if defined( USE_VULKAN )
-		globalImages->whiteImage->Bind();
-#else
 		if( !r_useSSAO.GetBool() || ( viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) ) )
 		{
 			globalImages->whiteImage->Bind();
@@ -1126,7 +1125,6 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		{
 			globalImages->ambientOcclusionImage[0]->Bind();
 		}
-#endif
 
 		GL_SelectTexture( INTERACTION_TEXUNIT_AMBIENT_CUBE1 );
 		currentSpace->lightGridAtlasImage->Bind();
@@ -1197,9 +1195,6 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		globalImages->brdfLutImage->Bind();
 
 		GL_SelectTexture( INTERACTION_TEXUNIT_PROJECTION );
-#if defined( USE_VULKAN )
-		globalImages->whiteImage->Bind();
-#else
 		if( !r_useSSAO.GetBool() || ( viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) ) )
 		{
 			globalImages->whiteImage->Bind();
@@ -1208,7 +1203,6 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 		{
 			globalImages->ambientOcclusionImage[0]->Bind();
 		}
-#endif
 
 		GL_SelectTexture( INTERACTION_TEXUNIT_AMBIENT_CUBE1 );
 		viewDef->irradianceImage->Bind();
@@ -1244,7 +1238,7 @@ void idRenderBackend::DrawSingleInteraction( drawInteraction_t* din, bool useFas
 			}
 			else
 			{
-				if( !r_skipShadows.GetBool() && r_useShadowMapping.GetBool() && din->vLight->globalShadows )
+				if( !r_skipShadows.GetBool() && r_useShadowMapping.GetBool() && din->vLight->globalShadows && din->vLight->shadowLOD > -1 )
 				{
 					// RB: we have shadow mapping enabled and shadow maps so do a shadow compare
 
@@ -1625,7 +1619,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 	bool lightDepthBoundsDisabled = false;
 
 	// RB begin
-	if( !r_skipShadows.GetBool() && r_useShadowMapping.GetBool() )
+	if( !r_skipShadows.GetBool() && r_useShadowMapping.GetBool() && vLight->shadowLOD > -1 )
 	{
 		const static int JITTER_SIZE = 128;
 
@@ -1672,7 +1666,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			float jitterTexScale[4];
 			jitterTexScale[0] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;	// TODO shadow buffer size fraction shadowMapSize / maxShadowMapSize
 			jitterTexScale[1] = vLight->imageSize.x / float( r_shadowMapAtlasSize.GetInteger() );
-			jitterTexScale[2] = -r_shadowMapBiasScale.GetFloat();
+			jitterTexScale[2] = vLight->shadowFadeOut;
 			jitterTexScale[3] = shadowMapSamples;
 			SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
 
@@ -1700,7 +1694,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			float jitterTexScale[4];
 			jitterTexScale[0] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;	// TODO shadow buffer size fraction shadowMapSize / maxShadowMapSize
 			jitterTexScale[1] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;
-			jitterTexScale[2] = -r_shadowMapBiasScale.GetFloat();
+			jitterTexScale[2] = 1;
 			jitterTexScale[3] = shadowMapSamples;
 			SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
 		}
@@ -1727,7 +1721,7 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			lightRegs[ lightStage->color.registers[3] ] );
 
 		// apply the world-global overbright and the 2x factor for specular
-		const idVec4 diffuseColor = lightColor;
+		idVec4 diffuseColor = lightColor;
 // jmarshall
 		idVec4 specularColor = lightColor * 2.0f;
 
@@ -1736,6 +1730,11 @@ void idRenderBackend::RenderInteractions( const drawSurf_t* surfList, const view
 			specularColor.Zero();
 		}
 // jmarshall end
+
+		//if( vLight->shadowLOD == 4 )
+		//{
+		//	diffuseColor = colorRed;
+		//}
 
 		float lightTextureMatrix[16];
 		if( lightStage->texture.hasMatrix )
@@ -2089,22 +2088,29 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		return;
 	}
 
-#if defined( USE_VULKAN )
-	if( fillGbuffer )
-	{
-		return;
-	}
-#endif
-
-
 	renderLog.OpenMainBlock( fillGbuffer ? MRB_FILL_GEOMETRY_BUFFER : MRB_AMBIENT_PASS );
 	renderLog.OpenBlock( fillGbuffer ? "Fill_GeometryBuffer" : "Render_AmbientPass", colorBlue );
+
+	// make sure rpWindowCoord is set even without post processing surfaces in the view
+	int x = viewDef->viewport.x1;
+	int y = viewDef->viewport.y1;
+	int	w = viewDef->viewport.x2 - viewDef->viewport.x1 + 1;
+	int	h = viewDef->viewport.y2 - viewDef->viewport.y1 + 1;
+
+	// window coord to 0.0 to 1.0 conversion
+	float windowCoordParm[4];
+	windowCoordParm[0] = 1.0f / w;
+	windowCoordParm[1] = 1.0f / h;
+	windowCoordParm[2] = w;
+	windowCoordParm[3] = h;
+	renderProgManager.SetUniformValue( RENDERPARM_WINDOWCOORD, windowCoordParm ); // rpWindowCoord
 
 	if( fillGbuffer )
 	{
 		commandList->clearTextureFloat( globalImages->gbufferNormalsRoughnessImage->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 0.f ) );
 	}
 
+	// RB: TODO remove this
 	if( !fillGbuffer && r_useSSAO.GetBool() && r_ssaoDebug.GetBool() )
 	{
 		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
@@ -2123,9 +2129,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 
 		currentSpace = NULL;
 		auto mvp = renderMatrix_identity;
-#if defined( USE_NVRHI )
 		mvp[1][1] = -mvp[1][1]; // flip y
-#endif
 		RB_SetMVP( mvp );
 
 		renderProgManager.BindShader_Texture();
@@ -2211,7 +2215,7 @@ void idRenderBackend::AmbientPass( const drawSurf_t* const* drawSurfs, int numDr
 		if( !r_usePBR.GetBool() )
 		{
 			ambientBoost += r_useSSAO.GetBool() ? 0.2f : 0.0f;
-			ambientBoost *= r_useHDR.GetBool() ? 1.1f : 1.0f;
+			ambientBoost *= 1.1f;
 		}
 
 		ambientColor.x = r_forceAmbient.GetFloat() * ambientBoost;
@@ -3517,8 +3521,6 @@ void idRenderBackend::ShadowMapPassFast( const drawSurf_t* drawSurfs, viewLight_
 	idRenderMatrix lightViewRenderMatrix;
 	SetupShadowMapMatrices( vLight, side, lightProjectionRenderMatrix, lightViewRenderMatrix );
 
-#if defined( USE_NVRHI )
-
 	int slice = Max( 0, side );
 
 	if( atlas )
@@ -3540,26 +3542,6 @@ void idRenderBackend::ShadowMapPassFast( const drawSurf_t* drawSurfs, viewLight_
 		}
 	}
 
-#elif !defined( USE_VULKAN )
-	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Bind();
-
-	if( side < 0 )
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], 0 );
-	}
-	else
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], side );
-	}
-
-	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Check();
-
-	GL_ViewportAndScissor( 0, 0, shadowMapResolutions[vLight->shadowLOD], shadowMapResolutions[vLight->shadowLOD] );
-
-
-	glClear( GL_DEPTH_BUFFER_BIT );
-#endif
-
 	// process the chain of shadows with the current rendering state
 	currentSpace = NULL;
 
@@ -3574,23 +3556,6 @@ void idRenderBackend::ShadowMapPassFast( const drawSurf_t* drawSurfs, viewLight_
 
 	for( const drawSurf_t* drawSurf = drawSurfs; drawSurf != NULL; drawSurf = drawSurf->nextOnLight )
 	{
-
-#if 0
-		// make sure the shadow occluder geometry is done
-		if( drawSurf->shadowVolumeState != SHADOWVOLUME_DONE )
-		{
-			assert( drawSurf->shadowVolumeState == SHADOWVOLUME_UNFINISHED || drawSurf->shadowVolumeState == SHADOWVOLUME_DONE );
-
-			uint64 start = Sys_Microseconds();
-			while( drawSurf->shadowVolumeState == SHADOWVOLUME_UNFINISHED )
-			{
-				Sys_Yield();
-			}
-			uint64 end = Sys_Microseconds();
-
-			pc.cpuShadowMicroSec += end - start;
-		}
-#endif
 
 		if( drawSurf->numIndexes == 0 )
 		{
@@ -3685,295 +3650,6 @@ void idRenderBackend::ShadowMapPassFast( const drawSurf_t* drawSurfs, viewLight_
 	renderLog.CloseBlock();
 }
 
-
-/*
-=====================
-idRenderBackend::ShadowMapPass
-=====================
-*/
-void idRenderBackend::ShadowMapPassOld( const drawSurf_t* drawSurfs, viewLight_t* vLight, int side )
-{
-	if( r_skipShadows.GetBool() )
-	{
-		return;
-	}
-
-	if( drawSurfs == NULL )
-	{
-		return;
-	}
-
-	if( viewDef->renderView.rdflags & RDF_NOSHADOWS )
-	{
-		return;
-	}
-
-	renderLog.OpenBlock( "Render_ShadowMapsOld", colorBrown );
-
-	renderProgManager.BindShader_Depth();
-
-	GL_SelectTexture( 0 );
-
-	uint64 glState = 0;
-
-	// the actual stencil func will be set in the draw code, but we need to make sure it isn't
-	// disabled here, and that the value will get reset for the interactions without looking
-	// like a no-change-required
-	GL_State( glState | GLS_POLYGON_OFFSET );
-
-	switch( r_shadowMapOccluderFacing.GetInteger() )
-	{
-		case 0:
-			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_FRONTSIDED );
-			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat(), r_shadowMapPolygonOffset.GetFloat() );
-			break;
-
-		case 1:
-			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_BACKSIDED );
-			GL_PolygonOffset( -r_shadowMapPolygonFactor.GetFloat(), -r_shadowMapPolygonOffset.GetFloat() );
-			break;
-
-		default:
-			GL_State( ( glStateBits & ~( GLS_CULL_MASK ) ) | GLS_CULL_TWOSIDED );
-			GL_PolygonOffset( r_shadowMapPolygonFactor.GetFloat(), r_shadowMapPolygonOffset.GetFloat() );
-			break;
-	}
-
-	idRenderMatrix lightProjectionRenderMatrix;
-	idRenderMatrix lightViewRenderMatrix;
-
-	SetupShadowMapMatrices( vLight, side, lightProjectionRenderMatrix, lightViewRenderMatrix );
-
-#if defined( USE_NVRHI )
-	if( side < 0 )
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD][0]->Bind();
-	}
-	else
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD][side]->Bind();
-	}
-
-
-	GL_ViewportAndScissor( 0, 0, shadowMapResolutions[vLight->shadowLOD], shadowMapResolutions[vLight->shadowLOD] );
-
-	const nvrhi::FramebufferAttachment& att = currentFrameBuffer->GetApiObject()->getDesc().depthAttachment;
-	if( att.texture )
-	{
-		int slice = Max( 0, side );
-		commandList->clearDepthStencilTexture( att.texture, nvrhi::TextureSubresourceSet().setArraySlices( slice, 1 ), true, 1.f, false, 0x80 );
-	}
-#elif !defined( USE_VULKAN )
-	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Bind();
-
-	if( side < 0 )
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], 0 );
-	}
-	else
-	{
-		globalFramebuffers.shadowFBO[vLight->shadowLOD]->AttachImageDepthLayer( globalImages->shadowImage[vLight->shadowLOD], side );
-	}
-
-	globalFramebuffers.shadowFBO[vLight->shadowLOD]->Check();
-
-	GL_ViewportAndScissor( 0, 0, shadowMapResolutions[vLight->shadowLOD], shadowMapResolutions[vLight->shadowLOD] );
-
-
-	glClear( GL_DEPTH_BUFFER_BIT );
-#endif
-
-	// process the chain of shadows with the current rendering state
-	currentSpace = NULL;
-
-	for( const drawSurf_t* drawSurf = drawSurfs; drawSurf != NULL; drawSurf = drawSurf->nextOnLight )
-	{
-
-#if 1
-		// make sure the shadow occluder geometry is done
-		if( drawSurf->shadowVolumeState != SHADOWVOLUME_DONE )
-		{
-			assert( drawSurf->shadowVolumeState == SHADOWVOLUME_UNFINISHED || drawSurf->shadowVolumeState == SHADOWVOLUME_DONE );
-
-			uint64 start = Sys_Microseconds();
-			while( drawSurf->shadowVolumeState == SHADOWVOLUME_UNFINISHED )
-			{
-				Sys_Yield();
-			}
-			uint64 end = Sys_Microseconds();
-
-			pc.cpuShadowMicroSec += end - start;
-		}
-#endif
-
-		if( drawSurf->numIndexes == 0 )
-		{
-			continue;	// a job may have created an empty shadow geometry
-		}
-
-		if( drawSurf->space != currentSpace )
-		{
-			// model -> world
-			idRenderMatrix modelRenderMatrix;
-			idRenderMatrix::Transpose( *( idRenderMatrix* )drawSurf->space->modelMatrix, modelRenderMatrix );
-
-			// world -> light = light camera view of model in Doom
-			idRenderMatrix modelToLightRenderMatrix;
-			idRenderMatrix::Multiply( lightViewRenderMatrix, modelRenderMatrix, modelToLightRenderMatrix );
-
-			idRenderMatrix clipMVP;
-			idRenderMatrix::Multiply( lightProjectionRenderMatrix, modelToLightRenderMatrix, clipMVP );
-
-			if( vLight->parallel )
-			{
-				// cascaded sun light shadowmap
-				idRenderMatrix MVP;
-				idRenderMatrix::Multiply( renderMatrix_clipSpaceToWindowSpace, clipMVP, MVP );
-
-				RB_SetMVP( clipMVP );
-			}
-			else if( side < 0 )
-			{
-				// spot light
-				idRenderMatrix MVP;
-				idRenderMatrix::Multiply( renderMatrix_windowSpaceToClipSpace, clipMVP, MVP );
-
-				RB_SetMVP( MVP );
-			}
-			else
-			{
-				// point light
-				RB_SetMVP( clipMVP );
-			}
-
-			// set the local light position to allow the vertex program to project the shadow volume end cap to infinity
-			/*
-			idVec4 localLight( 0.0f );
-			R_GlobalPointToLocal( drawSurf->space->modelMatrix, vLight->globalLightOrigin, localLight.ToVec3() );
-			SetVertexParm( RENDERPARM_LOCALLIGHTORIGIN, localLight.ToFloatPtr() );
-			*/
-
-			currentSpace = drawSurf->space;
-		}
-
-		bool didDraw = false;
-
-		const idMaterial* shader = drawSurf->material;
-
-		// get the expressions for conditionals / color / texcoords
-		const float* regs = drawSurf->shaderRegisters;
-		idVec4 color( 0, 0, 0, 1 );
-
-		uint64 surfGLState = 0;
-
-		// set polygon offset if necessary
-		if( shader && shader->TestMaterialFlag( MF_POLYGONOFFSET ) )
-		{
-			surfGLState |= GLS_POLYGON_OFFSET;
-			GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * shader->GetPolygonOffset() );
-		}
-
-#if 1
-		if( shader && shader->Coverage() == MC_PERFORATED )
-		{
-			// perforated surfaces may have multiple alpha tested stages
-			for( int stage = 0; stage < shader->GetNumStages(); stage++ )
-			{
-				const shaderStage_t* pStage = shader->GetStage( stage );
-
-				if( !pStage->hasAlphaTest )
-				{
-					continue;
-				}
-
-				// check the stage enable condition
-				if( regs[ pStage->conditionRegister ] == 0 )
-				{
-					continue;
-				}
-
-				// if we at least tried to draw an alpha tested stage,
-				// we won't draw the opaque surface
-				didDraw = true;
-
-				// set the alpha modulate
-				color[3] = regs[ pStage->color.registers[3] ];
-
-				// skip the entire stage if alpha would be black
-				if( color[3] <= 0.0f )
-				{
-					continue;
-				}
-
-				uint64 stageGLState = surfGLState;
-
-				// set privatePolygonOffset if necessary
-				if( pStage->privatePolygonOffset )
-				{
-					GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * pStage->privatePolygonOffset );
-					stageGLState |= GLS_POLYGON_OFFSET;
-				}
-
-				GL_Color( color );
-
-				GL_State( stageGLState );
-				idVec4 alphaTestValue( regs[ pStage->alphaTestRegister ] );
-				SetFragmentParm( RENDERPARM_ALPHA_TEST, alphaTestValue.ToFloatPtr() );
-
-				if( false && drawSurf->jointCache )
-				{
-					renderProgManager.BindShader_TextureVertexColorSkinned();
-				}
-				else
-				{
-					renderProgManager.BindShader_TextureVertexColor();
-				}
-
-				RB_SetVertexColorParms( SVC_IGNORE );
-
-				// bind the texture
-				GL_SelectTexture( 0 );
-				pStage->texture.image->Bind();
-
-				// set texture matrix and texGens
-				PrepareStageTexturing( pStage, drawSurf );
-
-				// must render with less-equal for Z-Cull to work properly
-				assert( ( GL_GetCurrentState() & GLS_DEPTHFUNC_BITS ) == GLS_DEPTHFUNC_LESS );
-
-				// draw it
-				DrawElementsWithCounters( drawSurf );
-
-				// clean up
-				FinishStageTexturing( pStage, drawSurf );
-
-				// unset privatePolygonOffset if necessary
-				if( pStage->privatePolygonOffset )
-				{
-					GL_PolygonOffset( r_offsetFactor.GetFloat(), r_offsetUnits.GetFloat() * shader->GetPolygonOffset() );
-				}
-			}
-		}
-#endif
-
-		if( !didDraw )
-		{
-			if( false && drawSurf->jointCache )
-			{
-				renderProgManager.BindShader_DepthSkinned();
-			}
-			else
-			{
-				renderProgManager.BindShader_Depth();
-			}
-
-			DrawElementsWithCounters( drawSurf );
-		}
-	}
-
-	renderLog.CloseBlock();
-}
-
 void RectAllocatorBinPack2D( const idList<idVec2i>& inputSizes, const idStrList& inputNames, idList<idVec2i>& outputPositions, idVec2i& totalSize, const int START_MAX );
 
 void RectAllocatorQuadTree( const idList<idVec2i>& inputSizes, idList<idVec2i>& outputPositions, idVec2i& totalSize, const int TILED_SM_RES, const int MAX_TILE_RES, const int NUM_QUAD_TREE_LEVELS );
@@ -4001,6 +3677,13 @@ void idRenderBackend::ShadowAtlasPass( const viewDef_t* _viewDef )
 		return;
 	}
 
+	OPTICK_EVENT( "Render_ShadowAtlas" );
+
+#if USE_OPTICK_GPU
+	OPTICK_GPU_CONTEXT( ( ID3D12GraphicsCommandList* ) commandList->getNativeObject( nvrhi::ObjectTypes::D3D12_GraphicsCommandList ) );
+	OPTICK_GPU_EVENT( "Render_ShadowAtlas" );
+#endif
+
 	renderLog.OpenMainBlock( MRB_SHADOW_ATLAS_PASS );
 	renderLog.OpenBlock( "Render_ShadowAtlas", colorYellow );
 
@@ -4014,10 +3697,18 @@ void idRenderBackend::ShadowAtlasPass( const viewDef_t* _viewDef )
 
 	GL_ViewportAndScissor( 0, 0, r_shadowMapAtlasSize.GetInteger(), r_shadowMapAtlasSize.GetInteger() );
 
-	const nvrhi::FramebufferAttachment& att = currentFrameBuffer->GetApiObject()->getDesc().depthAttachment;
-	if( att.texture )
+	/*
+	const nvrhi::FramebufferAttachment& attColor = currentFrameBuffer->GetApiObject()->getDesc().colorAttachments[0];
+	if( attColor.texture )
 	{
-		commandList->clearDepthStencilTexture( att.texture, nvrhi::AllSubresources, true, 1.0f, false, 0x80 );
+		commandList->clearTextureFloat( attColor.texture, nvrhi::AllSubresources, nvrhi::Color( 0.0f ) );
+	}
+	*/
+
+	const nvrhi::FramebufferAttachment& attDepth = currentFrameBuffer->GetApiObject()->getDesc().depthAttachment;
+	if( attDepth.texture )
+	{
+		commandList->clearDepthStencilTexture( attDepth.texture, nvrhi::AllSubresources, true, 1.0f, false, 0x80 );
 	}
 
 	//
@@ -4042,6 +3733,12 @@ void idRenderBackend::ShadowAtlasPass( const viewDef_t* _viewDef )
 
 		if( vLight->localInteractions == NULL && vLight->globalInteractions == NULL && vLight->translucentInteractions == NULL )
 		{
+			continue;
+		}
+
+		if( vLight->shadowLOD == -1 )
+		{
+			// light doesn't cast shadows
 			continue;
 		}
 
@@ -4075,8 +3772,13 @@ void idRenderBackend::ShadowAtlasPass( const viewDef_t* _viewDef )
 
 		for( ; side < sideStop ; side++ )
 		{
-			inputSizes.Append( idVec2i( shadowMapResolutions[ vLight->shadowLOD ], shadowMapResolutions[ vLight->shadowLOD ] ) );
-			//inputNames.Append( lightShader->GetName() );
+			idVec2i size( shadowMapResolutions[ vLight->shadowLOD ], shadowMapResolutions[ vLight->shadowLOD ] );
+			inputSizes.Append( size );
+
+			//if( size.x >= 1024 )
+			//{
+			//	inputNames.Append( lightShader->GetName() );
+			//}
 
 			shadowIndex++;
 		}
@@ -4086,12 +3788,6 @@ void idRenderBackend::ShadowAtlasPass( const viewDef_t* _viewDef )
 	idList<int>		outputSizes;
 	//idVec2i	totalSize;
 
-#if 0
-
-	RectAllocatorBinPack2D( inputSizes, inputNames, outputPositions, totalSize, r_shadowMapAtlasSize.GetInteger() );
-
-#else
-	//RectAllocatorQuadTree( inputSizes, outputPositions, totalSize, r_shadowMapAtlasSize.GetInteger(), 1024, 8 );
 
 	// RB: we don't use RectAllocatorQuadTree here because we don't want to rebuild the quad tree every frame
 
@@ -4152,7 +3848,6 @@ void idRenderBackend::ShadowAtlasPass( const viewDef_t* _viewDef )
 			outputPositions[ shadowIndex ].y = iPos.y;
 		}
 	}
-#endif
 
 	//
 	// for each light, perform shadowing to a big atlas Framebuffer
@@ -4174,6 +3869,13 @@ void idRenderBackend::ShadowAtlasPass( const viewDef_t* _viewDef )
 
 		if( vLight->localInteractions == NULL && vLight->globalInteractions == NULL && vLight->translucentInteractions == NULL )
 		{
+			continue;
+		}
+
+		if( vLight->shadowLOD == -1 )
+		{
+			// light doesn't cast shadows
+			vLight->imageSize.x = vLight->imageSize.y = -1;
 			continue;
 		}
 
@@ -4299,6 +4001,13 @@ void idRenderBackend::DrawInteractions( const viewDef_t* _viewDef )
 	{
 		return;
 	}
+
+	OPTICK_EVENT( "Render_Interactions" );
+
+#if USE_OPTICK_GPU
+	OPTICK_GPU_CONTEXT( ( ID3D12GraphicsCommandList* ) commandList->getNativeObject( nvrhi::ObjectTypes::D3D12_GraphicsCommandList ) );
+	OPTICK_GPU_EVENT( "Render_Interactions" );
+#endif
 
 	renderLog.OpenMainBlock( MRB_DRAW_INTERACTIONS );
 	renderLog.OpenBlock( "Render_Interactions", colorYellow );
@@ -4548,6 +4257,8 @@ int idRenderBackend::DrawShaderPasses( const drawSurf_t* const* const drawSurfs,
 	{
 		return numDrawSurfs;
 	}
+
+	OPTICK_EVENT( "Render_GenericShaderPasses" );
 
 	renderLog.OpenBlock( "Render_GenericShaderPasses", colorBlue );
 	if( viewDef->targetRender )
@@ -5303,6 +5014,8 @@ void idRenderBackend::FogAllLights()
 		return;
 	}
 
+	//OPTICK_EVENT( "Render_FogAllLights" );
+
 	renderLog.OpenMainBlock( MRB_FOG_ALL_LIGHTS );
 	renderLog.OpenBlock( "Render_FogAllLights", colorBlue );
 
@@ -5323,129 +5036,6 @@ void idRenderBackend::FogAllLights()
 
 	renderLog.CloseBlock();
 	renderLog.CloseMainBlock();
-}
-
-// RB begin
-void idRenderBackend::CalculateAutomaticExposure()
-{
-	int				i;
-	static float	image[64 * 64 * 4];
-	float           curTime;
-	float			deltaTime;
-	float           luminance;
-	float			avgLuminance;
-	float			maxLuminance;
-	double			sum;
-	const idVec3    LUMINANCE_SRGB( 0.2125f, 0.7154f, 0.0721f ); // be careful wether this should be linear RGB or sRGB
-	idVec4			color;
-	float			newAdaptation;
-	float			newMaximum;
-
-	if( !r_hdrAutoExposure.GetBool() )
-	{
-		// no dynamic exposure
-
-		hdrKey = r_hdrKey.GetFloat();
-		hdrAverageLuminance = r_hdrMinLuminance.GetFloat();
-		hdrMaxLuminance = 1;
-	}
-	else
-	{
-		curTime = Sys_Milliseconds() / 1000.0f;
-
-		// calculate the average scene luminance
-		globalFramebuffers.hdr64FBO->Bind();
-
-		// FIXME
-#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
-		// read back the contents
-		glReadPixels( 0, 0, 64, 64, GL_RGBA, GL_FLOAT, image );
-#endif
-
-		sum = 0.0f;
-		maxLuminance = 0.0f;
-		for( i = 0; i < ( 64 * 64 ); i += 4 )
-		{
-			color[0] = image[i * 4 + 0];
-			color[1] = image[i * 4 + 1];
-			color[2] = image[i * 4 + 2];
-			color[3] = image[i * 4 + 3];
-
-			luminance = ( color.x * LUMINANCE_SRGB.x + color.y * LUMINANCE_SRGB.y + color.z * LUMINANCE_SRGB.z ) + 0.0001f;
-			if( luminance > maxLuminance )
-			{
-				maxLuminance = luminance;
-			}
-
-			float logLuminance = log( luminance + 1 );
-			//if( logLuminance > 0 )
-			{
-				sum += luminance;
-			}
-		}
-#if 0
-		sum /= ( 64.0f * 64.0f );
-		avgLuminance = exp( sum );
-#else
-		avgLuminance = sum / ( 64.0f * 64.0f );
-#endif
-
-		// the user's adapted luminance level is simulated by closing the gap between
-		// adapted luminance and current luminance by 2% every frame, based on a
-		// 30 fps rate. This is not an accurate model of human adaptation, which can
-		// take longer than half an hour.
-		if( hdrTime > curTime )
-		{
-			hdrTime = curTime;
-		}
-
-		deltaTime = curTime - hdrTime;
-
-		//if(r_hdrMaxLuminance->value)
-		if( 0 )
-		{
-			hdrAverageLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), hdrAverageLuminance );
-			avgLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), avgLuminance );
-
-			hdrMaxLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), hdrMaxLuminance );
-			maxLuminance = idMath::ClampFloat( r_hdrMinLuminance.GetFloat(), r_hdrMaxLuminance.GetFloat(), maxLuminance );
-		}
-
-		newAdaptation = hdrAverageLuminance + ( avgLuminance - hdrAverageLuminance ) * ( 1.0f - powf( 0.98f, 30.0f * deltaTime ) );
-		newMaximum = hdrMaxLuminance + ( maxLuminance - hdrMaxLuminance ) * ( 1.0f - powf( 0.98f, 30.0f * deltaTime ) );
-
-		if( !IsNAN( newAdaptation ) && !IsNAN( newMaximum ) )
-		{
-#if 1
-			hdrAverageLuminance = newAdaptation;
-			hdrMaxLuminance = newMaximum;
-#else
-			hdrAverageLuminance = avgLuminance;
-			hdrMaxLuminance = maxLuminance;
-#endif
-		}
-
-		hdrTime = curTime;
-
-		// calculate HDR image key
-#if 0
-		// RB: this never worked :/
-		if( r_hdrAutoExposure.GetBool() )
-		{
-			// calculation from: Perceptual Effects in Real-time Tone Mapping - Krawczyk et al.
-			hdrKey = 1.03 - ( 2.0 / ( 2.0 + ( hdrAverageLuminance + 1.0f ) ) );
-		}
-		else
-#endif
-		{
-			hdrKey = r_hdrKey.GetFloat();
-		}
-	}
-
-	if( r_hdrDebug.GetBool() )
-	{
-		idLib::Printf( "HDR luminance avg = %f, max = %f, key = %f\n", hdrAverageLuminance, hdrMaxLuminance, hdrKey );
-	}
 }
 
 void idRenderBackend::DrawMotionVectors()
@@ -5470,6 +5060,8 @@ void idRenderBackend::DrawMotionVectors()
 	{
 		return;
 	}
+
+	//OPTICK_EVENT( "Render_MotionVectors" );
 
 	renderLog.OpenBlock( "Render_MotionVectors" );
 
@@ -5611,6 +5203,8 @@ void idRenderBackend::TemporalAAPass( const viewDef_t* _viewDef )
 		return;
 	}
 
+	//OPTICK_EVENT( "Render_TemporalAA" );
+
 	renderLog.OpenMainBlock( MRB_TAA );
 	renderLog.OpenBlock( "Render_TemporalAA" );
 
@@ -5638,111 +5232,16 @@ idVec2 idRenderBackend::GetCurrentPixelOffset() const
 	return idVec2( 0, 0 );
 }
 
-void idRenderBackend::Tonemap( const viewDef_t* _viewDef )
-{
-	renderLog.OpenBlock( "Tonemap" );
-
-	//postProcessCommand_t* cmd = ( postProcessCommand_t* )data;
-	//const idScreenRect& viewport = cmd->viewDef->viewport;
-	//globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
-
-	// Set up the target framebuffer
-	globalFramebuffers.ldrFBO->Bind();
-
-	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
-
-	int screenWidth = renderSystem->GetWidth();
-	int screenHeight = renderSystem->GetHeight();
-
-	// set the window clipping
-	GL_Viewport( 0, 0, screenWidth, screenHeight );
-	GL_Scissor( 0, 0, screenWidth, screenHeight );
-
-	GL_SelectTexture( 0 );
-
-#if defined(USE_HDR_MSAA)
-	if( glConfig.multisamples > 0 )
-	{
-		globalImages->currentRenderHDRImageNoMSAA->Bind();
-	}
-	else
-#endif
-	{
-		globalImages->currentRenderHDRImage->Bind();
-	}
-
-	GL_SelectTexture( 1 );
-	globalImages->heatmap7Image->Bind();
-
-	if( r_hdrDebug.GetBool() )
-	{
-		renderProgManager.BindShader_HDRDebug();
-	}
-	else
-	{
-		renderProgManager.BindShader_Tonemap();
-	}
-
-	float screenCorrectionParm[4];
-	if( _viewDef->is2Dgui )
-	{
-		screenCorrectionParm[0] = 2.0f;
-		screenCorrectionParm[1] = 1.0f;
-		screenCorrectionParm[2] = 1.0f;
-	}
-	else
-	{
-		if( r_hdrAutoExposure.GetBool() )
-		{
-			float exposureOffset = Lerp( -0.01f, 0.02f, idMath::ClampFloat( 0.0, 1.0, r_exposure.GetFloat() ) );
-
-			screenCorrectionParm[0] = hdrKey + exposureOffset;
-			screenCorrectionParm[1] = hdrAverageLuminance;
-			screenCorrectionParm[2] = hdrMaxLuminance;
-			screenCorrectionParm[3] = exposureOffset;
-			//screenCorrectionParm[3] = Lerp( -1, 5, idMath::ClampFloat( 0.0, 1.0, r_exposure.GetFloat() ) );
-		}
-		else
-		{
-			//float exposureOffset = ( idMath::ClampFloat( 0.0, 1.0, r_exposure.GetFloat() ) * 2.0f - 1.0f ) * 0.01f;
-
-			float exposureOffset = Lerp( -0.01f, 0.01f, idMath::ClampFloat( 0.0, 1.0, r_exposure.GetFloat() ) );
-
-			screenCorrectionParm[0] = 0.015f + exposureOffset;
-			screenCorrectionParm[1] = 0.005f;
-			screenCorrectionParm[2] = 1;
-
-			// RB: this gives a nice exposure curve in Scilab when using
-			// log2( max( 3 + 0..10, 0.001 ) ) as input for exp2
-			//float exposureOffset = r_exposure.GetFloat() * 10.0f;
-			//screenCorrectionParm[3] = exposureOffset;
-		}
-	}
-
-	SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-
-	// Draw
-	DrawElementsWithCounters( &unitSquareSurface );
-
-	GL_SelectTexture( 0 );
-	renderProgManager.Unbind();
-
-	GL_State( GLS_DEFAULT );
-
-	renderLog.CloseBlock();
-}
-
-
+// RB: FIXME currently not used
 void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 {
-	if( _viewDef->is2Dgui || !r_useHDR.GetBool() || ( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) )
+	if( _viewDef->is2Dgui || ( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) )
 	{
 		return;
 	}
 
 	renderLog.OpenMainBlock( MRB_BLOOM );
 	renderLog.OpenBlock( "Render_Bloom", colorBlue );
-
 
 	// BRIGHTPASS
 	renderLog.OpenBlock( "Brightpass" );
@@ -5751,12 +5250,6 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 
 	//Framebuffer::Unbind();
 	//globalFramebuffers.hdrQuarterFBO->Bind();
-
-	// FIXME
-#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
-	glClearColor( 0, 0, 0, 1 );
-//	glClear( GL_COLOR_BUFFER_BIT );
-#endif
 
 	GL_State( /*GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO |*/ GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
@@ -5771,31 +5264,9 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 
 	GL_SelectTexture( 0 );
 
-	if( r_useHDR.GetBool() )
-	{
-		globalImages->currentRenderHDRImage->Bind();
+	globalImages->currentRenderHDRImage->Bind();
 
-		renderProgManager.BindShader_Brightpass();
-	}
-	else
-	{
-		int x = viewDef->viewport.x1;
-		int y = viewDef->viewport.y1;
-		int	w = viewDef->viewport.x2 - viewDef->viewport.x1 + 1;
-		int	h = viewDef->viewport.y2 - viewDef->viewport.y1 + 1;
-
-		//RENDERLOG_PRINTF( "Resolve to %i x %i buffer\n", w, h );
-
-		// resolve the screen
-		globalImages->currentRenderImage->CopyFramebuffer( x, y, w, h );
-		commonPasses.BlitTexture(
-			commandList,
-			globalFramebuffers.bloomRenderFBO[0]->GetApiObject(),
-			globalImages->ldrImage->GetTextureHandle(),
-			&bindingCache );
-
-		renderProgManager.BindShader_Brightpass();
-	}
+	renderProgManager.BindShader_Brightpass();
 
 	float screenCorrectionParm[4];
 	screenCorrectionParm[0] = hdrKey;
@@ -5805,7 +5276,6 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 	SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
 
 	float overbright[4];
-	if( r_useHDR.GetBool() )
 	{
 		if( r_hdrAutoExposure.GetBool() )
 		{
@@ -5816,13 +5286,6 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 			overbright[0] = r_hdrContrastStaticThreshold.GetFloat();
 		}
 		overbright[1] = r_hdrContrastOffset.GetFloat();
-		overbright[2] = 0;
-		overbright[3] = 0;
-	}
-	else
-	{
-		overbright[0] = r_ldrContrastThreshold.GetFloat();
-		overbright[1] = r_ldrContrastOffset.GetFloat();
 		overbright[2] = 0;
 		overbright[3] = 0;
 	}
@@ -5844,11 +5307,7 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 		int index = ( j + 1 ) % 2;
 		globalFramebuffers.bloomRenderFBO[ index ]->Bind();
 
-#if defined( USE_NVRHI )
 		commandList->clearTextureFloat( globalImages->bloomRenderImage[index]->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 0.f, 0.f, 0.f, 1.f ) );
-#elif !defined( USE_VULKAN )
-		glClear( GL_COLOR_BUFFER_BIT );
-#endif
 
 		globalImages->bloomRenderImage[j % 2]->Bind();
 
@@ -5879,9 +5338,8 @@ void idRenderBackend::Bloom( const viewDef_t* _viewDef )
 }
 
 
-void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef, bool downModulateScreen )
+void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef )
 {
-#if !defined(USE_VULKAN)
 	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
 	{
 		// 3D views only
@@ -5889,7 +5347,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	}
 
 	// FIXME: the hierarchical depth buffer does not work with the MSAA depth texture source
-	if( r_useSSAO.GetInteger() <= 0 || r_useSSAO.GetInteger() > 1 || R_GetMSAASamples() > 1 )
+	if( !r_useSSAO.GetBool() || R_GetMSAASamples() > 1 )
 	{
 		return;
 	}
@@ -5905,6 +5363,8 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		return;
 	}
 
+	//OPTICK_EVENT( "Render_SSAO" );
+
 	renderLog.OpenMainBlock( MRB_SSAO_PASS );
 	renderLog.OpenBlock( "Render_SSAO", colorBlue );
 
@@ -5916,16 +5376,12 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	int screenWidth = renderSystem->GetWidth();
 	int screenHeight = renderSystem->GetHeight();
 
-#if defined( USE_NVRHI )
 	commandList->clearTextureFloat( globalImages->hierarchicalZbufferImage->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
 	commandList->clearTextureFloat( globalImages->ambientOcclusionImage[0]->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
-	commandList->clearTextureFloat( globalImages->ambientOcclusionImage[1]->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
-#endif
 
 	// build hierarchical depth buffer
 	if( r_useHierarchicalDepthBuffer.GetBool() )
 	{
-#if defined( USE_NVRHI )
 		renderLog.OpenBlock( "Render_HiZ" );
 
 		//if( R_GetMSAASamples() > 1 )
@@ -5944,63 +5400,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		hiZGenPass->Dispatch( commandList, MAX_HIERARCHICAL_ZBUFFERS );
 
 		renderLog.CloseBlock();
-#else
-		renderLog.OpenBlock( "Render_HiZ", colorDkGrey );
-
-		renderProgManager.BindShader_AmbientOcclusionMinify();
-
-		GL_Color( 0, 0, 0, 1 );
-
-		GL_SelectTexture( 0 );
-		//globalImages->currentDepthImage->Bind();
-
-		for( int i = 0; i < MAX_HIERARCHICAL_ZBUFFERS; i++ )
-		{
-			int width = globalFramebuffers.csDepthFBO[i]->GetWidth();
-			int height = globalFramebuffers.csDepthFBO[i]->GetHeight();
-
-			globalFramebuffers.csDepthFBO[i]->Bind();
-
-			GL_Viewport( 0, 0, width, height );
-			GL_Scissor( 0, 0, width, height );
-
-			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
-
-			glClear( GL_COLOR_BUFFER_BIT );
-
-			if( i == 0 )
-			{
-				renderProgManager.BindShader_AmbientOcclusionReconstructCSZ();
-
-				globalImages->currentDepthImage->Bind();
-			}
-			else
-			{
-				renderProgManager.BindShader_AmbientOcclusionMinify();
-
-				GL_SelectTexture( 0 );
-				globalImages->hierarchicalZbufferImage->Bind();
-			}
-
-			float jitterTexScale[4];
-			jitterTexScale[0] = i - 1;
-			jitterTexScale[1] = 0;
-			jitterTexScale[2] = 0;
-			jitterTexScale[3] = 0;
-			SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
-
-			float screenCorrectionParm[4];
-			screenCorrectionParm[0] = 1.0f / width;
-			screenCorrectionParm[1] = 1.0f / height;
-			screenCorrectionParm[2] = width;
-			screenCorrectionParm[3] = height;
-			SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-
-			DrawElementsWithCounters( &unitSquareSurface );
-		}
-
-		renderLog.CloseBlock();
-#endif
 	}
 
 	if( previousFramebuffer != NULL )
@@ -6019,57 +5418,17 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	GL_Viewport( 0, 0, aoScreenWidth, aoScreenHeight );
 	GL_Scissor( 0, 0, aoScreenWidth, aoScreenHeight );
 
-	if( downModulateScreen )
-	{
-		if( r_ssaoFiltering.GetBool() )
-		{
-			globalFramebuffers.ambientOcclusionFBO[0]->Bind();
-
-#if defined( USE_NVRHI )
-			GL_Clear( true, false, false, 0, 0, 0, 0, 0, false );
-#else
-			glClearColor( 0, 0, 0, 0 );
-			glClear( GL_COLOR_BUFFER_BIT );
-#endif
-
-			renderProgManager.BindShader_AmbientOcclusion();
-		}
-		else
-		{
-			if( r_ssaoDebug.GetInteger() <= 0 )
-			{
-				GL_State( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO | GLS_ALPHAMASK | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
-			}
-
-			if( previousFramebuffer != NULL )
-			{
-				previousFramebuffer->Bind();
-			}
-			else
-			{
-				Framebuffer::Unbind();
-			}
-
-			renderProgManager.BindShader_AmbientOcclusionAndOutput();
-		}
-	}
-	else
 	{
 		globalFramebuffers.ambientOcclusionFBO[0]->Bind();
 
 		GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
 
-#if defined( USE_NVRHI )
 		const nvrhi::FramebufferAttachment& att = globalFramebuffers.ambientOcclusionFBO[0]->GetApiObject()->getDesc().colorAttachments[0];
 
 		if( att.texture )
 		{
 			commandList->clearTextureFloat( att.texture, att.subresources, 0 );
 		}
-#else
-		glClearColor( 0, 0, 0, 0 );
-		glClear( GL_COLOR_BUFFER_BIT );
-#endif
 
 		if( r_ssaoFiltering.GetBool() )
 		{
@@ -6096,27 +5455,14 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	windowCoordParm[3] = aoScreenHeight;
 	SetFragmentParm( RENDERPARM_WINDOWCOORD, windowCoordParm ); // rpWindowCoord
 
-#if 0
-	// RB: set unprojection matrices so we can convert zbuffer values back to camera and world spaces
-	idRenderMatrix modelViewMatrix;
-	idRenderMatrix::Transpose( *( idRenderMatrix* )backEnd.viewDef->worldSpace.modelViewMatrix, modelViewMatrix );
-	idRenderMatrix cameraToWorldMatrix;
-	if( !idRenderMatrix::Inverse( modelViewMatrix, cameraToWorldMatrix ) )
-	{
-		idLib::Warning( "cameraToWorldMatrix invert failed" );
-	}
-
-	SetVertexParms( RENDERPARM_MODELMATRIX_X, cameraToWorldMatrix[0], 4 );
-	//SetVertexParms( RENDERPARM_MODELMATRIX_X, viewDef->unprojectionToWorldRenderMatrix[0], 4 );
-#endif
 	SetVertexParms( RENDERPARM_MODELMATRIX_X, viewDef->unprojectionToCameraRenderMatrix[0], 4 );
 
 	const float jitterSampleScale = 1.0f;
 
 	float jitterTexScale[4];
-	jitterTexScale[0] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;	// TODO shadow buffer size fraction shadowMapSize / maxShadowMapSize
+	jitterTexScale[0] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;
 	jitterTexScale[1] = r_shadowMapJitterScale.GetFloat() * jitterSampleScale;
-	jitterTexScale[2] = -r_shadowMapBiasScale.GetFloat();
+	jitterTexScale[2] = 0.0f;
 	jitterTexScale[3] = 0.0f;
 	SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
 
@@ -6159,6 +5505,8 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 	{
 		float jitterTexScale[4];
 
+		commandList->clearTextureFloat( globalImages->ambientOcclusionImage[1]->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
+
 		// AO blur X
 		globalFramebuffers.ambientOcclusionFBO[1]->Bind();
 
@@ -6177,26 +5525,7 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		DrawElementsWithCounters( &unitSquareSurface );
 
 		// AO blur Y
-		if( downModulateScreen )
-		{
-			if( previousFramebuffer != NULL )
-			{
-				previousFramebuffer->Bind();
-			}
-			else
-			{
-				Framebuffer::Unbind();
-			}
-
-			if( r_ssaoDebug.GetInteger() <= 0 )
-			{
-				GL_State( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
-			}
-		}
-		else
-		{
-			globalFramebuffers.ambientOcclusionFBO[0]->Bind();
-		}
+		globalFramebuffers.ambientOcclusionFBO[0]->Bind();
 
 		renderProgManager.BindShader_AmbientOcclusionBlurAndOutput();
 
@@ -6213,7 +5542,6 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 		DrawElementsWithCounters( &unitSquareSurface );
 	}
 
-	if( !downModulateScreen )
 	{
 		// go back to main scene render target
 		if( previousFramebuffer != NULL )
@@ -6244,16 +5572,16 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion( const viewDef_t* _viewDef
 /*
 NVRHI SSAO using compute shaders.
 */
-void idRenderBackend::DrawScreenSpaceAmbientOcclusion2( const viewDef_t* _viewDef, bool downModulateScreen )
+void idRenderBackend::DrawScreenSpaceAmbientOcclusion2( const viewDef_t* _viewDef )
 {
-	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
+	if( !r_useSSAO.GetBool() )
 	{
-		// 3D views only
 		return;
 	}
 
-	if( r_useSSAO.GetInteger() <= 0 || r_useSSAO.GetInteger() < 2 )
+	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
 	{
+		// 3D views only
 		return;
 	}
 
@@ -6268,281 +5596,18 @@ void idRenderBackend::DrawScreenSpaceAmbientOcclusion2( const viewDef_t* _viewDe
 		return;
 	}
 
-	//GL_CheckErrors();
-#endif
+	//OPTICK_EVENT( "Render_SSAO2" );
+
+	renderLog.OpenMainBlock( MRB_SSAO_PASS );
+	renderLog.OpenBlock( "Render_SSAO2", colorBlue );
+
+	commandList->clearTextureFloat( globalImages->ambientOcclusionImage[0]->GetTextureHandle(), nvrhi::AllSubresources, nvrhi::Color( 1.f ) );
+
+	ssaoPass->Render( commandList, _viewDef, 0 );
+
+	renderLog.CloseBlock();
+	renderLog.CloseMainBlock();
 }
-
-void idRenderBackend::DrawScreenSpaceGlobalIllumination( const viewDef_t* _viewDef )
-{
-#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
-	if( !_viewDef->viewEntitys || _viewDef->is2Dgui )
-	{
-		// 3D views only
-		return;
-	}
-
-	if( r_useSSGI.GetInteger() <= 0 )
-	{
-		return;
-	}
-
-	// FIXME very expensive to enable this in subviews
-	if( _viewDef->isSubview )
-	{
-		return;
-	}
-
-	if( _viewDef->renderView.rdflags & ( RDF_NOAMBIENT | RDF_IRRADIANCE ) )
-	{
-		return;
-	}
-
-	RENDERLOG_PRINTF( "---------- RB_SSGI() ----------\n" );
-
-	currentSpace = &viewDef->worldSpace;
-	RB_SetMVP( viewDef->worldSpace.mvp );
-
-	Framebuffer* previousFramebuffer = Framebuffer::GetActiveFramebuffer();
-
-	int screenWidth = renderSystem->GetWidth();
-	int screenHeight = renderSystem->GetHeight();
-
-	// set the window clipping
-	GL_Viewport( 0, 0, screenWidth, screenHeight );
-	GL_Scissor( 0, 0, screenWidth, screenHeight );
-
-	// TODO remove
-	if( previousFramebuffer == NULL )
-	{
-		const idScreenRect& viewport = viewDef->viewport;
-		globalImages->currentRenderImage->CopyFramebuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
-	}
-
-	// build hierarchical depth buffer
-	if( r_useHierarchicalDepthBuffer.GetBool() )
-	{
-		renderProgManager.BindShader_AmbientOcclusionMinify();
-
-		glClearColor( 0, 0, 0, 1 );
-
-		GL_SelectTexture( 0 );
-
-		for( int i = 0; i < MAX_HIERARCHICAL_ZBUFFERS; i++ )
-		{
-			int width = globalFramebuffers.csDepthFBO[i]->GetWidth();
-			int height = globalFramebuffers.csDepthFBO[i]->GetHeight();
-
-			GL_Viewport( 0, 0, width, height );
-			GL_Scissor( 0, 0, width, height );
-
-			globalFramebuffers.csDepthFBO[i]->Bind();
-
-			glClear( GL_COLOR_BUFFER_BIT );
-
-			if( i == 0 )
-			{
-				renderProgManager.BindShader_AmbientOcclusionReconstructCSZ();
-
-				globalImages->currentDepthImage->Bind();
-			}
-			else
-			{
-				renderProgManager.BindShader_AmbientOcclusionMinify();
-
-				GL_SelectTexture( 0 );
-				globalImages->hierarchicalZbufferImage->Bind();
-			}
-
-			float jitterTexScale[4];
-			jitterTexScale[0] = i - 1;
-			jitterTexScale[1] = 0;
-			jitterTexScale[2] = 0;
-			jitterTexScale[3] = 0;
-			SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
-#if 1
-			float screenCorrectionParm[4];
-			screenCorrectionParm[0] = 1.0f / width;
-			screenCorrectionParm[1] = 1.0f / height;
-			screenCorrectionParm[2] = width;
-			screenCorrectionParm[3] = height;
-			SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-#endif
-
-			DrawElementsWithCounters( &unitSquareSurface );
-		}
-	}
-
-	// set the window clipping
-	GL_Viewport( 0, 0, screenWidth, screenHeight );
-	GL_Scissor( 0, 0, screenWidth, screenHeight );
-
-	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS | GLS_CULL_TWOSIDED );
-
-	if( r_ssgiFiltering.GetBool() )
-	{
-		globalFramebuffers.ambientOcclusionFBO[0]->Bind();
-
-		// FIXME remove and mix with color from previous frame
-		glClearColor( 0, 0, 0, 0 );
-		glClear( GL_COLOR_BUFFER_BIT );
-
-		renderProgManager.BindShader_DeepGBufferRadiosity();
-	}
-	else
-	{
-		if( r_ssgiDebug.GetInteger() > 0 )
-		{
-			// replace current
-			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
-		}
-		else
-		{
-			// add result to main color
-			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
-		}
-
-		if( previousFramebuffer != NULL )
-		{
-			previousFramebuffer->Bind();
-		}
-		else
-		{
-			Framebuffer::Unbind();
-		}
-
-		renderProgManager.BindShader_DeepGBufferRadiosity();
-	}
-
-	float screenCorrectionParm[4];
-	screenCorrectionParm[0] = 1.0f / screenWidth;
-	screenCorrectionParm[1] = 1.0f / screenHeight;
-	screenCorrectionParm[2] = screenWidth;
-	screenCorrectionParm[3] = screenHeight;
-	SetFragmentParm( RENDERPARM_SCREENCORRECTIONFACTOR, screenCorrectionParm ); // rpScreenCorrectionFactor
-
-#if 0
-	// RB: set unprojection matrices so we can convert zbuffer values back to camera and world spaces
-	idRenderMatrix modelViewMatrix;
-	idRenderMatrix::Transpose( *( idRenderMatrix* )backEnd.viewDef->worldSpace.modelViewMatrix, modelViewMatrix );
-	idRenderMatrix cameraToWorldMatrix;
-	if( !idRenderMatrix::Inverse( modelViewMatrix, cameraToWorldMatrix ) )
-	{
-		idLib::Warning( "cameraToWorldMatrix invert failed" );
-	}
-
-	SetVertexParms( RENDERPARM_MODELMATRIX_X, cameraToWorldMatrix[0], 4 );
-	//SetVertexParms( RENDERPARM_MODELMATRIX_X, viewDef->unprojectionToWorldRenderMatrix[0], 4 );
-#endif
-	SetVertexParms( RENDERPARM_MODELMATRIX_X, viewDef->unprojectionToCameraRenderMatrix[0], 4 );
-
-
-	float jitterTexOffset[4];
-	if( r_shadowMapRandomizeJitter.GetBool() )
-	{
-		jitterTexOffset[0] = ( rand() & 255 ) / 255.0;
-		jitterTexOffset[1] = ( rand() & 255 ) / 255.0;
-	}
-	else
-	{
-		jitterTexOffset[0] = 0;
-		jitterTexOffset[1] = 0;
-	}
-	jitterTexOffset[2] = viewDef->renderView.time[0] * 0.001f;
-	jitterTexOffset[3] = 0.0f;
-	SetFragmentParm( RENDERPARM_JITTERTEXOFFSET, jitterTexOffset ); // rpJitterTexOffset
-
-	GL_SelectTexture( 0 );
-	globalImages->gbufferNormalsRoughnessImage->Bind();
-
-	GL_SelectTexture( 1 );
-	if( r_useHierarchicalDepthBuffer.GetBool() )
-	{
-		globalImages->hierarchicalZbufferImage->Bind();
-	}
-	else
-	{
-		globalImages->currentDepthImage->Bind();
-	}
-
-	GL_SelectTexture( 2 );
-	if( previousFramebuffer != NULL )
-	{
-		previousFramebuffer->Bind();
-	}
-	else
-	{
-		globalImages->currentRenderImage->Bind();
-	}
-
-	DrawElementsWithCounters( &unitSquareSurface );
-
-	if( r_ssgiFiltering.GetBool() )
-	{
-		float jitterTexScale[4];
-
-		// AO blur X
-#if 1
-		globalFramebuffers.ambientOcclusionFBO[1]->Bind();
-
-		renderProgManager.BindShader_DeepGBufferRadiosityBlur();
-
-		// set axis parameter
-		jitterTexScale[0] = 1;
-		jitterTexScale[1] = 0;
-		jitterTexScale[2] = 0;
-		jitterTexScale[3] = 0;
-		SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
-
-		GL_SelectTexture( 2 );
-		globalImages->ambientOcclusionImage[0]->Bind();
-
-		DrawElementsWithCounters( &unitSquareSurface );
-#endif
-
-		// AO blur Y
-		if( previousFramebuffer != NULL )
-		{
-			previousFramebuffer->Bind();
-		}
-		else
-		{
-			Framebuffer::Unbind();
-		}
-
-		if( r_ssgiDebug.GetInteger() > 0 )
-		{
-			// replace current
-			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
-		}
-		else
-		{
-			// add result to main color
-			GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | GLS_DEPTHFUNC_ALWAYS );
-		}
-
-		renderProgManager.BindShader_DeepGBufferRadiosityBlurAndOutput();
-
-		// set axis parameter
-		jitterTexScale[0] = 0;
-		jitterTexScale[1] = 1;
-		jitterTexScale[2] = 0;
-		jitterTexScale[3] = 0;
-		SetFragmentParm( RENDERPARM_JITTERTEXSCALE, jitterTexScale ); // rpJitterTexScale
-
-		GL_SelectTexture( 2 );
-		globalImages->ambientOcclusionImage[1]->Bind();
-
-		DrawElementsWithCounters( &unitSquareSurface );
-	}
-
-	renderProgManager.Unbind();
-
-	GL_State( GLS_DEFAULT );
-
-	//GL_CheckErrors();
-#endif
-}
-// RB end
 
 /*
 =========================================================================================================
@@ -6551,11 +5616,6 @@ BACKEND COMMANDS
 
 =========================================================================================================
 */
-
-#if defined( USE_NVRHI )
-	extern DeviceManager* deviceManager;
-#endif
-
 
 /*
 ====================
@@ -6567,6 +5627,8 @@ smp extensions, or asyncronously by another thread.
 */
 void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 {
+	SCOPED_PROFILE_EVENT( "ExecuteBackEndCommands" );
+
 	// r_debugRenderToTexture
 	int c_draw3d = 0;
 	int c_draw2d = 0;
@@ -6617,7 +5679,6 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 	void* textureId = globalImages->hierarchicalZbufferImage->GetTextureID();
 	globalImages->LoadDeferredImages( commandList );
 
-#if defined( USE_NVRHI )
 	if( !ssaoPass && r_useNewSsaoPass.GetBool() )
 	{
 		ssaoPass = new SsaoPass(
@@ -6634,14 +5695,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 			delete hiZGenPass;
 		}
 
-		if( deviceManager->GetGraphicsAPI() == nvrhi::GraphicsAPI::VULKAN )
-		{
-			hiZGenPass = NULL;
-		}
-		else
-		{
-			hiZGenPass = new MipMapGenPass( deviceManager->GetDevice(), globalImages->hierarchicalZbufferImage->GetTextureHandle() );
-		}
+		hiZGenPass = new MipMapGenPass( deviceManager->GetDevice(), globalImages->hierarchicalZbufferImage->GetTextureHandle() );
 	}
 
 
@@ -6666,7 +5720,6 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 		taaPass = new TemporalAntiAliasingPass();
 		taaPass->Init( deviceManager->GetDevice(), &commonPasses, NULL, taaParams );
 	}
-#endif
 
 	uint64 backEndStartTime = Sys_Microseconds();
 
@@ -6675,7 +5728,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 
 	// SRS - Save glConfig.timerQueryAvailable state so it can be disabled for RC_DRAW_VIEW_GUI then restored after it is finished
 	const bool timerQueryAvailable = glConfig.timerQueryAvailable;
-	bool drawView3D_timestamps = false;
+	drawView3D = false;
 
 	for( ; cmds != NULL; cmds = ( const emptyCommand_t* )cmds->next )
 	{
@@ -6685,7 +5738,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 				break;
 
 			case RC_DRAW_VIEW_GUI:
-				if( drawView3D_timestamps )
+				if( drawView3D )
 				{
 					// SRS - Capture separate timestamps for overlay GUI rendering when RC_DRAW_VIEW_3D timestamps are active
 					renderLog.OpenMainBlock( MRB_DRAW_GUI );
@@ -6708,7 +5761,7 @@ void idRenderBackend::ExecuteBackEndCommands( const emptyCommand_t* cmds )
 				break;
 
 			case RC_DRAW_VIEW_3D:
-				drawView3D_timestamps = true;
+				drawView3D = true;
 				DrawView( cmds, 0 );
 				c_draw3d++;
 				break;
@@ -6761,6 +5814,17 @@ idRenderBackend::DrawViewInternal
 */
 void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int stereoEye )
 {
+	OPTICK_EVENT( "Backend_DrawViewInternal" );
+	OPTICK_TAG( "stereoEye", stereoEye );
+
+#if USE_OPTICK_GPU
+	//uint32_t swapIndex = deviceManager->GetCurrentBackBufferIndex();
+	//idStr eventLabel;
+	//eventLabel.Format( "DrawView( frameIndex = %i, swapIndex = %i ) ", taaPass->GetFrameIndex(), swapIndex );
+	OPTICK_GPU_CONTEXT( ( ID3D12GraphicsCommandList* ) commandList->getNativeObject( nvrhi::ObjectTypes::D3D12_GraphicsCommandList ) );
+	OPTICK_GPU_EVENT( "DrawView" );
+#endif
+
 	renderLog.OpenBlock( "Render_DrawViewInternal", colorRed );
 
 	//-------------------------------------------------
@@ -6780,7 +5844,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 	}
 
-#if defined( USE_NVRHI )
 	// SP: reset the graphics state for validation layers
 	currentVertexBuffer = nullptr;
 	currentIndexBuffer = nullptr;
@@ -6788,8 +5851,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	currentVertexOffset = 0;
 	currentIndexOffset = 0;
 	currentJointOffset = 0;
-#endif
-	
 	if( !r_useGPUSkinning.GetBool() ) {
 		ComputeSkinnedMeshes( _viewDef );
 	}
@@ -6807,7 +5868,7 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// ensures that depth writes are enabled for the depth clear
 	GL_State( GLS_DEFAULT | GLS_CULL_FRONTSIDED, true );
 
-	bool useHDR = r_useHDR.GetBool() && !_viewDef->is2Dgui;
+	bool useHDR = !_viewDef->is2Dgui;
 	bool clearColor = false;
 
 	if( _viewDef->renderView.rdflags & RDF_IRRADIANCE )
@@ -6825,24 +5886,13 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	}
 	else
 	{
-#if defined( USE_NVRHI )
 		globalFramebuffers.ldrFBO->Bind();
-#else
-		Framebuffer::Unbind();
-#endif
 	}
 
 	// Clear the depth buffer and clear the stencil to 128 for stencil shadows as well as gui masking
 	GL_Clear( clearColor, true, true, STENCIL_SHADOW_TEST_VALUE, 0.0f, 0.0f, 0.0f, 0.0f, false );
 
 	// RB end
-
-	//GL_CheckErrors();
-
-#if !defined( USE_VULKAN ) && !defined( USE_NVRHI )
-	// bind one global Vertex Array Object (VAO)
-	glBindVertexArray( glConfig.global_vao );
-#endif
 
 	//------------------------------------
 	// sets variables that can be used by all programs
@@ -6887,17 +5937,32 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	//
 	// fill the geometric buffer with normals and roughness
 	//-------------------------------------------------
-	AmbientPass( drawSurfs, numDrawSurfs, true );
+	{
+		OPTICK_EVENT( "Render_GeometryBuffer" );
+
+		AmbientPass( drawSurfs, numDrawSurfs, true );
+	}
 
 	//-------------------------------------------------
 	// build hierarchical depth buffer and SSAO render target
 	//-------------------------------------------------
-	DrawScreenSpaceAmbientOcclusion( _viewDef, false );
+	if( r_useNewSsaoPass.GetBool() )
+	{
+		DrawScreenSpaceAmbientOcclusion2( _viewDef );
+	}
+	else
+	{
+		DrawScreenSpaceAmbientOcclusion( _viewDef );
+	}
 
 	//-------------------------------------------------
 	// render static lighting and consider SSAO results
 	//-------------------------------------------------
-	AmbientPass( drawSurfs, numDrawSurfs, false );
+	{
+		OPTICK_EVENT( "Render_AmbientPass" );
+
+		AmbientPass( drawSurfs, numDrawSurfs, false );
+	}
 
 	//-------------------------------------------------
 	// render all light <-> geometry interactions to a depth buffer atlas
@@ -6908,21 +5973,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// main light renderer
 	//-------------------------------------------------
 	DrawInteractions( _viewDef );
-
-	//-------------------------------------------------
-	// capture the depth for the motion blur before rendering any post process surfaces that may contribute to the depth
-	//-------------------------------------------------
-	if( ( r_motionBlur.GetInteger() > 0 ||  r_useSSAO.GetBool() || r_useSSGI.GetBool() ) && !r_useHDR.GetBool() )
-	{
-		const idScreenRect& viewport = viewDef->viewport;
-		globalImages->currentDepthImage->CopyDepthbuffer( viewport.x1, viewport.y1, viewport.GetWidth(), viewport.GetHeight() );
-	}
-
-	//-------------------------------------------------
-	// darken the scene using the screen space ambient occlusion
-	//-------------------------------------------------
-	//DrawScreenSpaceAmbientOcclusion( _viewDef );
-	//RB_SSGI( _viewDef );
 
 	//-------------------------------------------------
 	// now draw any non-light dependent shading passes
@@ -6969,12 +6019,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		GL_SelectTexture( 0 );
 
 		// resolve the screen
-#if defined( USE_NVRHI )
-
-
-
-		//if( currentFrameBuffer->GetApiObject()->getDesc().colorAttachments.begin().)
-
 		if( R_GetMSAASamples() > 1 )
 		{
 			renderLog.OpenBlock( "Resolve to _currentRender" );
@@ -6994,9 +6038,6 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 		}
 
 		renderLog.CloseBlock();
-#else
-		globalImages->currentRenderImage->CopyFramebuffer( x, y, w, h );
-#endif
 
 		currentRenderCopied = true;
 
@@ -7047,30 +6088,8 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	// tonemapping: convert back from HDR to LDR range
 	//-------------------------------------------------
 
-#if !defined( USE_VULKAN )
-
-// SRS - For OSX OpenGL record the final portion of GPU time while no other elapsed time query is active (after final passes and before bloom & other post processing)
-#if defined(__APPLE__) && !defined( USE_NVRHI )
-	renderLog.OpenMainBlock( MRB_GPU_TIME );
-#endif
-
 	if( useHDR && !( _viewDef->renderView.rdflags & RDF_IRRADIANCE ) && !_viewDef->targetRender )
 	{
-#if !defined( USE_NVRHI )
-		{
-			glBindFramebuffer( GL_READ_FRAMEBUFFER_EXT, globalFramebuffers.hdrFBO->GetFramebuffer() );
-			glBindFramebuffer( GL_DRAW_FRAMEBUFFER_EXT, globalFramebuffers.hdr64FBO->GetFramebuffer() );
-			glBlitFramebuffer( 0, 0, renderSystem->GetWidth(), renderSystem->GetHeight(),
-			0, 0, 64, 64,
-			GL_COLOR_BUFFER_BIT,
-			GL_LINEAR );
-		}
-#endif
-
-#if 0
-		CalculateAutomaticExposure();
-		Tonemap( _viewDef );
-#else
 		ToneMappingParameters parms;
 		if( R_UseTemporalAA() )
 		{
@@ -7089,38 +6108,27 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 				toneMapPass->SimpleRender( commandList, parms, viewDef, globalImages->currentRenderHDRImage->GetTextureHandle(), globalFramebuffers.ldrFBO->GetApiObject() );
 			}
 		}
-#endif
 	}
-
-// SRS - This macOS OpenGL-specific CloseMainBlock() must occur before the next OpenMainBlock() is called
-#if defined(__APPLE__) && !defined( USE_NVRHI )
-	renderLog.CloseMainBlock();
-#endif
 
 	//-------------------------------------------------
 	// bloom post processing
 	//-------------------------------------------------
 
-	if( !r_skipBloom.GetBool() )
-	{
-		// TODO(Stephen): implement bloom
-#if !defined( USE_NVRHI )
-		Bloom( _viewDef );
-#endif
-	}
-
-#if defined( USE_NVRHI )
-	//TODO(Stephen): Move somewhere else?
-	// RB: this needs to be done after next post processing steps later on
+	// TODO implement bloom
+	//Bloom( _viewDef );
 
 	if( _viewDef->renderView.rdflags & RDF_IRRADIANCE )
 	{
+		// copy LDR result to DX12 / Vulkan swapchain image
+
 		// we haven't changed ldrImage so it's basically the previewsRenderLDR
 		BlitParameters blitParms;
 		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
 		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
 		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
 		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
+
+		// blit envprobe over it for quick review where we are
 
 		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->envprobeHDRImage->GetTextureID();
 		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
@@ -7129,15 +6137,14 @@ void idRenderBackend::DrawViewInternal( const viewDef_t* _viewDef, const int ste
 	}
 	else
 	{
+		// copy LDR result to DX12 / Vulkan swapchain image
+
 		BlitParameters blitParms;
 		blitParms.sourceTexture = ( nvrhi::ITexture* )globalImages->ldrImage->GetTextureID();
 		blitParms.targetFramebuffer = deviceManager->GetCurrentFramebuffer();
 		blitParms.targetViewport = nvrhi::Viewport( renderSystem->GetWidth(), renderSystem->GetHeight() );
 		commonPasses.BlitTexture( commandList, blitParms, &bindingCache );
 	}
-#endif
-
-#endif
 
 	renderLog.CloseBlock();
 }
@@ -7171,12 +6178,6 @@ void idRenderBackend::MotionBlur()
 	// clear the alpha buffer and draw only the hands + weapon into it so
 	// we can avoid blurring them
 	GL_State( GLS_COLORMASK | GLS_DEPTHMASK );
-
-// FIXME
-#if !defined(USE_VULKAN) && !defined(USE_NVRHI)
-	glClearColor( 0, 0, 0, 1 );
-	glClear( GL_COLOR_BUFFER_BIT );
-#endif
 
 	GL_Color( 0, 0, 0, 0 );
 	GL_SelectTexture( 0 );
@@ -7272,6 +6273,8 @@ is 0, so the stereoEye parameter is not always the same as that.
 */
 void idRenderBackend::DrawView( const void* data, const int stereoEye )
 {
+	//OPTICK_EVENT( "Backend_DrawView" );
+
 	const drawSurfsCommand_t* cmd = ( const drawSurfsCommand_t* )data;
 
 	viewDef = cmd->viewDef;
@@ -7298,17 +6301,6 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 		return;
 	}
 
-	// skip render context sets the wgl context to NULL,
-	// which should factor out the API cost, under the assumption
-	// that all gl calls just return if the context isn't valid
-
-	// RB: not really needed
-	//if( r_skipRenderContext.GetBool() && backEnd.viewDef->viewEntitys )
-	//{
-	//	GLimp_DeactivateContext();
-	//}
-	// RB end
-
 	pc.c_surfaces += viewDef->numDrawSurfs;
 
 	DBG_ShowOverdraw();
@@ -7316,7 +6308,9 @@ void idRenderBackend::DrawView( const void* data, const int stereoEye )
 	// render the scene
 	DrawViewInternal( cmd->viewDef, stereoEye );
 
-	MotionBlur();
+	// RB: Support motion blur in the future again?
+	// It is the worst thing next to depth of field
+	//MotionBlur();
 
 	// optionally draw a box colored based on the eye number
 	if( r_drawEyeColor.GetBool() )

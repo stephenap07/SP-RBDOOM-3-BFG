@@ -893,17 +893,20 @@ void idRenderBackend::DBG_ShowLights()
 
 	renderProgManager.BindShader_Color();
 
-	common->Printf( "volumes: " );	// FIXME: not in back end!
-
 	int count = 0;
 	for( viewLight_t* vLight = viewDef->viewLights; vLight != NULL; vLight = vLight->next )
 	{
 		count++;
 
-		// depth buffered planes
-		if( r_showLights.GetInteger() >= 2 )
+		if( r_singleLight.GetInteger() >= 0 && r_singleLight.GetInteger() != vLight->lightDef->index )
 		{
-			GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK );
+			continue;
+		}
+
+		// depth buffered planes
+		if( r_showLights.GetInteger() >= 2 && r_singleLight.GetInteger() < 0 )
+		{
+			GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK | GLS_CULL_TWOSIDED );
 
 			// RB: show different light types
 			if( vLight->parallel )
@@ -929,7 +932,7 @@ void idRenderBackend::DBG_ShowLights()
 		// non-hidden lines
 		if( r_showLights.GetInteger() >= 3 )
 		{
-			GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_POLYMODE_LINE | GLS_DEPTHMASK );
+			GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_POLYMODE_LINE | GLS_DEPTHMASK | GLS_CULL_TWOSIDED );
 			GL_Color( 1.0f, 1.0f, 1.0f );
 			idRenderMatrix invProjectMVPMatrix;
 			idRenderMatrix::Multiply( viewDef->worldSpace.mvp, vLight->inverseBaseLightProject, invProjectMVPMatrix );
@@ -937,10 +940,38 @@ void idRenderBackend::DBG_ShowLights()
 			DrawElementsWithCounters( &zeroOneCubeSurface );
 		}
 
-		common->Printf( "%i ", vLight->lightDef->index );
-	}
+		/*
+		if( r_singleLight.GetInteger() > 0 )
+		{
+			// draw line from center to global light origin
+			RB_SetMVP( viewDef->worldSpace.mvp );
 
-	common->Printf( " = %i total\n", count );
+			GL_State( GLS_POLYMODE_LINE | GLS_DEPTHFUNC_ALWAYS );
+
+			idRenderWorldLocal& world = *viewDef->renderWorld;
+
+			fhImmediateMode im( tr.backend.GL_GetCommandList() );
+
+			im.Begin( GFX_LINES );
+			for( ; j < w->GetNumPoints(); j++ )
+			{
+				// draw a triangle for each line
+				if( j >= 1 )
+				{
+					im.Vertex3fv( ( *w )[ j - 1 ].ToFloatPtr() );
+					im.Vertex3fv( ( *w )[ j ].ToFloatPtr() );
+					im.Vertex3fv( ( *w )[ j ].ToFloatPtr() );
+				}
+			}
+
+			im.Vertex3fv( ( *w )[ 0 ].ToFloatPtr() );
+			im.Vertex3fv( ( *w )[ 0 ].ToFloatPtr() );
+			im.Vertex3fv( ( *w )[ j - 1 ].ToFloatPtr() );
+
+			im.End();
+		}
+		*/
+	}
 }
 
 // RB begin
@@ -1540,8 +1571,6 @@ void idRenderBackend::DBG_ShowShadowMapLODs()
 
 	renderProgManager.BindShader_Color();
 
-	common->Printf( "volumes: " );	// FIXME: not in back end!
-
 	int count = 0;
 	for( viewLight_t* vLight = viewDef->viewLights; vLight != NULL; vLight = vLight->next )
 	{
@@ -1555,7 +1584,8 @@ void idRenderBackend::DBG_ShowShadowMapLODs()
 		// depth buffered planes
 		if( r_showShadowMapLODs.GetInteger() >= 1 )
 		{
-			GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK );
+			GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_POLYMODE_LINE | GLS_DEPTHMASK );
+			//GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK );
 
 			idVec4 c;
 			if( vLight->shadowLOD == 0 )
@@ -1606,11 +1636,7 @@ void idRenderBackend::DBG_ShowShadowMapLODs()
 			RB_SetMVP( invProjectMVPMatrix );
 			DrawElementsWithCounters( &zeroOneCubeSurface );
 		}
-
-		common->Printf( "%i ", vLight->lightDef->index );
 	}
-
-	common->Printf( " = %i total\n", count );
 }
 // RB end
 
@@ -2238,7 +2264,7 @@ Display a single image over most of the screen
 */
 void idRenderBackend::DBG_TestImage()
 {
-	idImage*	image = NULL;
+	idImage* image   = NULL;
 	idImage* imageCr = NULL;
 	idImage* imageCb = NULL;
 	int		max;
@@ -2254,9 +2280,9 @@ void idRenderBackend::DBG_TestImage()
 	{
 		cinData_t	cin;
 
-		// SRS - Don't need calibrated time for testing cinematics, so just call ImageForTime( 0 ) for current system time
+		// SRS - Don't need calibrated time for testing cinematics, so just call ImageForTime( ) with current system time
 		// This simplification allows cinematic test playback to work over both 2D and 3D background scenes
-		cin = tr.testVideo->ImageForTime( 0 /*viewDef->renderView.time[1] - tr.testVideoStartTime*/, commandList );
+		cin = tr.testVideo->ImageForTime( Sys_Milliseconds() /*viewDef->renderView.time[1] - tr.testVideoStartTime*/, commandList );
 		if( cin.imageY != NULL )
 		{
 			image = cin.imageY;
@@ -2308,9 +2334,10 @@ void idRenderBackend::DBG_TestImage()
 	float scale[16] = { 0 };
 	scale[0] = w; // scale
 	scale[5] = h; // scale
-	scale[12] = halfScreenWidth - ( halfScreenWidth * w ); // translate
-	scale[13] = halfScreenHeight - ( halfScreenHeight * h ); // translate
 	scale[10] = 1.0f;
+	scale[12] = halfScreenWidth - ( halfScreenWidth * w ); 			// translate to center x
+	scale[13] = halfScreenHeight / 2 - ( halfScreenHeight * h );	// translate to center y of console dropdown
+	scale[14] = -0.5f;												// translate to center z
 	scale[15] = 1.0f;
 
 	float ortho[16] = { 0 };
@@ -2411,6 +2438,8 @@ void idRenderBackend::DBG_RenderDebugTools( drawSurf_t** drawSurfs, int numDrawS
 		DBG_ShowLines();
 		return;
 	}
+
+	OPTICK_EVENT( "Render_DebugTools" );
 
 	renderLog.OpenMainBlock( MRB_DRAW_DEBUG_TOOLS );
 	renderLog.OpenBlock( "Render_DebugTools", colorGreen );

@@ -48,25 +48,31 @@ option(WINDOWS10
 		"Build for Windows 10+" ON)
 		
 option(USE_SYSTEM_ZLIB
-                "Use the system zlib instead of the bundled one" OFF)
+         "Use the system zlib instead of the bundled one" OFF)
 
 option(USE_SYSTEM_LIBPNG
-                "Use the system libpng instead of the bundled one" OFF)
+         "Use the system libpng instead of the bundled one" OFF)
 
 option(USE_SYSTEM_LIBJPEG
-                "Use the system libjpeg instead of the bundled one" OFF)
+         "Use the system libjpeg instead of the bundled one" OFF)
 
 option(USE_SYSTEM_LIBGLEW
-                "Use the system libglew instead of the bundled one" OFF)
+         "Use the system libglew instead of the bundled one" OFF)
 
 option(USE_SYSTEM_RAPIDJSON
-                "Use the system rapidjson instead of the bundled one" OFF)
+         "Use the system rapidjson instead of the bundled one" OFF)
 
 option(USE_DX12
-				"Use DirectX 12" ON)
+		"Use DirectX 12" ON)
 
 option(USE_VULKAN
-				"Use Vulkan" ON)
+		"Use Vulkan" ON)
+
+option(USE_VMA
+		"Use VMA allocator instead of the NVRHI builtin one" ON)
+
+option(OPTICK
+		"Enable profiling with Optick" OFF)
 
 set(NVRHI_INSTALL OFF)
 
@@ -94,9 +100,17 @@ if(UNIX)
 	set(USE_VULKAN ON)
 	
     # SRS - Disable precompiled headers when cross-compiling on OSX, e.g. when creating universal binaries
-    if((CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64" AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64"  ) OR
-       (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64"  AND CMAKE_OSX_ARCHITECTURES MATCHES "x86_64"))
+    #     - Also disable precompiled headers when using the Ninja Multi-Config generator on linux or macOS
+    if((CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64" AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64" ) OR
+       (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64"  AND CMAKE_OSX_ARCHITECTURES MATCHES "x86_64") OR
+       (CMAKE_GENERATOR MATCHES "Ninja Multi-Config"))
         set(USE_PRECOMPILED_HEADERS OFF)
+    endif()
+    
+	# SRS - For single-config dev builds, define NO_MULTI_CONFIG to search for basepath up 1 dir level vs 2
+    if((CMAKE_GENERATOR MATCHES "Makefiles") OR
+       (CMAKE_GENERATOR MATCHES "Ninja" AND NOT CMAKE_GENERATOR MATCHES "Multi-Config"))
+		add_definitions(-DNO_MULTI_CONFIG)
     endif()
 endif()
 
@@ -172,7 +186,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 		# add clang-specific settings for warnings (the second one make sure clang doesn't complain
 		# about unknown -W flags, like -Wno-unused-but-set-variable)
 		# SRS - Add -Wno-expansion-to-defined to list of warning settings
-		add_definitions(-Wno-local-type-template-args -Wno-unknown-warning-option -Wno-inline-new-delete -Wno-switch-enum -Wno-expansion-to-defined)
+		add_definitions(-Wno-local-type-template-args -Wno-unknown-warning-option -Wno-inline-new-delete -Wno-switch-enum -Wno-expansion-to-defined -Wno-nullability-completeness)
 	endif()
 	
 	if(NOT CMAKE_CROSSCOMPILING AND ONATIVE)
@@ -340,6 +354,7 @@ else (JPEG_FOUND)
     set(JPEG_LIBRARY "" )
 endif (JPEG_FOUND)
 
+include_directories("libs/imgui")
 
 macro(SET_OPTION option value)
   set(${option} ${value} CACHE "" INTERNAL FORCE)
@@ -348,21 +363,15 @@ endmacro()
 if(USE_VULKAN)
 	# RB: moved this above the general Vulkan part so glslang does not include Vulkan SDK headers
 	# which causes all kinds of weird segmentation faults because struct sizes don't match
- 
-    # SRS - Set default VULKAN_SDK location if environment variable not defined on OSX
-    if(APPLE AND NOT DEFINED ENV{VULKAN_SDK})
-        if(NOT USE_MoltenVK)
-            # SRS - Vulkan SDK installer copies standard vulkan headers and libs to /usr/local on OSX
-            set(ENV{VULKAN_SDK} /usr/local)
-        else()
-            message(FATAL_ERROR "Must define VULKAN_SDK location if USE_MoltenVK option enabled!")
-        endif()
-    endif()
 
 	# Use FindVulkan module added with CMAKE 3.7
 	if(NOT CMAKE_VERSION VERSION_LESS 3.7.0)
-		message( STATUS "Using module to find Vulkan" )
-		find_package(Vulkan)
+		message( STATUS "Using module to find Vulkan and components" )
+		list(APPEND Vulkan_COMPONENTS dxc)
+	    if(APPLE AND USE_MoltenVK)
+			list(APPEND Vulkan_COMPONENTS MoltenVK)
+    	endif()
+		find_package(Vulkan OPTIONAL_COMPONENTS ${Vulkan_COMPONENTS})
 	endif()
 
 	if(NOT Vulkan_FOUND)
@@ -373,18 +382,24 @@ if(USE_VULKAN)
 		#	message("Using bundled Vulkan library version")
 		#endif()
 	else()
-        include_directories($ENV{VULKAN_SDK}/include)
+		include_directories(${Vulkan_INCLUDE_DIRS})
+
+		if(Vulkan_dxc_exe_FOUND AND NOT DEFINED DXC_SPIRV_EXECUTABLE)
+			set(DXC_SPIRV_EXECUTABLE ${Vulkan_dxc_EXECUTABLE})
+		endif()
 
         if(APPLE)
             # SRS - Enable Beta extensions for VULKAN_SDK portability subset features on OSX
             add_definitions(-DVK_ENABLE_BETA_EXTENSIONS)
-            # SRS - Explicitly define dxc path so find_package(DXCspirv) uses the specified Vulkan SDK location on OSX
-            set(DXC_SPIRV_EXECUTABLE $ENV{VULKAN_SDK}/bin/dxc CACHE FILEPATH "Path to SPIR-V shader compiler." FORCE)
             # SRS - Optionally link directly to MoltenVK headers/library for runtime config functions on OSX
             if(USE_MoltenVK)
-                add_definitions(-DUSE_MoltenVK)
-                include_directories($ENV{VULKAN_SDK}/../MoltenVK/include)
-                set(Vulkan_LIBRARY $ENV{VULKAN_SDK}/../MoltenVK/dylib/macOS/libMoltenVK.dylib CACHE FILEPATH "Path to MoltenVK library." FORCE)
+            	if(Vulkan_MoltenVK_FOUND)
+					add_definitions(-DUSE_MoltenVK)
+                	include_directories(${Vulkan_MoltenVK_INCLUDE_DIR})
+                	set(Vulkan_LIBRARY ${Vulkan_MoltenVK_LIBRARY} CACHE FILEPATH "Path to MoltenVK library." FORCE)
+                else()
+		            message(FATAL_ERROR "Must define VULKAN_SDK location if USE_MoltenVK option enabled!")
+                endif()
             endif()
 		endif()
 		message(STATUS "Using Vulkan: " ${Vulkan_LIBRARY})
@@ -396,6 +411,12 @@ if(USE_VULKAN)
         add_definitions(-DVULKAN_USE_PLATFORM_SDL)
 	elseif(WIN32)
 		add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
+	endif()
+
+	# SRS - Add support for vma allocator vs. NVRHI builtin allocator
+	if(USE_VMA)
+		add_definitions(-DUSE_AMD_ALLOCATOR)
+		include_directories("libs/vma/include")
 	endif()
 else()
 
@@ -448,7 +469,7 @@ include_directories(${NVRHI_DIR}/include)
 
 
 if(USE_SYSTEM_RAPIDJSON)
-find_package(rapidjson REQUIRED)
+	find_package(rapidjson REQUIRED)
 endif(USE_SYSTEM_RAPIDJSON)
 
 if (RAPIDJSON_FOUND)
@@ -457,6 +478,17 @@ if (RAPIDJSON_FOUND)
 else (RAPIDJSON_FOUND)
 	include_directories("libs/rapidjson/include")
 endif (RAPIDJSON_FOUND)
+
+
+include_directories("libs/optick")
+
+if(OPTICK)
+	file(GLOB OPTICK_INCLUDES libs/optick/*.h)
+	file(GLOB OPTICK_SOURCES libs/optick/*.cpp)
+
+	source_group("libs\\optick" FILES ${OPTICK_INCLUDES})
+	source_group("libs\\optick" FILES ${OPTICK_SOURCES})
+endif()
 
 add_subdirectory(idlib)
 
@@ -501,18 +533,6 @@ file(GLOB RENDERER_VULKAN_SOURCES renderer/Vulkan/*.cpp)
 
 file(GLOB RENDERER_NVRHI_INCLUDES renderer/NVRHI/*.h)
 file(GLOB RENDERER_NVRHI_SOURCES renderer/NVRHI/*.cpp)
-
-file(GLOB SHADERS shaders/*.hlsl shaders/*.inc )
-file(GLOB SHADERS_BUILTIN shaders/builtin/*.hlsl )
-file(GLOB SHADERS_BUILTIN_DEBUG shaders/builtin/debug/*.hlsl )
-file(GLOB SHADERS_BUILTIN_FOG shaders/builtin/fog/*.hlsl )
-file(GLOB SHADERS_BUILTIN_LEGACY shaders/builtin/legacy/*.hlsl )
-file(GLOB SHADERS_BUILTIN_LIGHTING shaders/builtin/lighting/*.hlsl )
-file(GLOB SHADERS_BUILTIN_POST shaders/builtin/post/*.hlsl )
-file(GLOB SHADERS_BUILTIN_SSAO shaders/builtin/SSAO/*.hlsl )
-file(GLOB SHADERS_BUILTIN_SSGI shaders/builtin/SSGI/*.hlsl )
-file(GLOB SHADERS_BUILTIN_VIDEO shaders/builtin/video/*.hlsl )
-file(GLOB SHADERS_BUILTIN_VR shaders/builtin/VR/*.hlsl )
 
 file(GLOB IRRXML_INCLUDES libs/irrxml/src/*.h)
 file(GLOB IRRXML_SOURCES libs/irrxml/src/*.cpp)
@@ -1085,16 +1105,6 @@ file(GLOB COMMON_SOURCES sys/common/*.cpp)
 file(GLOB SDL_INCLUDES sys/sdl/*.h)
 file(GLOB SDL_SOURCES sys/sdl/*.cpp)
 
-if(UNIX)
-    #if(USE_VULKAN)
-		get_filename_component(sdl_glimp_cpp_full_path ${CMAKE_CURRENT_SOURCE_DIR}/sys/sdl/sdl_glimp.cpp ABSOLUTE)
-		list(REMOVE_ITEM SDL_SOURCES "${sdl_glimp_cpp_full_path}")
-	#else()
-	#	get_filename_component(sdl_vkimp_cpp_full_path ${CMAKE_CURRENT_SOURCE_DIR}/sys/sdl/sdl_vkimp.cpp ABSOLUTE)
-	#	list(REMOVE_ITEM SDL_SOURCES "${sdl_vkimp_cpp_full_path}")
-	#endif()
-endif()
-
 source_group("aas" FILES ${AAS_INCLUDES})
 source_group("aas" FILES ${AAS_SOURCES})
 
@@ -1141,18 +1151,6 @@ source_group("renderer\\Vulkan" FILES ${RENDERER_VULKAN_INCLUDES})
 source_group("renderer\\Vulkan" FILES ${RENDERER_VULKAN_SOURCES})
 
 source_group("renderer\\SMAA" FILES ${RENDERER_SMAA_INCLUDES})
-
-source_group("renderer\\Shaders" FILES ${SHADERS})
-source_group("renderer\\Shaders\\builtin" FILES ${SHADERS_BUILTIN})
-source_group("renderer\\Shaders\\builtin\\debug" FILES ${SHADERS_BUILTIN_DEBUG})
-source_group("renderer\\Shaders\\builtin\\fog" FILES ${SHADERS_BUILTIN_FOG})
-source_group("renderer\\Shaders\\builtin\\legacy" FILES ${SHADERS_BUILTIN_LEGACY})
-source_group("renderer\\Shaders\\builtin\\lighting" FILES ${SHADERS_BUILTIN_LIGHTING})
-source_group("renderer\\Shaders\\builtin\\post" FILES ${SHADERS_BUILTIN_POST})
-source_group("renderer\\Shaders\\builtin\\SSAO" FILES ${SHADERS_BUILTIN_SSAO})
-source_group("renderer\\Shaders\\builtin\\SSGI" FILES ${SHADERS_BUILTIN_SSGI})
-source_group("renderer\\Shaders\\builtin\\video" FILES ${SHADERS_BUILTIN_VIDEO})
-source_group("renderer\\Shaders\\builtin\\VR" FILES ${SHADERS_BUILTIN_VR})
 
 source_group("libs\\irrxml" FILES ${IRRXML_INCLUDES})
 source_group("libs\\irrxml" FILES ${IRRXML_SOURCES})
@@ -1341,18 +1339,6 @@ set(RBDOOM3_INCLUDES
 			${RENDERER_JOBS_STATICSHADOWVOLUME_INCLUDES}
 			${RENDERER_PASSES_INCLUDES}
 			
-			${SHADERS}
-			${SHADERS_BUILTIN}
-			${SHADERS_BUILTIN_DEBUG}
-			${SHADERS_BUILTIN_FOG}
-			${SHADERS_BUILTIN_LEGACY}
-			${SHADERS_BUILTIN_LIGHTING}
-			${SHADERS_BUILTIN_POST}
-			${SHADERS_BUILTIN_SSAO}
-			${SHADERS_BUILTIN_SSGI}
-			${SHADERS_BUILTIN_VIDEO}
-			${SHADERS_BUILTIN_VR}
-			
 			${RENDERER_SMAA_INCLUDES}
 			${IRRXML_INCLUDES}
 			${FRAMEWORK_IMGUI_INCLUDES}
@@ -1372,6 +1358,7 @@ set(RBDOOM3_INCLUDES
 			#${FREETYPE_SOURCES}
 			${SOUND_INCLUDES}
 			${OGGVORBIS_INCLUDES}
+			${OPTICK_INCLUDES}
 			${UI_INCLUDES}
 			${SWF_INCLUDES}
 			${COMMON_INCLUDES}
@@ -1421,6 +1408,7 @@ set(RBDOOM3_SOURCES
 			#${FREETYPE_SOURCES}
 			${SOUND_SOURCES}
 			${OGGVORBIS_SOURCES}
+			${OPTICK_SOURCES}
 			${UI_SOURCES}
 			${SWF_SOURCES}
 			${COMMON_SOURCES}
@@ -1580,7 +1568,7 @@ if(MSVC)
 	
 	if(USE_PRECOMPILED_HEADERS) 
 		set(RBDOOM3_PRECOMPILED_SOURCES ${RBDOOM3_SOURCES})
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES})
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES} ${OPTICK_SOURCES})
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib/minizip/ioapi.c)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTDecoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder.cpp)
@@ -1589,6 +1577,9 @@ if(MSVC)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/prelightshadowvolume/PreLightShadowVolume.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/staticshadowvolume/StaticShadowVolume.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/ShadowShared.cpp)
+		if(USE_VULKAN)
+			list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sys/DeviceManager_VK.cpp)
+		endif()
 	
 		#foreach( src_file ${RBDOOM3_PRECOMPILED_SOURCES} )
 		#	message(STATUS "-include precompiled.h for ${src_file}")
@@ -1607,18 +1598,6 @@ if(MSVC)
 			OBJECT_OUTPUTS "precompiled.pch"
 		)
 	endif()
-	
-	set_source_files_properties( ${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_DEBUG} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_FOG} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_LEGACY} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_LIGHTING} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_POST} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_SSAO} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_SSGI} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_VIDEO} PROPERTIES VS_TOOL_OVERRIDE "None" )
-	set_source_files_properties( ${SHADERS_BUILTIN_VR} PROPERTIES VS_TOOL_OVERRIDE "None" )
 	
 	list(APPEND RBDOOM3_SOURCES ${WIN32_RESOURCES})
 	
@@ -1731,7 +1710,7 @@ else()
 	
 	if(USE_PRECOMPILED_HEADERS) 	
 		set(RBDOOM3_PRECOMPILED_SOURCES ${RBDOOM3_SOURCES})
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES})
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES} ${OPTICK_SOURCES})
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib/minizip/ioapi.c)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTDecoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder.cpp)
@@ -1740,6 +1719,9 @@ else()
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/prelightshadowvolume/PreLightShadowVolume.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/staticshadowvolume/StaticShadowVolume.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/ShadowShared.cpp)
+		if(USE_VULKAN)
+			list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sys/DeviceManager_VK.cpp)
+		endif()
 
 		foreach( src_file ${RBDOOM3_PRECOMPILED_SOURCES} )
 			#message(STATUS "-include precompiled.h for ${src_file}")
@@ -1777,7 +1759,27 @@ else()
 		add_dependencies(precomp_header_rbdoom3bfg idlib)
 	endif()
 
-	add_executable(RBDoom3BFG WIN32 ${RBDOOM3_SOURCES})
+	if(MACOSX_BUNDLE)
+		# define contents of macOS app bundle Resources folder
+		set(MACOS_RESOURCES sys/posix/res/Doom3BFG.icns ../base)
+		source_group("Resources" FILES ${MACOS_RESOURCES})
+		set_source_files_properties(${MACOS_RESOURCES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+
+		# enable Xcode to display the icons file properly
+		set_source_files_properties(sys/posix/res/Doom3BFG.icns PROPERTIES XCODE_EXPLICIT_FILE_TYPE .icns)
+
+		# add macOS bundle properties to executable
+		set(MACOSX_BUNDLE_BUNDLE_NAME RBDoom-3-BFG)
+		set(MACOSX_BUNDLE_BUNDLE_VERSION 1.5.0)
+		set(MACOSX_BUNDLE_SHORT_VERSION_STRING 1.5.0)
+		set(MACOSX_BUNDLE_ICON_FILE Doom3BFG.icns)
+		set(MACOSX_BUNDLE_INFO_STRING "")					# to be added by author if desired
+		set(MACOSX_BUNDLE_COPYRIGHT "")						# to be added by author if desired
+
+		add_executable(RBDoom3BFG MACOSX_BUNDLE ${MACOS_RESOURCES} ${RBDOOM3_INCLUDES} ${RBDOOM3_SOURCES})
+	else()
+		add_executable(RBDoom3BFG WIN32 ${RBDOOM3_INCLUDES} ${RBDOOM3_SOURCES})
+	endif()
 
 	if(USE_VULKAN)
         add_dependencies(RBDoom3BFG nvrhi_vk)
@@ -1792,13 +1794,24 @@ else()
 			set(remove_command "rm")
 		endif()
 
-		# make sure precompiled header is deleted after executable is compiled
-		add_custom_command(TARGET RBDoom3BFG POST_BUILD
-				COMMAND ${remove_command} "idlib/precompiled.h.gch"
-				WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-				COMMENT "remove idlib/precompiled.h.gch"
-		)
-	endif()	
+		# delete precompiled header file after executable is compiled: command line build case
+		if(CMAKE_GENERATOR MATCHES "Makefiles" OR CMAKE_GENERATOR MATCHES "Ninja")
+			add_custom_target(rm_precomp_header ALL
+					COMMAND ${remove_command} "idlib/precompiled.h.gch"
+					WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+					COMMENT "remove idlib/precompiled.h.gch"
+					)
+			add_dependencies(rm_precomp_header RBDoom3BFG)
+
+		# delete precompiled header file after executable is compiled: IDE build case (e.g. Xcode)
+		else()
+			add_custom_command(TARGET RBDoom3BFG POST_BUILD
+					COMMAND ${remove_command} "idlib/precompiled.h.gch"
+					WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+					COMMENT "remove idlib/precompiled.h.gch"
+			)
+		endif()
+	endif()
 
 	if(NOT WIN32)
         if(NOT APPLE)
@@ -1837,6 +1850,11 @@ if(USE_VULKAN)
 	target_link_libraries(RBDoom3BFG nvrhi_vk)
 endif()
 
+if(OPTICK)
+	target_compile_definitions(RBDoom3BFG PUBLIC USE_OPTICK=1)
+else()
+	target_compile_definitions(RBDoom3BFG PUBLIC USE_OPTICK=0)
+endif()
 
 # needs to come after nvrhi_d3d11 etc. for link order
 target_link_libraries(RBDoom3BFG nvrhi)

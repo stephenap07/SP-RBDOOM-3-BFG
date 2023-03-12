@@ -26,6 +26,15 @@
 
 struct SsaoConstants
 {
+	float2		viewportOrigin;
+	float2		viewportSize;
+	float2		pixelOffset;
+	float2		unused; // padding
+
+	float4x4	matClipToView;
+	float4x4	matWorldToView;
+	float4x4	matViewToWorld;
+
 	float2      clipToView;
 	float2      invQuantizedGbufferSize;
 
@@ -170,8 +179,8 @@ void main( uint2 groupId : SV_GroupID, uint2 threadId : SV_GroupThreadID, uint2 
 	int2 storePos = int2( globalId.xy ) + g_Ssao.quantizedViewportOrigin;
 	float2 storePosF = float2( storePos );
 
-	//if (all(storePosF >= g_Ssao.view.viewportOrigin.xy) && all(storePosF < g_Ssao.view.viewportOrigin.xy + g_Ssao.view.viewportSize.xy))
-	//{
-	//    u_RenderTarget[storePos] = totalOcclusion;
-	//}
+	if( all( storePosF >= g_Ssao.viewportOrigin.xy ) && all( storePosF < g_Ssao.viewportOrigin.xy + g_Ssao.viewportSize.xy ) )
+	{
+		u_RenderTarget[storePos] = totalOcclusion;
+	}
 }

@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2018 Robert Beckebans
+Copyright (C) 2013-2023 Robert Beckebans
 Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -34,22 +34,9 @@ If you have questions concerning this license or the applicable additional terms
 #include "RenderCommon.h"
 
 
-#if defined( USE_NVRHI )
-
-	#include <sys/DeviceManager.h>
-	#include <nvrhi/utils.h>
-
-	extern DeviceManager* deviceManager;
-
-#elif defined(USE_VULKAN)
-
-	extern idUniformBuffer emptyUBO;
-
-	void CreateVertexDescriptions();
-
-	void CreateDescriptorPools( VkDescriptorPool( &pools )[NUM_FRAME_DATA] );
-
-#endif
+#include <sys/DeviceManager.h>
+#include <nvrhi/utils.h>
+extern DeviceManager* deviceManager;
 
 idRenderProgManager renderProgManager;
 
@@ -96,7 +83,6 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		builtinShaders[i] = -1;
 	}
 
-#if defined( USE_NVRHI )
 	this->device = device;
 
 	uniforms.SetNum( RENDERPARM_TOTAL, vec4_zero );
@@ -447,7 +433,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 	{
 		{ BUILTIN_GUI, "builtin/gui", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_COLOR, "builtin/color", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_CONSTANT_BUFFER_ONLY },
-		// RB begin
+
 		{ BUILTIN_COLOR_SKINNED, "builtin/color", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_CONSTANT_BUFFER_ONLY_SKINNED },
 		{ BUILTIN_VERTEX_COLOR, "builtin/vertex_color", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_CONSTANT_BUFFER_ONLY },
 
@@ -463,14 +449,14 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 
 		{ BUILTIN_SMALL_GEOMETRY_BUFFER, "builtin/gbuffer", "", { {"USE_GPU_SKINNING", "0" }, { "USE_NORMAL_FMT_RGB8", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_SMALL_GEOMETRY_BUFFER_SKINNED, "builtin/gbuffer", "_skinned", { {"USE_GPU_SKINNING", "1" }, { "USE_NORMAL_FMT_RGB8", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT_SKINNED },
-		// RB end
+
 		{ BUILTIN_TEXTURED, "builtin/texture", "", { }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_TEXTURE_VERTEXCOLOR, "builtin/texture_color", "", { {"USE_GPU_SKINNING", "0" }, {"USE_SRGB", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_TEXTURE_VERTEXCOLOR_SRGB, "builtin/texture_color", "_sRGB", { {"USE_GPU_SKINNING", "0" }, {"USE_SRGB", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_TEXTURE_VERTEXCOLOR_SKINNED, "builtin/texture_color", "_skinned", { {"USE_GPU_SKINNING", "1" }, {"USE_SRGB", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT_SKINNED },
 		{ BUILTIN_TEXTURE_TEXGEN_VERTEXCOLOR, "builtin/texture_color_texgen", "",  {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 
-		// RB begin
+
 		{ BUILTIN_INTERACTION, "builtin/lighting/interaction", "", { {"USE_GPU_SKINNING", "0" }, { "USE_PBR", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION },
 		{ BUILTIN_INTERACTION_SKINNED, "builtin/lighting/interaction", "_skinned", { {"USE_GPU_SKINNING", "1" }, { "USE_PBR", "0" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_INTERACTION_SKINNED },
 
@@ -529,7 +515,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 
 		{ BUILTIN_DEBUG_OCTAHEDRON, "builtin/debug/octahedron", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_DEBUG_OCTAHEDRON_SKINNED, "builtin/debug/octahedron", "_skinned", { {"USE_GPU_SKINNING", "1" } }, true, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT_SKINNED },
-		// RB end
+
 
 		{ BUILTIN_ENVIRONMENT, "builtin/legacy/environment", "", { {"USE_GPU_SKINNING", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_ENVIRONMENT_SKINNED, "builtin/legacy/environment", "_skinned",  { {"USE_GPU_SKINNING", "1" } }, true , SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT_SKINNED },
@@ -552,7 +538,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		{ BUILTIN_SKYBOX, "builtin/legacy/skybox", "",  {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_WOBBLESKY, "builtin/legacy/wobblesky", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_POSTPROCESS, "builtin/post/postprocess", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_POST_PROCESS_FINAL },
-		// RB begin
+
 		{ BUILTIN_SCREEN, "builtin/post/screen", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_TONEMAP, "builtin/post/tonemap", "", { { "BRIGHTPASS", "0" }, { "HDR_DEBUG", "0"} }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_BRIGHTPASS, "builtin/post/tonemap", "_brightpass", { { "BRIGHTPASS", "1" }, { "HDR_DEBUG", "0"} }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
@@ -573,12 +559,10 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		{ BUILTIN_AMBIENT_OCCLUSION_AND_OUTPUT, "builtin/SSAO/AmbientOcclusion_AO", "_write", { { "BRIGHTPASS", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO },
 		{ BUILTIN_AMBIENT_OCCLUSION_BLUR, "builtin/SSAO/AmbientOcclusion_blur", "", { { "BRIGHTPASS", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO },
 		{ BUILTIN_AMBIENT_OCCLUSION_BLUR_AND_OUTPUT, "builtin/SSAO/AmbientOcclusion_blur", "_write", { { "BRIGHTPASS", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO },
-		{ BUILTIN_AMBIENT_OCCLUSION_MINIFY, "builtin/SSAO/AmbientOcclusion_minify", "", { { "BRIGHTPASS", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO1 },
-		{ BUILTIN_AMBIENT_OCCLUSION_RECONSTRUCT_CSZ, "builtin/SSAO/AmbientOcclusion_minify", "_mip0", { { "BRIGHTPASS", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DRAW_AO1 },
 		{ BUILTIN_DEEP_GBUFFER_RADIOSITY_SSGI, "builtin/SSGI/DeepGBufferRadiosity_radiosity", "", { }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_DEEP_GBUFFER_RADIOSITY_BLUR, "builtin/SSGI/DeepGBufferRadiosity_blur", "", { }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_DEEP_GBUFFER_RADIOSITY_BLUR_AND_OUTPUT, "builtin/SSGI/DeepGBufferRadiosity_blur", "_write", { }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		// RB end
+
 		{ BUILTIN_STEREO_DEGHOST, "builtin/VR/stereoDeGhost", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_STEREO_WARP, "builtin/VR/stereoWarp", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_BINK, "builtin/video/bink", "",  { {"USE_SRGB", "0" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_BINK_VIDEO },
@@ -587,9 +571,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		{ BUILTIN_STEREO_INTERLACE, "builtin/VR/stereoInterlace", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 		{ BUILTIN_MOTION_BLUR, "builtin/post/motionBlur", "", { { "VECTORS_ONLY", "1" } }, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
 
-		// RB begin
 		{ BUILTIN_DEBUG_SHADOWMAP, "builtin/debug/debug_shadowmap", "", {}, false, SHADER_STAGE_DEFAULT, LAYOUT_DRAW_VERT, BINDING_LAYOUT_DEFAULT },
-		// RB end
 
 		// SP begin
 		{ BUILTIN_BLIT, "builtin/blit", "", { { "TEXTURE_ARRAY", "0" } }, false, SHADER_STAGE_FRAGMENT, LAYOUT_UNKNOWN, BINDING_LAYOUT_BLIT },
@@ -616,11 +598,11 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 
 		builtinShaders[builtins[i].index] = i;
 
-		if( builtins[i].requireGPUSkinningSupport && !glConfig.gpuSkinningAvailable )
-		{
-			// RB: don't try to load shaders that would break the GLSL compiler in the OpenGL driver
-			continue;
-		}
+		//if( builtins[i].requireGPUSkinningSupport && !glConfig.gpuSkinningAvailable )
+		//{
+		// RB: don't try to load shaders that would break the GLSL compiler in the OpenGL driver
+		//	continue;
+		//}
 
 		int vIndex = -1;
 		if( builtins[i].stages & SHADER_STAGE_VERTEX )
@@ -652,16 +634,13 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 			LoadComputeProgram( i, cIndex );
 		}
 	}
-#endif
 
 	r_useHalfLambertLighting.ClearModified();
-	r_useHDR.ClearModified();
 	r_usePBR.ClearModified();
 	r_pbrDebug.ClearModified();
 
 	uniforms.SetNum( RENDERPARM_TOTAL, vec4_zero );
 
-	if( glConfig.gpuSkinningAvailable )
 	{
 		renderProgs[builtinShaders[BUILTIN_TEXTURE_VERTEXCOLOR_SKINNED]].usesJoints = true;
 		renderProgs[builtinShaders[BUILTIN_INTERACTION_SKINNED]].usesJoints = true;
@@ -672,7 +651,7 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		renderProgs[builtinShaders[BUILTIN_SHADOW_SKINNED]].usesJoints = true;
 		renderProgs[builtinShaders[BUILTIN_SHADOW_DEBUG_SKINNED]].usesJoints = true;
 		renderProgs[builtinShaders[BUILTIN_FOG_SKINNED]].usesJoints = true;
-		// RB begin
+
 		renderProgs[builtinShaders[BUILTIN_DEBUG_LIGHTGRID_SKINNED]].usesJoints = true;
 		renderProgs[builtinShaders[BUILTIN_DEBUG_OCTAHEDRON_SKINNED]].usesJoints = true;
 
@@ -702,29 +681,9 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		renderProgs[builtinShaders[BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_SPOT_SKINNED]].usesJoints = true;
 		renderProgs[builtinShaders[BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_POINT_SKINNED]].usesJoints = true;
 		renderProgs[builtinShaders[BUILTIN_PBR_INTERACTION_SHADOW_ATLAS_PARALLEL_SKINNED]].usesJoints = true;
-		// RB end
 	}
 
 	cmdSystem->AddCommand( "reloadShaders", R_ReloadShaders, CMD_FL_RENDERER, "reloads shaders" );
-
-#if defined(USE_VULKAN)
-	counter = 0;
-
-	// Create Vertex Descriptions
-	CreateVertexDescriptions();
-
-	// Create Descriptor Pools
-	CreateDescriptorPools( descriptorPools );
-
-	for( int i = 0; i < NUM_FRAME_DATA; ++i )
-	{
-		parmBuffers[i] = new idUniformBuffer();
-		parmBuffers[i]->AllocBufferObject( NULL, MAX_DESC_SETS * MAX_DESC_SET_UNIFORMS * sizeof( idVec4 ), BU_DYNAMIC );
-	}
-
-	// Placeholder: mainly for optionalSkinning
-	emptyUBO.AllocBufferObject( NULL, sizeof( idVec4 ), BU_DYNAMIC );
-#endif
 }
 
 /*
@@ -762,7 +721,6 @@ void idRenderProgManager::Shutdown()
 {
 	KillAllShaders();
 
-#if defined( USE_NVRHI )
 	// SRS - Delete renderprogs builtin binding layouts
 	for( int i = 0; i < renderProgs.Num(); i++ )
 	{
@@ -786,7 +744,6 @@ void idRenderProgManager::Shutdown()
 	{
 		constantBuffer[i] = nullptr;
 	}
-#endif
 }
 
 /*
@@ -816,54 +773,11 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage )
 	shader.name = shaderName;
 	shader.stage = stage;
 
-#if 0
-	for( int i = 0; i < MAX_SHADER_MACRO_NAMES; i++ )
-	{
-		int feature = ( bool )( 0 & BIT( i ) );
-		idStr macroName( GetGLSLMacroName( ( shaderFeature_t )i ) );
-		idStr value( feature );
-		shader.macros.Append( shaderMacro_t( macroName, value ) );
-	}
-#endif
-
 	int index = shaders.Append( shader );
 	LoadShader( index, stage );
 
 	return index;
 }
-
-
-/*
-int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, uint32 features, bool builtin, vertexLayoutType_t vertexLayout )
-{
-	idStr shaderName( name );
-	shaderName.StripFileExtension();
-	//shaderName += nameOutSuffix;
-
-	for( int i = 0; i < shaders.Num(); i++ )
-	{
-		shader_t& shader = shaders[ i ];
-		if( shader.name.Icmp( shaderName.c_str() ) == 0 && shader.stage == stage && shader.nameOutSuffix.Icmp( nameOutSuffix ) == 0 )
-		{
-			LoadShader( i, stage );
-			return i;
-		}
-	}
-
-	shader_t shader;
-	shader.name = shaderName;
-	shader.nameOutSuffix = nameOutSuffix;
-	shader.shaderFeatures = features;
-	shader.builtin = builtin;
-	shader.stage = stage;
-	shader.vertexLayout = vertexLayout;
-
-	int index = shaders.Append( shader );
-	LoadShader( index, stage );
-
-	return index;
-}
-*/
 
 
 int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const char* nameOutSuffix, const idList<shaderMacro_t>& macros, bool builtin, vertexLayoutType_t vertexLayout )
@@ -896,7 +810,6 @@ int idRenderProgManager::FindShader( const char* name, rpStage_t stage, const ch
 	return index;
 }
 
-#if defined( USE_NVRHI )
 nvrhi::ShaderHandle idRenderProgManager::GetShader( int index )
 {
 	return shaders[index].handle;
@@ -927,7 +840,6 @@ programInfo_t idRenderProgManager::GetProgramInfo( int index )
 
 	return info;
 }
-#endif
 
 bool idRenderProgManager::IsShaderBound() const
 {
