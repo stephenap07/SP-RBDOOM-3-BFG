@@ -1273,11 +1273,11 @@ void DeviceManager_VK::Present()
 	BeginFrame();
 
 	vk::PresentInfoKHR info = vk::PresentInfoKHR()
-		.setWaitSemaphoreCount( 1 )
-		.setPWaitSemaphores( &m_PresentSemaphore )
-		.setSwapchainCount( 1 )
-		.setPSwapchains( &m_SwapChain )
-		.setPImageIndices( &m_SwapChainIndex );
+							  .setWaitSemaphoreCount( 1 )
+							  .setPWaitSemaphores( &m_PresentSemaphore )
+							  .setSwapchainCount( 1 )
+							  .setPSwapchains( &m_SwapChain )
+							  .setPImageIndices( &m_SwapChainIndex );
 
 	const vk::Result res = m_PresentQueue.presentKHR( &info );
 	assert( res == vk::Result::eSuccess || res == vk::Result::eErrorOutOfDateKHR || res == vk::Result::eSuboptimalKHR );
@@ -1299,7 +1299,7 @@ void DeviceManager_VK::Present()
 
 			m_QueryPool.push_back( query );
 		}
-		
+
 		nvrhi::EventQueryHandle query;
 		if( !m_QueryPool.empty() )
 		{

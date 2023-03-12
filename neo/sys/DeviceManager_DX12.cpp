@@ -64,7 +64,7 @@ class DeviceManager_DX12 : public DeviceManager
 	std::vector<nvrhi::TextureHandle>           m_RhiSwapChainBuffers;
 	RefCountPtr<ID3D12Fence>                    m_FrameFence;
 	std::vector<HANDLE>                         m_FrameFenceEvents;
-	
+
 	UINT64                                      m_FrameCount = 1;
 
 	nvrhi::DeviceHandle                         m_NvrhiDevice;
