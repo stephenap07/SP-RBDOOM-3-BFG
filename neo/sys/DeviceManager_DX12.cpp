@@ -64,8 +64,7 @@ class DeviceManager_DX12 : public DeviceManager
 	std::vector<nvrhi::TextureHandle>           m_RhiSwapChainBuffers;
 	RefCountPtr<ID3D12Fence>                    m_FrameFence;
 	std::vector<HANDLE>                         m_FrameFenceEvents;
-	nvrhi::EventQueryHandle						m_FrameWaitQuery;
-
+	
 	UINT64                                      m_FrameCount = 1;
 
 	nvrhi::DeviceHandle                         m_NvrhiDevice;
@@ -451,9 +450,6 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 		m_FrameFenceEvents.push_back( CreateEvent( nullptr, false, true, NULL ) );
 	}
 
-	m_FrameWaitQuery = m_NvrhiDevice->createEventQuery();
-	m_NvrhiDevice->setEventQuery( m_FrameWaitQuery, nvrhi::CommandQueue::Graphics );
-
 	OPTICK_GPU_INIT_D3D12( m_Device12, &m_GraphicsQueue, 1 );
 
 	return true;
@@ -467,8 +463,6 @@ void DeviceManager_DX12::DestroyDeviceAndSwapChain()
 	ReleaseRenderTargets();
 
 	m_NvrhiDevice = nullptr;
-
-	m_FrameWaitQuery = nullptr;
 
 	for( auto fenceEvent : m_FrameFenceEvents )
 	{
@@ -580,37 +574,7 @@ void DeviceManager_DX12::ResizeSwapChain()
 
 void DeviceManager_DX12::BeginFrame()
 {
-	//SRS - This code not needed: framebuffer/swapchain resizing & fullscreen are handled by idRenderBackend::ResizeImages() and DeviceManager::UpdateWindowSize()
-#if 0
-	DXGI_SWAP_CHAIN_DESC1 newSwapChainDesc;
-	DXGI_SWAP_CHAIN_FULLSCREEN_DESC newFullScreenDesc;
-	if( SUCCEEDED( m_SwapChain->GetDesc1( &newSwapChainDesc ) ) && SUCCEEDED( m_SwapChain->GetFullscreenDesc( &newFullScreenDesc ) ) )
-	{
-		if( m_FullScreenDesc.Windowed != newFullScreenDesc.Windowed )
-		{
-			BackBufferResizing();
-
-			m_FullScreenDesc = newFullScreenDesc;
-			m_SwapChainDesc = newSwapChainDesc;
-			m_DeviceParams.backBufferWidth = newSwapChainDesc.Width;
-			m_DeviceParams.backBufferHeight = newSwapChainDesc.Height;
-
-			if( newFullScreenDesc.Windowed )
-			{
-				//glfwSetWindowMonitor( m_Window, nullptr, 50, 50, newSwapChainDesc.Width, newSwapChainDesc.Height, 0 );
-			}
-
-			ResizeSwapChain();
-			BackBufferResized();
-		}
-	}
-#endif
-
 	OPTICK_CATEGORY( "DX12_BeginFrame", Optick::Category::Wait );
-
-	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-
-	WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
 }
 
 nvrhi::ITexture* DeviceManager_DX12::GetCurrentBackBuffer()
@@ -644,21 +608,19 @@ void DeviceManager_DX12::EndFrame()
 
 void DeviceManager_DX12::Present()
 {
-	// SRS - Sync on previous frame's command queue completion vs. waitForIdle() on whole device
-	{
-		OPTICK_CATEGORY( "DX12_Present", Optick::Category::Wait );
-
-		m_NvrhiDevice->waitEventQuery( m_FrameWaitQuery );
-		m_NvrhiDevice->resetEventQuery( m_FrameWaitQuery );
-		m_NvrhiDevice->setEventQuery( m_FrameWaitQuery, nvrhi::CommandQueue::Graphics );
-	}
-
 	if( !m_windowVisible )
 	{
 		return;
 	}
 
 	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+
+	if constexpr( NUM_FRAME_DATA > 2 )
+	{
+		int32 prevIndex = bufferIndex - 1;
+		prevIndex = ( prevIndex < 0 ) ? m_SwapChainDesc.BufferCount - 1 : prevIndex;
+		WaitForSingleObject( m_FrameFenceEvents[prevIndex], INFINITE );
+	}
 
 	UINT presentFlags = 0;
 
@@ -677,6 +639,11 @@ void DeviceManager_DX12::Present()
 	m_FrameFence->SetEventOnCompletion( m_FrameCount, m_FrameFenceEvents[bufferIndex] );
 	m_GraphicsQueue->Signal( m_FrameFence, m_FrameCount );
 	m_FrameCount++;
+
+	if constexpr( NUM_FRAME_DATA < 3 )
+	{
+		WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
+	}
 }
 
 DeviceManager* DeviceManager::CreateD3D12()

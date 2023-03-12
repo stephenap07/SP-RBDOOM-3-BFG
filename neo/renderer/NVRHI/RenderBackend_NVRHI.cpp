@@ -1552,8 +1552,6 @@ void idRenderBackend::GL_StartFrame()
 	// fetch GPU timer queries of last frame
 	renderLog.FetchGPUTimers( pc );
 
-	deviceManager->BeginFrame();
-
 #if defined( USE_AMD_ALLOCATOR )
 	idImage::EmptyGarbage();
 #endif
@@ -1588,7 +1586,7 @@ void idRenderBackend::GL_EndFrame()
 	deviceManager->GetDevice()->executeCommandList( commandList );
 
 	// required for Vulkan: transition our swap image to present
-	deviceManager->EndFrame();
+	//deviceManager->EndFrame();
 
 	// update jitter for perspective matrix
 	taaPass->AdvanceFrame();

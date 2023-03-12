@@ -53,10 +53,11 @@ struct DeviceCreationParameters
 	uint32_t backBufferHeight = 720;
 	uint32_t backBufferSampleCount = 1;  // optional HDR Framebuffer MSAA
 	uint32_t refreshRate = 0;
-	uint32_t swapChainBufferCount = 3;
+	uint32_t swapChainBufferCount = NUM_FRAME_DATA;
 	nvrhi::Format swapChainFormat = nvrhi::Format::RGBA8_UNORM; // RB: don't do the sRGB gamma ramp with the swapchain
 	uint32_t swapChainSampleCount = 1;
 	uint32_t swapChainSampleQuality = 0;
+	uint32_t maxFramesInFlight = 2;
 	bool enableDebugRuntime = false;
 	bool enableNvrhiValidationLayer = false;
 	bool vsyncEnabled = false;
