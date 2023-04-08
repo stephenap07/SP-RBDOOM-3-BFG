@@ -582,10 +582,7 @@ void DeviceManager_DX12::ResizeSwapChain()
 
 void DeviceManager_DX12::BeginFrame()
 {
-	OPTICK_CATEGORY( "DX12_BeginFrame", Optick::Category::Wait );
-
-	auto bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-
+	uint32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 	WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
 }
 
@@ -624,20 +621,18 @@ void DeviceManager_DX12::Present()
 		return;
 	}
 
+	OPTICK_CATEGORY( "DX12_Present", Optick::Category::Wait );
+
 	// SRS - Sync on previous frame's command queue completion vs. waitForIdle() on whole device
+	const int32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+
+	if constexpr( NUM_FRAME_DATA > 2 )
 	{
-		OPTICK_CATEGORY( "DX12_Present", Optick::Category::Wait );
-
-		int prevIndex = m_SwapChain->GetCurrentBackBufferIndex() - 1;
-		if( prevIndex < 0 )
-		{
-			prevIndex = m_SwapChainDesc.BufferCount - 1;
-		}
-
+		OPTICK_EVENT( "Wait For Swap Chain" );
+		int32 prevIndex = bufferIndex - 1;
+		prevIndex = ( prevIndex < 0 ) ? m_SwapChainDesc.BufferCount - 1 : prevIndex;
 		WaitForSingleObject( m_FrameFenceEvents[prevIndex], INFINITE );
 	}
-
-	const int32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
 	UINT presentFlags = 0;
 
@@ -658,6 +653,12 @@ void DeviceManager_DX12::Present()
 	m_FrameFence->SetEventOnCompletion( m_FrameCount, m_FrameFenceEvents[bufferIndex] );
 	m_GraphicsQueue->Signal( m_FrameFence, m_FrameCount );
 	m_FrameCount++;
+
+	if constexpr( NUM_FRAME_DATA < 3 )
+	{
+		OPTICK_EVENT( "Wait For Swap Chain" );
+		WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
+	}
 }
 
 DeviceManager* DeviceManager::CreateD3D12()

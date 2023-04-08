@@ -1235,13 +1235,7 @@ void idImage::UploadScratch( const byte* data, int cols, int rows, nvrhi::IComma
 				bufferW = ( opts.width + 3 ) & ~3;
 			}
 
-			//commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
-
 			commandList->writeTexture( texture, 0, 0, data, GetRowPitch( opts.format, opts.width ) );
-			
-			//commandList->setPermanentTextureState( texture, nvrhi::ResourceStates::ShaderResource );
-
-			//commandList->commitBarriers();
 		}
 #else
 		if( opts.textureType != TT_2D || usage != TD_LOOKUP_TABLE_RGBA )
