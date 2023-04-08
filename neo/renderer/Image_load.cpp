@@ -590,6 +590,7 @@ void idImage::FinalizeImage( bool fromBackEnd, nvrhi::ICommandList* commandList 
 #if defined( USE_NVRHI )
 				const nvrhi::FormatInfo& info = nvrhi::getFormatInfo( texture->getDesc().format );
 
+				commandList->setEnableAutomaticBarriers( false );
 				commandList->beginTrackingTextureState( texture, nvrhi::AllSubresources, nvrhi::ResourceStates::Common );
 				for( int level = 0; level < opts.numLevels; level++ )
 				{

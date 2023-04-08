@@ -133,34 +133,6 @@ void idRenderProgManager::Init( nvrhi::IDevice* device )
 		.setOffset( offsetof( idDrawVert, color ) )
 		.setElementStride( sizeof( idDrawVert ) ) );
 
-	/*
-	// === Shadow vertex ===
-
-	vertexLayoutDescs[LAYOUT_DRAW_SHADOW_VERT].Append(
-		nvrhi::VertexAttributeDesc()
-		.setName( "POSITION" )
-		.setFormat( nvrhi::Format::RGBA32_FLOAT )
-		.setOffset( offsetof( idShadowVert, xyzw ) )
-		.setElementStride( sizeof( idShadowVert ) ) );
-
-	// === Shadow vertex skinned ===
-
-	vertexLayoutDescs[LAYOUT_DRAW_SHADOW_VERT_SKINNED].Append(
-		nvrhi::VertexAttributeDesc()
-		.setName( "POSITION" )
-		.setFormat( nvrhi::Format::RGBA32_FLOAT )
-		.setOffset( offsetof( idShadowVertSkinned, xyzw ) )
-		.setElementStride( sizeof( idShadowVertSkinned ) ) );
-
-	vertexLayoutDescs[LAYOUT_DRAW_SHADOW_VERT_SKINNED].Append(
-		nvrhi::VertexAttributeDesc()
-		.setName( "COLOR" )
-		.setArraySize( 2 )
-		.setFormat( nvrhi::Format::RGBA8_UNORM )
-		.setOffset( offsetof( idShadowVertSkinned, color ) )
-		.setElementStride( sizeof( idShadowVertSkinned ) ) );
-	*/
-
 	vertexLayoutDescs[LAYOUT_DRAW_DEPTH] =
 	{
 		GetVertexAttributeDesc( VERTEXATTRIBUTE_POSITION, "POSITION", 0 ),

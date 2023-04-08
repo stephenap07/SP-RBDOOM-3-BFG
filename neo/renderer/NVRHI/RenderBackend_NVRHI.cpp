@@ -281,7 +281,7 @@ void idRenderBackend::Init()
 	nvrhi::BindlessLayoutDesc bindlessLayoutDesc;
 	bindlessLayoutDesc.visibility = nvrhi::ShaderType::All;
 	bindlessLayoutDesc.firstSlot = 0;
-	bindlessLayoutDesc.maxCapacity = 1024;
+	bindlessLayoutDesc.maxCapacity = 2048;
 	bindlessLayoutDesc.registerSpaces =
 	{
 		nvrhi::BindingLayoutItem::RawBuffer_SRV( 1 ),	// vertex buffers
