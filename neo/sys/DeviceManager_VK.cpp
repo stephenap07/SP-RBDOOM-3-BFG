@@ -38,6 +38,8 @@
 // SRS - optionally needed for VK_MVK_MOLTENVK_EXTENSION_NAME and MoltenVK runtime config visibility
 #if defined(__APPLE__) && defined( USE_MoltenVK )
 	#include <MoltenVK/vk_mvk_moltenvk.h>
+
+	idCVar r_mvkSynchronousQueueSubmits( "r_mvkSynchronousQueueSubmits", "0", CVAR_BOOL | CVAR_INIT, "Use MoltenVK's synchronous queue submit option." );
 #endif
 #include <nvrhi/validation.h>
 
@@ -273,6 +275,7 @@ private:
 	nvrhi::DeviceHandle m_ValidationLayer;
 
 	nvrhi::CommandListHandle m_BarrierCommandList;
+	std::queue<vk::Semaphore> m_PresentSemaphoreQueue;
 	vk::Semaphore m_PresentSemaphore;
 
 	nvrhi::EventQueryHandle m_FrameWaitQuery;
@@ -1020,7 +1023,7 @@ bool DeviceManager_VK::createSwapChain()
 				.setPQueueFamilyIndices( enableSwapChainSharing ? queues.data() : nullptr )
 				.setPreTransform( vk::SurfaceTransformFlagBitsKHR::eIdentity )
 				.setCompositeAlpha( vk::CompositeAlphaFlagBitsKHR::eOpaque )
-				.setPresentMode( m_DeviceParams.vsyncEnabled ? ( r_swapInterval.GetInteger() == 2 || !enablePModeFifoRelaxed ? vk::PresentModeKHR::eFifo : vk::PresentModeKHR::eFifoRelaxed ) : vk::PresentModeKHR::eImmediate )
+				.setPresentMode( m_DeviceParams.vsyncEnabled > 0 ? ( m_DeviceParams.vsyncEnabled == 2 || !enablePModeFifoRelaxed ? vk::PresentModeKHR::eFifo : vk::PresentModeKHR::eFifoRelaxed ) : vk::PresentModeKHR::eImmediate )
 				.setClipped( true )
 				.setOldSwapchain( nullptr );
 
@@ -1126,8 +1129,8 @@ bool DeviceManager_VK::CreateDeviceAndSwapChain()
 
 	vkGetMoltenVKConfigurationMVK( m_VulkanInstance, &pConfig, &pConfigSize );
 
-	// SRS - Enforce synchronous queue submission for vkQueueSubmit() & vkQueuePresentKHR()
-	pConfig.synchronousQueueSubmits = VK_TRUE;
+	// SRS - Set MoltenVK's synchronous queue submit option for vkQueueSubmit() & vkQueuePresentKHR()
+	pConfig.synchronousQueueSubmits = r_mvkSynchronousQueueSubmits.GetBool() ? VK_TRUE : VK_FALSE;
 	vkSetMoltenVKConfigurationMVK( m_VulkanInstance, &pConfig, &pConfigSize );
 
 	// SRS - If we don't have native image view swizzle, enable MoltenVK's image view swizzle feature
@@ -1186,7 +1189,12 @@ bool DeviceManager_VK::CreateDeviceAndSwapChain()
 
 	m_BarrierCommandList = m_NvrhiDevice->createCommandList();
 
-	m_PresentSemaphore = m_VulkanDevice.createSemaphore( vk::SemaphoreCreateInfo() );
+	// SRS - Give each swapchain image its own semaphore in case of overlap (e.g. MoltenVK async queue submit)
+	for( int i = 0; i < m_SwapChainImages.size(); i++ )
+	{
+		m_PresentSemaphoreQueue.push( m_VulkanDevice.createSemaphore( vk::SemaphoreCreateInfo() ) );
+	}
+	m_PresentSemaphore = m_PresentSemaphoreQueue.front();
 
 	m_FrameWaitQuery = m_NvrhiDevice->createEventQuery();
 	m_NvrhiDevice->setEventQuery( m_FrameWaitQuery, nvrhi::CommandQueue::Graphics );
@@ -1198,14 +1206,18 @@ bool DeviceManager_VK::CreateDeviceAndSwapChain()
 
 void DeviceManager_VK::DestroyDeviceAndSwapChain()
 {
-	destroySwapChain();
-
 	m_FrameWaitQuery = nullptr;
 
-	m_VulkanDevice.destroySemaphore( m_PresentSemaphore );
+	for( int i = 0; i < m_SwapChainImages.size(); i++ )
+	{
+		m_VulkanDevice.destroySemaphore( m_PresentSemaphoreQueue.front() );
+		m_PresentSemaphoreQueue.pop();
+	}
 	m_PresentSemaphore = vk::Semaphore();
 
 	m_BarrierCommandList = nullptr;
+
+	destroySwapChain();
 
 	m_NvrhiDevice = nullptr;
 	m_ValidationLayer = nullptr;
@@ -1273,11 +1285,6 @@ void DeviceManager_VK::EndFrame()
 
 void DeviceManager_VK::Present()
 {
-	// SRS - Sync on previous frame's command queue completion vs. waitForIdle() on whole device
-	m_NvrhiDevice->waitEventQuery( m_FrameWaitQuery );
-	m_NvrhiDevice->resetEventQuery( m_FrameWaitQuery );
-	m_NvrhiDevice->setEventQuery( m_FrameWaitQuery, nvrhi::CommandQueue::Graphics );
-
 	vk::PresentInfoKHR info = vk::PresentInfoKHR()
 							  .setWaitSemaphoreCount( 1 )
 							  .setPWaitSemaphores( &m_PresentSemaphore )
@@ -1288,11 +1295,36 @@ void DeviceManager_VK::Present()
 	const vk::Result res = m_PresentQueue.presentKHR( &info );
 	assert( res == vk::Result::eSuccess || res == vk::Result::eErrorOutOfDateKHR || res == vk::Result::eSuboptimalKHR );
 
-	if( m_DeviceParams.enableDebugRuntime || m_DeviceParams.vsyncEnabled )
+	// SRS - Cycle the semaphore queue and setup m_PresentSemaphore for the next swapchain image
+	m_PresentSemaphoreQueue.pop();
+	m_PresentSemaphoreQueue.push( m_PresentSemaphore );
+	m_PresentSemaphore = m_PresentSemaphoreQueue.front();
+
+#if !defined(__APPLE__) || !defined( USE_MoltenVK )
+	// SRS - validation layer is present only when the vulkan loader + layers are enabled (i.e. not MoltenVK standalone)
+	if( m_DeviceParams.enableDebugRuntime )
 	{
 		// according to vulkan-tutorial.com, "the validation layer implementation expects
 		// the application to explicitly synchronize with the GPU"
 		m_PresentQueue.waitIdle();
+	}
+	else
+#endif
+	{
+		if constexpr( NUM_FRAME_DATA > 2 )
+		{
+			// SRS - For triple buffering, sync on previous frame's command queue completion
+			m_NvrhiDevice->waitEventQuery( m_FrameWaitQuery );
+		}
+
+		m_NvrhiDevice->resetEventQuery( m_FrameWaitQuery );
+		m_NvrhiDevice->setEventQuery( m_FrameWaitQuery, nvrhi::CommandQueue::Graphics );
+
+		if constexpr( NUM_FRAME_DATA < 3 )
+		{
+			// SRS - For double buffering, sync on current frame's command queue completion
+			m_NvrhiDevice->waitEventQuery( m_FrameWaitQuery );
+		}
 	}
 }
 

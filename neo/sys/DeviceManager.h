@@ -28,6 +28,7 @@
 
 #if USE_DX11 || USE_DX12
 	#include <DXGI.h>
+	#include <dxgi1_6.h>
 #endif
 
 #if USE_DX11
@@ -53,13 +54,13 @@ struct DeviceCreationParameters
 	uint32_t backBufferHeight = 720;
 	uint32_t backBufferSampleCount = 1;  // optional HDR Framebuffer MSAA
 	uint32_t refreshRate = 0;
-	uint32_t swapChainBufferCount = NUM_FRAME_DATA;
+	uint32_t swapChainBufferCount = 3;	// SRS - hardcode to 3 for Vsync modes and linux surfaceCaps.minImageCount = 3
 	nvrhi::Format swapChainFormat = nvrhi::Format::RGBA8_UNORM; // RB: don't do the sRGB gamma ramp with the swapchain
 	uint32_t swapChainSampleCount = 1;
 	uint32_t swapChainSampleQuality = 0;
 	bool enableDebugRuntime = false;
 	bool enableNvrhiValidationLayer = false;
-	bool vsyncEnabled = false;
+	int vsyncEnabled = 0;
 	bool enableRayTracingExtensions = false; // for vulkan
 	bool enableComputeQueue = true;
 	bool enableCopyQueue = true;
@@ -160,7 +161,7 @@ protected:
 
 	float m_DPIScaleFactorX = 1.f;
 	float m_DPIScaleFactorY = 1.f;
-	bool m_RequestedVSync = false;
+	int m_RequestedVSync = 0;
 
 	uint32_t m_FrameIndex = 0;
 
@@ -183,9 +184,9 @@ public:
 	[[nodiscard]] virtual nvrhi::GraphicsAPI GetGraphicsAPI() const = 0;
 
 	const DeviceCreationParameters& GetDeviceParams();
-	virtual void SetVsyncEnabled( bool enabled )
+	virtual void SetVsyncEnabled( int vsyncMode )
 	{
-		m_RequestedVSync = enabled; /* will be processed later */
+		m_RequestedVSync = vsyncMode; /* will be processed later */
 	}
 	virtual void ReportLiveObjects() {}
 

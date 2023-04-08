@@ -72,15 +72,6 @@ idCVar r_debugContext( "r_debugContext", "0", CVAR_RENDERER, "Enable various lev
 
 idCVar r_useValidationLayers( "r_useValidationLayers", "1", CVAR_INTEGER | CVAR_INIT, "1 is just the NVRHI and 2 will turn on additional DX12, VK validation layers" );
 
-// SRS - Added workaround for AMD OSX driver bugs caused by GL_EXT_timer_query when shadow mapping enabled; Intel bugs not present on OSX
-#if defined(__APPLE__)
-	idCVar r_skipIntelWorkarounds( "r_skipIntelWorkarounds", "1", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for Intel driver bugs" );
-	idCVar r_skipAMDWorkarounds( "r_skipAMDWorkarounds", "0", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for AMD driver bugs" );
-#else
-	idCVar r_skipIntelWorkarounds( "r_skipIntelWorkarounds", "0", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for Intel driver bugs" );
-	idCVar r_skipAMDWorkarounds( "r_skipAMDWorkarounds", "1", CVAR_RENDERER | CVAR_BOOL, "skip workarounds for AMD driver bugs" );
-#endif
-// SRS end
 // RB: disabled 16x MSAA
 #if ID_MSAA
 	idCVar r_antiAliasing( "r_antiAliasing", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, " 0 = None\n 1 = TAA 1x\n 2 = TAA + SMAA 1x\n 3 = MSAA 2x\n 4 = MSAA 4x\n", 0, ANTI_ALIASING_MSAA_4X );
@@ -90,13 +81,10 @@ idCVar r_useValidationLayers( "r_useValidationLayers", "1", CVAR_INTEGER | CVAR_
 // RB end
 idCVar r_vidMode( "r_vidMode", "0", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_INTEGER, "fullscreen video mode number" );
 idCVar r_displayRefresh( "r_displayRefresh", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_NOCHEAT, "optional display refresh rate option for vid mode", 0.0f, 240.0f );
-#ifdef WIN32
-	idCVar r_fullscreen( "r_fullscreen", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "0 = windowed, 1 = full screen on monitor 1, 2 = full screen on monitor 2, etc" );
-#else
-	// DG: add mode -2 for SDL, also defaulting to windowed mode, as that causes less trouble on linux
-	idCVar r_fullscreen( "r_fullscreen", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "-2 = use current monitor, -1 = (reserved), 0 = windowed, 1 = full screen on monitor 1, 2 = full screen on monitor 2, etc" );
-	// DG end
-#endif
+// SRS - redefined mode -2 to be borderless fullscreen, implemented borderless modes -2 and -1 for Windows and linux/macOS (SDL)
+// DG: add mode -2 for SDL, also defaulting to windowed mode, as that causes less trouble on linux
+idCVar r_fullscreen( "r_fullscreen", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "-2 = borderless fullscreen, -1 = borderless window, 0 = windowed, 1 = full screen on monitor 1, 2 = full screen on monitor 2, etc" );
+// DG end
 idCVar r_customWidth( "r_customWidth", "1280", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "custom screen width. set r_vidMode to -1 to activate" );
 idCVar r_customHeight( "r_customHeight", "720", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "custom screen height. set r_vidMode to -1 to activate" );
 idCVar r_windowX( "r_windowX", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "Non-fullscreen parameter" );
@@ -180,7 +168,6 @@ idCVar r_testGammaBias( "r_testGammaBias", "0", CVAR_RENDERER | CVAR_FLOAT, "if 
 idCVar r_lightScale( "r_lightScale", "3", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT, "all light intensities are multiplied by this", 0, 100 );
 idCVar r_flareSize( "r_flareSize", "1", CVAR_RENDERER | CVAR_FLOAT, "scale the flare deforms from the material def" );
 
-idCVar r_skipPrelightShadows( "r_skipPrelightShadows", "0", CVAR_RENDERER | CVAR_BOOL, "skip the dmap generated static shadow volumes" );
 idCVar r_useScissor( "r_useScissor", "1", CVAR_RENDERER | CVAR_BOOL, "scissor clip as portals and lights are processed" );
 idCVar r_useLightDepthBounds( "r_useLightDepthBounds", "1", CVAR_RENDERER | CVAR_BOOL, "use depth bounds test on lights to reduce both shadow and interaction fill" );
 idCVar r_useShadowDepthBounds( "r_useShadowDepthBounds", "1", CVAR_RENDERER | CVAR_BOOL, "use depth bounds test on individual shadow volumes to reduce shadow fill" );
@@ -196,7 +183,7 @@ idCVar r_singleEnvprobe( "r_singleEnvprobe", "-1", CVAR_RENDERER | CVAR_INTEGER,
 idCVar r_singleSurface( "r_singleSurface", "-1", CVAR_RENDERER | CVAR_INTEGER, "suppress all but one surface on each entity" );
 idCVar r_singleArea( "r_singleArea", "0", CVAR_RENDERER | CVAR_BOOL, "only draw the portal area the view is actually in" );
 idCVar r_orderIndexes( "r_orderIndexes", "1", CVAR_RENDERER | CVAR_BOOL, "perform index reorganization to optimize vertex use" );
-idCVar r_lightAllBackFaces( "r_lightAllBackFaces", "0", CVAR_RENDERER | CVAR_BOOL, "light all the back faces, even when they would be shadowed" );
+idCVar r_lightAllBackFaces( "r_lightAllBackFaces", "1", CVAR_RENDERER | CVAR_BOOL, "light all the back faces, even when they would be shadowed" );
 
 // visual debugging info
 idCVar r_showPortals( "r_showPortals", "0", CVAR_RENDERER | CVAR_BOOL, "draw portal outlines in color based on passed / not passed" );
@@ -255,7 +242,6 @@ idCVar stereoRender_deGhost( "stereoRender_deGhost", "0.05", CVAR_FLOAT | CVAR_A
 idCVar r_useVirtualScreenResolution( "r_useVirtualScreenResolution", "0", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "do 2D rendering at 640x480 and stretch to the current resolution" );
 
 // RB: shadow mapping parameters
-idCVar r_useShadowMapping( "r_useShadowMapping", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "use shadow mapping instead of stencil shadows" );
 idCVar r_useShadowAtlas( "r_useShadowAtlas", "1", CVAR_RENDERER | CVAR_INTEGER, "" );
 idCVar r_shadowMapAtlasSize( "r_shadowMapAtlasSize", "8192", CVAR_RENDERER | CVAR_INTEGER | CVAR_ROM, "size of the shadowmap atlas" );
 idCVar r_shadowMapFrustumFOV( "r_shadowMapFrustumFOV", "92", CVAR_RENDERER | CVAR_FLOAT, "oversize FOV for point light side matching" );
@@ -370,6 +356,7 @@ uint R_GetMSAASamples()
 =============================
 R_SetNewMode
 
+r_fullScreen -2		borderless fullscreen on current monitor at desktop resolution
 r_fullScreen -1		borderless window at exact desktop coordinates
 r_fullScreen 0		bordered window at exact desktop coordinates
 r_fullScreen 1		fullscreen on monitor 1 at r_vidMode
@@ -405,7 +392,7 @@ void R_SetNewMode( const bool fullInit )
 			parms.y = r_windowY.GetInteger();
 			parms.width = r_windowWidth.GetInteger();
 			parms.height = r_windowHeight.GetInteger();
-			// may still be -1 to force a borderless window
+			// may still be -1 or -2 to force a borderless window
 			parms.fullScreen = r_fullscreen.GetInteger();
 			parms.displayHz = 0;		// ignored
 		}
@@ -415,14 +402,14 @@ void R_SetNewMode( const bool fullInit )
 			idList<vidMode_t> modeList;
 			if( !R_GetModeListForDisplay( r_fullscreen.GetInteger() - 1, modeList ) )
 			{
-				idLib::Printf( "r_fullscreen reset from %i to 1 because mode list failed.", r_fullscreen.GetInteger() );
+				idLib::Printf( "r_fullscreen reset from %i to 1 because mode list failed.\n", r_fullscreen.GetInteger() );
 				r_fullscreen.SetInteger( 1 );
 				R_GetModeListForDisplay( r_fullscreen.GetInteger() - 1, modeList );
 			}
 
 			if( modeList.Num() < 1 )
 			{
-				idLib::Printf( "Going to safe mode because mode list failed." );
+				idLib::Printf( "Going to safe mode because mode list failed.\n" );
 				goto safeMode;
 			}
 
@@ -498,7 +485,7 @@ void R_SetNewMode( const bool fullInit )
 			if( GLimp_Init( parms ) )
 #endif
 			{
-				ImGuiHook::Init( parms.width, parms.height );
+				ImGuiHook::Init( glConfig.nativeScreenWidth, glConfig.nativeScreenHeight );
 				break;
 			}
 		}
@@ -513,7 +500,7 @@ void R_SetNewMode( const bool fullInit )
 #endif
 			{
 				Framebuffer::ResizeFramebuffers();
-				ImGuiHook::NotifyDisplaySizeChanged( parms.width, parms.height );
+				ImGuiHook::NotifyDisplaySizeChanged( glConfig.nativeScreenWidth, glConfig.nativeScreenHeight );
 				break;
 			}
 		}

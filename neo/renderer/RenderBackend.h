@@ -51,15 +51,6 @@ If you have questions concerning this license or the applicable additional terms
 	#define USE_OPTICK_GPU 0
 #endif
 
-// TODO remove
-bool			GL_CheckErrors_( const char* filename, int line );
-#if 1 // !defined(RETAIL)
-	#define         GL_CheckErrors()	GL_CheckErrors_(__FILE__, __LINE__)
-#else
-	#define         GL_CheckErrors()	false
-#endif
-// RB end
-
 struct tmu_t
 {
 	unsigned int	current2DMap;
@@ -186,7 +177,7 @@ public:
 	static void			ImGui_Shutdown();
 	static void			ImGui_RenderDrawLists( ImDrawData* draw_data );
 
-	void				DrawElementsWithCounters( const drawSurf_t* surf );
+	void				DrawElementsWithCounters( const drawSurf_t* surf, bool shadowCounter = false );
 
 private:
 	void				DrawFlickerBox();

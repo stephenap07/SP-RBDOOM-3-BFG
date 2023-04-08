@@ -62,11 +62,7 @@ class DeviceManager_DX12 : public DeviceManager
 
 	std::vector<RefCountPtr<ID3D12Resource>>    m_SwapChainBuffers;
 	std::vector<nvrhi::TextureHandle>           m_RhiSwapChainBuffers;
-	RefCountPtr<ID3D12Fence>                    m_FrameFence;
-	std::vector<HANDLE>                         m_FrameFenceEvents;
 	nvrhi::EventQueryHandle						m_FrameWaitQuery;
-
-	UINT64                                      m_FrameCount = 1;
 
 	nvrhi::DeviceHandle                         m_NvrhiDevice;
 
@@ -125,11 +121,22 @@ static RefCountPtr<IDXGIAdapter> FindAdapter( const std::wstring& targetName )
 		return targetAdapter;
 	}
 
+	RefCountPtr<IDXGIFactory6> DXGIFactory6;
+
 	unsigned int adapterNo = 0;
 	while( SUCCEEDED( hres ) )
 	{
 		RefCountPtr<IDXGIAdapter> pAdapter;
-		hres = DXGIFactory->EnumAdapters( adapterNo, &pAdapter );
+
+		// Try to use EnumAdapterByGpuPreference method to get the better performing GPU.
+		if( S_OK == DXGIFactory->QueryInterface( IID_PPV_ARGS( &DXGIFactory6 ) ) )
+		{
+			hres = DXGIFactory6->EnumAdapterByGpuPreference( adapterNo, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS( &pAdapter ) );
+		}
+		else
+		{
+			hres = DXGIFactory->EnumAdapters( adapterNo, &pAdapter );
+		}
 
 		if( SUCCEEDED( hres ) )
 		{
@@ -321,6 +328,7 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 			break;
 	}
 
+	m_DeviceParams.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
 	if( m_DeviceParams.enableDebugRuntime )
 	{
 		RefCountPtr<ID3D12Debug> pDebug;
@@ -433,8 +441,6 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 	m_NvrhiDevice = nvrhi::d3d12::createDevice( deviceDesc );
 
 	m_DeviceParams.enableNvrhiValidationLayer = r_useValidationLayers.GetInteger() > 0;
-	m_DeviceParams.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
-
 	if( m_DeviceParams.enableNvrhiValidationLayer )
 	{
 		m_NvrhiDevice = nvrhi::validation::createValidationLayer( m_NvrhiDevice );
@@ -443,14 +449,6 @@ bool DeviceManager_DX12::CreateDeviceAndSwapChain()
 	if( !CreateRenderTargets() )
 	{
 		return false;
-	}
-
-	hr = m_Device12->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( &m_FrameFence ) );
-	HR_RETURN( hr );
-
-	for( UINT bufferIndex = 0; bufferIndex < m_SwapChainDesc.BufferCount; bufferIndex++ )
-	{
-		m_FrameFenceEvents.push_back( CreateEvent( nullptr, false, true, NULL ) );
 	}
 
 	m_FrameWaitQuery = m_NvrhiDevice->createEventQuery();
@@ -472,14 +470,6 @@ void DeviceManager_DX12::DestroyDeviceAndSwapChain()
 
 	m_FrameWaitQuery = nullptr;
 
-	for( auto fenceEvent : m_FrameFenceEvents )
-	{
-		WaitForSingleObject( fenceEvent, INFINITE );
-		CloseHandle( fenceEvent );
-	}
-
-	m_FrameFenceEvents.clear();
-
 	if( m_SwapChain )
 	{
 		m_SwapChain->SetFullscreenState( false, nullptr );
@@ -487,7 +477,6 @@ void DeviceManager_DX12::DestroyDeviceAndSwapChain()
 
 	m_SwapChainBuffers.clear();
 
-	m_FrameFence = nullptr;
 	m_SwapChain = nullptr;
 	m_GraphicsQueue = nullptr;
 	m_ComputeQueue = nullptr;
@@ -537,12 +526,6 @@ void DeviceManager_DX12::ReleaseRenderTargets()
 	// Release all in-flight references to the render targets
 	m_NvrhiDevice->runGarbageCollection();
 
-	// Set the events so that WaitForSingleObject in OneFrame will not hang later
-	for( auto e : m_FrameFenceEvents )
-	{
-		SetEvent( e );
-	}
-
 	// Release the old buffers because ResizeBuffers requires that
 	m_RhiSwapChainBuffers.clear();
 	m_SwapChainBuffers.clear();
@@ -582,8 +565,7 @@ void DeviceManager_DX12::ResizeSwapChain()
 
 void DeviceManager_DX12::BeginFrame()
 {
-	uint32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-	WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
+	OPTICK_CATEGORY( "DX12_BeginFrame", Optick::Category::Wait );
 }
 
 nvrhi::ITexture* DeviceManager_DX12::GetCurrentBackBuffer()
@@ -621,43 +603,37 @@ void DeviceManager_DX12::Present()
 		return;
 	}
 
-	OPTICK_CATEGORY( "DX12_Present", Optick::Category::Wait );
-
-	// SRS - Sync on previous frame's command queue completion vs. waitForIdle() on whole device
-	const int32 bufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-
-	if constexpr( NUM_FRAME_DATA > 2 )
-	{
-		OPTICK_EVENT( "Wait For Swap Chain" );
-		int32 prevIndex = bufferIndex - 1;
-		prevIndex = ( prevIndex < 0 ) ? m_SwapChainDesc.BufferCount - 1 : prevIndex;
-		WaitForSingleObject( m_FrameFenceEvents[prevIndex], INFINITE );
-	}
-
 	UINT presentFlags = 0;
 
 	// SRS - DXGI docs say fullscreen must be disabled for unlocked fps/tear, but this does not seem to be true
-	if( !m_DeviceParams.vsyncEnabled && m_TearingSupported ) //&& !glConfig.isFullscreen )
+	if( m_DeviceParams.vsyncEnabled == 0 && m_TearingSupported ) //&& !glConfig.isFullscreen )
 	{
 		presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
 	}
 
 	OPTICK_GPU_FLIP( m_SwapChain.Get() );
-	OPTICK_CATEGORY( "Present", Optick::Category::Wait );
+	OPTICK_CATEGORY( "DX12_Present", Optick::Category::Wait );
 
 	// SRS - Don't change m_DeviceParams.vsyncEnabled here, simply test for vsync mode 2 to set DXGI SyncInterval
-	m_SwapChain->Present( m_DeviceParams.vsyncEnabled && r_swapInterval.GetInteger() == 2 ? 1 : 0, presentFlags );
+	m_SwapChain->Present( m_DeviceParams.vsyncEnabled == 2 ? 1 : 0, presentFlags );
 
-	int32 bufferIndex2 = m_SwapChain->GetCurrentBackBufferIndex();
+	if constexpr( NUM_FRAME_DATA > 2 )
+	{
+		OPTICK_CATEGORY( "DX12_Sync3", Optick::Category::Wait );
 
-	m_FrameFence->SetEventOnCompletion( m_FrameCount, m_FrameFenceEvents[bufferIndex] );
-	m_GraphicsQueue->Signal( m_FrameFence, m_FrameCount );
-	m_FrameCount++;
+		// SRS - For triple buffering, sync on previous frame's command queue completion
+		m_NvrhiDevice->waitEventQuery( m_FrameWaitQuery );
+	}
+
+	m_NvrhiDevice->resetEventQuery( m_FrameWaitQuery );
+	m_NvrhiDevice->setEventQuery( m_FrameWaitQuery, nvrhi::CommandQueue::Graphics );
 
 	if constexpr( NUM_FRAME_DATA < 3 )
 	{
-		OPTICK_EVENT( "Wait For Swap Chain" );
-		WaitForSingleObject( m_FrameFenceEvents[bufferIndex], INFINITE );
+		OPTICK_CATEGORY( "DX12_Sync2", Optick::Category::Wait );
+
+		// SRS - For double buffering, sync on current frame's command queue completion
+		m_NvrhiDevice->waitEventQuery( m_FrameWaitQuery );
 	}
 }
 

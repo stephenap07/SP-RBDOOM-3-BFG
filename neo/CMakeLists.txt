@@ -56,9 +56,6 @@ option(USE_SYSTEM_LIBPNG
 option(USE_SYSTEM_LIBJPEG
          "Use the system libjpeg instead of the bundled one" OFF)
 
-option(USE_SYSTEM_LIBGLEW
-         "Use the system libglew instead of the bundled one" OFF)
-
 option(USE_SYSTEM_RAPIDJSON
          "Use the system rapidjson instead of the bundled one" OFF)
 
@@ -418,30 +415,7 @@ if(USE_VULKAN)
 		add_definitions(-DUSE_AMD_ALLOCATOR)
 		include_directories("libs/vma/include")
 	endif()
-else()
 
-	if(USE_SYSTEM_LIBGLEW)
-		find_package(GLEW)
-	endif()
-
-	if(GLEW_FOUND)
-		include_directories(${GLEW_INCLUDE_DIRS})
-		set(GLEW_LIBRARY ${GLEW_LIBRARIES})
-	else()
-		include_directories("libs/glew/include")
-		set(GLEW_LIBRARY "" )
-		add_definitions(-DGLEW_STATIC)
-		
-		set(GLEW_INCLUDES libs/glew/include/GL/glew.h)
-		set(GLEW_SOURCES libs/glew/src/glew.c)
-
-		if(WIN32)
-			set(GLEW_INCLUDES ${GLEW_INCLUDES} libs/glew/include/GL/wglew.h)
-		else()
-			set(GLEW_INCLUDES ${GLEW_INCLUDES} libs/glew/include/GL/glxew.h)
-		endif()
-		
-	endif()
 endif()
 
 set(NVRHI_WITH_DX11 "${USE_DX11}" CACHE BOOL "" FORCE)
@@ -512,14 +486,6 @@ file(GLOB RENDERER_COLOR_INCLUDES renderer/Color/*.h)
 file(GLOB RENDERER_COLOR_SOURCES renderer/Color/*.cpp)
 file(GLOB RENDERER_DXT_INCLUDES renderer/DXT/*.h)
 file(GLOB RENDERER_DXT_SOURCES renderer/DXT/*.cpp)
-file(GLOB RENDERER_JOBS_INCLUDES renderer/jobs/*.h)
-file(GLOB RENDERER_JOBS_SOURCES renderer/jobs/*.cpp)
-file(GLOB RENDERER_JOBS_DYNAMICSHADOWVOLUME_INCLUDES renderer/jobs/dynamicshadowvolume/*.h)
-file(GLOB RENDERER_JOBS_DYNAMICSHADOWVOLUME_SOURCES renderer/jobs/dynamicshadowvolume/*.cpp)
-file(GLOB RENDERER_JOBS_PRELIGHTSHADOWVOLUME_INCLUDES renderer/jobs/prelightshadowvolume/*.h)
-file(GLOB RENDERER_JOBS_PRELIGHTSHADOWVOLUME_SOURCES renderer/jobs/prelightshadowvolume/*.cpp)
-file(GLOB RENDERER_JOBS_STATICSHADOWVOLUME_INCLUDES renderer/jobs/staticshadowvolume/*.h)
-file(GLOB RENDERER_JOBS_STATICSHADOWVOLUME_SOURCES renderer/jobs/staticshadowvolume/*.cpp)
 file(GLOB RENDERER_PASSES_INCLUDES renderer/Passes/*.h)
 file(GLOB RENDERER_PASSES_SOURCES renderer/Passes/*.cpp)
 
@@ -1129,18 +1095,6 @@ source_group("renderer\\Passes" FILES ${RENDERER_PASSES_SOURCES})
 source_group("renderer\\DXT" FILES ${RENDERER_DXT_INCLUDES})
 source_group("renderer\\DXT" FILES ${RENDERER_DXT_SOURCES})
 
-source_group("renderer\\jobs" FILES ${RENDERER_JOBS_INCLUDES})
-source_group("renderer\\jobs" FILES ${RENDERER_JOBS_SOURCES})
-
-source_group("renderer\\jobs\\dynamicshadowvolume" FILES ${RENDERER_JOBS_DYNAMICSHADOWVOLUME_INCLUDES})
-source_group("renderer\\jobs\\dynamicshadowvolume" FILES ${RENDERER_JOBS_DYNAMICSHADOWVOLUME_SOURCES})
-
-source_group("renderer\\jobs\\prelightshadowvolume" FILES ${RENDERER_JOBS_PRELIGHTSHADOWVOLUME_INCLUDES})
-source_group("renderer\\jobs\\prelightshadowvolume" FILES ${RENDERER_JOBS_PRELIGHTSHADOWVOLUME_SOURCES})
-
-source_group("renderer\\jobs\\staticshadowvolume" FILES ${RENDERER_JOBS_STATICSHADOWVOLUME_INCLUDES})
-source_group("renderer\\jobs\\staticshadowvolume" FILES ${RENDERER_JOBS_STATICSHADOWVOLUME_SOURCES})
-
 source_group("renderer\\OpenGL" FILES ${RENDERER_OPENGL_INCLUDES})
 source_group("renderer\\OpenGL" FILES ${RENDERER_OPENGL_SOURCES})
 
@@ -1183,9 +1137,6 @@ source_group("libs\\zlib" FILES ${ZLIB_SOURCES})
 
 source_group("libs\\zlib\\minizip" FILES ${MINIZIP_INCLUDES})
 source_group("libs\\zlib\\minizip" FILES ${MINIZIP_SOURCES})
-
-source_group("libs\\glew" FILES ${GLEW_INCLUDES})
-source_group("libs\\glew" FILES ${GLEW_SOURCES})
 
 source_group("libs\\rapidjson" FILES ${RAPIDJSON_INCLUDES})
 
@@ -1353,7 +1304,6 @@ set(RBDOOM3_INCLUDES
 			${ZLIB_INCLUDES}
 			${MINIZIP_INCLUDES}
 			${BINKDEC_INCLUDES}
-			${GLEW_INCLUDES}
 			${RAPIDJSON_INCLUDES}
 			#${FREETYPE_SOURCES}
 			${SOUND_INCLUDES}
@@ -1404,7 +1354,6 @@ set(RBDOOM3_SOURCES
 			${ZLIB_SOURCES}
 			${MINIZIP_SOURCES}
 			${BINKDEC_SOURCES}
-			${GLEW_SOURCES}
 			#${FREETYPE_SOURCES}
 			${SOUND_SOURCES}
 			${OGGVORBIS_SOURCES}
@@ -1568,15 +1517,12 @@ if(MSVC)
 	
 	if(USE_PRECOMPILED_HEADERS) 
 		set(RBDOOM3_PRECOMPILED_SOURCES ${RBDOOM3_SOURCES})
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES} ${OPTICK_SOURCES})
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES} ${OPTICK_SOURCES})
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib/minizip/ioapi.c)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTDecoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder_SSE2.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/dynamicshadowvolume/DynamicShadowVolume.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/prelightshadowvolume/PreLightShadowVolume.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/staticshadowvolume/StaticShadowVolume.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/ShadowShared.cpp)
+		
 		if(USE_VULKAN)
 			list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sys/DeviceManager_VK.cpp)
 		endif()
@@ -1627,7 +1573,6 @@ if(MSVC)
         ${ZLIB_LIBRARY}
         ${PNG_LIBRARY}
         ${JPEG_LIBRARY}
-        ${GLEW_LIBRARY}
 		${CMAKE_DL_LIBS}
 		)
 		
@@ -1710,15 +1655,12 @@ else()
 	
 	if(USE_PRECOMPILED_HEADERS) 	
 		set(RBDOOM3_PRECOMPILED_SOURCES ${RBDOOM3_SOURCES})
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${GLEW_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES} ${OPTICK_SOURCES})
+		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${TIMIDITY_SOURCES} ${JPEG_SOURCES} ${PNG_SOURCES} ${ZLIB_SOURCES} ${BINKDEC_SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES} ${OGGVORBIS_SOURCES} ${OPTICK_SOURCES})
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib/minizip/ioapi.c)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTDecoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder.cpp)
 		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/DXT/DXTEncoder_SSE2.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/dynamicshadowvolume/DynamicShadowVolume.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/prelightshadowvolume/PreLightShadowVolume.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/staticshadowvolume/StaticShadowVolume.cpp)
-		list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/renderer/jobs/ShadowShared.cpp)
+		
 		if(USE_VULKAN)
 			list(REMOVE_ITEM RBDOOM3_PRECOMPILED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sys/DeviceManager_VK.cpp)
 		endif()
@@ -1830,7 +1772,6 @@ else()
             ${ZLIB_LIBRARY}
             ${PNG_LIBRARY}
             ${JPEG_LIBRARY}
-            ${GLEW_LIBRARY}
 	    	${CMAKE_DL_LIBS}
 			)
 	endif()

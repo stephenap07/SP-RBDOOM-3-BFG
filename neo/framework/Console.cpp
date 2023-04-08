@@ -306,7 +306,7 @@ float idConsoleLocal::DrawFPS( float y )
 	const int64 frameBusyTime = int64( commonLocal.frameTiming.finishSyncTime ) - int64( commonLocal.mainFrameTiming.startGameTime );
 
 	// SRS - Frame sync time represents swap buffer synchronization + game thread wait + other time spent outside of rendering
-	const int64 frameSyncTime = int64( commonLocal.frameTiming.finishSyncTime ) - int64( commonLocal.mainFrameTiming.finishRenderTime );
+	const int64 frameSyncTime = int64( commonLocal.frameTiming.finishSyncTime ) - int64( commonLocal.mainFrameTiming.startRenderTime ) - int64( rendererBackEndTime );
 
 	// SRS - GPU idle time is simply the difference between measured frame-over-frame time and GPU busy time (directly from GPU timers)
 	const int64 rendererGPUIdleTime = frameBusyTime + frameIdleTime - rendererGPUTime;
@@ -323,7 +323,7 @@ float idConsoleLocal::DrawFPS( float y )
 		if( com_showFPS.GetInteger() > 2 )
 		{
 			statsWindowWidth += 230;
-			statsWindowHeight += 105;
+			statsWindowHeight += 120;
 		}
 
 		ImVec2 pos;
@@ -425,14 +425,20 @@ float idConsoleLocal::DrawFPS( float y )
 
 		ImGui::TextColored( colorGold, "Device: %s", deviceManager->GetRendererString() );
 
-		ImGui::TextColored( colorLtGrey, "GENERAL: views:%i draws:%i tris:%i (shdw:%i)",
+		ImGui::TextColored( colorLtGrey, "GENERAL: views:%i draws:%i tris:%i",
 							commonLocal.stats_frontend.c_numViews,
 							commonLocal.stats_backend.c_drawElements + commonLocal.stats_backend.c_shadowElements,
-							( commonLocal.stats_backend.c_drawIndexes + commonLocal.stats_backend.c_shadowIndexes ) / 3,
-							commonLocal.stats_backend.c_shadowIndexes / 3 );
+							( commonLocal.stats_backend.c_drawIndexes + commonLocal.stats_backend.c_shadowIndexes ) / 3 );
 
 		if( com_showFPS.GetInteger() > 2 )
 		{
+			int atlasPercentage = idMath::Ftoi( 100.0f * ( commonLocal.stats_backend.c_shadowAtlasUsage / ( float )Square( r_shadowMapAtlasSize.GetInteger() ) ) );
+			ImGui::TextColored( colorLtGrey, "SHADOWS: atlas usage:%2i%% views:%i draws:%i tris:%i",
+								atlasPercentage,
+								commonLocal.stats_backend.c_shadowViews,
+								commonLocal.stats_backend.c_shadowElements,
+								commonLocal.stats_backend.c_shadowIndexes / 3 );
+
 			ImGui::TextColored( colorLtGrey, "DYNAMIC: callback:%-2i md5:%i dfrmVerts:%i dfrmTris:%i tangTris:%i guis:%i",
 								commonLocal.stats_frontend.c_entityDefCallbacks,
 								commonLocal.stats_frontend.c_generateMd5,

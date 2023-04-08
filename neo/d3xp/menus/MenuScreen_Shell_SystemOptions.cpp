@@ -418,7 +418,7 @@ void idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::LoadData
 	originalBrightness = r_exposure.GetFloat();
 	originalVolume = s_volume_dB.GetFloat();
 	// RB begin
-	originalShadowMapping = r_useShadowMapping.GetInteger();
+	//originalShadowMapping = r_useShadowMapping.GetInteger();
 	originalSSAO = r_useSSAO.GetInteger();
 	originalAmbientBrightness = r_forceAmbient.GetFloat();
 	originalPostProcessing = r_useFilmicPostProcessing.GetInteger();
@@ -686,6 +686,16 @@ idSWFScriptVar idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings
 			{
 				return "#str_swf_disabled";
 			}
+			// SRS - Added support for displaying borderless modes
+			else if( fullscreen == -1 )
+			{
+				return "Borderless Window";
+			}
+			else if( fullscreen == -2 )
+			{
+				return "Borderless Fullscreen";
+			}
+			// SRS end
 			if( fullscreen < 0 || vidmode < 0 || vidmode >= modeList.Num() )
 			{
 				return "???";
@@ -828,10 +838,10 @@ bool idMenuScreen_Shell_SystemOptions::idMenuDataSource_SystemSettings::IsDataCh
 		return true;
 	}
 
-	if( originalShadowMapping != r_useShadowMapping.GetInteger() )
-	{
-		return true;
-	}
+	//if( originalShadowMapping != r_useShadowMapping.GetInteger() )
+	//{
+	//	return true;
+	//}
 
 	if( originalSSAO != r_useSSAO.GetInteger() )
 	{

@@ -626,7 +626,7 @@ private:
 		}
 		bool operator==( const optionData_t& other ) const
 		{
-			return ( fullscreen == other.fullscreen ) && ( ( vidmode == other.vidmode ) || ( fullscreen == 0 ) );
+			return ( fullscreen == other.fullscreen ) && ( ( vidmode == other.vidmode ) || ( fullscreen <= 0 ) );
 		}
 		int fullscreen;
 		int vidmode;
@@ -1404,7 +1404,7 @@ public:
 		float originalBrightness;
 		float originalVolume;
 		// RB begin
-		int originalShadowMapping;
+		//int originalShadowMapping; // TODO use for quality of shadowmaps?
 		int originalSSAO;
 		int originalPostProcessing;
 		float originalAmbientBrightness;
